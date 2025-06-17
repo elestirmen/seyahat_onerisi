@@ -30,5 +30,25 @@ ox.save_graphml(G, "urgup_driving.graphml")
 
 Dosya mevcut değilse betik örnek koordinatlarla yaklaşık rotalar çizer.
 
+### Kategori bazlı rota oluşturma
+
+POI noktaları gastronomik, kültürel ve sanatsal olarak gruplandırılmıştır.
+Betik herhangi bir kategori verilmezse tüm kategorilere ait rotaları tek bir
+haritada gösterir. Haritayı açıp katman kontrolü üzerinden istediğiniz rotayı
+seçebilirsiniz:
+
+```bash
+python category_route_planner.py
+```
+
+Belirli bir kategori için yalnızca o rotayı oluşturmak isterseniz:
+
+```bash
+python category_route_planner.py gastronomik
+```
+
+Harita `category_routes.html` veya `<kategori>_route.html` adıyla kaydedilir ve
+rota uzunlukları katman adlarında görüntülenir.
+
 > **Not:** Bazı ortamlarda OpenStreetMap servislerine erişim kısıtlanmış olabilir. Böyle bir durumda betik otomatik indirme yapamaz ve hazır rotaları kullanır.
 
