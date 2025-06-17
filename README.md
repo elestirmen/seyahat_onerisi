@@ -44,6 +44,8 @@ python category_route_planner.py <kategori>
 python category_route_planner.py gastronomik
 ```
 
+Kategori belirtilmezse gastronomik rota oluşturulur.
+
 Komut çalıştıktan sonra `<kategori>_route.html` dosyası oluşur ve rota üzerindeki noktalar ile toplam uzunluk terminale yazdırılır.
 
 > **Not:** Bazı ortamlarda OpenStreetMap servislerine erişim kısıtlanmış olabilir. Böyle bir durumda betik otomatik indirme yapamaz ve hazır rotaları kullanır.
