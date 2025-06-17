@@ -2,6 +2,7 @@ import os
 import folium
 import osmnx as ox
 import networkx as nx
+from math import atan2, cos, radians, sin, sqrt
 
 
 def load_graph(path="urgup_driving.graphml"):
@@ -22,6 +23,19 @@ def shortest_route(G, origin, destination):
     dest_node = ox.nearest_nodes(G, destination[1], destination[0])
     route = nx.shortest_path(G, orig_node, dest_node, weight="length")
     return [(G.nodes[n]["y"], G.nodes[n]["x"]) for n in route]
+
+
+def route_length(coords):
+    """Approximate length of a route given as (lat, lon) coordinates in km."""
+    R = 6371.0
+    total = 0.0
+    for (lat1, lon1), (lat2, lon2) in zip(coords, coords[1:]):
+        dlat = radians(lat2 - lat1)
+        dlon = radians(lon2 - lon1)
+        a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        total += R * c
+    return total
 
 # POI coordinates in Ürgüp (approximate)
 pois = {
@@ -70,11 +84,54 @@ else:
         pois["Kadı Kalesi"],
     ]
 
-folium.PolyLine(route1, color="blue", weight=5, opacity=0.7, tooltip="Rota 1").add_to(m)
-folium.PolyLine(route2, color="red", weight=5, opacity=0.7, tooltip="Rota 2").add_to(m)
+# Calculate route lengths
+length1 = route_length(route1)
+length2 = route_length(route2)
 
-# Optional layer control to toggle routes
-folium.LayerControl().add_to(m)
+# Create route polylines and keep references for JS
+route1_line = folium.PolyLine(route1, color="blue", weight=5, opacity=0.7, tooltip="Rota 1")
+route2_line = folium.PolyLine(route2, color="red", weight=5, opacity=0.7, tooltip="Rota 2")
+route1_line.add_to(m)
+route2_line.add_to(m)
+
+# Dropdown menu for selecting routes and showing length
+dropdown_html = f"""
+<div id='route-control' style='position: fixed; top: 10px; left: 10px; z-index:9999; background:white; padding:6px; border-radius:4px;'>
+  <select id='route-select'>
+    <option value='' selected>Rota Seçiniz</option>
+    <option value='route1'>Rota 1</option>
+    <option value='route2'>Rota 2</option>
+  </select>
+  <div id='route-length' style='margin-top:4px;'></div>
+</div>
+"""
+m.get_root().html.add_child(folium.Element(dropdown_html))
+
+script = f"""
+document.addEventListener('DOMContentLoaded', function() {{
+  var mapObj = {m.get_name()};
+  var line1 = {route1_line.get_name()};
+  var line2 = {route2_line.get_name()};
+  mapObj.removeLayer(line1);
+  mapObj.removeLayer(line2);
+  var select = document.getElementById('route-select');
+  var info = document.getElementById('route-length');
+  select.addEventListener('change', function() {{
+    mapObj.removeLayer(line1);
+    mapObj.removeLayer(line2);
+    if (this.value === 'route1') {{
+      line1.addTo(mapObj);
+      info.innerHTML = 'Uzunluk: {length1:.2f} km';
+    }} else if (this.value === 'route2') {{
+      line2.addTo(mapObj);
+      info.innerHTML = 'Uzunluk: {length2:.2f} km';
+    }} else {{
+      info.innerHTML = '';
+    }}
+  }});
+}});
+"""
+m.get_root().script.add_child(folium.Element(script))
 
 # Save map to HTML
 m.save("urgup_rotalar.html")
