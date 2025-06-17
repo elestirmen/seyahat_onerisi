@@ -48,6 +48,11 @@ pois = {
         "Dimrit Cafe & Restaurant": (38.6332, 34.9153),
         "Sofra Restaurant": (38.6310, 34.9140),
         "Lagarto Restaurant": (38.6290, 34.9130),
+        "Ürgüp Şarap Evi": (38.6285, 34.9170),
+        "Tapu Cafe": (38.6320, 34.9165),
+        "Fırın Express": (38.6315, 34.9155),
+        "Kebap Evi": (38.6305, 34.9145),
+        "Asmalı Konak Restaurant": (38.6346, 34.9128),
     },
     "kulturel": {
         "Ürgüp Müzesi": (38.6323, 34.9116),
@@ -55,6 +60,11 @@ pois = {
         "Kadı Kalesi": (38.6351, 34.9089),
         "Kapadokya Kültür Merkezi": (38.6280, 34.9120),
         "Ürgüp Kütüphanesi": (38.6314, 34.9122),
+        "Mustafapaşa Medresesi": (38.6130, 34.8980),
+        "Cappadocia Art & History Museum": (38.6115, 34.8975),
+        "Ürgüp Belediyesi": (38.6285, 34.9125),
+        "Turasan Şarap Fabrikası": (38.6295, 34.9190),
+        "Ortahisar Kalesi": (38.6235, 34.8490),
     },
     "sanatsal": {
         "Kapadokya Sanat Galerisi": (38.6325, 34.9135),
@@ -62,6 +72,11 @@ pois = {
         "Ürgüp Tiyatro Salonu": (38.6300, 34.9100),
         "Sanat Atölyesi": (38.6335, 34.9095),
         "El Sanatları Merkezi": (38.6340, 34.9110),
+        "Kapadokya Sanat ve Tarih Müzesi": (38.6110, 34.8970),
+        "Seramik Atölyesi": (38.6338, 34.9132),
+        "Ürgüp Fotoğraf Galerisi": (38.6322, 34.9148),
+        "Halı Dokuma Atölyesi": (38.6318, 34.9158),
+        "Kapadokya Konser Alanı": (38.6298, 34.9122),
     },
 }
 
@@ -114,6 +129,7 @@ def main(category):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Kategoriye göre Ürgüp rotası oluştur")
-    parser.add_argument("category", choices=pois.keys(), help="Rota kategorisi")
+    parser.add_argument("category", nargs="?", choices=pois.keys(), default="gastronomik",
+                        help="Rota kategorisi (varsayılan: gastronomik)")
     args = parser.parse_args()
     main(args.category)
