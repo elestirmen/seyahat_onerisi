@@ -3,6 +3,7 @@ import folium
 from folium import plugins # Seçildi
 import osmnx as ox
 import networkx as nx
+from math import atan2, cos, radians, sin, sqrt
 
 
 def load_graph(path="urgup_driving.graphml"):
@@ -23,6 +24,19 @@ def shortest_route(G, origin, destination):
     dest_node = ox.nearest_nodes(G, destination[1], destination[0])
     route = nx.shortest_path(G, orig_node, dest_node, weight="length")
     return [(G.nodes[n]["y"], G.nodes[n]["x"]) for n in route]
+
+
+def route_length(coords):
+    """Approximate length of a route given as (lat, lon) coordinates in km."""
+    R = 6371.0
+    total = 0.0
+    for (lat1, lon1), (lat2, lon2) in zip(coords, coords[1:]):
+        dlat = radians(lat2 - lat1)
+        dlon = radians(lon2 - lon1)
+        a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        total += R * c
+    return total
 
 # POI coordinates in Ürgüp (approximate)
 pois = {
@@ -68,32 +82,31 @@ else:
     # Yedek Rota 2 için mantıksal düzeltme: Otogardan başlamalı
     route2 = [
         pois["Ürgüp Otogarı"], # Mantıksal düzeltme
-        # (38.6270, 34.9170), # Bu nokta Turasan Şarap Evi ile ilgiliydi, kaldırıldı
         (38.6295, 34.9130),   # Otogar civarı bir nokta
-        # pois["Temenni Tepesi"], # Bu ara nokta da olabilir, isteğe bağlı
         (38.6320, 34.9120),   # Temenni Tepesi civarı bir nokta
         pois["Kadı Kalesi"],
     ]
-    # Alternatif olarak daha basit bir yedek Rota 2:
-    # route2 = [
-    #     pois["Ürgüp Otogarı"],
-    #     pois["Temenni Tepesi"], # Otogardan Temenni'ye
-    #     pois["Kadı Kalesi"],   # Temenni'den Kadı Kalesi'ne
-    # ]
 
+# Calculate route lengths
+length1 = route_length(route1)
+length2 = route_length(route2)
 
-# Seçildi (FeatureGroup, Draw plugin, LayerControl collapsed=False)
-fg1 = folium.FeatureGroup(name="Rota 1")
-folium.PolyLine(route1, color="blue", weight=5, opacity=0.7, tooltip="Rota 1").add_to(fg1)
+# Create FeatureGroups for routes, including their lengths in names and tooltips
+# Original comment: # Seçildi (FeatureGroup, Draw plugin, LayerControl collapsed=False)
+fg1_name = f"Rota 1 ({length1:.2f} km)"
+fg1 = folium.FeatureGroup(name=fg1_name)
+folium.PolyLine(route1, color="blue", weight=5, opacity=0.7, tooltip=fg1_name).add_to(fg1)
 fg1.add_to(m)
 
-fg2 = folium.FeatureGroup(name="Rota 2")
-folium.PolyLine(route2, color="red", weight=5, opacity=0.7, tooltip="Rota 2").add_to(fg2)
+fg2_name = f"Rota 2 ({length2:.2f} km)"
+fg2 = folium.FeatureGroup(name=fg2_name)
+folium.PolyLine(route2, color="red", weight=5, opacity=0.7, tooltip=fg2_name).add_to(fg2)
 fg2.add_to(m)
 
+# Add Draw plugin
 plugins.Draw(export=False).add_to(m)
 
-# Optional layer control to toggle routes
+# Add LayerControl to toggle routes and other layers
 folium.LayerControl(collapsed=False).add_to(m)
 
 # Save map to HTML
