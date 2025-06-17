@@ -32,7 +32,3 @@ Dosya mevcut değilse betik örnek koordinatlarla yaklaşık rotalar çizer.
 
 > **Not:** Bazı ortamlarda OpenStreetMap servislerine erişim kısıtlanmış olabilir. Böyle bir durumda betik otomatik indirme yapamaz ve hazır rotaları kullanır.
 
-### Harita üzerindeki düzenlemeler
-
-Oluşturulan HTML haritasında sağ üstteki katman menüsünden her rota ayrı ayrı açılıp kapatılabilir.
-Menü üzerindeki düzenleme aracı sayesinde rotaların çizgilerini harita üzerinde oynatarak yeni güzergahlar yaratabilirsiniz.
