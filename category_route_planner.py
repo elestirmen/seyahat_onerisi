@@ -315,11 +315,12 @@ def add_custom_legend(folium_map: folium.Map, processed_categories: List[str]):
 
     legend_title = '<h4 style="margin-top:0; margin-bottom:5px; text-align:center; font-weight:bold; font-size:16px;">🗺️ Lejant</h4>'
     legend_html = f"""
-     <div style="position: fixed; 
-                 bottom: 20px; left: 10px; width: auto; min-width:180px; max_width: 220px; 
+     <div id="legend-container" style="position: fixed;
+                 bottom: 20px; left: 10px; width: auto; min-width:180px; max_width: 220px;
                  border:2px solid #bbb; z-index:9999; font-size:12px;
                  background-color:rgba(255,255,255,0.95);
                  border-radius:8px; padding: 10px; box-shadow: 3px 3px 5px #888888;">
+       <div style="text-align:right;"><a href="#" id="legend-toggle" style="text-decoration:none;">[X]</a></div>
        {legend_title}
        <ul style="list-style-type:none; padding-left:0; margin-bottom:0;">
     """
@@ -353,7 +354,20 @@ def add_custom_legend(folium_map: folium.Map, processed_categories: List[str]):
 
 
     legend_html += "</ul></div>"
-    folium_map.get_root().html.add_child(folium.Element(legend_html))
+    toggle_script = """
+    <script>
+    document.getElementById('legend-toggle').addEventListener('click', function(e){
+        e.preventDefault();
+        var legend = document.getElementById('legend-container');
+        if(legend.style.display === 'none') {
+            legend.style.display = 'block';
+        } else {
+            legend.style.display = 'none';
+        }
+    });
+    </script>
+    """
+    folium_map.get_root().html.add_child(folium.Element(legend_html + toggle_script))
 
 # --- Ana Fonksiyon ---
 def main(
