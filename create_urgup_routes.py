@@ -1,5 +1,6 @@
 import os
 import folium
+from folium import plugins # Seçildi
 import osmnx as ox
 import networkx as nx
 
@@ -30,27 +31,31 @@ pois = {
     "Temenni Tepesi": (38.6318, 34.9104),
     "Kadı Kalesi": (38.6351, 34.9089),
     "Asmalı Konak": (38.6346, 34.9128),
-    "Ürgüp Otogarı": (38.6240, 34.9125)
+    "Ürgüp Otogarı": (38.6240, 34.9125), # Seçildi (virgülle)
 }
 
 # Base map centered around Ürgüp
 m = folium.Map(location=[38.6310, 34.9130], zoom_start=13)
 
-# Add POI markers
-for name, coords in pois.items():
-    folium.Marker(location=coords, popup=name).add_to(m)
+# Add POI markers with default icons (Seçildi - daha detaylı)
+for name, (lat, lon) in pois.items():
+    popup = folium.Popup(name, max_width=200)
+    marker = folium.Marker(location=(lat, lon), tooltip=name, popup=popup)
+    marker.add_to(m)
 
 # Build routes using the road network if possible
 G = load_graph()
 
 if G:
     print("Yol ağı yüklendi, rotalar hesaplanıyor...")
+    # Seçildi ([:2] olmadan)
     route1 = shortest_route(G, pois["Turasan Şarap Evi"], pois["Kadı Kalesi"])
     route2 = shortest_route(G, pois["Ürgüp Otogarı"], pois["Kadı Kalesi"])
 else:
     print("Yol ağı bulunamadı, örnek koordinatlar kullanılacak.")
     # Approximations along main roads
     route1 = [
+        # Seçildi ([:2] olmadan)
         pois["Turasan Şarap Evi"],
         (38.6327, 34.9185),
         (38.6339, 34.9148),
@@ -60,21 +65,36 @@ else:
         pois["Kadı Kalesi"],
     ]
 
+    # Yedek Rota 2 için mantıksal düzeltme: Otogardan başlamalı
     route2 = [
-        pois["Turasan Şarap Evi"],
-        (38.6270, 34.9170),
-        pois["Ürgüp Otogarı"],
-        (38.6295, 34.9130),
-        pois["Temenni Tepesi"],
-        (38.6320, 34.9120),
+        pois["Ürgüp Otogarı"], # Mantıksal düzeltme
+        # (38.6270, 34.9170), # Bu nokta Turasan Şarap Evi ile ilgiliydi, kaldırıldı
+        (38.6295, 34.9130),   # Otogar civarı bir nokta
+        # pois["Temenni Tepesi"], # Bu ara nokta da olabilir, isteğe bağlı
+        (38.6320, 34.9120),   # Temenni Tepesi civarı bir nokta
         pois["Kadı Kalesi"],
     ]
+    # Alternatif olarak daha basit bir yedek Rota 2:
+    # route2 = [
+    #     pois["Ürgüp Otogarı"],
+    #     pois["Temenni Tepesi"], # Otogardan Temenni'ye
+    #     pois["Kadı Kalesi"],   # Temenni'den Kadı Kalesi'ne
+    # ]
 
-folium.PolyLine(route1, color="blue", weight=5, opacity=0.7, tooltip="Rota 1").add_to(m)
-folium.PolyLine(route2, color="red", weight=5, opacity=0.7, tooltip="Rota 2").add_to(m)
+
+# Seçildi (FeatureGroup, Draw plugin, LayerControl collapsed=False)
+fg1 = folium.FeatureGroup(name="Rota 1")
+folium.PolyLine(route1, color="blue", weight=5, opacity=0.7, tooltip="Rota 1").add_to(fg1)
+fg1.add_to(m)
+
+fg2 = folium.FeatureGroup(name="Rota 2")
+folium.PolyLine(route2, color="red", weight=5, opacity=0.7, tooltip="Rota 2").add_to(fg2)
+fg2.add_to(m)
+
+plugins.Draw(export=False).add_to(m)
 
 # Optional layer control to toggle routes
-folium.LayerControl().add_to(m)
+folium.LayerControl(collapsed=False).add_to(m)
 
 # Save map to HTML
 m.save("urgup_rotalar.html")
