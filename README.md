@@ -30,23 +30,12 @@ ox.save_graphml(G, "urgup_driving.graphml")
 
 Dosya mevcut değilse betik örnek koordinatlarla yaklaşık rotalar çizer.
 
-### Kategori bazlı rota oluşturma
 
-POI noktaları gastronomik, kültürel ve sanatsal olarak gruplandırılmıştır. Belirli bir kategori için rota oluşturmak üzere:
-
-```bash
-python category_route_planner.py <kategori>
-```
-
-Örnek:
 
 ```bash
 python category_route_planner.py gastronomik
 ```
 
-Kategori belirtilmezse gastronomik rota oluşturulur.
-
-Komut çalıştıktan sonra `<kategori>_route.html` dosyası oluşur ve rota üzerindeki noktalar ile toplam uzunluk terminale yazdırılır.
 
 > **Not:** Bazı ortamlarda OpenStreetMap servislerine erişim kısıtlanmış olabilir. Böyle bir durumda betik otomatik indirme yapamaz ve hazır rotaları kullanır.
 
