@@ -1,5 +1,6 @@
 import os
 import folium
+from folium import plugins # Seçildi
 import osmnx as ox
 import networkx as nx
 from math import atan2, cos, radians, sin, sqrt
@@ -44,27 +45,31 @@ pois = {
     "Temenni Tepesi": (38.6318, 34.9104),
     "Kadı Kalesi": (38.6351, 34.9089),
     "Asmalı Konak": (38.6346, 34.9128),
-    "Ürgüp Otogarı": (38.6240, 34.9125)
+    "Ürgüp Otogarı": (38.6240, 34.9125), # Seçildi (virgülle)
 }
 
 # Base map centered around Ürgüp
 m = folium.Map(location=[38.6310, 34.9130], zoom_start=13)
 
-# Add POI markers
-for name, coords in pois.items():
-    folium.Marker(location=coords, popup=name).add_to(m)
+# Add POI markers with default icons (Seçildi - daha detaylı)
+for name, (lat, lon) in pois.items():
+    popup = folium.Popup(name, max_width=200)
+    marker = folium.Marker(location=(lat, lon), tooltip=name, popup=popup)
+    marker.add_to(m)
 
 # Build routes using the road network if possible
 G = load_graph()
 
 if G:
     print("Yol ağı yüklendi, rotalar hesaplanıyor...")
+    # Seçildi ([:2] olmadan)
     route1 = shortest_route(G, pois["Turasan Şarap Evi"], pois["Kadı Kalesi"])
     route2 = shortest_route(G, pois["Ürgüp Otogarı"], pois["Kadı Kalesi"])
 else:
     print("Yol ağı bulunamadı, örnek koordinatlar kullanılacak.")
     # Approximations along main roads
     route1 = [
+        # Seçildi ([:2] olmadan)
         pois["Turasan Şarap Evi"],
         (38.6327, 34.9185),
         (38.6339, 34.9148),
@@ -74,13 +79,11 @@ else:
         pois["Kadı Kalesi"],
     ]
 
+    # Yedek Rota 2 için mantıksal düzeltme: Otogardan başlamalı
     route2 = [
-        pois["Turasan Şarap Evi"],
-        (38.6270, 34.9170),
-        pois["Ürgüp Otogarı"],
-        (38.6295, 34.9130),
-        pois["Temenni Tepesi"],
-        (38.6320, 34.9120),
+        pois["Ürgüp Otogarı"], # Mantıksal düzeltme
+        (38.6295, 34.9130),   # Otogar civarı bir nokta
+        (38.6320, 34.9120),   # Temenni Tepesi civarı bir nokta
         pois["Kadı Kalesi"],
     ]
 
@@ -88,50 +91,23 @@ else:
 length1 = route_length(route1)
 length2 = route_length(route2)
 
-# Create route polylines and keep references for JS
-route1_line = folium.PolyLine(route1, color="blue", weight=5, opacity=0.7, tooltip="Rota 1")
-route2_line = folium.PolyLine(route2, color="red", weight=5, opacity=0.7, tooltip="Rota 2")
-route1_line.add_to(m)
-route2_line.add_to(m)
+# Create FeatureGroups for routes, including their lengths in names and tooltips
+# Original comment: # Seçildi (FeatureGroup, Draw plugin, LayerControl collapsed=False)
+fg1_name = f"Rota 1 ({length1:.2f} km)"
+fg1 = folium.FeatureGroup(name=fg1_name)
+folium.PolyLine(route1, color="blue", weight=5, opacity=0.7, tooltip=fg1_name).add_to(fg1)
+fg1.add_to(m)
 
-# Dropdown menu for selecting routes and showing length
-dropdown_html = f"""
-<div id='route-control' style='position: fixed; top: 10px; left: 10px; z-index:9999; background:white; padding:6px; border-radius:4px;'>
-  <select id='route-select'>
-    <option value='' selected>Rota Seçiniz</option>
-    <option value='route1'>Rota 1</option>
-    <option value='route2'>Rota 2</option>
-  </select>
-  <div id='route-length' style='margin-top:4px;'></div>
-</div>
-"""
-m.get_root().html.add_child(folium.Element(dropdown_html))
+fg2_name = f"Rota 2 ({length2:.2f} km)"
+fg2 = folium.FeatureGroup(name=fg2_name)
+folium.PolyLine(route2, color="red", weight=5, opacity=0.7, tooltip=fg2_name).add_to(fg2)
+fg2.add_to(m)
 
-script = f"""
-document.addEventListener('DOMContentLoaded', function() {{
-  var mapObj = {m.get_name()};
-  var line1 = {route1_line.get_name()};
-  var line2 = {route2_line.get_name()};
-  mapObj.removeLayer(line1);
-  mapObj.removeLayer(line2);
-  var select = document.getElementById('route-select');
-  var info = document.getElementById('route-length');
-  select.addEventListener('change', function() {{
-    mapObj.removeLayer(line1);
-    mapObj.removeLayer(line2);
-    if (this.value === 'route1') {{
-      line1.addTo(mapObj);
-      info.innerHTML = 'Uzunluk: {length1:.2f} km';
-    }} else if (this.value === 'route2') {{
-      line2.addTo(mapObj);
-      info.innerHTML = 'Uzunluk: {length2:.2f} km';
-    }} else {{
-      info.innerHTML = '';
-    }}
-  }});
-}});
-"""
-m.get_root().script.add_child(folium.Element(script))
+# Add Draw plugin
+plugins.Draw(export=False).add_to(m)
+
+# Add LayerControl to toggle routes and other layers
+folium.LayerControl(collapsed=False).add_to(m)
 
 # Save map to HTML
 m.save("urgup_rotalar.html")
