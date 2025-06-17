@@ -1,4 +1,27 @@
+import os
 import folium
+import osmnx as ox
+import networkx as nx
+
+
+def load_graph(path="urgup_driving.graphml"):
+    """Load road network from a GraphML file if available."""
+    if os.path.exists(path):
+        return ox.load_graphml(path)
+    try:
+        # Attempt to download if network access is permitted
+        return ox.graph_from_place("Ürgüp, Türkiye", network_type="drive")
+    except Exception as exc:
+        print("Yol ağı indirilemedi:", exc)
+        return None
+
+
+def shortest_route(G, origin, destination):
+    """Return a list of coordinates representing the shortest route."""
+    orig_node = ox.nearest_nodes(G, origin[1], origin[0])
+    dest_node = ox.nearest_nodes(G, destination[1], destination[0])
+    route = nx.shortest_path(G, orig_node, dest_node, weight="length")
+    return [(G.nodes[n]["y"], G.nodes[n]["x"]) for n in route]
 
 # POI coordinates in Ürgüp (approximate)
 pois = {
@@ -17,22 +40,35 @@ m = folium.Map(location=[38.6310, 34.9130], zoom_start=13)
 for name, coords in pois.items():
     folium.Marker(location=coords, popup=name).add_to(m)
 
-# Example alternative routes (sample coordinates)
-route1 = [
-    pois["Turasan Şarap Evi"],
-    pois["Asmalı Konak"],
-    pois["Ürgüp Müzesi"],
-    pois["Temenni Tepesi"],
-    pois["Kadı Kalesi"],
-]
+# Build routes using the road network if possible
+G = load_graph()
 
-route2 = [
-    pois["Turasan Şarap Evi"],
-    pois["Ürgüp Otogarı"],
-    pois["Temenni Tepesi"],
-    pois["Ürgüp Müzesi"],
-    pois["Kadı Kalesi"],
-]
+if G:
+    print("Yol ağı yüklendi, rotalar hesaplanıyor...")
+    route1 = shortest_route(G, pois["Turasan Şarap Evi"], pois["Kadı Kalesi"])
+    route2 = shortest_route(G, pois["Ürgüp Otogarı"], pois["Kadı Kalesi"])
+else:
+    print("Yol ağı bulunamadı, örnek koordinatlar kullanılacak.")
+    # Approximations along main roads
+    route1 = [
+        pois["Turasan Şarap Evi"],
+        (38.6327, 34.9185),
+        (38.6339, 34.9148),
+        pois["Ürgüp Müzesi"],
+        (38.6327, 34.9110),
+        pois["Temenni Tepesi"],
+        pois["Kadı Kalesi"],
+    ]
+
+    route2 = [
+        pois["Turasan Şarap Evi"],
+        (38.6270, 34.9170),
+        pois["Ürgüp Otogarı"],
+        (38.6295, 34.9130),
+        pois["Temenni Tepesi"],
+        (38.6320, 34.9120),
+        pois["Kadı Kalesi"],
+    ]
 
 folium.PolyLine(route1, color="blue", weight=5, opacity=0.7, tooltip="Rota 1").add_to(m)
 folium.PolyLine(route2, color="red", weight=5, opacity=0.7, tooltip="Rota 2").add_to(m)
