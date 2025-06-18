@@ -7,6 +7,7 @@ import networkx as nx
 from math import atan2, cos, radians, sin, sqrt
 from typing import List, Tuple, Dict, Optional, Any
 import traceback # Hata ayıklama için
+import json
 
 # --- Sabitler ve Konfigürasyon ---
 URGUP_CENTER_LOCATION = (38.6310, 34.9130) # Ürgüp merkezi
@@ -15,12 +16,48 @@ DEFAULT_GRAPH_FILE_URGUP = "urgup_merkez_driving.graphml" # Ürgüp'e özel grap
 EARTH_RADIUS_KM = 6371.0
 
 CATEGORY_STYLES = {
-    "gastronomik": {"color": "red", "icon": "utensils", "icon_prefix": "fa"},
-    "kulturel": {"color": "blue", "icon": "landmark", "icon_prefix": "fa"},
-    "sanatsal": {"color": "green", "icon": "palette", "icon_prefix": "fa"},
-    "doga_macera": {"color": "orange", "icon": "hiking", "icon_prefix": "fa"},
-    "konaklama": {"color": "purple", "icon": "bed", "icon_prefix": "fa"},
-    "default": {"color": "gray", "icon": "info-circle", "icon_prefix": "fa"} # DEĞİŞİKLİK: Glyphicon yerine FontAwesome
+    "gastronomik": {
+        "color": "#e74c3c", 
+        "icon": "utensils", 
+        "icon_prefix": "fa",
+        "display_name": "🍽️ Gastronomik",
+        "description": "Restoranlar, kafeler ve lezzet noktaları"
+    },
+    "kulturel": {
+        "color": "#3498db", 
+        "icon": "landmark", 
+        "icon_prefix": "fa",
+        "display_name": "🏛️ Kültürel",
+        "description": "Müzeler, tarihi yerler ve kültürel mekanlar"
+    },
+    "sanatsal": {
+        "color": "#2ecc71", 
+        "icon": "palette", 
+        "icon_prefix": "fa",
+        "display_name": "🎨 Sanatsal",
+        "description": "Sanat galerileri, atölyeler ve yaratıcı mekanlar"
+    },
+    "doga_macera": {
+        "color": "#f39c12", 
+        "icon": "hiking", 
+        "icon_prefix": "fa",
+        "display_name": "🌿 Doğa & Macera",
+        "description": "Doğal güzellikler ve macera aktiviteleri"
+    },
+    "konaklama": {
+        "color": "#9b59b6", 
+        "icon": "bed", 
+        "icon_prefix": "fa",
+        "display_name": "🏨 Konaklama",
+        "description": "Oteller, pensiyonlar ve konaklama tesisleri"
+    },
+    "default": {
+        "color": "#95a5a6", 
+        "icon": "info-circle", 
+        "icon_prefix": "fa",
+        "display_name": "ℹ️ Diğer",
+        "description": "Diğer ilgi çekici noktalar"
+    }
 }
 
 POI_DATA: Dict[str, Dict[str, Tuple[float, float]]] = {
@@ -238,25 +275,55 @@ def add_poi_markers_and_route_to_map(
     road_network: Optional[nx.MultiDiGraph]
 ) -> Tuple[float, List[str], str]:
     style = CATEGORY_STYLES.get(category_name, CATEGORY_STYLES["default"])
-    feature_group_name = f"{category_name.capitalize()} Noktaları ve Rotası"
-    fg = folium.FeatureGroup(name=feature_group_name, show=True) # Varsayılan olarak gösterilsin
+    display_name = style.get("display_name", category_name.capitalize())
+    feature_group_name = f"{display_name}"
+    fg = folium.FeatureGroup(name=feature_group_name, show=True)
 
     poi_coords_in_order = list(category_pois.values())
     route_path_coords, route_length_km, generation_warnings = generate_route_for_poi_order(road_network, poi_coords_in_order)
 
+    # POI marker'larını ekle
     for i, (poi_name, coord) in enumerate(category_pois.items()):
         gmaps_search_url = f"https://www.google.com/maps/search/?api=1&query={coord[0]},{coord[1]}"
+        
+        # Gelişmiş popup HTML
         popup_html = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 280px;">
-            <h4 style="margin-bottom: 5px; color: {style['color']};">{i+1}. {poi_name}</h4>
-            <p style="margin: 2px 0;"><strong>Kategori:</strong> {category_name.capitalize()}</p>
-            <p style="margin: 2px 0;"><strong>Koordinatlar:</strong> ({coord[0]:.5f}, {coord[1]:.5f})</p>
-            <a href="{gmaps_search_url}" target="_blank" rel="noopener noreferrer" style="color: #007bff; text-decoration: none;">Google Maps'te Görüntüle</a>
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">
+            <div style="border-left: 4px solid {style['color']}; padding-left: 10px; margin-bottom: 10px;">
+                <h3 style="margin: 0 0 5px 0; color: {style['color']}; font-size: 16px;">
+                    {style.get('icon', '📍')} {poi_name}
+                </h3>
+                <p style="margin: 0; color: #666; font-size: 12px;">{style.get('description', '')}</p>
+            </div>
+            
+            <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">
+                <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> {i+1}. durak</p>
+                <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> {display_name}</p>
+                <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> {coord[0]:.5f}, {coord[1]:.5f}</p>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{gmaps_search_url}" target="_blank" rel="noopener noreferrer" 
+                   style="background-color: {style['color']}; color: white; padding: 8px 16px; 
+                          border-radius: 20px; text-decoration: none; font-size: 12px; 
+                          display: inline-block; transition: all 0.3s;">
+                    🗺️ Google Maps'te Aç
+                </a>
+            </div>
         </div>
         """
+        
+        # Gelişmiş tooltip
+        tooltip_html = f"""
+        <div style="font-weight: bold; color: {style['color']}; font-size: 14px;">
+            {i+1}. {poi_name}<br>
+            <small style="color: #666;">{display_name}</small>
+        </div>
+        """
+        
         icon_to_use = plugins.BeautifyIcon(
-            icon=style.get("icon", "info-circle"), # Stil içinde ikon yoksa varsayılan kullan
-            icon_prefix=style.get("icon_prefix", "fa"), # Stil içinde prefix yoksa varsayılan kullan
+            icon=style.get("icon", "info-circle"),
+            icon_prefix=style.get("icon_prefix", "fa"),
             icon_style=f"color:white; font-size:14px;",
             border_color=style["color"],
             background_color=style["color"],
@@ -264,126 +331,299 @@ def add_poi_markers_and_route_to_map(
             number=i + 1,
             icon_shape="marker"
         )
+        
         folium.Marker(
             location=coord,
-            tooltip=f"<b>{i+1}. {poi_name}</b><br>({category_name.capitalize()})",
-            popup=folium.Popup(popup_html, max_width=300),
+            tooltip=folium.Tooltip(tooltip_html, sticky=True),
+            popup=folium.Popup(popup_html, max_width=350),
             icon=icon_to_use
         ).add_to(fg)
 
-    route_tooltip = f"{category_name.capitalize()} Rotası: {route_length_km:.2f} km"
-    is_straight_line_only_route = False
-    if not road_network and len(poi_coords_in_order) >= 2: # Yol ağı yoksa ve en az 2 POI varsa, bu kesin düz çizgidir
-        is_straight_line_only_route = True
-        route_tooltip += " (Yol ağı yok - Düz Çizgi)"
-    elif any("düz çizgi kullanıldı" in w for w in generation_warnings):
-         route_tooltip += " (Bazı kısımlar düz çizgi)"
-    
-    # Sadece tek POI varsa veya hiç POI yoksa rota çizme
+    # Rota çizgisini ekle (gelişmiş özelliklerle)
     if route_path_coords and len(route_path_coords) >= 2:
-        # Eğer rota sadece iki noktadan oluşuyorsa ve bunlar orijinal POI'ler ise
-        # ve yol ağı yoksa veya bir uyarıda "düz çizgi" geçiyorsa, kesikli çizgi kullan.
-        # Bu, generate_route_for_poi_order'ın fallback davranışını yakalar.
-        if len(route_path_coords) == 2 and route_path_coords[0] in poi_coords_in_order and route_path_coords[1] in poi_coords_in_order:
-            if not road_network or any("düz çizgi kullanıldı" in w for w in generation_warnings):
-                is_straight_line_only_route = True
-
-
+        is_straight_line = False
+        route_type = "Yol Ağı Rotası"
+        
+        # Düz çizgi kontrolü
+        if not road_network or any("düz çizgi kullanıldı" in w for w in generation_warnings):
+            is_straight_line = True
+            route_type = "Hava Mesafesi (Düz Çizgi)"
+        
+        # Rota detayları için popup
+        route_popup_html = f"""
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 280px; padding: 15px;">
+            <h3 style="margin: 0 0 10px 0; color: {style['color']}; text-align: center;">
+                📍 {display_name} Rotası
+            </h3>
+            
+            <div style="background: linear-gradient(135deg, {style['color']}20, {style['color']}10); 
+                        padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+                <p style="margin: 5px 0; font-size: 14px;"><strong>📏 Uzunluk:</strong> {route_length_km:.2f} km</p>
+                <p style="margin: 5px 0; font-size: 14px;"><strong>🛣️ Tip:</strong> {route_type}</p>
+                <p style="margin: 5px 0; font-size: 14px;"><strong>📍 Duraklar:</strong> {len(category_pois)} nokta</p>
+                <p style="margin: 5px 0; font-size: 14px;"><strong>⏱️ Tahmini Süre:</strong> {int(route_length_km * 2)} dakika</p>
+            </div>
+            
+            <div style="font-size: 12px; color: #666;">
+                <p style="margin: 5px 0;"><strong>💡 İpucu:</strong> Marker'lara tıklayarak detayları görebilirsiniz</p>
+                {'<p style="margin: 5px 0; color: #e74c3c;"><strong>⚠️</strong> Bazı bölümler düz çizgi olarak gösterilmiştir</p>' if is_straight_line else ''}
+            </div>
+        </div>
+        """
+        
         polyline_options = {
             "locations": route_path_coords,
             "color": style["color"],
-            "weight": 5,
-            "opacity": 0.8
+            "weight": 6,
+            "opacity": 0.8,
+            "smooth_factor": 1.0
         }
-        if is_straight_line_only_route:
-            polyline_options["dash_array"] = '10, 5'
-            polyline_options["weight"] = 3
-            polyline_options["opacity"] = 0.6
-
-        poly = folium.PolyLine(**polyline_options)
-        poly.add_child(folium.Popup(route_tooltip))
-        poly.add_to(fg)
-    elif len(poi_coords_in_order) == 1:
-        # Tek POI varsa rota çizilmez, sadece marker eklenir. generation_warnings bu durumda boş olmalı.
-        pass
-
+        
+        if is_straight_line:
+            polyline_options.update({
+                "dash_array": '15, 10',
+                "weight": 4,
+                "opacity": 0.7
+            })
+        
+        route_line = folium.PolyLine(**polyline_options)
+        route_line.add_child(folium.Popup(route_popup_html, max_width=300))
+        
+        # Hover tooltip for route
+        route_tooltip = f"🛣️ {display_name}: {route_length_km:.2f} km ({route_type})"
+        route_line.add_child(folium.Tooltip(route_tooltip, sticky=False))
+        
+        route_line.add_to(fg)
 
     fg.add_to(folium_map)
     return route_length_km, generation_warnings, fg.get_name()
 
-def add_custom_legend(folium_map: folium.Map, processed_categories: List[Tuple[str, str]], map_js_var: str):
-    if not processed_categories: return
-
-    legend_title = '<h4 style="margin-top:0; margin-bottom:5px; text-align:center; font-weight:bold; font-size:16px;">🗺️ Lejant</h4>'
+def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categories: List[Tuple[str, str, float, int]], map_js_var: str):
+    """Gelişmiş lejant ve kontrol paneli ekler"""
+    if not processed_categories:
+        return
+    
+    # İstatistikler
+    total_length = sum(length for _, _, length, _ in processed_categories)
+    total_pois = sum(pois for _, _, _, pois in processed_categories)
+    
+    # Ana lejant HTML
     legend_html = f"""
-     <div id="legend-container" style="position: fixed;
-                 bottom: 20px; left: 10px; width: auto; min-width:180px; max_width: 220px;
-                 border:2px solid #bbb; z-index:9999; font-size:12px;
-                 background-color:rgba(255,255,255,0.95);
-                 border-radius:8px; padding: 10px; box-shadow: 3px 3px 5px #888888;">
-       <div style="text-align:right;"><a href="#" id="legend-toggle" style="text-decoration:none;">[X]</a></div>
-       {legend_title}
-       <ul style="list-style-type:none; padding-left:0; margin-bottom:0;">
-    """
-    # Sadece işlenen ve stili olan kategorileri lejantta göster
-    categories_in_legend = set()
-
-    for cat_name, layer_var in processed_categories:
-        # Eğer kategori zaten lejantta varsa tekrar ekleme (çok olası değil ama önlem)
-        if cat_name in categories_in_legend:
-            continue
-
-        style = CATEGORY_STYLES.get(cat_name) # Kategori için stili al
-        if not style: # Eğer kategori için özel bir stil yoksa, default stili dene
-            style = CATEGORY_STYLES.get("default")
+    <div id="legend-panel" style="position: fixed; top: 20px; right: 20px; width: 320px; 
+                                  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+                                  border: none; border-radius: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                                  z-index: 9999; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                                  backdrop-filter: blur(10px); overflow: hidden;">
         
-        if style: # Stil bulunduysa (ya kategoriye özel ya da default)
-            icon_html = ""
-            icon_name = style.get("icon", "info-circle") # İkon adı yoksa varsayılan
-            icon_prefix = style.get("icon_prefix", "fa") # Prefix yoksa varsayılan
-            color = style.get("color", "gray") # Renk yoksa varsayılan
-
-            if icon_prefix == "fa":
-                icon_html = f'<i class="fa {icon_name}" style="color:{color}; font-size:16px; margin-right: 8px; vertical-align: middle;"></i>'
-            elif icon_prefix == "glyphicon": # Artık kullanılmıyor ama kodda kalabilir
-                 icon_html = f'<i class="glyphicon {icon_name}" style="color:{color}; font-size:14px; margin-right: 8px; vertical-align: middle;"></i>'
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding: 15px; color: white; position: relative;">
+            <h3 style="margin: 0; font-size: 18px; text-align: center; font-weight: 600;">
+                🗺️ Kapadokya Rota Rehberi
+            </h3>
+            <button id="legend-toggle" style="position: absolute; top: 15px; right: 15px; 
+                                              background: rgba(255,255,255,0.2); border: none; 
+                                              color: white; width: 30px; height: 30px; 
+                                              border-radius: 50%; cursor: pointer; font-size: 16px;">
+                ✕
+            </button>
+        </div>
+        
+        <!-- İstatistikler -->
+        <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e9ecef;">
+            <div style="display: flex; justify-content: space-between; font-size: 13px; color: #666;">
+                <span><strong>📍 Toplam Nokta:</strong> {total_pois}</span>
+                <span><strong>📏 Toplam Mesafe:</strong> {total_length:.1f} km</span>
+            </div>
+        </div>
+        
+        <!-- Kategoriler -->
+        <div id="categories-container" style="padding: 15px; max-height: 400px; overflow-y: auto;">
+    """
+    
+    for cat_name, layer_var, length, poi_count in processed_categories:
+        style = CATEGORY_STYLES.get(cat_name, CATEGORY_STYLES["default"])
+        display_name = style.get("display_name", cat_name.capitalize())
+        description = style.get("description", "")
+        
+        legend_html += f"""
+        <div class="category-item" onclick="toggleLayer('{layer_var}', this)" 
+             style="background: white; margin-bottom: 10px; padding: 12px; border-radius: 10px; 
+                    cursor: pointer; transition: all 0.3s; border-left: 4px solid {style['color']};
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);"
+             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'"
+             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)'">
             
-            legend_html += (
-                f'<li onclick="toggleLayer(\'{layer_var}\', this)" '
-                f'style="cursor:pointer; margin-bottom: 5px; display: flex; align-items: center;">'
-                f'{icon_html}<span style="font-size:13px;">{cat_name.capitalize()}</span></li>'
-            )
-            categories_in_legend.add(cat_name)
-        else:
-            print(f"Uyarı: '{cat_name}' kategorisi için lejant stili bulunamadı (default dahil).")
-
-
-    legend_html += "</ul></div>"
-    toggle_script = f"""
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <i class="fa {style.get('icon', 'info-circle')}" 
+                   style="color: {style['color']}; font-size: 18px; margin-right: 12px; width: 20px;"></i>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; color: #333; font-size: 14px;">{display_name}</div>
+                    <div style="font-size: 11px; color: #888; margin-top: 2px;">{description}</div>
+                </div>
+                <div class="toggle-indicator" style="width: 12px; height: 12px; border-radius: 50%; 
+                                                    background-color: {style['color']}; 
+                                                    box-shadow: 0 0 0 2px white, 0 0 0 3px {style['color']};"></div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
+                <span>📍 {poi_count} nokta</span>
+                <span>📏 {length:.1f} km</span>
+                <span>⏱️ ~{int(length * 2)} dk</span>
+            </div>
+        </div>
+        """
+    
+    legend_html += f"""
+        </div>
+        
+        <!-- Footer -->
+        <div style="background: #f8f9fa; padding: 12px; text-align: center; border-top: 1px solid #e9ecef;">
+            <button onclick="toggleAllLayers()" 
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                           color: white; border: none; padding: 8px 16px; border-radius: 20px; 
+                           font-size: 12px; cursor: pointer; font-weight: 500;">
+                🔄 Tümünü Aç/Kapat
+            </button>
+        </div>
+    </div>
+    """
+    
+    # JavaScript kontrolcüleri
+    control_script = f"""
     <script>
-    function toggleLayer(layerVarName, el){{
-        var layer = window[layerVarName];
-        if(!layer) return;
-        if({map_js_var}.hasLayer(layer)){{
+    let allLayersVisible = true;
+    const layerStates = {{}};
+    
+    function toggleLayer(layerVarName, element) {{
+        const layer = window[layerVarName];
+        if (!layer) return;
+        
+        const indicator = element.querySelector('.toggle-indicator');
+        const isVisible = {map_js_var}.hasLayer(layer);
+        
+        if (isVisible) {{
             {map_js_var}.removeLayer(layer);
-            if(el) el.style.opacity = 0.5;
-        }}else{{
+            indicator.style.opacity = '0.3';
+            element.style.opacity = '0.6';
+            layerStates[layerVarName] = false;
+        }} else {{
             {map_js_var}.addLayer(layer);
-            if(el) el.style.opacity = 1.0;
+            indicator.style.opacity = '1';
+            element.style.opacity = '1';
+            layerStates[layerVarName] = true;
         }}
     }}
-    document.getElementById('legend-toggle').addEventListener('click', function(e){{
-        e.preventDefault();
-        var legend = document.getElementById('legend-container');
-        if(legend.style.display === 'none') {{
-            legend.style.display = 'block';
+    
+    function toggleAllLayers() {{
+        allLayersVisible = !allLayersVisible;
+        const categoryItems = document.querySelectorAll('.category-item');
+        
+        categoryItems.forEach(item => {{
+            const layerVar = item.getAttribute('onclick').match(/'([^']+)'/)[1];
+            const layer = window[layerVar];
+            const indicator = item.querySelector('.toggle-indicator');
+            
+            if (allLayersVisible) {{
+                if (!{map_js_var}.hasLayer(layer)) {{
+                    {map_js_var}.addLayer(layer);
+                }}
+                indicator.style.opacity = '1';
+                item.style.opacity = '1';
+            }} else {{
+                if ({map_js_var}.hasLayer(layer)) {{
+                    {map_js_var}.removeLayer(layer);
+                }}
+                indicator.style.opacity = '0.3';
+                item.style.opacity = '0.6';
+            }}
+        }});
+    }}
+    
+    document.getElementById('legend-toggle').addEventListener('click', function(e) {{
+        e.stopPropagation();
+        const panel = document.getElementById('legend-panel');
+        if (panel.style.display === 'none') {{
+            panel.style.display = 'block';
+            panel.style.animation = 'slideInRight 0.3s ease-out';
         }} else {{
-            legend.style.display = 'none';
+            panel.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => panel.style.display = 'none', 300);
         }}
     }});
+    
+    // Animasyonlar
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {{
+            from {{ transform: translateX(100%); opacity: 0; }}
+            to {{ transform: translateX(0); opacity: 1; }}
+        }}
+        @keyframes slideOutRight {{
+            from {{ transform: translateX(0); opacity: 1; }}
+            to {{ transform: translateX(100%); opacity: 0; }}
+        }}
+        .category-item:hover {{
+            transform: translateY(-2px) !important;
+        }}
+    `;
+    document.head.appendChild(style);
     </script>
     """
-    folium_map.get_root().html.add_child(folium.Element(legend_html + toggle_script))
+    
+    folium_map.get_root().html.add_child(folium.Element(legend_html + control_script))
+
+def add_enhanced_map_features(folium_map: folium.Map):
+    """Gelişmiş harita özelliklerini ekler"""
+    
+    # Tam ekran
+    plugins.Fullscreen(
+        position="topleft",
+        title="🔍 Tam Ekran",
+        title_cancel="❌ Tam Ekrandan Çık",
+        force_separate_button=True,
+    ).add_to(folium_map)
+    
+    # Çizim araçları
+    plugins.Draw(
+        export=True, 
+        filename='kapadokya_cizimlerim.geojson',
+        draw_options={
+            'polyline': {'shapeOptions': {'color': '#3498db', 'weight': 4, 'opacity': 0.8}},
+            'polygon': {'shapeOptions': {'color': '#2ecc71', 'fillColor': '#2ecc71', 'fillOpacity': 0.2}},
+            'rectangle': {'shapeOptions': {'color': '#f39c12', 'fillColor': '#f39c12', 'fillOpacity': 0.2}},
+            'circle': {'shapeOptions': {'color': '#e74c3c', 'fillColor': '#e74c3c', 'fillOpacity': 0.2}},
+            'marker': {},
+            'circlemarker': {}
+        },
+        edit_options={'edit': True, 'remove': True}
+    ).add_to(folium_map)
+    
+    # Mesafe ölçüm
+    plugins.MeasureControl(
+        position='bottomleft',
+        primary_length_unit='kilometers',
+        secondary_length_unit='miles',
+        primary_area_unit='sqkilometers',
+        secondary_area_unit='sqmiles',
+        completed_color='#e74c3c',
+        active_color='#3498db'
+    ).add_to(folium_map)
+    
+    # Mini harita
+    plugins.MiniMap(
+        toggle_display=True, 
+        position='bottomright', 
+        zoom_level_offset=-5,
+        width=150, 
+        height=150
+    ).add_to(folium_map)
+    
+    # Gelişmiş katman kontrolü
+    folium.LayerControl(
+        collapsed=False, 
+        position='topright'
+    ).add_to(folium_map)
 
 # --- Ana Fonksiyon ---
 def main(
@@ -395,13 +635,34 @@ def main(
     folium_map = None 
     all_warnings = []
     try:
-        print("✨ Ürgüp Merkezli Rota Oluşturucu Başlatılıyor ✨")
+        print("✨ Kapadokya Gelişmiş Rota Oluşturucu Başlatılıyor ✨")
 
         road_network = load_road_network(graph_filepath, default_place_query_for_download="Ürgüp, Türkiye")
         
-        folium_map = folium.Map(location=URGUP_CENTER_LOCATION, zoom_start=DEFAULT_ZOOM_URGUP, tiles=map_tiles)
+        # Gelişmiş harita oluşturma
+        folium_map = folium.Map(
+            location=URGUP_CENTER_LOCATION, 
+            zoom_start=DEFAULT_ZOOM_URGUP, 
+            tiles=map_tiles,
+            prefer_canvas=True
+        )
         
-        map_title_html = f'<h3 align="center" style="font-size:20px"><b>Kapadokya Rota Haritası: {selected_category.capitalize() if selected_category else "Tüm Kategoriler"}</b></h3>'
+        # Gelişmiş başlık
+        category_display = CATEGORY_STYLES.get(selected_category, {}).get("display_name", selected_category.capitalize()) if selected_category else "🌟 Tüm Kategoriler"
+        map_title_html = f'''
+        <div style="position: fixed; top: 20px; left: 20px; z-index: 1000; 
+                    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.95) 100%);
+                    padding: 15px 25px; border-radius: 15px; 
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.1); backdrop-filter: blur(10px);
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            <h2 style="margin: 0; color: #2c3e50; font-size: 20px; font-weight: 600;">
+                🗺️ Kapadokya Rota Haritası
+            </h2>
+            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 14px;">
+                📍 {category_display}
+            </p>
+        </div>
+        '''
         folium_map.get_root().html.add_child(folium.Element(map_title_html))
 
         categories_to_process = []
@@ -409,133 +670,104 @@ def main(
             if selected_category in POI_DATA:
                 categories_to_process.append(selected_category)
             else:
-                print(f"Uyarı: Seçilen '{selected_category}' kategorisi POI verilerinde bulunamadı.")
+                print(f"⚠️ Seçilen '{selected_category}' kategorisi POI verilerinde bulunamadı.")
         else:
             categories_to_process = list(POI_DATA.keys())
         
-        processed_categories_for_legend = [] # Lejant için gerçekten işlenen kategoriler
-
+        processed_categories_for_legend = []
         total_routes_length = 0
         total_pois_count = 0
 
         for cat_name in categories_to_process:
-            category_pois = POI_DATA.get(cat_name) # .get() kullanımı daha güvenli
+            category_pois = POI_DATA.get(cat_name)
             if not category_pois:
-                print(f"Bilgi: '{cat_name}' kategorisi için POI bulunmuyor veya kategori POI_DATA'da yok, atlanıyor.")
+                print(f"ℹ️ '{cat_name}' kategorisi için POI bulunmuyor, atlanıyor.")
                 continue
 
-            print(f"\n➡️  '{cat_name.capitalize()}' kategorisi işleniyor...")
+            print(f"\n🔄 '{CATEGORY_STYLES.get(cat_name, {}).get('display_name', cat_name.capitalize())}' kategorisi işleniyor...")
             route_len, cat_warnings, layer_var = add_poi_markers_and_route_to_map(folium_map, cat_name, category_pois, road_network)
             all_warnings.extend(cat_warnings)
 
-            if route_len > 0 or len(category_pois) == 1 : # Tek POI varsa da bilgi ver
-                # Rota uzunluğu 0 olabilir (örn: tek POI)
+            if route_len > 0 or len(category_pois) == 1:
                 if len(category_pois) > 1 and route_len > 0:
-                     print(f"   '{cat_name.capitalize()}' rotası haritaya eklendi. Hesaplanan uzunluk: {route_len:.2f} km")
+                    print(f"   ✅ Rota eklendi: {route_len:.2f} km, {len(category_pois)} nokta")
                 elif len(category_pois) == 1:
-                     print(f"   '{cat_name.capitalize()}' kategorisinden 1 nokta haritaya eklendi.")
-                else: # Birden fazla POI var ama rota uzunluğu 0 (örn. tüm POI'ler aynı yerde)
-                     print(f"   '{cat_name.capitalize()}' noktaları haritaya eklendi (rota uzunluğu {route_len:.2f} km).")
+                    print(f"   ✅ 1 nokta eklendi")
+                else:
+                    print(f"   ✅ {len(category_pois)} nokta eklendi (rota: {route_len:.2f} km)")
 
-            else: # Hiç POI yoksa (yukarıdaki `if not category_pois:` ile yakalanmalı ama yine de)
-                 print(f"   '{cat_name.capitalize()}' için gösterilecek nokta bulunamadı veya rota oluşturulamadı.")
-
-            processed_categories_for_legend.append((cat_name, layer_var))  # Bu kategori işlendi ve lejantta olmalı
+            processed_categories_for_legend.append((cat_name, layer_var, route_len, len(category_pois)))
             total_routes_length += route_len
             total_pois_count += len(category_pois)
 
-            if selected_category and cat_name == selected_category: # Sadece seçili kategori için detaylar
-                print(f"\n--- '{selected_category.capitalize()}' Rota Detayları ---")
-                print(f"  Toplam {len(category_pois)} nokta ziyaret edilecek:")
+            if selected_category and cat_name == selected_category:
+                style = CATEGORY_STYLES.get(selected_category, {})
+                display_name = style.get("display_name", selected_category.capitalize())
+                print(f"\n📋 '{display_name}' Rota Detayları:")
+                print(f"   📍 Ziyaret edilecek {len(category_pois)} nokta:")
                 for i, poi_name in enumerate(category_pois.keys()):
-                    print(f"    {i+1}. {poi_name}")
+                    print(f"      {i+1}. {poi_name}")
                 if route_len > 0 and len(category_pois) > 1:
-                    print(f"  Hesaplanan Toplam Rota Uzunluğu: {route_len:.2f} km")
+                    print(f"   📏 Toplam Rota Uzunluğu: {route_len:.2f} km")
+                    print(f"   ⏱️ Tahmini Sürüş Süresi: {int(route_len * 2)} dakika")
         
-        plugins.Fullscreen(
-            position="topright",
-            title="Tam Ekran",
-            title_cancel="Tam Ekrandan Çık",
-            force_separate_button=True,
-        ).add_to(folium_map)
-
-        plugins.Draw(
-            export=True, filename='cizimlerim.geojson',
-            draw_options={
-                'polyline': {'shapeOptions': {'color': '#007bff', 'weight': 5, 'opacity': 0.7}},
-                'polygon': {'shapeOptions': {'color': '#28a745', 'fillColor': '#28a745', 'fillOpacity': 0.3}},
-                'rectangle': {'shapeOptions': {'color': '#ffc107', 'fillColor': '#ffc107', 'fillOpacity': 0.3}},
-                'circle': {'shapeOptions': {'color': '#dc3545', 'fillColor': '#dc3545', 'fillOpacity': 0.3}},
-                'marker': {} 
-            },
-            edit_options={'edit': True, 'remove': True}
-        ).add_to(folium_map)
-
-        plugins.MeasureControl(
-            position='bottomleft',
-            primary_length_unit='kilometers',
-            secondary_length_unit='miles',
-            primary_area_unit='sqmeters',
-            secondary_area_unit='acres'
-        ).add_to(folium_map)
+        # Gelişmiş harita özelliklerini ekle
+        add_enhanced_map_features(folium_map)
         
-        plugins.MiniMap(toggle_display=True, position='bottomright', zoom_level_offset=-4).add_to(folium_map)
-
-
-        if processed_categories_for_legend:  # Sadece gerçekten işlenen kategoriler için lejant
-             add_custom_legend(folium_map, processed_categories_for_legend, folium_map.get_name())
-        
-        folium.LayerControl(collapsed=False, position='topright').add_to(folium_map)
+        # Gelişmiş lejant ve kontrolleri ekle
+        if processed_categories_for_legend:
+            add_enhanced_legend_and_controls(folium_map, processed_categories_for_legend, folium_map.get_name())
 
         folium_map.save(output_filename)
-        print(f"\n✅ Harita başarıyla '{output_filename}' olarak kaydedildi.")
-        print(f"   Toplam {total_pois_count} nokta ve yaklaşık {total_routes_length:.2f} km rota işlendi.")
+        print(f"\n🎉 Harita başarıyla '{output_filename}' olarak kaydedildi!")
+        print(f"   📊 Toplam: {total_pois_count} nokta, {total_routes_length:.2f} km rota")
+        print(f"   ⏱️ Toplam tahmini süre: {int(total_routes_length * 2)} dakika")
 
         if all_warnings:
-            print("\n--- Rota Oluşturma Uyarıları/Bilgileri ---")
-            unique_warnings = sorted(list(set(all_warnings)))
-            for warning in unique_warnings:
-                print(f"   {warning}")
+            print(f"\n⚠️ Rota Oluşturma Bildirimleri ({len(set(all_warnings))} adet):")
+            for warning in sorted(set(all_warnings))[:5]:  # İlk 5 uyarıyı göster
+                print(f"   • {warning}")
+            if len(set(all_warnings)) > 5:
+                print(f"   ... ve {len(set(all_warnings)) - 5} uyarı daha")
         
         if not road_network:
-            print("\n   ⚠️ ÖNEMLİ UYARI: Yol ağı yüklenemediği için tüm rotalar sadece düz çizgilerle (hava mesafesi) gösterilmiştir.")
-        elif any("yol ağında rota bulunamadı" in w for w in all_warnings): # Daha spesifik kontrol
-            print("\n   ⚠️ BİLGİ: Bazı noktalar arası yol ağında rota bulunamadığından düz çizgi kullanılmıştır.")
-        elif road_network and not any("yol ağında rota bulunamadı" in w for w in all_warnings) and total_pois_count > 0:
-             print("\n   ℹ️ Bilgi: Rotalar (uygun olanlar) Ürgüp yol ağı kullanılarak hesaplanmıştır.")
-
+            print("\n   ⚠️ Yol ağı yüklenemediği için rotalar düz çizgi olarak gösterildi")
+        elif road_network and total_pois_count > 0:
+            print("\n   ✅ Rotalar Ürgüp yol ağı kullanılarak hesaplandı")
+            
+        print(f"\n🎯 Kullanım İpuçları:")
+        print(f"   • Sağ üstteki lejanttan kategorileri açıp kapatabilirsiniz")
+        print(f"   • Rota çizgilerine tıklayarak detaylı bilgi alabilirsiniz")
+        print(f"   • Marker'lara tıklayarak nokta detaylarını görebilirsiniz")
+        print(f"   • Sol üstteki araçlarla haritada çizim yapabilirsiniz")
 
     except Exception as e_main:
-        print(f"\n‼️‼️‼️ KRİTİK HATA main fonksiyonunda oluştu ‼️‼️‼️")
-        print(f"Hata Mesajı: {e_main}")
-        print("---------------- Traceback Başlangıcı ----------------")
+        print(f"\n💥 KRİTİK HATA: {e_main}")
         traceback.print_exc()
-        print("----------------- Traceback Sonu -----------------")
         
         if folium_map is not None:
             try:
                 error_html = f"""
-                <div style="position: fixed; top: 10px; left: 10px; width: 300px; 
-                            background-color: #ffdddd; border-left: 6px solid #f44336; 
-                            padding: 10px; z-index: 10000; font-family: Arial, sans-serif;">
-                    <h4>⛔ KRİTİK HATA OLUŞTU ⛔</h4>
-                    <p>Harita oluşturulurken bir sorunla karşılaşıldı.</p>
-                    <p><strong>Detay:</strong> {str(e_main)[:200]}...</p>
-                    <p><small>Lütfen konsol loglarını kontrol edin.</small></p>
+                <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                            background: #fee; border: 2px solid #f66; border-radius: 10px;
+                            padding: 20px; z-index: 10000; font-family: Arial, sans-serif;
+                            box-shadow: 0 8px 32px rgba(244,67,54,0.3);">
+                    <h3>💥 Hata Oluştu</h3>
+                    <p>Harita oluşturulurken bir sorun yaşandı.</p>
+                    <p><strong>Detay:</strong> {str(e_main)[:150]}...</p>
+                    <p><small>Konsol loglarını kontrol edin.</small></p>
                 </div>
                 """
                 folium_map.get_root().html.add_child(folium.Element(error_html))
                 
                 error_map_filename = output_filename.replace(".html", "_HATALI.html")
                 folium_map.save(error_map_filename)
-                print(f"\n⚠️ Hata ayıklama için kısmi harita '{error_map_filename}' olarak kaydedilmeye çalışıldı.")
+                print(f"\n⚠️ Kısmi harita '{error_map_filename}' olarak kaydedildi.")
             except Exception as e_save_error:
-                print(f"⚠️ Hata haritası da kaydedilemedi: {e_save_error}")
-        else:
-            print("\n⚠️ Harita nesnesi oluşturulamadığı için hata haritası kaydedilemedi.")
+                print(f"⚠️ Hata haritası kaydedilemedi: {e_save_error}")
             
     finally:
-        print("\n✨ Program Tamamlandı (veya bir hata ile sonlandı) ✨")
+        print("\n✨ Program tamamlandı ✨")
 
 
 if __name__ == "__main__":
