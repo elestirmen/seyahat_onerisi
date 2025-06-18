@@ -236,7 +236,7 @@ def add_poi_markers_and_route_to_map(
     category_name: str,
     category_pois: Dict[str, Tuple[float, float]],
     road_network: Optional[nx.MultiDiGraph]
-) -> Tuple[float, List[str]]:
+) -> Tuple[float, List[str], str]:
     style = CATEGORY_STYLES.get(category_name, CATEGORY_STYLES["default"])
     feature_group_name = f"{category_name.capitalize()} Noktaları ve Rotası"
     fg = folium.FeatureGroup(name=feature_group_name, show=True) # Varsayılan olarak gösterilsin
@@ -293,24 +293,25 @@ def add_poi_markers_and_route_to_map(
             "locations": route_path_coords,
             "color": style["color"],
             "weight": 5,
-            "opacity": 0.8,
-            "tooltip": route_tooltip
+            "opacity": 0.8
         }
         if is_straight_line_only_route:
             polyline_options["dash_array"] = '10, 5'
             polyline_options["weight"] = 3
             polyline_options["opacity"] = 0.6
-        
-        folium.PolyLine(**polyline_options).add_to(fg)
+
+        poly = folium.PolyLine(**polyline_options)
+        poly.add_child(folium.Popup(route_tooltip))
+        poly.add_to(fg)
     elif len(poi_coords_in_order) == 1:
         # Tek POI varsa rota çizilmez, sadece marker eklenir. generation_warnings bu durumda boş olmalı.
         pass
 
 
     fg.add_to(folium_map)
-    return route_length_km, generation_warnings
+    return route_length_km, generation_warnings, fg.get_name()
 
-def add_custom_legend(folium_map: folium.Map, processed_categories: List[str]):
+def add_custom_legend(folium_map: folium.Map, processed_categories: List[Tuple[str, str]], map_js_var: str):
     if not processed_categories: return
 
     legend_title = '<h4 style="margin-top:0; margin-bottom:5px; text-align:center; font-weight:bold; font-size:16px;">🗺️ Lejant</h4>'
@@ -327,7 +328,7 @@ def add_custom_legend(folium_map: folium.Map, processed_categories: List[str]):
     # Sadece işlenen ve stili olan kategorileri lejantta göster
     categories_in_legend = set()
 
-    for cat_name in processed_categories:
+    for cat_name, layer_var in processed_categories:
         # Eğer kategori zaten lejantta varsa tekrar ekleme (çok olası değil ama önlem)
         if cat_name in categories_in_legend:
             continue
@@ -347,24 +348,39 @@ def add_custom_legend(folium_map: folium.Map, processed_categories: List[str]):
             elif icon_prefix == "glyphicon": # Artık kullanılmıyor ama kodda kalabilir
                  icon_html = f'<i class="glyphicon {icon_name}" style="color:{color}; font-size:14px; margin-right: 8px; vertical-align: middle;"></i>'
             
-            legend_html += f'<li style="margin-bottom: 5px; display: flex; align-items: center;">{icon_html}<span style="font-size:13px;">{cat_name.capitalize()}</span></li>'
+            legend_html += (
+                f'<li onclick="toggleLayer(\'{layer_var}\', this)" '
+                f'style="cursor:pointer; margin-bottom: 5px; display: flex; align-items: center;">'
+                f'{icon_html}<span style="font-size:13px;">{cat_name.capitalize()}</span></li>'
+            )
             categories_in_legend.add(cat_name)
         else:
             print(f"Uyarı: '{cat_name}' kategorisi için lejant stili bulunamadı (default dahil).")
 
 
     legend_html += "</ul></div>"
-    toggle_script = """
+    toggle_script = f"""
     <script>
-    document.getElementById('legend-toggle').addEventListener('click', function(e){
+    function toggleLayer(layerVarName, el){{
+        var layer = window[layerVarName];
+        if(!layer) return;
+        if({map_js_var}.hasLayer(layer)){{
+            {map_js_var}.removeLayer(layer);
+            if(el) el.style.opacity = 0.5;
+        }}else{{
+            {map_js_var}.addLayer(layer);
+            if(el) el.style.opacity = 1.0;
+        }}
+    }}
+    document.getElementById('legend-toggle').addEventListener('click', function(e){{
         e.preventDefault();
         var legend = document.getElementById('legend-container');
-        if(legend.style.display === 'none') {
+        if(legend.style.display === 'none') {{
             legend.style.display = 'block';
-        } else {
+        }} else {{
             legend.style.display = 'none';
-        }
-    });
+        }}
+    }});
     </script>
     """
     folium_map.get_root().html.add_child(folium.Element(legend_html + toggle_script))
@@ -409,7 +425,7 @@ def main(
                 continue
 
             print(f"\n➡️  '{cat_name.capitalize()}' kategorisi işleniyor...")
-            route_len, cat_warnings = add_poi_markers_and_route_to_map(folium_map, cat_name, category_pois, road_network)
+            route_len, cat_warnings, layer_var = add_poi_markers_and_route_to_map(folium_map, cat_name, category_pois, road_network)
             all_warnings.extend(cat_warnings)
 
             if route_len > 0 or len(category_pois) == 1 : # Tek POI varsa da bilgi ver
@@ -424,7 +440,7 @@ def main(
             else: # Hiç POI yoksa (yukarıdaki `if not category_pois:` ile yakalanmalı ama yine de)
                  print(f"   '{cat_name.capitalize()}' için gösterilecek nokta bulunamadı veya rota oluşturulamadı.")
 
-            processed_categories_for_legend.append(cat_name) # Bu kategori işlendi ve lejantta olmalı
+            processed_categories_for_legend.append((cat_name, layer_var))  # Bu kategori işlendi ve lejantta olmalı
             total_routes_length += route_len
             total_pois_count += len(category_pois)
 
@@ -466,8 +482,8 @@ def main(
         plugins.MiniMap(toggle_display=True, position='bottomright', zoom_level_offset=-4).add_to(folium_map)
 
 
-        if processed_categories_for_legend: # Sadece gerçekten işlenen kategoriler için lejant
-             add_custom_legend(folium_map, processed_categories_for_legend)
+        if processed_categories_for_legend:  # Sadece gerçekten işlenen kategoriler için lejant
+             add_custom_legend(folium_map, processed_categories_for_legend, folium_map.get_name())
         
         folium.LayerControl(collapsed=False, position='topright').add_to(folium_map)
 

@@ -18,6 +18,8 @@ python create_urgup_routes.py
 
 Betik çalıştıktan sonra aynı klasörde `urgup_rotalar.html` adında bir dosya oluşur. Bu dosyayı bir tarayıcıda açarak POI noktalarını ve alternatif rotaları görebilirsiniz.
 
+Oluşan harita üzerinde kategoriler için bir lejant bulunur. Lejanttaki maddelere tıklayarak ilgili rota ve işaretçileri gösterip gizleyebilir, rotaların üzerine tıkladığınızda uzunluk bilgisini içeren bir açılır pencere görebilirsiniz.
+
 ### Yol ağı kullanımı
 
 Gerçek yol verisi kullanmak isterseniz `osmnx` kütüphanesi ile Ürgüp'ün yol ağını indirip `urgup_driving.graphml` olarak kaydedebilirsiniz:
