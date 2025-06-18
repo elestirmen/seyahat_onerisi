@@ -14,6 +14,7 @@ URGUP_CENTER_LOCATION = (38.6310, 34.9130) # Ürgüp merkezi
 DEFAULT_ZOOM_URGUP = 13 # Ürgüp merkezine odaklanmak için zoom
 DEFAULT_GRAPH_FILE_URGUP = "urgup_merkez_driving.graphml" # Ürgüp'e özel graph dosyası
 EARTH_RADIUS_KM = 6371.0
+DEFAULT_GRAPH_RADIUS_KM = 10.0  # Varsayılan yarıçap (km)
 
 CATEGORY_STYLES = {
     "gastronomik": {
@@ -70,14 +71,10 @@ POI_DATA: Dict[str, Dict[str, Tuple[float, float]]] = {
         "Fırın Express Pide & Kebap (Ürgüp)": (38.63161, 34.91537),
         "Turasan Şarap Fabrikası Satış Yeri (Ürgüp)": (38.62939, 34.91888),
         "Old Greek House Restaurant (Mustafapaşa)": (38.57741, 34.89868),
-        "Seki Restaurant (Argos in Cappadocia - Uçhisar)": (38.63072, 34.82845),
-        "Lil'a Restaurant (Museum Hotel - Uçhisar)": (38.63191, 34.82682),
-        "Elai Restaurant (Uçhisar)": (38.63143, 34.82939),
-        "Topdeck Cave Restaurant (Göreme)": (38.64242, 34.82765),
-        "Dibek Geleneksel Ev Yemekleri (Göreme)": (38.64278, 34.82817),
-        "Seten Anatolian Cuisine (Göreme)": (38.64125, 34.82870),
-        "Bizim Ev Restaurant (Avanos)": (38.71618, 34.84578),
-        "Uranos Sarıkaya Restaurant (Avanos - Kaya Oyma)": (38.71186, 34.83597),
+        # Yeni eklenen ve koordinatı bulunanlar
+        "Mahzen Şarap Evi (Ürgüp)": (38.63411, 34.91035),
+        "Revithia (Kayakapı - Ürgüp)": (38.62867, 34.91262),
+        "Apetito Restaurant (Ürgüp)": (38.63231, 34.91345),
     },
     "kulturel": {
         "Ürgüp Müzesi": (38.63222, 34.91148),
@@ -87,44 +84,27 @@ POI_DATA: Dict[str, Dict[str, Tuple[float, float]]] = {
         "Gomeda Vadisi (Mustafapaşa Yakını)": (38.58790, 34.89010),
         "Ortahisar Kalesi": (38.63359, 34.85871),
         "Ortahisar Etnografya Müzesi": (38.63375, 34.85813),
-        "Göreme Açık Hava Müzesi": (38.63941, 34.84433),
-        "Tokalı Kilise (Göreme Açık Hava Müzesi Girişi)": (38.63989, 34.84304),
-        "Zelve Açık Hava Müzesi": (38.68733, 34.85781),
-        "Paşabağları (Rahipler Vadisi)": (38.67795, 34.85582),
-        "Çavuşin Köyü Eski Camii ve Harabeler": (38.67691, 34.83385),
-        "Vaftizci Yahya Kilisesi (Çavuşin)": (38.67553, 34.83351),
-        "Derinkuyu Yeraltı Şehri": (38.37292, 34.73391),
-        "Kaymaklı Yeraltı Şehri": (38.45895, 34.75184),
-        "Özkonak Yeraltı Şehri": (38.76174, 34.83972),
         "Sobesos Antik Kenti (Şahinefendi Köyü)": (38.51995, 34.99783),
-        "Kayseri Arkeoloji Müzesi": (38.71861, 35.48833),
+        # Yeni eklenen ve koordinatı bulunanlar
+        "Pancarlık Kilisesi (Ortahisar Yakını)": (38.61469, 34.89302),
+        "Aios Vasilios Kilisesi (Mustafapaşa)": (38.58923, 34.89773),
+        "Kapadokya Sanat ve Tarih Müzesi (Bebek Müzesi - Mustafapaşa)": (38.57493, 34.89635),
     },
     "sanatsal": {
         "El Sanatları Çarşısı (Ürgüp Cumhuriyet Meydanı)": (38.63145, 34.91183),
         "Kapadokya Sanat ve El Sanatları Merkezi (Ürgüp)": (38.63102, 34.91251),
-        "Kapadokya Sanat ve Tarih Müzesi (Bebek Müzesi - Mustafapaşa)": (38.57493, 34.89635),
-        "Guray Seramik Müzesi (Avanos - Yeraltı Seramik Müzesi)": (38.71791, 34.84282),
-        "Chez Galip Saç Müzesi ve Seramik Atölyesi (Avanos)": (38.71895, 34.84334),
-        "Sarıhan Kervansarayı (Avanos Yolu - Derviş Gösterileri)": (38.74495, 34.79981),
-        "Venessa Seramik (Avanos)": (38.71752, 34.84493),
         "Üç Güzeller Peri Bacaları (Ürgüp)": (38.65293, 34.93182),
         "Devrent Vadisi (Hayal Vadisi - Pembe Vadi)": (38.66981, 34.89985),
-        "Güvercinlik Vadisi Manzara Noktası (Uçhisar)": (38.62995, 34.81983),
-        "Aşk Vadisi (Bağlıdere Vadisi) Manzara Noktası": (38.65792, 34.82481),
-        "Kızılçukur Vadisi Gün Batımı İzleme Noktası": (38.64983, 34.85974),
+        "Kızılçukur Vadisi Gün Batımı İzleme Noktası (Ortahisar)": (38.64983, 34.85974),
         "Ortahisar Panorama Seyir Terası": (38.63241, 34.85695),
+         # Yeni eklenen ve koordinatı bulunanlar
+        "Red Valley (Kızıl Vadi) Panorama": (38.65311, 34.86339),
     },
     "doga_macera": {
-        "Ihlara Vadisi Başlangıç Noktası (Ihlara Köyü)": (38.24451, 34.30543),
-        "Güllüdere Vadisi Yürüyüş Parkuru Girişi (Göreme Yakını)": (38.65495, 34.84481),
-        "Zemi Vadisi Yürüyüş Parkuru (Göreme-Uçhisar arası)": (38.63493, 34.83785),
         "Pancarlık Vadisi ve Kilisesi (Ürgüp-Ortahisar arası)": (38.61502, 34.87363),
-        "Soğanlı Vadisi (Yeşilhisar)": (38.41792, 34.99491),
-        "Balon Turu Kalkış Alanları (Göreme çevresi - genel bir nokta)": (38.65005, 34.84998),
-        "ATV Safari Tur Başlangıç Noktası (Göreme/Çavuşin - genel bir nokta)": (38.66996, 34.83997),
-        "At Turu Çiftlikleri (Göreme/Avanos - genel bir nokta)": (38.66501, 34.83502),
-        "Kızılırmak Üzerinde Gondol ve Jet Boat (Avanos Taş Köprü civarı)": (38.71583, 34.84485),
-        "Erciyes Dağı Kayak Merkezi (Kayseri)": (38.54952, 35.48951),
+         # Yeni eklenen ve koordinatı bulunanlar
+        "Manastır Vadisi (Mustafapaşa)": (38.58638, 34.89777),
+        "Ürgüp ATV Turu (Başlangıç noktası)": (38.63851, 34.91352),
     },
     "konaklama": {
         "Kayakapı Premium Caves - Special Class (Ürgüp)": (38.62879, 34.91248),
@@ -132,17 +112,15 @@ POI_DATA: Dict[str, Dict[str, Tuple[float, float]]] = {
         "Esbelli Evi Cave Hotel (Ürgüp)": (38.62985, 34.90882),
         "Dere Suites Cappadocia (Ürgüp)": (38.63273, 34.90841),
         "Seraphim Cave Hotel (Ürgüp)": (38.60942, 34.90375),
-        "Argos in Cappadocia (Uçhisar)": (38.63048, 34.82796),
-        "Museum Hotel - Special Class (Uçhisar)": (38.63177, 34.82648),
-        "CCR Cappadocia Cave Resort & Spa (Uçhisar)": (38.62699, 34.82499),
-        "Sultan Cave Suites (Göreme)": (38.64148, 34.82797),
-        "Mithra Cave Hotel (Göreme)": (38.64079, 34.82848),
-        "Kelebek Special Cave Hotel & Spa (Göreme)": (38.64121, 34.82873),
-        "Traveller's Cave Pension (Göreme)": (38.64042, 34.82743),
         "Hezen Cave Hotel (Ortahisar)": (38.63445, 34.85942),
-        "Gamirasu Cave Hotel (Ayvalı Köyü - Mustafapaşa Yakını)": (38.58291, 34.93485),
+        "Gamirasu Cave Hotel (Ayvalı Köyü)": (38.58291, 34.93485),
+         # Yeni eklenen ve koordinatı bulunanlar
+        "Utopia Cave Cappadocia (Ürgüp)": (38.63583, 34.90562),
+        "Romantic Cave Hotel (Ürgüp)": (38.63511, 34.90618),
+        "Helios Cave Hotel (Mustafapaşa)": (38.58354, 34.89781),
     }
 }
+
 # --- Yardımcı Fonksiyonlar ---
 
 def haversine_distance(coord1: Tuple[float, float], coord2: Tuple[float, float]) -> float:
@@ -154,7 +132,8 @@ def haversine_distance(coord1: Tuple[float, float], coord2: Tuple[float, float])
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return EARTH_RADIUS_KM * c
 
-def load_road_network(graph_file_path: str, default_place_query_for_download: str = "Ürgüp, Türkiye") -> Optional[nx.MultiDiGraph]:
+def load_road_network(graph_file_path: str, radius_km: float = DEFAULT_GRAPH_RADIUS_KM, 
+                     default_place_query_for_download: str = "Ürgüp, Türkiye") -> Optional[nx.MultiDiGraph]:
     if os.path.exists(graph_file_path):
         print(f"'{graph_file_path}' dosyasından yol ağı yükleniyor...")
         try:
@@ -162,17 +141,33 @@ def load_road_network(graph_file_path: str, default_place_query_for_download: st
         except Exception as e:
             print(f"HATA: '{graph_file_path}' yüklenemedi: {e}. Yeniden indirme denenecek.")
     
-    print(f"'{graph_file_path}' bulunamadı/yüklenemedi. '{default_place_query_for_download}' için yol ağı indiriliyor...")
+    print(f"Ürgüp merkezi etrafında {radius_km} km yarıçapta yol ağı indiriliyor...")
     try:
-        G = ox.graph_from_place(default_place_query_for_download, network_type="drive", retain_all=True)
-        print("Yol ağı indirildi. Kaydediliyor...")
+        # Koordinat tabanlı indirme - daha kontrollü
+        center_lat, center_lon = URGUP_CENTER_LOCATION
+        G = ox.graph_from_point(
+            center_point=(center_lat, center_lon), 
+            dist=radius_km * 1000,  # metre cinsinden
+            network_type="drive", 
+            retain_all=True
+        )
+        print(f"Yol ağı indirildi ({radius_km} km yarıçap). Kaydediliyor...")
         ox.save_graphml(G, filepath=graph_file_path)
         print(f"Yol ağı '{graph_file_path}' olarak kaydedildi.")
         return G
     except Exception as e:
-        print(f"KRİTİK HATA: Yol ağı indirilemedi ({default_place_query_for_download}): {e}")
-        print("Rota hesaplamaları sadece düz çizgilerle (hava mesafesi) yapılacaktır.")
-        return None
+        print(f"KRİTİK HATA: Yarıçap tabanlı indirme başarısız. Place tabanlı deneniyor...")
+        try:
+            # Fallback: place tabanlı
+            G = ox.graph_from_place(default_place_query_for_download, network_type="drive", retain_all=True)
+            print("Place tabanlı yol ağı indirildi. Kaydediliyor...")
+            ox.save_graphml(G, filepath=graph_file_path)
+            print(f"Yol ağı '{graph_file_path}' olarak kaydedildi.")
+            return G
+        except Exception as e2:
+            print(f"KRİTİK HATA: Hiçbir yöntemle yol ağı indirilemedi: {e2}")
+            print("Rota hesaplamaları sadece düz çizgilerle yapılacaktır.")
+            return None
 
 def get_shortest_path_route_and_length(
     G: nx.MultiDiGraph,
@@ -630,14 +625,15 @@ def main(
     selected_category: Optional[str],
     output_filename: str,
     graph_filepath: str,
-    map_tiles: str
+    map_tiles: str,
+    radius_km: float = DEFAULT_GRAPH_RADIUS_KM
 ):
     folium_map = None 
     all_warnings = []
     try:
         print("✨ Kapadokya Gelişmiş Rota Oluşturucu Başlatılıyor ✨")
 
-        road_network = load_road_network(graph_filepath, default_place_query_for_download="Ürgüp, Türkiye")
+        road_network = load_road_network(graph_filepath, radius_km)
         
         # Gelişmiş harita oluşturma
         folium_map = folium.Map(
@@ -805,6 +801,14 @@ if __name__ == "__main__":
              "Varsayılan: OpenStreetMap\n"
              "Diğer seçenekler: CartoDB positron, CartoDB dark_matter, Stamen Terrain, vb."
     )
+    parser.add_argument(
+        "-r", "--radius",
+        type=float,
+        default=DEFAULT_GRAPH_RADIUS_KM,
+        help=f"Yol ağı indirme yarıçapı (km).\n"
+             f"Varsayılan: {DEFAULT_GRAPH_RADIUS_KM} km (Ürgüp merkezi etrafında)\n"
+             f"Örnekler: 10 (dar alan), 50 (geniş alan)"
+    )
     
     args = parser.parse_args()
 
@@ -819,5 +823,5 @@ if __name__ == "__main__":
         if not output_file.lower().endswith(".html"):
             output_file += ".html"
             
-    main(args.category, output_file, args.graphfile, args.tiles)
+    main(args.category, output_file, args.graphfile, args.tiles, args.radius)
 
