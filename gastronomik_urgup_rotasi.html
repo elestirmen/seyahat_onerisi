@@ -25,7 +25,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_6fdc1d2a88e8e341b506558cf8d32826 {
+                #map_105be1f1d62048eeb020f41d02f19b92 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -105,15 +105,15 @@
         <!-- İstatistikler -->
         <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e9ecef;">
             <div style="display: flex; justify-content: space-between; font-size: 13px; color: #666;">
-                <span><strong>📍 Toplam Nokta:</strong> 16</span>
-                <span><strong>📏 Toplam Mesafe:</strong> 41.4 km</span>
+                <span><strong>📍 Toplam Nokta:</strong> 11</span>
+                <span><strong>📏 Toplam Mesafe:</strong> 18.2 km</span>
             </div>
         </div>
         
         <!-- Kategoriler -->
         <div id="categories-container" style="padding: 15px; max-height: 400px; overflow-y: auto;">
     
-        <div class="category-item" onclick="toggleLayer('feature_group_93566ca4813aeb4bfb2d4176f4cc8121', this)" 
+        <div class="category-item" onclick="toggleLayer('feature_group_e9d7ce0fc20ae46664667d01e78220fd', this)" 
              style="background: white; margin-bottom: 10px; padding: 12px; border-radius: 10px; 
                     cursor: pointer; transition: all 0.3s; border-left: 4px solid #e74c3c;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.05);"
@@ -133,9 +133,9 @@
             </div>
             
             <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
-                <span>📍 16 nokta</span>
-                <span>📏 41.4 km</span>
-                <span>⏱️ ~82 dk</span>
+                <span>📍 11 nokta</span>
+                <span>📏 18.2 km</span>
+                <span>⏱️ ~36 dk</span>
             </div>
         </div>
         
@@ -161,15 +161,15 @@
         if (!layer) return;
         
         const indicator = element.querySelector('.toggle-indicator');
-        const isVisible = map_6fdc1d2a88e8e341b506558cf8d32826.hasLayer(layer);
+        const isVisible = map_105be1f1d62048eeb020f41d02f19b92.hasLayer(layer);
         
         if (isVisible) {
-            map_6fdc1d2a88e8e341b506558cf8d32826.removeLayer(layer);
+            map_105be1f1d62048eeb020f41d02f19b92.removeLayer(layer);
             indicator.style.opacity = '0.3';
             element.style.opacity = '0.6';
             layerStates[layerVarName] = false;
         } else {
-            map_6fdc1d2a88e8e341b506558cf8d32826.addLayer(layer);
+            map_105be1f1d62048eeb020f41d02f19b92.addLayer(layer);
             indicator.style.opacity = '1';
             element.style.opacity = '1';
             layerStates[layerVarName] = true;
@@ -186,14 +186,14 @@
             const indicator = item.querySelector('.toggle-indicator');
             
             if (allLayersVisible) {
-                if (!map_6fdc1d2a88e8e341b506558cf8d32826.hasLayer(layer)) {
-                    map_6fdc1d2a88e8e341b506558cf8d32826.addLayer(layer);
+                if (!map_105be1f1d62048eeb020f41d02f19b92.hasLayer(layer)) {
+                    map_105be1f1d62048eeb020f41d02f19b92.addLayer(layer);
                 }
                 indicator.style.opacity = '1';
                 item.style.opacity = '1';
             } else {
-                if (map_6fdc1d2a88e8e341b506558cf8d32826.hasLayer(layer)) {
-                    map_6fdc1d2a88e8e341b506558cf8d32826.removeLayer(layer);
+                if (map_105be1f1d62048eeb020f41d02f19b92.hasLayer(layer)) {
+                    map_105be1f1d62048eeb020f41d02f19b92.removeLayer(layer);
                 }
                 indicator.style.opacity = '0.3';
                 item.style.opacity = '0.6';
@@ -232,15 +232,15 @@
     </script>
     
     
-            <div class="folium-map" id="map_6fdc1d2a88e8e341b506558cf8d32826" ></div>
+            <div class="folium-map" id="map_105be1f1d62048eeb020f41d02f19b92" ></div>
         
     <a href='#' id='export'>Export</a>
 </body>
 <script>
     
     
-            var map_6fdc1d2a88e8e341b506558cf8d32826 = L.map(
-                "map_6fdc1d2a88e8e341b506558cf8d32826",
+            var map_105be1f1d62048eeb020f41d02f19b92 = L.map(
+                "map_105be1f1d62048eeb020f41d02f19b92",
                 {
                     center: [38.631, 34.913],
                     crs: L.CRS.EPSG3857,
@@ -257,7 +257,7 @@
 
         
     
-            var tile_layer_f2d4d30ff15557abe0ed9d1b3a773b3e = L.tileLayer(
+            var tile_layer_c082bea865bc08502a3c0055b0c90b69 = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -274,23 +274,23 @@
             );
         
     
-            tile_layer_f2d4d30ff15557abe0ed9d1b3a773b3e.addTo(map_6fdc1d2a88e8e341b506558cf8d32826);
+            tile_layer_c082bea865bc08502a3c0055b0c90b69.addTo(map_105be1f1d62048eeb020f41d02f19b92);
         
     
-            var feature_group_93566ca4813aeb4bfb2d4176f4cc8121 = L.featureGroup(
+            var feature_group_e9d7ce0fc20ae46664667d01e78220fd = L.featureGroup(
                 {
 }
             );
         
     
-            var marker_2c5ba65edefc65bea0cd605d20bdf1c4 = L.marker(
+            var marker_bfc32e409ebde2577a1312cf472d1479 = L.marker(
                 [38.63294, 34.91489],
                 {
 }
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
+            ).addTo(feature_group_e9d7ce0fc20ae46664667d01e78220fd);
         
     
-            var beautify_icon_a7cd607648e1fdd458c828641fe4ddd8 = new L.BeautifyIcon.icon(
+            var beautify_icon_b35670fc7627c12ca88836bfb8fa5fc9 = new L.BeautifyIcon.icon(
                 {
   "icon": "utensils",
   "iconShape": "marker",
@@ -306,27 +306,27 @@
   "iconStyle": "color:white; font-size:14px;",
 }
             )
-            marker_2c5ba65edefc65bea0cd605d20bdf1c4.setIcon(beautify_icon_a7cd607648e1fdd458c828641fe4ddd8);
+            marker_bfc32e409ebde2577a1312cf472d1479.setIcon(beautify_icon_b35670fc7627c12ca88836bfb8fa5fc9);
         
     
-        var popup_cf2b4089e9819d164d03d9d5fcf2f281 = L.popup({
+        var popup_320c813360088d90093840b38f3b2d46 = L.popup({
   "maxWidth": 350,
 });
 
         
             
-                var html_3f1ac8df64425f215d14fee3a8061077 = $(`<div id="html_3f1ac8df64425f215d14fee3a8061077" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Ziggy Cafe & Restaurant (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 1. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63294, 34.91489</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63294,34.91489" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_cf2b4089e9819d164d03d9d5fcf2f281.setContent(html_3f1ac8df64425f215d14fee3a8061077);
+                var html_ff6603c7c39982fce3e7d4c540833b9d = $(`<div id="html_ff6603c7c39982fce3e7d4c540833b9d" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Ziggy Cafe & Restaurant (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 1. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63294, 34.91489</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63294,34.91489" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_320c813360088d90093840b38f3b2d46.setContent(html_ff6603c7c39982fce3e7d4c540833b9d);
             
         
 
-        marker_2c5ba65edefc65bea0cd605d20bdf1c4.bindPopup(popup_cf2b4089e9819d164d03d9d5fcf2f281)
+        marker_bfc32e409ebde2577a1312cf472d1479.bindPopup(popup_320c813360088d90093840b38f3b2d46)
         ;
 
         
     
     
-            marker_2c5ba65edefc65bea0cd605d20bdf1c4.bindTooltip(
+            marker_bfc32e409ebde2577a1312cf472d1479.bindTooltip(
                 `<div>
                      
         <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
@@ -341,17 +341,17 @@
             );
         
     
-                marker_2c5ba65edefc65bea0cd605d20bdf1c4.setIcon(beautify_icon_a7cd607648e1fdd458c828641fe4ddd8);
+                marker_bfc32e409ebde2577a1312cf472d1479.setIcon(beautify_icon_b35670fc7627c12ca88836bfb8fa5fc9);
             
     
-            var marker_6e0b7d0b719d98e31a8b6394711b3bc5 = L.marker(
+            var marker_9a0594afc3002bf3c6fcaa07b0bf1c71 = L.marker(
                 [38.63309, 34.91522],
                 {
 }
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
+            ).addTo(feature_group_e9d7ce0fc20ae46664667d01e78220fd);
         
     
-            var beautify_icon_3a11e3863aea74c8cb4ba9ff8a53f0a8 = new L.BeautifyIcon.icon(
+            var beautify_icon_1adfe26966f0ede7f6e99de47db9c5b1 = new L.BeautifyIcon.icon(
                 {
   "icon": "utensils",
   "iconShape": "marker",
@@ -367,27 +367,27 @@
   "iconStyle": "color:white; font-size:14px;",
 }
             )
-            marker_6e0b7d0b719d98e31a8b6394711b3bc5.setIcon(beautify_icon_3a11e3863aea74c8cb4ba9ff8a53f0a8);
+            marker_9a0594afc3002bf3c6fcaa07b0bf1c71.setIcon(beautify_icon_1adfe26966f0ede7f6e99de47db9c5b1);
         
     
-        var popup_6f4ffa1d1d75b0d8d033ef449989f0cb = L.popup({
+        var popup_610b1a78eb5927c75681b0c29f45f8af = L.popup({
   "maxWidth": 350,
 });
 
         
             
-                var html_35b4ba1048f60f488dccd68d749340c8 = $(`<div id="html_35b4ba1048f60f488dccd68d749340c8" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Dimrit Cafe & Restaurant (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 2. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63309, 34.91522</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63309,34.91522" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_6f4ffa1d1d75b0d8d033ef449989f0cb.setContent(html_35b4ba1048f60f488dccd68d749340c8);
+                var html_531092cad363850bf1dcb78e6982cf4c = $(`<div id="html_531092cad363850bf1dcb78e6982cf4c" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Dimrit Cafe & Restaurant (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 2. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63309, 34.91522</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63309,34.91522" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_610b1a78eb5927c75681b0c29f45f8af.setContent(html_531092cad363850bf1dcb78e6982cf4c);
             
         
 
-        marker_6e0b7d0b719d98e31a8b6394711b3bc5.bindPopup(popup_6f4ffa1d1d75b0d8d033ef449989f0cb)
+        marker_9a0594afc3002bf3c6fcaa07b0bf1c71.bindPopup(popup_610b1a78eb5927c75681b0c29f45f8af)
         ;
 
         
     
     
-            marker_6e0b7d0b719d98e31a8b6394711b3bc5.bindTooltip(
+            marker_9a0594afc3002bf3c6fcaa07b0bf1c71.bindTooltip(
                 `<div>
                      
         <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
@@ -402,17 +402,17 @@
             );
         
     
-                marker_6e0b7d0b719d98e31a8b6394711b3bc5.setIcon(beautify_icon_3a11e3863aea74c8cb4ba9ff8a53f0a8);
+                marker_9a0594afc3002bf3c6fcaa07b0bf1c71.setIcon(beautify_icon_1adfe26966f0ede7f6e99de47db9c5b1);
             
     
-            var marker_46e16432bc52bb2773e3b1be7b9e6f10 = L.marker(
+            var marker_cd494bbf98a6349b8bad2ca8c0796f00 = L.marker(
                 [38.63099, 34.91382],
                 {
 }
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
+            ).addTo(feature_group_e9d7ce0fc20ae46664667d01e78220fd);
         
     
-            var beautify_icon_f445a3ae8e99d64bebcc3fa5cea5efe9 = new L.BeautifyIcon.icon(
+            var beautify_icon_6fa5a41c133d7805e82ae6202a289348 = new L.BeautifyIcon.icon(
                 {
   "icon": "utensils",
   "iconShape": "marker",
@@ -428,27 +428,27 @@
   "iconStyle": "color:white; font-size:14px;",
 }
             )
-            marker_46e16432bc52bb2773e3b1be7b9e6f10.setIcon(beautify_icon_f445a3ae8e99d64bebcc3fa5cea5efe9);
+            marker_cd494bbf98a6349b8bad2ca8c0796f00.setIcon(beautify_icon_6fa5a41c133d7805e82ae6202a289348);
         
     
-        var popup_b721c85b1488e01ae47a73925c2739c9 = L.popup({
+        var popup_dbc271bf2eda57dc801afea0e9f7a764 = L.popup({
   "maxWidth": 350,
 });
 
         
             
-                var html_c3dcef78b18db67b9d7426c15d62dae0 = $(`<div id="html_c3dcef78b18db67b9d7426c15d62dae0" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Sofra Restaurant (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 3. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63099, 34.91382</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63099,34.91382" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_b721c85b1488e01ae47a73925c2739c9.setContent(html_c3dcef78b18db67b9d7426c15d62dae0);
+                var html_f30ad8530c2263000d61dcec9039022b = $(`<div id="html_f30ad8530c2263000d61dcec9039022b" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Sofra Restaurant (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 3. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63099, 34.91382</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63099,34.91382" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_dbc271bf2eda57dc801afea0e9f7a764.setContent(html_f30ad8530c2263000d61dcec9039022b);
             
         
 
-        marker_46e16432bc52bb2773e3b1be7b9e6f10.bindPopup(popup_b721c85b1488e01ae47a73925c2739c9)
+        marker_cd494bbf98a6349b8bad2ca8c0796f00.bindPopup(popup_dbc271bf2eda57dc801afea0e9f7a764)
         ;
 
         
     
     
-            marker_46e16432bc52bb2773e3b1be7b9e6f10.bindTooltip(
+            marker_cd494bbf98a6349b8bad2ca8c0796f00.bindTooltip(
                 `<div>
                      
         <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
@@ -463,17 +463,17 @@
             );
         
     
-                marker_46e16432bc52bb2773e3b1be7b9e6f10.setIcon(beautify_icon_f445a3ae8e99d64bebcc3fa5cea5efe9);
+                marker_cd494bbf98a6349b8bad2ca8c0796f00.setIcon(beautify_icon_6fa5a41c133d7805e82ae6202a289348);
             
     
-            var marker_e41cd6aba6871643cf65f0ffa709e6cb = L.marker(
+            var marker_1bf3e3d32caa29f23d60f09b946a26a1 = L.marker(
                 [38.63188, 34.91307],
                 {
 }
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
+            ).addTo(feature_group_e9d7ce0fc20ae46664667d01e78220fd);
         
     
-            var beautify_icon_ccb1601ac0b171904c213dfc32ba6a2d = new L.BeautifyIcon.icon(
+            var beautify_icon_80f08b7f811c00e163a8ee3e530f7887 = new L.BeautifyIcon.icon(
                 {
   "icon": "utensils",
   "iconShape": "marker",
@@ -489,27 +489,27 @@
   "iconStyle": "color:white; font-size:14px;",
 }
             )
-            marker_e41cd6aba6871643cf65f0ffa709e6cb.setIcon(beautify_icon_ccb1601ac0b171904c213dfc32ba6a2d);
+            marker_1bf3e3d32caa29f23d60f09b946a26a1.setIcon(beautify_icon_80f08b7f811c00e163a8ee3e530f7887);
         
     
-        var popup_b81e6789889412c311d92b19aafdd9cc = L.popup({
+        var popup_1dab6cdfddc5600d5aa655d827f2e9ab = L.popup({
   "maxWidth": 350,
 });
 
         
             
-                var html_e81135c5de2f6eff64742a937db36e7d = $(`<div id="html_e81135c5de2f6eff64742a937db36e7d" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Ehlikeyf Restaurant (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 4. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63188, 34.91307</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63188,34.91307" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_b81e6789889412c311d92b19aafdd9cc.setContent(html_e81135c5de2f6eff64742a937db36e7d);
+                var html_e1d118b3e92182d8ad231fef79f421be = $(`<div id="html_e1d118b3e92182d8ad231fef79f421be" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Ehlikeyf Restaurant (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 4. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63188, 34.91307</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63188,34.91307" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_1dab6cdfddc5600d5aa655d827f2e9ab.setContent(html_e1d118b3e92182d8ad231fef79f421be);
             
         
 
-        marker_e41cd6aba6871643cf65f0ffa709e6cb.bindPopup(popup_b81e6789889412c311d92b19aafdd9cc)
+        marker_1bf3e3d32caa29f23d60f09b946a26a1.bindPopup(popup_1dab6cdfddc5600d5aa655d827f2e9ab)
         ;
 
         
     
     
-            marker_e41cd6aba6871643cf65f0ffa709e6cb.bindTooltip(
+            marker_1bf3e3d32caa29f23d60f09b946a26a1.bindTooltip(
                 `<div>
                      
         <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
@@ -524,17 +524,17 @@
             );
         
     
-                marker_e41cd6aba6871643cf65f0ffa709e6cb.setIcon(beautify_icon_ccb1601ac0b171904c213dfc32ba6a2d);
+                marker_1bf3e3d32caa29f23d60f09b946a26a1.setIcon(beautify_icon_80f08b7f811c00e163a8ee3e530f7887);
             
     
-            var marker_c0ecdd02b1087f266061b802321b4461 = L.marker(
+            var marker_ab10984e9feb68bf220fc79b1c19a10a = L.marker(
                 [38.62883, 34.91285],
                 {
 }
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
+            ).addTo(feature_group_e9d7ce0fc20ae46664667d01e78220fd);
         
     
-            var beautify_icon_d2b1abca6aa727327bc3280fb14d80eb = new L.BeautifyIcon.icon(
+            var beautify_icon_454e50e9b946f949ac45c32e65d17417 = new L.BeautifyIcon.icon(
                 {
   "icon": "utensils",
   "iconShape": "marker",
@@ -550,27 +550,27 @@
   "iconStyle": "color:white; font-size:14px;",
 }
             )
-            marker_c0ecdd02b1087f266061b802321b4461.setIcon(beautify_icon_d2b1abca6aa727327bc3280fb14d80eb);
+            marker_ab10984e9feb68bf220fc79b1c19a10a.setIcon(beautify_icon_454e50e9b946f949ac45c32e65d17417);
         
     
-        var popup_e0931249abff7649365f1d3d5ed01343 = L.popup({
+        var popup_551ace5ef322e32be239735446e3ac55 = L.popup({
   "maxWidth": 350,
 });
 
         
             
-                var html_510c94204e485c12543507fa1b1ce6ce = $(`<div id="html_510c94204e485c12543507fa1b1ce6ce" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Lagarto Restaurant (Kayakapı Premium Caves - Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 5. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.62883, 34.91285</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.62883,34.91285" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_e0931249abff7649365f1d3d5ed01343.setContent(html_510c94204e485c12543507fa1b1ce6ce);
+                var html_2775a4c0e15dc2ec1af09813c260c20b = $(`<div id="html_2775a4c0e15dc2ec1af09813c260c20b" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Lagarto Restaurant (Kayakapı Premium Caves - Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 5. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.62883, 34.91285</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.62883,34.91285" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_551ace5ef322e32be239735446e3ac55.setContent(html_2775a4c0e15dc2ec1af09813c260c20b);
             
         
 
-        marker_c0ecdd02b1087f266061b802321b4461.bindPopup(popup_e0931249abff7649365f1d3d5ed01343)
+        marker_ab10984e9feb68bf220fc79b1c19a10a.bindPopup(popup_551ace5ef322e32be239735446e3ac55)
         ;
 
         
     
     
-            marker_c0ecdd02b1087f266061b802321b4461.bindTooltip(
+            marker_ab10984e9feb68bf220fc79b1c19a10a.bindTooltip(
                 `<div>
                      
         <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
@@ -585,17 +585,17 @@
             );
         
     
-                marker_c0ecdd02b1087f266061b802321b4461.setIcon(beautify_icon_d2b1abca6aa727327bc3280fb14d80eb);
+                marker_ab10984e9feb68bf220fc79b1c19a10a.setIcon(beautify_icon_454e50e9b946f949ac45c32e65d17417);
             
     
-            var marker_df4e3cc07940d19e5ba897035e055a87 = L.marker(
+            var marker_b024064da01ff434d25a54214c87c105 = L.marker(
                 [38.63161, 34.91537],
                 {
 }
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
+            ).addTo(feature_group_e9d7ce0fc20ae46664667d01e78220fd);
         
     
-            var beautify_icon_9cded527f7482d7800c6dd0f86e0a12f = new L.BeautifyIcon.icon(
+            var beautify_icon_27178bcc521891546e1b98777425a21d = new L.BeautifyIcon.icon(
                 {
   "icon": "utensils",
   "iconShape": "marker",
@@ -611,27 +611,27 @@
   "iconStyle": "color:white; font-size:14px;",
 }
             )
-            marker_df4e3cc07940d19e5ba897035e055a87.setIcon(beautify_icon_9cded527f7482d7800c6dd0f86e0a12f);
+            marker_b024064da01ff434d25a54214c87c105.setIcon(beautify_icon_27178bcc521891546e1b98777425a21d);
         
     
-        var popup_c512c82c480e4d78fd94d066350acaa1 = L.popup({
+        var popup_f59e4d50dba23c239bf1324ceb3a53af = L.popup({
   "maxWidth": 350,
 });
 
         
             
-                var html_47ed10593cca80d0eb7f6eb0aba99d63 = $(`<div id="html_47ed10593cca80d0eb7f6eb0aba99d63" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Fırın Express Pide & Kebap (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 6. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63161, 34.91537</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63161,34.91537" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_c512c82c480e4d78fd94d066350acaa1.setContent(html_47ed10593cca80d0eb7f6eb0aba99d63);
+                var html_1bc9b9700c09b62fedf19a81918c2c3b = $(`<div id="html_1bc9b9700c09b62fedf19a81918c2c3b" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Fırın Express Pide & Kebap (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 6. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63161, 34.91537</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63161,34.91537" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_f59e4d50dba23c239bf1324ceb3a53af.setContent(html_1bc9b9700c09b62fedf19a81918c2c3b);
             
         
 
-        marker_df4e3cc07940d19e5ba897035e055a87.bindPopup(popup_c512c82c480e4d78fd94d066350acaa1)
+        marker_b024064da01ff434d25a54214c87c105.bindPopup(popup_f59e4d50dba23c239bf1324ceb3a53af)
         ;
 
         
     
     
-            marker_df4e3cc07940d19e5ba897035e055a87.bindTooltip(
+            marker_b024064da01ff434d25a54214c87c105.bindTooltip(
                 `<div>
                      
         <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
@@ -646,17 +646,17 @@
             );
         
     
-                marker_df4e3cc07940d19e5ba897035e055a87.setIcon(beautify_icon_9cded527f7482d7800c6dd0f86e0a12f);
+                marker_b024064da01ff434d25a54214c87c105.setIcon(beautify_icon_27178bcc521891546e1b98777425a21d);
             
     
-            var marker_68e33d7ba65bf5ef51911b29fa0e1b2d = L.marker(
+            var marker_02d4482f84fbae49f37c77f7a9237931 = L.marker(
                 [38.62939, 34.91888],
                 {
 }
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
+            ).addTo(feature_group_e9d7ce0fc20ae46664667d01e78220fd);
         
     
-            var beautify_icon_2fe9c3c3eb33ff9a352beb8f4a357cf9 = new L.BeautifyIcon.icon(
+            var beautify_icon_fe8314e4cabf7a58f0164a9f8829409f = new L.BeautifyIcon.icon(
                 {
   "icon": "utensils",
   "iconShape": "marker",
@@ -672,27 +672,27 @@
   "iconStyle": "color:white; font-size:14px;",
 }
             )
-            marker_68e33d7ba65bf5ef51911b29fa0e1b2d.setIcon(beautify_icon_2fe9c3c3eb33ff9a352beb8f4a357cf9);
+            marker_02d4482f84fbae49f37c77f7a9237931.setIcon(beautify_icon_fe8314e4cabf7a58f0164a9f8829409f);
         
     
-        var popup_6d2c5d0f47096d17fff7548700c79029 = L.popup({
+        var popup_e04212312a1be8ce0a527eac3e0dfd17 = L.popup({
   "maxWidth": 350,
 });
 
         
             
-                var html_a906405e3889512191c44416e38c730f = $(`<div id="html_a906405e3889512191c44416e38c730f" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Turasan Şarap Fabrikası Satış Yeri (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 7. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.62939, 34.91888</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.62939,34.91888" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_6d2c5d0f47096d17fff7548700c79029.setContent(html_a906405e3889512191c44416e38c730f);
+                var html_ef5f9041b0397cd05e50dc0735e735be = $(`<div id="html_ef5f9041b0397cd05e50dc0735e735be" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Turasan Şarap Fabrikası Satış Yeri (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 7. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.62939, 34.91888</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.62939,34.91888" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_e04212312a1be8ce0a527eac3e0dfd17.setContent(html_ef5f9041b0397cd05e50dc0735e735be);
             
         
 
-        marker_68e33d7ba65bf5ef51911b29fa0e1b2d.bindPopup(popup_6d2c5d0f47096d17fff7548700c79029)
+        marker_02d4482f84fbae49f37c77f7a9237931.bindPopup(popup_e04212312a1be8ce0a527eac3e0dfd17)
         ;
 
         
     
     
-            marker_68e33d7ba65bf5ef51911b29fa0e1b2d.bindTooltip(
+            marker_02d4482f84fbae49f37c77f7a9237931.bindTooltip(
                 `<div>
                      
         <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
@@ -707,17 +707,17 @@
             );
         
     
-                marker_68e33d7ba65bf5ef51911b29fa0e1b2d.setIcon(beautify_icon_2fe9c3c3eb33ff9a352beb8f4a357cf9);
+                marker_02d4482f84fbae49f37c77f7a9237931.setIcon(beautify_icon_fe8314e4cabf7a58f0164a9f8829409f);
             
     
-            var marker_e4f9c7ecbee521ccbe4bc05e5f4a0f99 = L.marker(
+            var marker_afe772e3f06bbffd791358591485d423 = L.marker(
                 [38.57741, 34.89868],
                 {
 }
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
+            ).addTo(feature_group_e9d7ce0fc20ae46664667d01e78220fd);
         
     
-            var beautify_icon_853f81cddde4e81c7014807271b8aa58 = new L.BeautifyIcon.icon(
+            var beautify_icon_2f6d0a79ca24ac40e08c53d2127dbfe7 = new L.BeautifyIcon.icon(
                 {
   "icon": "utensils",
   "iconShape": "marker",
@@ -733,27 +733,27 @@
   "iconStyle": "color:white; font-size:14px;",
 }
             )
-            marker_e4f9c7ecbee521ccbe4bc05e5f4a0f99.setIcon(beautify_icon_853f81cddde4e81c7014807271b8aa58);
+            marker_afe772e3f06bbffd791358591485d423.setIcon(beautify_icon_2f6d0a79ca24ac40e08c53d2127dbfe7);
         
     
-        var popup_ead8d9892c8088e134cba5c249de8b43 = L.popup({
+        var popup_2696be49c9259d06c4fc31744a9d7b6c = L.popup({
   "maxWidth": 350,
 });
 
         
             
-                var html_187041a41442a8a16077e7693f595763 = $(`<div id="html_187041a41442a8a16077e7693f595763" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Old Greek House Restaurant (Mustafapaşa)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 8. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.57741, 34.89868</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.57741,34.89868" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_ead8d9892c8088e134cba5c249de8b43.setContent(html_187041a41442a8a16077e7693f595763);
+                var html_6e49f94e8ecf8c4bafc06608df0f9095 = $(`<div id="html_6e49f94e8ecf8c4bafc06608df0f9095" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Old Greek House Restaurant (Mustafapaşa)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 8. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.57741, 34.89868</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.57741,34.89868" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_2696be49c9259d06c4fc31744a9d7b6c.setContent(html_6e49f94e8ecf8c4bafc06608df0f9095);
             
         
 
-        marker_e4f9c7ecbee521ccbe4bc05e5f4a0f99.bindPopup(popup_ead8d9892c8088e134cba5c249de8b43)
+        marker_afe772e3f06bbffd791358591485d423.bindPopup(popup_2696be49c9259d06c4fc31744a9d7b6c)
         ;
 
         
     
     
-            marker_e4f9c7ecbee521ccbe4bc05e5f4a0f99.bindTooltip(
+            marker_afe772e3f06bbffd791358591485d423.bindTooltip(
                 `<div>
                      
         <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
@@ -768,17 +768,17 @@
             );
         
     
-                marker_e4f9c7ecbee521ccbe4bc05e5f4a0f99.setIcon(beautify_icon_853f81cddde4e81c7014807271b8aa58);
+                marker_afe772e3f06bbffd791358591485d423.setIcon(beautify_icon_2f6d0a79ca24ac40e08c53d2127dbfe7);
             
     
-            var marker_b50c0687ca549a7a5f556e613e9b7e69 = L.marker(
-                [38.63072, 34.82845],
+            var marker_4f62d2101faf0748cd4bd99f0a8a1901 = L.marker(
+                [38.63411, 34.91035],
                 {
 }
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
+            ).addTo(feature_group_e9d7ce0fc20ae46664667d01e78220fd);
         
     
-            var beautify_icon_5bfec15f9d21c3b513f2b55464fb153e = new L.BeautifyIcon.icon(
+            var beautify_icon_ca005ce0c94d0e59f92cac0862417172 = new L.BeautifyIcon.icon(
                 {
   "icon": "utensils",
   "iconShape": "marker",
@@ -794,31 +794,31 @@
   "iconStyle": "color:white; font-size:14px;",
 }
             )
-            marker_b50c0687ca549a7a5f556e613e9b7e69.setIcon(beautify_icon_5bfec15f9d21c3b513f2b55464fb153e);
+            marker_4f62d2101faf0748cd4bd99f0a8a1901.setIcon(beautify_icon_ca005ce0c94d0e59f92cac0862417172);
         
     
-        var popup_097825a32a0d4255364e4551f7ea4cfb = L.popup({
+        var popup_cf3b13d677dcd065db96a7febc2da694 = L.popup({
   "maxWidth": 350,
 });
 
         
             
-                var html_ab3ef9496ee12729941686856fa4da19 = $(`<div id="html_ab3ef9496ee12729941686856fa4da19" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Seki Restaurant (Argos in Cappadocia - Uçhisar)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 9. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63072, 34.82845</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63072,34.82845" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_097825a32a0d4255364e4551f7ea4cfb.setContent(html_ab3ef9496ee12729941686856fa4da19);
+                var html_b6b54997ca7adedc1977d0949041adc7 = $(`<div id="html_b6b54997ca7adedc1977d0949041adc7" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Mahzen Şarap Evi (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 9. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63411, 34.91035</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63411,34.91035" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_cf3b13d677dcd065db96a7febc2da694.setContent(html_b6b54997ca7adedc1977d0949041adc7);
             
         
 
-        marker_b50c0687ca549a7a5f556e613e9b7e69.bindPopup(popup_097825a32a0d4255364e4551f7ea4cfb)
+        marker_4f62d2101faf0748cd4bd99f0a8a1901.bindPopup(popup_cf3b13d677dcd065db96a7febc2da694)
         ;
 
         
     
     
-            marker_b50c0687ca549a7a5f556e613e9b7e69.bindTooltip(
+            marker_4f62d2101faf0748cd4bd99f0a8a1901.bindTooltip(
                 `<div>
                      
         <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
-            9. Seki Restaurant (Argos in Cappadocia - Uçhisar)<br>
+            9. Mahzen Şarap Evi (Ürgüp)<br>
             <small style="color: #666;">🍽️ Gastronomik</small>
         </div>
         
@@ -829,17 +829,17 @@
             );
         
     
-                marker_b50c0687ca549a7a5f556e613e9b7e69.setIcon(beautify_icon_5bfec15f9d21c3b513f2b55464fb153e);
+                marker_4f62d2101faf0748cd4bd99f0a8a1901.setIcon(beautify_icon_ca005ce0c94d0e59f92cac0862417172);
             
     
-            var marker_67c6da9ff58e78705b9f9d39ac687d9e = L.marker(
-                [38.63191, 34.82682],
+            var marker_83f3f86de6a780d7cb618fc7ae40513f = L.marker(
+                [38.62867, 34.91262],
                 {
 }
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
+            ).addTo(feature_group_e9d7ce0fc20ae46664667d01e78220fd);
         
     
-            var beautify_icon_8f37aebf2501dc35ffaa2506a8c1ce3b = new L.BeautifyIcon.icon(
+            var beautify_icon_40062f0736db6b23915c5d9f7bc70b5e = new L.BeautifyIcon.icon(
                 {
   "icon": "utensils",
   "iconShape": "marker",
@@ -855,31 +855,31 @@
   "iconStyle": "color:white; font-size:14px;",
 }
             )
-            marker_67c6da9ff58e78705b9f9d39ac687d9e.setIcon(beautify_icon_8f37aebf2501dc35ffaa2506a8c1ce3b);
+            marker_83f3f86de6a780d7cb618fc7ae40513f.setIcon(beautify_icon_40062f0736db6b23915c5d9f7bc70b5e);
         
     
-        var popup_454e0a97179989d750231b12e25712b1 = L.popup({
+        var popup_ae21c884ca2caa35123908392f787287 = L.popup({
   "maxWidth": 350,
 });
 
         
             
-                var html_1cdb9a8048e33514029dfc450cb78291 = $(`<div id="html_1cdb9a8048e33514029dfc450cb78291" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Lil'a Restaurant (Museum Hotel - Uçhisar)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 10. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63191, 34.82682</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63191,34.82682" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_454e0a97179989d750231b12e25712b1.setContent(html_1cdb9a8048e33514029dfc450cb78291);
+                var html_d0f00319d6a08dc8a12fb02a70ad017b = $(`<div id="html_d0f00319d6a08dc8a12fb02a70ad017b" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Revithia (Kayakapı - Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 10. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.62867, 34.91262</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.62867,34.91262" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_ae21c884ca2caa35123908392f787287.setContent(html_d0f00319d6a08dc8a12fb02a70ad017b);
             
         
 
-        marker_67c6da9ff58e78705b9f9d39ac687d9e.bindPopup(popup_454e0a97179989d750231b12e25712b1)
+        marker_83f3f86de6a780d7cb618fc7ae40513f.bindPopup(popup_ae21c884ca2caa35123908392f787287)
         ;
 
         
     
     
-            marker_67c6da9ff58e78705b9f9d39ac687d9e.bindTooltip(
+            marker_83f3f86de6a780d7cb618fc7ae40513f.bindTooltip(
                 `<div>
                      
         <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
-            10. Lil'a Restaurant (Museum Hotel - Uçhisar)<br>
+            10. Revithia (Kayakapı - Ürgüp)<br>
             <small style="color: #666;">🍽️ Gastronomik</small>
         </div>
         
@@ -890,17 +890,17 @@
             );
         
     
-                marker_67c6da9ff58e78705b9f9d39ac687d9e.setIcon(beautify_icon_8f37aebf2501dc35ffaa2506a8c1ce3b);
+                marker_83f3f86de6a780d7cb618fc7ae40513f.setIcon(beautify_icon_40062f0736db6b23915c5d9f7bc70b5e);
             
     
-            var marker_b426c9713d14ff4848bea31c5197b428 = L.marker(
-                [38.63143, 34.82939],
+            var marker_818420c7e06cae8f370b61f9cd2d5350 = L.marker(
+                [38.63231, 34.91345],
                 {
 }
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
+            ).addTo(feature_group_e9d7ce0fc20ae46664667d01e78220fd);
         
     
-            var beautify_icon_b70fc4c835a27d2daa53f4d717b4b58c = new L.BeautifyIcon.icon(
+            var beautify_icon_21410b2eb0d2d84f67c06d9c8860bbe0 = new L.BeautifyIcon.icon(
                 {
   "icon": "utensils",
   "iconShape": "marker",
@@ -916,31 +916,31 @@
   "iconStyle": "color:white; font-size:14px;",
 }
             )
-            marker_b426c9713d14ff4848bea31c5197b428.setIcon(beautify_icon_b70fc4c835a27d2daa53f4d717b4b58c);
+            marker_818420c7e06cae8f370b61f9cd2d5350.setIcon(beautify_icon_21410b2eb0d2d84f67c06d9c8860bbe0);
         
     
-        var popup_b730f627fb4393fc069c395106d45ae8 = L.popup({
+        var popup_ec54243c0c1a18c8d37055a3cdb6869d = L.popup({
   "maxWidth": 350,
 });
 
         
             
-                var html_db6b4627bc2ff9bca5732022203e3a5e = $(`<div id="html_db6b4627bc2ff9bca5732022203e3a5e" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Elai Restaurant (Uçhisar)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 11. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63143, 34.82939</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63143,34.82939" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_b730f627fb4393fc069c395106d45ae8.setContent(html_db6b4627bc2ff9bca5732022203e3a5e);
+                var html_36d2ec1c1a3b10954561e77a8edea076 = $(`<div id="html_36d2ec1c1a3b10954561e77a8edea076" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Apetito Restaurant (Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 11. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63231, 34.91345</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63231,34.91345" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_ec54243c0c1a18c8d37055a3cdb6869d.setContent(html_36d2ec1c1a3b10954561e77a8edea076);
             
         
 
-        marker_b426c9713d14ff4848bea31c5197b428.bindPopup(popup_b730f627fb4393fc069c395106d45ae8)
+        marker_818420c7e06cae8f370b61f9cd2d5350.bindPopup(popup_ec54243c0c1a18c8d37055a3cdb6869d)
         ;
 
         
     
     
-            marker_b426c9713d14ff4848bea31c5197b428.bindTooltip(
+            marker_818420c7e06cae8f370b61f9cd2d5350.bindTooltip(
                 `<div>
                      
         <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
-            11. Elai Restaurant (Uçhisar)<br>
+            11. Apetito Restaurant (Ürgüp)<br>
             <small style="color: #666;">🍽️ Gastronomik</small>
         </div>
         
@@ -951,340 +951,35 @@
             );
         
     
-                marker_b426c9713d14ff4848bea31c5197b428.setIcon(beautify_icon_b70fc4c835a27d2daa53f4d717b4b58c);
+                marker_818420c7e06cae8f370b61f9cd2d5350.setIcon(beautify_icon_21410b2eb0d2d84f67c06d9c8860bbe0);
             
     
-            var marker_bf0f4e46f4d0af505c528327f34dfc1b = L.marker(
-                [38.64242, 34.82765],
-                {
-}
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
-        
-    
-            var beautify_icon_195eeb2b176002692b52f0ce3beb75da = new L.BeautifyIcon.icon(
-                {
-  "icon": "utensils",
-  "iconShape": "marker",
-  "borderWidth": 3,
-  "borderColor": "#e74c3c",
-  "textColor": "white",
-  "backgroundColor": "#e74c3c",
-  "innerIconStyle": "",
-  "spin": false,
-  "isAlphaNumericIcon": true,
-  "text": 12,
-  "iconPrefix": "fa",
-  "iconStyle": "color:white; font-size:14px;",
-}
-            )
-            marker_bf0f4e46f4d0af505c528327f34dfc1b.setIcon(beautify_icon_195eeb2b176002692b52f0ce3beb75da);
-        
-    
-        var popup_a74d028add3a020c4ad0d5e21838e673 = L.popup({
-  "maxWidth": 350,
-});
-
-        
-            
-                var html_6b94e464537cc0a5cf7be86ea91389fb = $(`<div id="html_6b94e464537cc0a5cf7be86ea91389fb" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Topdeck Cave Restaurant (Göreme)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 12. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.64242, 34.82765</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.64242,34.82765" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_a74d028add3a020c4ad0d5e21838e673.setContent(html_6b94e464537cc0a5cf7be86ea91389fb);
-            
-        
-
-        marker_bf0f4e46f4d0af505c528327f34dfc1b.bindPopup(popup_a74d028add3a020c4ad0d5e21838e673)
-        ;
-
-        
-    
-    
-            marker_bf0f4e46f4d0af505c528327f34dfc1b.bindTooltip(
-                `<div>
-                     
-        <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
-            12. Topdeck Cave Restaurant (Göreme)<br>
-            <small style="color: #666;">🍽️ Gastronomik</small>
-        </div>
-        
-                 </div>`,
-                {
-  "sticky": true,
-}
-            );
-        
-    
-                marker_bf0f4e46f4d0af505c528327f34dfc1b.setIcon(beautify_icon_195eeb2b176002692b52f0ce3beb75da);
-            
-    
-            var marker_20e6459c2c4876a082a2719a6b171eca = L.marker(
-                [38.64278, 34.82817],
-                {
-}
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
-        
-    
-            var beautify_icon_c0fa7969dad51b260587e3eb8f729a77 = new L.BeautifyIcon.icon(
-                {
-  "icon": "utensils",
-  "iconShape": "marker",
-  "borderWidth": 3,
-  "borderColor": "#e74c3c",
-  "textColor": "white",
-  "backgroundColor": "#e74c3c",
-  "innerIconStyle": "",
-  "spin": false,
-  "isAlphaNumericIcon": true,
-  "text": 13,
-  "iconPrefix": "fa",
-  "iconStyle": "color:white; font-size:14px;",
-}
-            )
-            marker_20e6459c2c4876a082a2719a6b171eca.setIcon(beautify_icon_c0fa7969dad51b260587e3eb8f729a77);
-        
-    
-        var popup_9481276cbf67ea5ab8f7b77d1d6d2012 = L.popup({
-  "maxWidth": 350,
-});
-
-        
-            
-                var html_ec0c05d2d54dbe469a039877c0c48fa1 = $(`<div id="html_ec0c05d2d54dbe469a039877c0c48fa1" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Dibek Geleneksel Ev Yemekleri (Göreme)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 13. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.64278, 34.82817</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.64278,34.82817" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_9481276cbf67ea5ab8f7b77d1d6d2012.setContent(html_ec0c05d2d54dbe469a039877c0c48fa1);
-            
-        
-
-        marker_20e6459c2c4876a082a2719a6b171eca.bindPopup(popup_9481276cbf67ea5ab8f7b77d1d6d2012)
-        ;
-
-        
-    
-    
-            marker_20e6459c2c4876a082a2719a6b171eca.bindTooltip(
-                `<div>
-                     
-        <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
-            13. Dibek Geleneksel Ev Yemekleri (Göreme)<br>
-            <small style="color: #666;">🍽️ Gastronomik</small>
-        </div>
-        
-                 </div>`,
-                {
-  "sticky": true,
-}
-            );
-        
-    
-                marker_20e6459c2c4876a082a2719a6b171eca.setIcon(beautify_icon_c0fa7969dad51b260587e3eb8f729a77);
-            
-    
-            var marker_28335e48d1e505b9663510001fb537b6 = L.marker(
-                [38.64125, 34.8287],
-                {
-}
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
-        
-    
-            var beautify_icon_db96b00388061901b37c29d3daeaba7f = new L.BeautifyIcon.icon(
-                {
-  "icon": "utensils",
-  "iconShape": "marker",
-  "borderWidth": 3,
-  "borderColor": "#e74c3c",
-  "textColor": "white",
-  "backgroundColor": "#e74c3c",
-  "innerIconStyle": "",
-  "spin": false,
-  "isAlphaNumericIcon": true,
-  "text": 14,
-  "iconPrefix": "fa",
-  "iconStyle": "color:white; font-size:14px;",
-}
-            )
-            marker_28335e48d1e505b9663510001fb537b6.setIcon(beautify_icon_db96b00388061901b37c29d3daeaba7f);
-        
-    
-        var popup_70a08b5c0759d3bcc689cd6cb20fc9dc = L.popup({
-  "maxWidth": 350,
-});
-
-        
-            
-                var html_920ecf40a648dbd252abee6ba0c4075e = $(`<div id="html_920ecf40a648dbd252abee6ba0c4075e" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Seten Anatolian Cuisine (Göreme)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 14. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.64125, 34.82870</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.64125,34.8287" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_70a08b5c0759d3bcc689cd6cb20fc9dc.setContent(html_920ecf40a648dbd252abee6ba0c4075e);
-            
-        
-
-        marker_28335e48d1e505b9663510001fb537b6.bindPopup(popup_70a08b5c0759d3bcc689cd6cb20fc9dc)
-        ;
-
-        
-    
-    
-            marker_28335e48d1e505b9663510001fb537b6.bindTooltip(
-                `<div>
-                     
-        <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
-            14. Seten Anatolian Cuisine (Göreme)<br>
-            <small style="color: #666;">🍽️ Gastronomik</small>
-        </div>
-        
-                 </div>`,
-                {
-  "sticky": true,
-}
-            );
-        
-    
-                marker_28335e48d1e505b9663510001fb537b6.setIcon(beautify_icon_db96b00388061901b37c29d3daeaba7f);
-            
-    
-            var marker_d135926ff0a43c0b8cf8c505068fff31 = L.marker(
-                [38.71618, 34.84578],
-                {
-}
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
-        
-    
-            var beautify_icon_22377227346776034819d74e7db99bc5 = new L.BeautifyIcon.icon(
-                {
-  "icon": "utensils",
-  "iconShape": "marker",
-  "borderWidth": 3,
-  "borderColor": "#e74c3c",
-  "textColor": "white",
-  "backgroundColor": "#e74c3c",
-  "innerIconStyle": "",
-  "spin": false,
-  "isAlphaNumericIcon": true,
-  "text": 15,
-  "iconPrefix": "fa",
-  "iconStyle": "color:white; font-size:14px;",
-}
-            )
-            marker_d135926ff0a43c0b8cf8c505068fff31.setIcon(beautify_icon_22377227346776034819d74e7db99bc5);
-        
-    
-        var popup_ee8fb2d01c700d1d0150aba5a65a1313 = L.popup({
-  "maxWidth": 350,
-});
-
-        
-            
-                var html_1e8a0bb65cefb9ee71c14c6cffc17b2e = $(`<div id="html_1e8a0bb65cefb9ee71c14c6cffc17b2e" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Bizim Ev Restaurant (Avanos)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 15. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.71618, 34.84578</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.71618,34.84578" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_ee8fb2d01c700d1d0150aba5a65a1313.setContent(html_1e8a0bb65cefb9ee71c14c6cffc17b2e);
-            
-        
-
-        marker_d135926ff0a43c0b8cf8c505068fff31.bindPopup(popup_ee8fb2d01c700d1d0150aba5a65a1313)
-        ;
-
-        
-    
-    
-            marker_d135926ff0a43c0b8cf8c505068fff31.bindTooltip(
-                `<div>
-                     
-        <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
-            15. Bizim Ev Restaurant (Avanos)<br>
-            <small style="color: #666;">🍽️ Gastronomik</small>
-        </div>
-        
-                 </div>`,
-                {
-  "sticky": true,
-}
-            );
-        
-    
-                marker_d135926ff0a43c0b8cf8c505068fff31.setIcon(beautify_icon_22377227346776034819d74e7db99bc5);
-            
-    
-            var marker_7b03a25004f2b285358962a7914846f9 = L.marker(
-                [38.71186, 34.83597],
-                {
-}
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
-        
-    
-            var beautify_icon_6bf7dd94a9243c1757cb277199ff25b3 = new L.BeautifyIcon.icon(
-                {
-  "icon": "utensils",
-  "iconShape": "marker",
-  "borderWidth": 3,
-  "borderColor": "#e74c3c",
-  "textColor": "white",
-  "backgroundColor": "#e74c3c",
-  "innerIconStyle": "",
-  "spin": false,
-  "isAlphaNumericIcon": true,
-  "text": 16,
-  "iconPrefix": "fa",
-  "iconStyle": "color:white; font-size:14px;",
-}
-            )
-            marker_7b03a25004f2b285358962a7914846f9.setIcon(beautify_icon_6bf7dd94a9243c1757cb277199ff25b3);
-        
-    
-        var popup_1394ee1c58b09a72ba20c5ce55e71bef = L.popup({
-  "maxWidth": 350,
-});
-
-        
-            
-                var html_231cfd83ac4c79b11b5180a86e034b1c = $(`<div id="html_231cfd83ac4c79b11b5180a86e034b1c" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #e74c3c; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #e74c3c; font-size: 16px;">                     utensils Uranos Sarıkaya Restaurant (Avanos - Kaya Oyma)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Restoranlar, kafeler ve lezzet noktaları</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 16. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🍽️ Gastronomik</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.71186, 34.83597</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.71186,34.83597" target="_blank" rel="noopener noreferrer"                     style="background-color: #e74c3c; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
-                popup_1394ee1c58b09a72ba20c5ce55e71bef.setContent(html_231cfd83ac4c79b11b5180a86e034b1c);
-            
-        
-
-        marker_7b03a25004f2b285358962a7914846f9.bindPopup(popup_1394ee1c58b09a72ba20c5ce55e71bef)
-        ;
-
-        
-    
-    
-            marker_7b03a25004f2b285358962a7914846f9.bindTooltip(
-                `<div>
-                     
-        <div style="font-weight: bold; color: #e74c3c; font-size: 14px;">
-            16. Uranos Sarıkaya Restaurant (Avanos - Kaya Oyma)<br>
-            <small style="color: #666;">🍽️ Gastronomik</small>
-        </div>
-        
-                 </div>`,
-                {
-  "sticky": true,
-}
-            );
-        
-    
-                marker_7b03a25004f2b285358962a7914846f9.setIcon(beautify_icon_6bf7dd94a9243c1757cb277199ff25b3);
-            
-    
-            var poly_line_9d935a3caf286b542091b663b4638ec9 = L.polyline(
-                [[38.63294, 34.91489], [38.6326084, 34.9147569], [38.6326684, 34.9141628], [38.6332056, 34.9140326], [38.6333734, 34.915095], [38.63309, 34.91522], [38.6333734, 34.915095], [38.6332056, 34.9140326], [38.6326684, 34.9141628], [38.6326084, 34.9147569], [38.6324146, 34.9147847], [38.6318685, 34.91361], [38.6318258, 34.913526], [38.6312949, 34.9138307], [38.6312144, 34.9139212], [38.63099, 34.91382], [38.6312144, 34.9139212], [38.6313234, 34.9139181], [38.6318685, 34.91361], [38.6318258, 34.913526], [38.63188, 34.91307], [38.6318258, 34.913526], [38.6313269, 34.9125185], [38.6311224, 34.9121398], [38.6306812, 34.9111761], [38.6306369, 34.9110326], [38.6305673, 34.9103836], [38.6304043, 34.9101897], [38.6299985, 34.9103808], [38.6292326, 34.9105302], [38.6291261, 34.9105916], [38.6289833, 34.9107031], [38.6289801, 34.911056], [38.6290123, 34.9114323], [38.628511, 34.9122933], [38.62883, 34.91285], [38.628511, 34.9122933], [38.6290123, 34.9114323], [38.6289801, 34.911056], [38.6289833, 34.9107031], [38.6291261, 34.9105916], [38.6292326, 34.9105302], [38.6299985, 34.9103808], [38.6300513, 34.9115696], [38.6312949, 34.9138307], [38.6313234, 34.9139181], [38.6317575, 34.915305], [38.63161, 34.91537], [38.6317575, 34.915305], [38.6318912, 34.9168063], [38.6310082, 34.9168519], [38.6296554, 34.916851], [38.6290768, 34.9168512], [38.629065, 34.9175303], [38.629058, 34.9183066], [38.6289763, 34.9190793], [38.62939, 34.91888], [38.6289763, 34.9190793], [38.6281768, 34.9190929], [38.6273307, 34.9190716], [38.6273652, 34.9183346], [38.6265023, 34.9182967], [38.6265069, 34.9175817], [38.6265119, 34.9168168], [38.6255838, 34.9168364], [38.6249421, 34.9168481], [38.6248004, 34.9148177], [38.6248036, 34.9147739], [38.6245861, 34.9147369], [38.6242448, 34.9146789], [38.623705, 34.914581], [38.6233618, 34.9145188], [38.6230392, 34.9144558], [38.6223433, 34.9143198], [38.622211, 34.914294], [38.6032275, 34.9080177], [38.6015456, 34.9068581], [38.5995038, 34.9068265], [38.5930572, 34.9053518], [38.5877987, 34.9009479], [38.5861823, 34.8995749], [38.5858283, 34.8993423], [38.5856665, 34.899236], [38.5855463, 34.899157], [38.5849149, 34.8987031], [38.5843088, 34.8983403], [38.5839162, 34.8982327], [38.5836533, 34.898262], [38.5834747, 34.8981449], [38.5833193, 34.8978627], [38.5832615, 34.8973887], [38.5829631, 34.896832], [38.5820207, 34.8964782], [38.5806319, 34.8961746], [38.5805571, 34.8961918], [38.5802494, 34.8962627], [38.578572, 34.8961704], [38.5784832, 34.8961381], [38.57741, 34.89868], [38.5784832, 34.8961381], [38.578572, 34.8961704], [38.5802494, 34.8962627], [38.5805571, 34.8961918], [38.5806319, 34.8961746], [38.5820207, 34.8964782], [38.5829631, 34.896832], [38.5832615, 34.8973887], [38.5833193, 34.8978627], [38.5834747, 34.8981449], [38.5836533, 34.898262], [38.5838381, 34.8983819], [38.583866, 34.8984501], [38.5839734, 34.8984594], [38.5840194, 34.8984093], [38.5843088, 34.8983403], [38.5849149, 34.8987031], [38.5855463, 34.899157], [38.5856665, 34.899236], [38.5858283, 34.8993423], [38.5861823, 34.8995749], [38.5877987, 34.9009479], [38.5930572, 34.9053518], [38.5995038, 34.9068265], [38.6015456, 34.9068581], [38.6032275, 34.9080177], [38.622211, 34.914294], [38.6223433, 34.9143198], [38.6230392, 34.9144558], [38.6233618, 34.9145188], [38.6247973, 34.9124448], [38.6249149, 34.9120009], [38.6249676, 34.911913], [38.6251111, 34.9103142], [38.6251281, 34.9098082], [38.6264231, 34.9063053], [38.6275489, 34.9056373], [38.628197, 34.9053317], [38.6289474, 34.9032729], [38.6327957, 34.8989386], [38.6335403, 34.8993281], [38.6337027, 34.8995632], [38.6338082, 34.8989734], [38.633746, 34.894454], [38.6354505, 34.8900212], [38.6345089, 34.8635946], [38.6343785, 34.8632533], [38.6318535, 34.8583056], [38.6314744, 34.8576752], [38.6313137, 34.8574621], [38.628711, 34.8543363], [38.6277631, 34.853317], [38.6198836, 34.8466666], [38.63072, 34.82845], [38.63191, 34.82682], [38.63143, 34.82939], [38.6198836, 34.8466666], [38.6197999, 34.8467538], [38.6223879, 34.8489724], [38.6249591, 34.8511284], [38.6255371, 34.851613], [38.6274972, 34.8532661], [38.6276548, 34.8534017], [38.6277631, 34.853317], [38.64242, 34.82765], [38.64278, 34.82817], [38.64125, 34.8287], [38.6277631, 34.853317], [38.6276548, 34.8534017], [38.6277517, 34.8534852], [38.6286563, 34.8544568], [38.629891, 34.8559029], [38.6311038, 34.8576238], [38.631229, 34.8578413], [38.6339104, 34.8628098], [38.6340934, 34.8632582], [38.6342155, 34.8636083], [38.6354505, 34.8900212], [38.633746, 34.894454], [38.6335608, 34.8984468], [38.6335508, 34.8988771], [38.6335403, 34.8993281], [38.6337027, 34.8995632], [38.6357041, 34.9009046], [38.6458981, 34.9057194], [38.6454995, 34.910283], [38.6455267, 34.9105708], [38.6455629, 34.9107879], [38.6456871, 34.9112506], [38.64591, 34.9119575], [38.6462843, 34.9131061], [38.6471493, 34.9157797], [38.6477861, 34.9171865], [38.6479234, 34.9173762], [38.6482487, 34.917692], [38.6589066, 34.9187299], [38.7133213, 34.9311592], [38.7136479, 34.9312767], [38.7137649, 34.9312], [38.7138824, 34.9310423], [38.7138713, 34.9309508], [38.7118207, 34.9061596], [38.71618, 34.84578]],
+            var poly_line_2e43361fe493e82b2b8e20a2e2546463 = L.polyline(
+                [[38.63294, 34.91489], [38.6326084, 34.9147569], [38.6326684, 34.9141628], [38.6332056, 34.9140326], [38.6333734, 34.915095], [38.63309, 34.91522], [38.6333734, 34.915095], [38.6332056, 34.9140326], [38.6326684, 34.9141628], [38.6326084, 34.9147569], [38.6324146, 34.9147847], [38.6318685, 34.91361], [38.6318258, 34.913526], [38.6312949, 34.9138307], [38.6312144, 34.9139212], [38.63099, 34.91382], [38.6312144, 34.9139212], [38.6313234, 34.9139181], [38.6318685, 34.91361], [38.6318258, 34.913526], [38.63188, 34.91307], [38.6318258, 34.913526], [38.6313269, 34.9125185], [38.6311224, 34.9121398], [38.6306812, 34.9111761], [38.6306369, 34.9110326], [38.6305673, 34.9103836], [38.6304043, 34.9101897], [38.6299985, 34.9103808], [38.6292326, 34.9105302], [38.6291261, 34.9105916], [38.6289833, 34.9107031], [38.6289801, 34.911056], [38.6290123, 34.9114323], [38.628511, 34.9122933], [38.62883, 34.91285], [38.628511, 34.9122933], [38.6290123, 34.9114323], [38.6289801, 34.911056], [38.6289833, 34.9107031], [38.6291261, 34.9105916], [38.6292326, 34.9105302], [38.6299985, 34.9103808], [38.6300513, 34.9115696], [38.6312949, 34.9138307], [38.6313234, 34.9139181], [38.6317575, 34.915305], [38.63161, 34.91537], [38.6317575, 34.915305], [38.6318912, 34.9168063], [38.6310082, 34.9168519], [38.6296554, 34.916851], [38.6290768, 34.9168512], [38.629065, 34.9175303], [38.629058, 34.9183066], [38.6289763, 34.9190793], [38.62939, 34.91888], [38.6289763, 34.9190793], [38.6281768, 34.9190929], [38.6273307, 34.9190716], [38.6273652, 34.9183346], [38.6265023, 34.9182967], [38.6265069, 34.9175817], [38.6265119, 34.9168168], [38.6255838, 34.9168364], [38.6249421, 34.9168481], [38.6248004, 34.9148177], [38.6248036, 34.9147739], [38.6245861, 34.9147369], [38.6242448, 34.9146789], [38.623705, 34.914581], [38.6233618, 34.9145188], [38.6230392, 34.9144558], [38.6223433, 34.9143198], [38.622211, 34.914294], [38.6032275, 34.9080177], [38.6015456, 34.9068581], [38.5995038, 34.9068265], [38.5930572, 34.9053518], [38.5877987, 34.9009479], [38.5861823, 34.8995749], [38.5858283, 34.8993423], [38.5856665, 34.899236], [38.5855463, 34.899157], [38.5849149, 34.8987031], [38.5843088, 34.8983403], [38.5839162, 34.8982327], [38.5836533, 34.898262], [38.5834747, 34.8981449], [38.5833193, 34.8978627], [38.5832615, 34.8973887], [38.5829631, 34.896832], [38.5820207, 34.8964782], [38.5806319, 34.8961746], [38.5805571, 34.8961918], [38.5802494, 34.8962627], [38.578572, 34.8961704], [38.5784832, 34.8961381], [38.57741, 34.89868], [38.5784832, 34.8961381], [38.578572, 34.8961704], [38.5802494, 34.8962627], [38.5805571, 34.8961918], [38.5806319, 34.8961746], [38.5820207, 34.8964782], [38.5829631, 34.896832], [38.5832615, 34.8973887], [38.5833193, 34.8978627], [38.5834747, 34.8981449], [38.5836533, 34.898262], [38.5838381, 34.8983819], [38.583866, 34.8984501], [38.5839734, 34.8984594], [38.5840194, 34.8984093], [38.5843088, 34.8983403], [38.5849149, 34.8987031], [38.5855463, 34.899157], [38.5856665, 34.899236], [38.5858283, 34.8993423], [38.5861823, 34.8995749], [38.5877987, 34.9009479], [38.5930572, 34.9053518], [38.5995038, 34.9068265], [38.6015456, 34.9068581], [38.6032275, 34.9080177], [38.622211, 34.914294], [38.6223433, 34.9143198], [38.6230392, 34.9144558], [38.6233618, 34.9145188], [38.623705, 34.914581], [38.6242448, 34.9146789], [38.6245705, 34.9147837], [38.6248004, 34.9148177], [38.6255878, 34.914794], [38.6258969, 34.9147209], [38.6263767, 34.9146074], [38.6271957, 34.9143579], [38.6280898, 34.9140997], [38.6281884, 34.9140123], [38.6294643, 34.9127569], [38.6296613, 34.912398], [38.6300513, 34.9115696], [38.6306812, 34.9111761], [38.6311224, 34.9121398], [38.6313269, 34.9125185], [38.632156, 34.9120118], [38.6328465, 34.9120163], [38.6329498, 34.9120074], [38.6334069, 34.9119533], [38.6341252, 34.9113289], [38.63411, 34.91035], [38.6341252, 34.9113289], [38.6334069, 34.9119533], [38.6329498, 34.9120074], [38.6328465, 34.9120163], [38.632156, 34.9120118], [38.6313611, 34.9116631], [38.6306369, 34.9110326], [38.6305673, 34.9103836], [38.6304043, 34.9101897], [38.6299985, 34.9103808], [38.6292326, 34.9105302], [38.6291261, 34.9105916], [38.6289833, 34.9107031], [38.6289801, 34.911056], [38.6290123, 34.9114323], [38.628511, 34.9122933], [38.62867, 34.91262], [38.628511, 34.9122933], [38.6290123, 34.9114323], [38.6289801, 34.911056], [38.6289833, 34.9107031], [38.6291261, 34.9105916], [38.6292326, 34.9105302], [38.6299985, 34.9103808], [38.6300513, 34.9115696], [38.6306812, 34.9111761], [38.6311224, 34.9121398], [38.6313269, 34.9125185], [38.6318258, 34.913526], [38.6318685, 34.91361], [38.63231, 34.91345]],
                 {"bubblingMouseEvents": true, "color": "#e74c3c", "dashArray": null, "dashOffset": null, "fill": false, "fillColor": "#e74c3c", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.8, "smoothFactor": 1.0, "stroke": true, "weight": 6}
-            ).addTo(feature_group_93566ca4813aeb4bfb2d4176f4cc8121);
+            ).addTo(feature_group_e9d7ce0fc20ae46664667d01e78220fd);
         
     
-        var popup_88d4bd25590941aa03849b5ef3526985 = L.popup({
+        var popup_6ef5e3975ed06af1948d64ed93e60e35 = L.popup({
   "maxWidth": 300,
 });
 
         
             
-                var html_519149b9fb5159e2ed05906886aa1a02 = $(`<div id="html_519149b9fb5159e2ed05906886aa1a02" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 280px; padding: 15px;">             <h3 style="margin: 0 0 10px 0; color: #e74c3c; text-align: center;">                 📍 🍽️ Gastronomik Rotası             </h3>                          <div style="background: linear-gradient(135deg, #e74c3c20, #e74c3c10);                          padding: 12px; border-radius: 8px; margin-bottom: 10px;">                 <p style="margin: 5px 0; font-size: 14px;"><strong>📏 Uzunluk:</strong> 41.44 km</p>                 <p style="margin: 5px 0; font-size: 14px;"><strong>🛣️ Tip:</strong> Yol Ağı Rotası</p>                 <p style="margin: 5px 0; font-size: 14px;"><strong>📍 Duraklar:</strong> 16 nokta</p>                 <p style="margin: 5px 0; font-size: 14px;"><strong>⏱️ Tahmini Süre:</strong> 82 dakika</p>             </div>                          <div style="font-size: 12px; color: #666;">                 <p style="margin: 5px 0;"><strong>💡 İpucu:</strong> Marker'lara tıklayarak detayları görebilirsiniz</p>                              </div>         </div>         </div>`)[0];
-                popup_88d4bd25590941aa03849b5ef3526985.setContent(html_519149b9fb5159e2ed05906886aa1a02);
+                var html_c3006166a29b34e9c25640fe26bd1062 = $(`<div id="html_c3006166a29b34e9c25640fe26bd1062" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 280px; padding: 15px;">             <h3 style="margin: 0 0 10px 0; color: #e74c3c; text-align: center;">                 📍 🍽️ Gastronomik Rotası             </h3>                          <div style="background: linear-gradient(135deg, #e74c3c20, #e74c3c10);                          padding: 12px; border-radius: 8px; margin-bottom: 10px;">                 <p style="margin: 5px 0; font-size: 14px;"><strong>📏 Uzunluk:</strong> 18.19 km</p>                 <p style="margin: 5px 0; font-size: 14px;"><strong>🛣️ Tip:</strong> Yol Ağı Rotası</p>                 <p style="margin: 5px 0; font-size: 14px;"><strong>📍 Duraklar:</strong> 11 nokta</p>                 <p style="margin: 5px 0; font-size: 14px;"><strong>⏱️ Tahmini Süre:</strong> 36 dakika</p>             </div>                          <div style="font-size: 12px; color: #666;">                 <p style="margin: 5px 0;"><strong>💡 İpucu:</strong> Marker'lara tıklayarak detayları görebilirsiniz</p>                              </div>         </div>         </div>`)[0];
+                popup_6ef5e3975ed06af1948d64ed93e60e35.setContent(html_c3006166a29b34e9c25640fe26bd1062);
             
         
 
-        poly_line_9d935a3caf286b542091b663b4638ec9.bindPopup(popup_88d4bd25590941aa03849b5ef3526985)
+        poly_line_2e43361fe493e82b2b8e20a2e2546463.bindPopup(popup_6ef5e3975ed06af1948d64ed93e60e35)
         ;
 
         
     
     
-            poly_line_9d935a3caf286b542091b663b4638ec9.bindTooltip(
+            poly_line_2e43361fe493e82b2b8e20a2e2546463.bindTooltip(
                 `<div>
-                     🛣️ 🍽️ Gastronomik: 41.44 km (Yol Ağı Rotası)
+                     🛣️ 🍽️ Gastronomik: 18.19 km (Yol Ağı Rotası)
                  </div>`,
                 {
   "sticky": false,
@@ -1292,7 +987,7 @@
             );
         
     
-            feature_group_93566ca4813aeb4bfb2d4176f4cc8121.addTo(map_6fdc1d2a88e8e341b506558cf8d32826);
+            feature_group_e9d7ce0fc20ae46664667d01e78220fd.addTo(map_105be1f1d62048eeb020f41d02f19b92);
         
     
             L.control.fullscreen(
@@ -1302,7 +997,7 @@
   "titleCancel": "\u274c Tam Ekrandan \u00c7\u0131k",
   "forceSeparateButton": true,
 }
-            ).addTo(map_6fdc1d2a88e8e341b506558cf8d32826);
+            ).addTo(map_105be1f1d62048eeb020f41d02f19b92);
         
     
             var options = {
@@ -1311,16 +1006,16 @@
               edit: {"edit": true, "remove": true},
             }
                 // FeatureGroup is to store editable layers.
-                var drawnItems_draw_control_a0a8f81786687e18c4a739824d372747 =
+                var drawnItems_draw_control_b2a8e391e2ef8ce79b2b3a41cdba6bd4 =
                     new L.featureGroup().addTo(
-                        map_6fdc1d2a88e8e341b506558cf8d32826
+                        map_105be1f1d62048eeb020f41d02f19b92
                     );
 
-            options.edit.featureGroup = drawnItems_draw_control_a0a8f81786687e18c4a739824d372747;
-            var draw_control_a0a8f81786687e18c4a739824d372747 = new L.Control.Draw(
+            options.edit.featureGroup = drawnItems_draw_control_b2a8e391e2ef8ce79b2b3a41cdba6bd4;
+            var draw_control_b2a8e391e2ef8ce79b2b3a41cdba6bd4 = new L.Control.Draw(
                 options
-            ).addTo( map_6fdc1d2a88e8e341b506558cf8d32826 );
-            map_6fdc1d2a88e8e341b506558cf8d32826.on(L.Draw.Event.CREATED, function(e) {
+            ).addTo( map_105be1f1d62048eeb020f41d02f19b92 );
+            map_105be1f1d62048eeb020f41d02f19b92.on(L.Draw.Event.CREATED, function(e) {
                 var layer = e.layer,
                     type = e.layerType;
                 var coords = JSON.stringify(layer.toGeoJSON());
@@ -1328,15 +1023,15 @@
                     alert(coords);
                     console.log(coords);
                 });
-                drawnItems_draw_control_a0a8f81786687e18c4a739824d372747.addLayer(layer);
+                drawnItems_draw_control_b2a8e391e2ef8ce79b2b3a41cdba6bd4.addLayer(layer);
             });
-            map_6fdc1d2a88e8e341b506558cf8d32826.on('draw:created', function(e) {
-                drawnItems_draw_control_a0a8f81786687e18c4a739824d372747.addLayer(e.layer);
+            map_105be1f1d62048eeb020f41d02f19b92.on('draw:created', function(e) {
+                drawnItems_draw_control_b2a8e391e2ef8ce79b2b3a41cdba6bd4.addLayer(e.layer);
             });
 
             
             document.getElementById('export').onclick = function(e) {
-                var data = drawnItems_draw_control_a0a8f81786687e18c4a739824d372747.toGeoJSON();
+                var data = drawnItems_draw_control_b2a8e391e2ef8ce79b2b3a41cdba6bd4.toGeoJSON();
                 var convertedData = 'text/json;charset=utf-8,'
                     + encodeURIComponent(JSON.stringify(data));
                 document.getElementById('export').setAttribute(
@@ -1349,7 +1044,7 @@
             
         
     
-            var measure_control_09e174060af7b01d75e70e2d7d160955 = new L.Control.Measure(
+            var measure_control_9209f2fdb79395843525931cd06529d8 = new L.Control.Measure(
                 {
   "position": "bottomleft",
   "primaryLengthUnit": "kilometers",
@@ -1359,7 +1054,7 @@
   "completedColor": "#e74c3c",
   "activeColor": "#3498db",
 });
-            map_6fdc1d2a88e8e341b506558cf8d32826.addControl(measure_control_09e174060af7b01d75e70e2d7d160955);
+            map_105be1f1d62048eeb020f41d02f19b92.addControl(measure_control_9209f2fdb79395843525931cd06529d8);
 
             // Workaround for using this plugin with Leaflet>=1.8.0
             // https://github.com/ljagis/leaflet-measure/issues/171
@@ -1378,12 +1073,12 @@
 
         
     
-            var tile_layer_7ead7e22a4a0f07a9ea99668f3a0e715 = L.tileLayer(
+            var tile_layer_8f296fbe3c0df47c005d36607efc1154 = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {"attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors", "detect_retina": false, "max_native_zoom": 19, "max_zoom": 19, "min_zoom": 0, "no_wrap": false, "opacity": 1, "subdomains": "abc", "tms": false}
             );
-            var mini_map_690c1cb5e57c72d3e3dcf6d849740db0 = new L.Control.MiniMap(
-                tile_layer_7ead7e22a4a0f07a9ea99668f3a0e715,
+            var mini_map_7fdc505f791a91aeb344d47ecec0dfc7 = new L.Control.MiniMap(
+                tile_layer_8f296fbe3c0df47c005d36607efc1154,
                 {
   "position": "bottomright",
   "width": 150,
@@ -1398,26 +1093,26 @@
   "minimized": false,
 }
             );
-            map_6fdc1d2a88e8e341b506558cf8d32826.addControl(mini_map_690c1cb5e57c72d3e3dcf6d849740db0);
+            map_105be1f1d62048eeb020f41d02f19b92.addControl(mini_map_7fdc505f791a91aeb344d47ecec0dfc7);
         
     
-            var layer_control_9bdfc74a9fa78980ae0a94c76b9a23b1_layers = {
+            var layer_control_60eda493d15340f3550d3e443f9a1360_layers = {
                 base_layers : {
-                    "openstreetmap" : tile_layer_f2d4d30ff15557abe0ed9d1b3a773b3e,
+                    "openstreetmap" : tile_layer_c082bea865bc08502a3c0055b0c90b69,
                 },
                 overlays :  {
-                    "\ud83c\udf7d\ufe0f Gastronomik" : feature_group_93566ca4813aeb4bfb2d4176f4cc8121,
+                    "\ud83c\udf7d\ufe0f Gastronomik" : feature_group_e9d7ce0fc20ae46664667d01e78220fd,
                 },
             };
-            let layer_control_9bdfc74a9fa78980ae0a94c76b9a23b1 = L.control.layers(
-                layer_control_9bdfc74a9fa78980ae0a94c76b9a23b1_layers.base_layers,
-                layer_control_9bdfc74a9fa78980ae0a94c76b9a23b1_layers.overlays,
+            let layer_control_60eda493d15340f3550d3e443f9a1360 = L.control.layers(
+                layer_control_60eda493d15340f3550d3e443f9a1360_layers.base_layers,
+                layer_control_60eda493d15340f3550d3e443f9a1360_layers.overlays,
                 {
   "position": "topright",
   "collapsed": false,
   "autoZIndex": true,
 }
-            ).addTo(map_6fdc1d2a88e8e341b506558cf8d32826);
+            ).addTo(map_105be1f1d62048eeb020f41d02f19b92);
 
         
 </script>

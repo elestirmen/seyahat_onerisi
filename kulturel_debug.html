@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    
+        <script>
+            L_NO_TOUCH = false;
+            L_DISABLE_3D = false;
+        </script>
+    
+    <style>html, body {width: 100%;height: 100%;margin: 0;padding: 0;}</style>
+    <style>#map {position:absolute;top:0;bottom:0;right:0;left:0;}</style>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_45b59ceaa5a7f81b91c4e93e42cf978a {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+        
+    <script src="https://cdn.jsdelivr.net/gh/marslan390/BeautifyMarker/leaflet-beautify-marker-icon.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/marslan390/BeautifyMarker/leaflet-beautify-marker-icon.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@3.0.0/Control.FullScreen.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@3.0.0/Control.FullScreen.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.2/leaflet.draw.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.2/leaflet.draw.css"/>
+    
+            <style>
+                #export {
+                    position: absolute;
+                    top: 5px;
+                    right: 10px;
+                    z-index: 999;
+                    background: white;
+                    color: black;
+                    padding: 6px;
+                    border-radius: 4px;
+                    font-family: 'Helvetica Neue';
+                    cursor: pointer;
+                    font-size: 12px;
+                    text-decoration: none;
+                    top: 90px;
+                }
+            </style>
+        
+    <script src="https://cdn.jsdelivr.net/gh/ljagis/leaflet-measure@2.1.7/dist/leaflet-measure.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ljagis/leaflet-measure@2.1.7/dist/leaflet-measure.min.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-minimap/3.6.1/Control.MiniMap.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-minimap/3.6.1/Control.MiniMap.css"/>
+</head>
+<body>
+    
+    
+        <div style="position: fixed; top: 20px; left: 20px; z-index: 1000; 
+                    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.95) 100%);
+                    padding: 15px 25px; border-radius: 15px; 
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.1); backdrop-filter: blur(10px);
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            <h2 style="margin: 0; color: #2c3e50; font-size: 20px; font-weight: 600;">
+                🗺️ Kapadokya Rota Haritası
+            </h2>
+            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 14px;">
+                📍 🏛️ Kültürel
+            </p>
+        </div>
+        
+    
+    <div id="legend-panel" style="position: fixed; top: 20px; right: 20px; width: 320px; 
+                                  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+                                  border: none; border-radius: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                                  z-index: 9999; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                                  backdrop-filter: blur(10px); overflow: hidden;">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding: 15px; color: white; position: relative;">
+            <h3 style="margin: 0; font-size: 18px; text-align: center; font-weight: 600;">
+                🗺️ Kapadokya Rota Rehberi
+            </h3>
+            <button id="legend-toggle" style="position: absolute; top: 15px; right: 15px; 
+                                              background: rgba(255,255,255,0.2); border: none; 
+                                              color: white; width: 30px; height: 30px; 
+                                              border-radius: 50%; cursor: pointer; font-size: 16px;">
+                ✕
+            </button>
+        </div>
+        
+        <!-- İstatistikler -->
+        <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e9ecef;">
+            <div style="display: flex; justify-content: space-between; font-size: 13px; color: #666;">
+                <span><strong>📍 Toplam Nokta:</strong> 11</span>
+                <span><strong>📏 Toplam Mesafe:</strong> 67.0 km</span>
+            </div>
+        </div>
+        
+        <!-- Kategoriler -->
+        <div id="categories-container" style="padding: 15px; max-height: 400px; overflow-y: auto;">
+    
+        <div class="category-item" onclick="toggleLayer('feature_group_4d5367acfc0485d47be59660c80fcae0', this)" 
+             style="background: white; margin-bottom: 10px; padding: 12px; border-radius: 10px; 
+                    cursor: pointer; transition: all 0.3s; border-left: 4px solid #3498db;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);"
+             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'"
+             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)'">
+            
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <i class="fa landmark" 
+                   style="color: #3498db; font-size: 18px; margin-right: 12px; width: 20px;"></i>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; color: #333; font-size: 14px;">🏛️ Kültürel</div>
+                    <div style="font-size: 11px; color: #888; margin-top: 2px;">Müzeler, tarihi yerler ve kültürel mekanlar</div>
+                </div>
+                <div class="toggle-indicator" style="width: 12px; height: 12px; border-radius: 50%; 
+                                                    background-color: #3498db; 
+                                                    box-shadow: 0 0 0 2px white, 0 0 0 3px #3498db;"></div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
+                <span>📍 11 nokta</span>
+                <span>📏 67.0 km</span>
+                <span>⏱️ ~134 dk</span>
+            </div>
+        </div>
+        
+        </div>
+        
+        <!-- Footer -->
+        <div style="background: #f8f9fa; padding: 12px; text-align: center; border-top: 1px solid #e9ecef;">
+            <button onclick="toggleAllLayers()" 
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                           color: white; border: none; padding: 8px 16px; border-radius: 20px; 
+                           font-size: 12px; cursor: pointer; font-weight: 500;">
+                🔄 Tümünü Aç/Kapat
+            </button>
+        </div>
+    </div>
+    
+    <script>
+    let allLayersVisible = true;
+    const layerStates = {};
+    
+    function toggleLayer(layerVarName, element) {
+        const layer = window[layerVarName];
+        if (!layer) return;
+        
+        const indicator = element.querySelector('.toggle-indicator');
+        const isVisible = map_45b59ceaa5a7f81b91c4e93e42cf978a.hasLayer(layer);
+        
+        if (isVisible) {
+            map_45b59ceaa5a7f81b91c4e93e42cf978a.removeLayer(layer);
+            indicator.style.opacity = '0.3';
+            element.style.opacity = '0.6';
+            layerStates[layerVarName] = false;
+        } else {
+            map_45b59ceaa5a7f81b91c4e93e42cf978a.addLayer(layer);
+            indicator.style.opacity = '1';
+            element.style.opacity = '1';
+            layerStates[layerVarName] = true;
+        }
+    }
+    
+    function toggleAllLayers() {
+        allLayersVisible = !allLayersVisible;
+        const categoryItems = document.querySelectorAll('.category-item');
+        
+        categoryItems.forEach(item => {
+            const layerVar = item.getAttribute('onclick').match(/'([^']+)'/)[1];
+            const layer = window[layerVar];
+            const indicator = item.querySelector('.toggle-indicator');
+            
+            if (allLayersVisible) {
+                if (!map_45b59ceaa5a7f81b91c4e93e42cf978a.hasLayer(layer)) {
+                    map_45b59ceaa5a7f81b91c4e93e42cf978a.addLayer(layer);
+                }
+                indicator.style.opacity = '1';
+                item.style.opacity = '1';
+            } else {
+                if (map_45b59ceaa5a7f81b91c4e93e42cf978a.hasLayer(layer)) {
+                    map_45b59ceaa5a7f81b91c4e93e42cf978a.removeLayer(layer);
+                }
+                indicator.style.opacity = '0.3';
+                item.style.opacity = '0.6';
+            }
+        });
+    }
+    
+    document.getElementById('legend-toggle').addEventListener('click', function(e) {
+        e.stopPropagation();
+        const panel = document.getElementById('legend-panel');
+        if (panel.style.display === 'none') {
+            panel.style.display = 'block';
+            panel.style.animation = 'slideInRight 0.3s ease-out';
+        } else {
+            panel.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => panel.style.display = 'none', 300);
+        }
+    });
+    
+    // Animasyonlar
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        .category-item:hover {
+            transform: translateY(-2px) !important;
+        }
+    `;
+    document.head.appendChild(style);
+    </script>
+    
+    
+            <div class="folium-map" id="map_45b59ceaa5a7f81b91c4e93e42cf978a" ></div>
+        
+    <a href='#' id='export'>Export</a>
+</body>
+<script>
+    
+    
+            var map_45b59ceaa5a7f81b91c4e93e42cf978a = L.map(
+                "map_45b59ceaa5a7f81b91c4e93e42cf978a",
+                {
+                    center: [38.631, 34.913],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 13,
+  "zoomControl": true,
+  "preferCanvas": true,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_d1253d39fd0470424cbbb72ed0251077 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_d1253d39fd0470424cbbb72ed0251077.addTo(map_45b59ceaa5a7f81b91c4e93e42cf978a);
+        
+    
+            var feature_group_4d5367acfc0485d47be59660c80fcae0 = L.featureGroup(
+                {
+}
+            );
+        
+    
+            var marker_639c56da24d6986123d719c51f8e12d6 = L.marker(
+                [38.63222, 34.91148],
+                {
+}
+            ).addTo(feature_group_4d5367acfc0485d47be59660c80fcae0);
+        
+    
+            var beautify_icon_acd77ccdb9e2cf5d098b370b686f22a8 = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 1,
+  "iconPrefix": "fa",
+  "iconStyle": "color:white; font-size:14px;",
+}
+            )
+            marker_639c56da24d6986123d719c51f8e12d6.setIcon(beautify_icon_acd77ccdb9e2cf5d098b370b686f22a8);
+        
+    
+        var popup_b1337f18f5e990d0eb3426c5fb83f1e9 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_40e59a38a21648ce591cd1de93100e7c = $(`<div id="html_40e59a38a21648ce591cd1de93100e7c" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 16px;">                     landmark Ürgüp Müzesi                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Müzeler, tarihi yerler ve kültürel mekanlar</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 1. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🏛️ Kültürel</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63222, 34.91148</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63222,34.91148" target="_blank" rel="noopener noreferrer"                     style="background-color: #3498db; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_b1337f18f5e990d0eb3426c5fb83f1e9.setContent(html_40e59a38a21648ce591cd1de93100e7c);
+            
+        
+
+        marker_639c56da24d6986123d719c51f8e12d6.bindPopup(popup_b1337f18f5e990d0eb3426c5fb83f1e9)
+        ;
+
+        
+    
+    
+            marker_639c56da24d6986123d719c51f8e12d6.bindTooltip(
+                `<div>
+                     
+        <div style="font-weight: bold; color: #3498db; font-size: 14px;">
+            1. Ürgüp Müzesi<br>
+            <small style="color: #666;">🏛️ Kültürel</small>
+        </div>
+        
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_639c56da24d6986123d719c51f8e12d6.setIcon(beautify_icon_acd77ccdb9e2cf5d098b370b686f22a8);
+            
+    
+            var marker_7b6e96f33d548738bc77048af50d5265 = L.marker(
+                [38.63194, 34.91054],
+                {
+}
+            ).addTo(feature_group_4d5367acfc0485d47be59660c80fcae0);
+        
+    
+            var beautify_icon_ca21bf2d7936d0b1b0f5703922f41b78 = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 2,
+  "iconPrefix": "fa",
+  "iconStyle": "color:white; font-size:14px;",
+}
+            )
+            marker_7b6e96f33d548738bc77048af50d5265.setIcon(beautify_icon_ca21bf2d7936d0b1b0f5703922f41b78);
+        
+    
+        var popup_b5ca4016bf2981c1efaa5651739f6a77 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_18b34592b4b3920c34af3fdda17db480 = $(`<div id="html_18b34592b4b3920c34af3fdda17db480" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 16px;">                     landmark Temenni Tepesi (Kadir Kalesi ve Kılıçarslan Gazi Türbesi - Ürgüp)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Müzeler, tarihi yerler ve kültürel mekanlar</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 2. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🏛️ Kültürel</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63194, 34.91054</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63194,34.91054" target="_blank" rel="noopener noreferrer"                     style="background-color: #3498db; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_b5ca4016bf2981c1efaa5651739f6a77.setContent(html_18b34592b4b3920c34af3fdda17db480);
+            
+        
+
+        marker_7b6e96f33d548738bc77048af50d5265.bindPopup(popup_b5ca4016bf2981c1efaa5651739f6a77)
+        ;
+
+        
+    
+    
+            marker_7b6e96f33d548738bc77048af50d5265.bindTooltip(
+                `<div>
+                     
+        <div style="font-weight: bold; color: #3498db; font-size: 14px;">
+            2. Temenni Tepesi (Kadir Kalesi ve Kılıçarslan Gazi Türbesi - Ürgüp)<br>
+            <small style="color: #666;">🏛️ Kültürel</small>
+        </div>
+        
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_7b6e96f33d548738bc77048af50d5265.setIcon(beautify_icon_ca21bf2d7936d0b1b0f5703922f41b78);
+            
+    
+            var marker_d68e7e8fb6dc832f878ee80818b02539 = L.marker(
+                [38.57593, 34.89694],
+                {
+}
+            ).addTo(feature_group_4d5367acfc0485d47be59660c80fcae0);
+        
+    
+            var beautify_icon_f6c097e564492167266f1e823daf74e8 = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 3,
+  "iconPrefix": "fa",
+  "iconStyle": "color:white; font-size:14px;",
+}
+            )
+            marker_d68e7e8fb6dc832f878ee80818b02539.setIcon(beautify_icon_f6c097e564492167266f1e823daf74e8);
+        
+    
+        var popup_ce6034ec109b5f04bd73b1777312e06b = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_57e554f5426f9e9ebf23ed927feefd33 = $(`<div id="html_57e554f5426f9e9ebf23ed927feefd33" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 16px;">                     landmark Mustafapaşa (Sinasos) Köy Meydanı                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Müzeler, tarihi yerler ve kültürel mekanlar</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 3. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🏛️ Kültürel</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.57593, 34.89694</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.57593,34.89694" target="_blank" rel="noopener noreferrer"                     style="background-color: #3498db; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_ce6034ec109b5f04bd73b1777312e06b.setContent(html_57e554f5426f9e9ebf23ed927feefd33);
+            
+        
+
+        marker_d68e7e8fb6dc832f878ee80818b02539.bindPopup(popup_ce6034ec109b5f04bd73b1777312e06b)
+        ;
+
+        
+    
+    
+            marker_d68e7e8fb6dc832f878ee80818b02539.bindTooltip(
+                `<div>
+                     
+        <div style="font-weight: bold; color: #3498db; font-size: 14px;">
+            3. Mustafapaşa (Sinasos) Köy Meydanı<br>
+            <small style="color: #666;">🏛️ Kültürel</small>
+        </div>
+        
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_d68e7e8fb6dc832f878ee80818b02539.setIcon(beautify_icon_f6c097e564492167266f1e823daf74e8);
+            
+    
+            var marker_6c5514bce267e36314bcfc6df781094a = L.marker(
+                [38.57678, 34.89655],
+                {
+}
+            ).addTo(feature_group_4d5367acfc0485d47be59660c80fcae0);
+        
+    
+            var beautify_icon_088cf669c832ec0c46ec8adaa9e21b50 = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 4,
+  "iconPrefix": "fa",
+  "iconStyle": "color:white; font-size:14px;",
+}
+            )
+            marker_6c5514bce267e36314bcfc6df781094a.setIcon(beautify_icon_088cf669c832ec0c46ec8adaa9e21b50);
+        
+    
+        var popup_3620b770d2c996d8f6841e8cc694585a = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_0135eb83fb7f08d066a7ba9a4eea713e = $(`<div id="html_0135eb83fb7f08d066a7ba9a4eea713e" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 16px;">                     landmark Aziz Konstantin Elena Kilisesi (Mustafapaşa)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Müzeler, tarihi yerler ve kültürel mekanlar</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 4. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🏛️ Kültürel</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.57678, 34.89655</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.57678,34.89655" target="_blank" rel="noopener noreferrer"                     style="background-color: #3498db; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_3620b770d2c996d8f6841e8cc694585a.setContent(html_0135eb83fb7f08d066a7ba9a4eea713e);
+            
+        
+
+        marker_6c5514bce267e36314bcfc6df781094a.bindPopup(popup_3620b770d2c996d8f6841e8cc694585a)
+        ;
+
+        
+    
+    
+            marker_6c5514bce267e36314bcfc6df781094a.bindTooltip(
+                `<div>
+                     
+        <div style="font-weight: bold; color: #3498db; font-size: 14px;">
+            4. Aziz Konstantin Elena Kilisesi (Mustafapaşa)<br>
+            <small style="color: #666;">🏛️ Kültürel</small>
+        </div>
+        
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_6c5514bce267e36314bcfc6df781094a.setIcon(beautify_icon_088cf669c832ec0c46ec8adaa9e21b50);
+            
+    
+            var marker_26846f0381d0e658a1cbcc672f62f946 = L.marker(
+                [38.5879, 34.8901],
+                {
+}
+            ).addTo(feature_group_4d5367acfc0485d47be59660c80fcae0);
+        
+    
+            var beautify_icon_5b035546f7337c24f7750d965dcc5f22 = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 5,
+  "iconPrefix": "fa",
+  "iconStyle": "color:white; font-size:14px;",
+}
+            )
+            marker_26846f0381d0e658a1cbcc672f62f946.setIcon(beautify_icon_5b035546f7337c24f7750d965dcc5f22);
+        
+    
+        var popup_c242f0145c3368502699cd6de64f9f9c = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_9cdc93216df6f81f5e9821513b4e62ca = $(`<div id="html_9cdc93216df6f81f5e9821513b4e62ca" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 16px;">                     landmark Gomeda Vadisi (Mustafapaşa Yakını)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Müzeler, tarihi yerler ve kültürel mekanlar</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 5. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🏛️ Kültürel</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.58790, 34.89010</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.5879,34.8901" target="_blank" rel="noopener noreferrer"                     style="background-color: #3498db; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_c242f0145c3368502699cd6de64f9f9c.setContent(html_9cdc93216df6f81f5e9821513b4e62ca);
+            
+        
+
+        marker_26846f0381d0e658a1cbcc672f62f946.bindPopup(popup_c242f0145c3368502699cd6de64f9f9c)
+        ;
+
+        
+    
+    
+            marker_26846f0381d0e658a1cbcc672f62f946.bindTooltip(
+                `<div>
+                     
+        <div style="font-weight: bold; color: #3498db; font-size: 14px;">
+            5. Gomeda Vadisi (Mustafapaşa Yakını)<br>
+            <small style="color: #666;">🏛️ Kültürel</small>
+        </div>
+        
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_26846f0381d0e658a1cbcc672f62f946.setIcon(beautify_icon_5b035546f7337c24f7750d965dcc5f22);
+            
+    
+            var marker_efdf0b7a3dc0b243794ce9f1c44425d3 = L.marker(
+                [38.63359, 34.85871],
+                {
+}
+            ).addTo(feature_group_4d5367acfc0485d47be59660c80fcae0);
+        
+    
+            var beautify_icon_a20ee06ef2e200d200c2ebc94fe419c4 = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 6,
+  "iconPrefix": "fa",
+  "iconStyle": "color:white; font-size:14px;",
+}
+            )
+            marker_efdf0b7a3dc0b243794ce9f1c44425d3.setIcon(beautify_icon_a20ee06ef2e200d200c2ebc94fe419c4);
+        
+    
+        var popup_146cb3e46701cd5ad87ea25940506c84 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_c2fdfe5794f26c5681be537db4c352df = $(`<div id="html_c2fdfe5794f26c5681be537db4c352df" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 16px;">                     landmark Ortahisar Kalesi                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Müzeler, tarihi yerler ve kültürel mekanlar</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 6. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🏛️ Kültürel</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63359, 34.85871</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63359,34.85871" target="_blank" rel="noopener noreferrer"                     style="background-color: #3498db; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_146cb3e46701cd5ad87ea25940506c84.setContent(html_c2fdfe5794f26c5681be537db4c352df);
+            
+        
+
+        marker_efdf0b7a3dc0b243794ce9f1c44425d3.bindPopup(popup_146cb3e46701cd5ad87ea25940506c84)
+        ;
+
+        
+    
+    
+            marker_efdf0b7a3dc0b243794ce9f1c44425d3.bindTooltip(
+                `<div>
+                     
+        <div style="font-weight: bold; color: #3498db; font-size: 14px;">
+            6. Ortahisar Kalesi<br>
+            <small style="color: #666;">🏛️ Kültürel</small>
+        </div>
+        
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_efdf0b7a3dc0b243794ce9f1c44425d3.setIcon(beautify_icon_a20ee06ef2e200d200c2ebc94fe419c4);
+            
+    
+            var marker_bdc3d7553285b3d020942f8433c3264f = L.marker(
+                [38.63375, 34.85813],
+                {
+}
+            ).addTo(feature_group_4d5367acfc0485d47be59660c80fcae0);
+        
+    
+            var beautify_icon_50eecfe1bf912e3b2b79fc9a439fde06 = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 7,
+  "iconPrefix": "fa",
+  "iconStyle": "color:white; font-size:14px;",
+}
+            )
+            marker_bdc3d7553285b3d020942f8433c3264f.setIcon(beautify_icon_50eecfe1bf912e3b2b79fc9a439fde06);
+        
+    
+        var popup_7272838a495c4ac0622696b403489179 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_87b41f8b1c79d916f0c2028efc93f290 = $(`<div id="html_87b41f8b1c79d916f0c2028efc93f290" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 16px;">                     landmark Ortahisar Etnografya Müzesi                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Müzeler, tarihi yerler ve kültürel mekanlar</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 7. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🏛️ Kültürel</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.63375, 34.85813</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.63375,34.85813" target="_blank" rel="noopener noreferrer"                     style="background-color: #3498db; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_7272838a495c4ac0622696b403489179.setContent(html_87b41f8b1c79d916f0c2028efc93f290);
+            
+        
+
+        marker_bdc3d7553285b3d020942f8433c3264f.bindPopup(popup_7272838a495c4ac0622696b403489179)
+        ;
+
+        
+    
+    
+            marker_bdc3d7553285b3d020942f8433c3264f.bindTooltip(
+                `<div>
+                     
+        <div style="font-weight: bold; color: #3498db; font-size: 14px;">
+            7. Ortahisar Etnografya Müzesi<br>
+            <small style="color: #666;">🏛️ Kültürel</small>
+        </div>
+        
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_bdc3d7553285b3d020942f8433c3264f.setIcon(beautify_icon_50eecfe1bf912e3b2b79fc9a439fde06);
+            
+    
+            var marker_b9abf5eb4e137493cddbd0eface81349 = L.marker(
+                [38.51995, 34.99783],
+                {
+}
+            ).addTo(feature_group_4d5367acfc0485d47be59660c80fcae0);
+        
+    
+            var beautify_icon_76dd57153c92545b79320a144c212791 = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 8,
+  "iconPrefix": "fa",
+  "iconStyle": "color:white; font-size:14px;",
+}
+            )
+            marker_b9abf5eb4e137493cddbd0eface81349.setIcon(beautify_icon_76dd57153c92545b79320a144c212791);
+        
+    
+        var popup_89e852b9d95234d74beed771fa3ed8f2 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_9cf392eeea60dab0845c8c4f7423fcc7 = $(`<div id="html_9cf392eeea60dab0845c8c4f7423fcc7" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 16px;">                     landmark Sobesos Antik Kenti (Şahinefendi Köyü)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Müzeler, tarihi yerler ve kültürel mekanlar</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 8. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🏛️ Kültürel</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.51995, 34.99783</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.51995,34.99783" target="_blank" rel="noopener noreferrer"                     style="background-color: #3498db; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_89e852b9d95234d74beed771fa3ed8f2.setContent(html_9cf392eeea60dab0845c8c4f7423fcc7);
+            
+        
+
+        marker_b9abf5eb4e137493cddbd0eface81349.bindPopup(popup_89e852b9d95234d74beed771fa3ed8f2)
+        ;
+
+        
+    
+    
+            marker_b9abf5eb4e137493cddbd0eface81349.bindTooltip(
+                `<div>
+                     
+        <div style="font-weight: bold; color: #3498db; font-size: 14px;">
+            8. Sobesos Antik Kenti (Şahinefendi Köyü)<br>
+            <small style="color: #666;">🏛️ Kültürel</small>
+        </div>
+        
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_b9abf5eb4e137493cddbd0eface81349.setIcon(beautify_icon_76dd57153c92545b79320a144c212791);
+            
+    
+            var marker_1e4cfac2f4923e1529c8b2f2ea67e011 = L.marker(
+                [38.61469, 34.89302],
+                {
+}
+            ).addTo(feature_group_4d5367acfc0485d47be59660c80fcae0);
+        
+    
+            var beautify_icon_cb1fa99e5e718f29233ffe7104567252 = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 9,
+  "iconPrefix": "fa",
+  "iconStyle": "color:white; font-size:14px;",
+}
+            )
+            marker_1e4cfac2f4923e1529c8b2f2ea67e011.setIcon(beautify_icon_cb1fa99e5e718f29233ffe7104567252);
+        
+    
+        var popup_1b236af16ca6213ec628d15d115dc5ce = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_ef24b424075bffc20d85d61dbec6b823 = $(`<div id="html_ef24b424075bffc20d85d61dbec6b823" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 16px;">                     landmark Pancarlık Kilisesi (Ortahisar Yakını)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Müzeler, tarihi yerler ve kültürel mekanlar</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 9. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🏛️ Kültürel</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.61469, 34.89302</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.61469,34.89302" target="_blank" rel="noopener noreferrer"                     style="background-color: #3498db; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_1b236af16ca6213ec628d15d115dc5ce.setContent(html_ef24b424075bffc20d85d61dbec6b823);
+            
+        
+
+        marker_1e4cfac2f4923e1529c8b2f2ea67e011.bindPopup(popup_1b236af16ca6213ec628d15d115dc5ce)
+        ;
+
+        
+    
+    
+            marker_1e4cfac2f4923e1529c8b2f2ea67e011.bindTooltip(
+                `<div>
+                     
+        <div style="font-weight: bold; color: #3498db; font-size: 14px;">
+            9. Pancarlık Kilisesi (Ortahisar Yakını)<br>
+            <small style="color: #666;">🏛️ Kültürel</small>
+        </div>
+        
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_1e4cfac2f4923e1529c8b2f2ea67e011.setIcon(beautify_icon_cb1fa99e5e718f29233ffe7104567252);
+            
+    
+            var marker_09511481e39a421afdadd7a15c543be1 = L.marker(
+                [38.58923, 34.89773],
+                {
+}
+            ).addTo(feature_group_4d5367acfc0485d47be59660c80fcae0);
+        
+    
+            var beautify_icon_d7e7fd57d346d6555fc08eb206ed85c2 = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 10,
+  "iconPrefix": "fa",
+  "iconStyle": "color:white; font-size:14px;",
+}
+            )
+            marker_09511481e39a421afdadd7a15c543be1.setIcon(beautify_icon_d7e7fd57d346d6555fc08eb206ed85c2);
+        
+    
+        var popup_11a3096da2be57a10ffce222f4fbcb07 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_c34a87a17027b9871f1c57767c18e6fa = $(`<div id="html_c34a87a17027b9871f1c57767c18e6fa" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 16px;">                     landmark Aios Vasilios Kilisesi (Mustafapaşa)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Müzeler, tarihi yerler ve kültürel mekanlar</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 10. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🏛️ Kültürel</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.58923, 34.89773</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.58923,34.89773" target="_blank" rel="noopener noreferrer"                     style="background-color: #3498db; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_11a3096da2be57a10ffce222f4fbcb07.setContent(html_c34a87a17027b9871f1c57767c18e6fa);
+            
+        
+
+        marker_09511481e39a421afdadd7a15c543be1.bindPopup(popup_11a3096da2be57a10ffce222f4fbcb07)
+        ;
+
+        
+    
+    
+            marker_09511481e39a421afdadd7a15c543be1.bindTooltip(
+                `<div>
+                     
+        <div style="font-weight: bold; color: #3498db; font-size: 14px;">
+            10. Aios Vasilios Kilisesi (Mustafapaşa)<br>
+            <small style="color: #666;">🏛️ Kültürel</small>
+        </div>
+        
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_09511481e39a421afdadd7a15c543be1.setIcon(beautify_icon_d7e7fd57d346d6555fc08eb206ed85c2);
+            
+    
+            var marker_1254114a5f5228c014769b31e0f80f4c = L.marker(
+                [38.57493, 34.89635],
+                {
+}
+            ).addTo(feature_group_4d5367acfc0485d47be59660c80fcae0);
+        
+    
+            var beautify_icon_48a57c4b0ceb2bc5c8eb321a7ae20e35 = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 11,
+  "iconPrefix": "fa",
+  "iconStyle": "color:white; font-size:14px;",
+}
+            )
+            marker_1254114a5f5228c014769b31e0f80f4c.setIcon(beautify_icon_48a57c4b0ceb2bc5c8eb321a7ae20e35);
+        
+    
+        var popup_c56f45920ebd6c69f80bc18debcd4701 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_e97ef118111f4dce1a6ef734383c1b18 = $(`<div id="html_e97ef118111f4dce1a6ef734383c1b18" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">             <div style="border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px;">                 <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 16px;">                     landmark Kapadokya Sanat ve Tarih Müzesi (Bebek Müzesi - Mustafapaşa)                 </h3>                 <p style="margin: 0; color: #666; font-size: 12px;">Müzeler, tarihi yerler ve kültürel mekanlar</p>             </div>                          <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">                 <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> 11. durak</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> 🏛️ Kültürel</p>                 <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> 38.57493, 34.89635</p>             </div>                          <div style="text-align: center;">                 <a href="https://www.google.com/maps/search/?api=1&query=38.57493,34.89635" target="_blank" rel="noopener noreferrer"                     style="background-color: #3498db; color: white; padding: 8px 16px;                            border-radius: 20px; text-decoration: none; font-size: 12px;                            display: inline-block; transition: all 0.3s;">                     🗺️ Google Maps'te Aç                 </a>             </div>         </div>         </div>`)[0];
+                popup_c56f45920ebd6c69f80bc18debcd4701.setContent(html_e97ef118111f4dce1a6ef734383c1b18);
+            
+        
+
+        marker_1254114a5f5228c014769b31e0f80f4c.bindPopup(popup_c56f45920ebd6c69f80bc18debcd4701)
+        ;
+
+        
+    
+    
+            marker_1254114a5f5228c014769b31e0f80f4c.bindTooltip(
+                `<div>
+                     
+        <div style="font-weight: bold; color: #3498db; font-size: 14px;">
+            11. Kapadokya Sanat ve Tarih Müzesi (Bebek Müzesi - Mustafapaşa)<br>
+            <small style="color: #666;">🏛️ Kültürel</small>
+        </div>
+        
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_1254114a5f5228c014769b31e0f80f4c.setIcon(beautify_icon_48a57c4b0ceb2bc5c8eb321a7ae20e35);
+            
+    
+            var poly_line_327464d4c94424e7d6aafa242af7f16b = L.polyline(
+                [[38.63222, 34.91148], [38.6322873, 34.9116157], [38.6321597, 34.9111907], [38.6324986, 34.9105489], [38.6325104, 34.9104276], [38.632411, 34.9101217], [38.6316023, 34.9101859], [38.6316493, 34.9104542], [38.63194, 34.91054], [38.6316493, 34.9104542], [38.6316023, 34.9101859], [38.632411, 34.9101217], [38.6323113, 34.9098993], [38.6318624, 34.9092065], [38.6312137, 34.9093228], [38.6306523, 34.9102057], [38.6304043, 34.9101897], [38.6299985, 34.9103808], [38.6300513, 34.9115696], [38.6294204, 34.9126743], [38.6283134, 34.9137964], [38.6280692, 34.914025], [38.6269687, 34.9143719], [38.6258903, 34.9146519], [38.6248036, 34.9147739], [38.6245861, 34.9147369], [38.6242448, 34.9146789], [38.623705, 34.914581], [38.6233618, 34.9145188], [38.6230392, 34.9144558], [38.6223433, 34.9143198], [38.622211, 34.914294], [38.6032275, 34.9080177], [38.6015456, 34.9068581], [38.5995038, 34.9068265], [38.5930572, 34.9053518], [38.5877987, 34.9009479], [38.5861823, 34.8995749], [38.5858283, 34.8993423], [38.5856665, 34.899236], [38.5855463, 34.899157], [38.5849149, 34.8987031], [38.5843088, 34.8983403], [38.5839162, 34.8982327], [38.5836533, 34.898262], [38.5834747, 34.8981449], [38.5833193, 34.8978627], [38.5832615, 34.8973887], [38.5829631, 34.896832], [38.5820207, 34.8964782], [38.5806319, 34.8961746], [38.5805571, 34.8961918], [38.5802494, 34.8962627], [38.578572, 34.8961704], [38.5784832, 34.8961381], [38.57593, 34.89694], [38.57678, 34.89655], [38.5784832, 34.8961381], [38.578572, 34.8961704], [38.5802494, 34.8962627], [38.5805571, 34.8961918], [38.5806319, 34.8961746], [38.5820207, 34.8964782], [38.5829631, 34.896832], [38.58334, 34.8967257], [38.5836739, 34.8967607], [38.5890298, 34.8921448], [38.5879, 34.8901], [38.5890298, 34.8921448], [38.59551, 34.9007663], [38.5995038, 34.9068265], [38.6015456, 34.9068581], [38.6032275, 34.9080177], [38.622211, 34.914294], [38.6223433, 34.9143198], [38.6230392, 34.9144558], [38.6233618, 34.9145188], [38.6247973, 34.9124448], [38.6249149, 34.9120009], [38.6249676, 34.911913], [38.6251111, 34.9103142], [38.6251281, 34.9098082], [38.6264231, 34.9063053], [38.6275489, 34.9056373], [38.628197, 34.9053317], [38.6289474, 34.9032729], [38.6327957, 34.8989386], [38.6335403, 34.8993281], [38.6337027, 34.8995632], [38.6338082, 34.8989734], [38.633746, 34.894454], [38.6354505, 34.8900212], [38.6345089, 34.8635946], [38.6343785, 34.8632533], [38.6318535, 34.8583056], [38.63359, 34.85871], [38.6318535, 34.8583056], [38.632045, 34.8572988], [38.6323885, 34.85696], [38.63375, 34.85813], [38.6323885, 34.85696], [38.6313137, 34.8574621], [38.6311038, 34.8576238], [38.631229, 34.8578413], [38.6339104, 34.8628098], [38.6340934, 34.8632582], [38.6342155, 34.8636083], [38.6354505, 34.8900212], [38.633746, 34.894454], [38.6335608, 34.8984468], [38.6335508, 34.8988771], [38.6335403, 34.8993281], [38.6334906, 34.9003937], [38.6331832, 34.9030415], [38.6331289, 34.90338], [38.6330341, 34.9049323], [38.6328356, 34.9067387], [38.6325986, 34.906614], [38.6324625, 34.9066652], [38.6321371, 34.9074194], [38.6317506, 34.9077632], [38.6312137, 34.9093228], [38.6318624, 34.9092065], [38.6323113, 34.9098993], [38.632411, 34.9101217], [38.6325104, 34.9104276], [38.6330972, 34.9110728], [38.6330895, 34.9111818], [38.6329498, 34.9120074], [38.6328465, 34.9120163], [38.6328104, 34.9124211], [38.6326684, 34.9141628], [38.6326084, 34.9147569], [38.6324146, 34.9147847], [38.6324304, 34.9150413], [38.6322961, 34.9168512], [38.6330703, 34.9219211], [38.6330866, 34.9220028], [38.6330956, 34.9220525], [38.6333975, 34.9235781], [38.6335838, 34.9248404], [38.6337159, 34.9268984], [38.6337821, 34.9284186], [38.6337626, 34.9297944], [38.6334663, 34.932607], [38.6333582, 34.9340181], [38.6336767, 34.9362999], [38.6338253, 34.9375264], [38.6333226, 34.9382466], [38.6332933, 34.9382648], [38.6326267, 34.9386688], [38.6317225, 34.9391607], [38.6312524, 34.9394369], [38.6306077, 34.9433461], [38.6305248, 34.9445663], [38.6182216, 34.9698], [38.6155087, 34.9736284], [38.6152948, 34.9742139], [38.6146922, 34.9757303], [38.6141316, 34.9764478], [38.6132288, 34.9768911], [38.6001793, 34.9939986], [38.5920548, 34.9910355], [38.5919449, 34.9910311], [38.5914051, 34.9912797], [38.5895452, 34.9910335], [38.5878475, 34.9919934], [38.5866975, 34.9930228], [38.560652, 34.9865034], [38.5599708, 34.9863471], [38.5592825, 34.9859954], [38.5583731, 34.9857128], [38.5581629, 34.9854585], [38.557771, 34.9852674], [38.5424161, 34.9932452], [38.5411054, 34.9929764], [38.5410147, 34.9929527], [38.5408596, 34.9928937], [38.5404632, 34.9929525], [38.5401121, 34.9930383], [38.5396021, 34.9934555], [38.5392286, 34.9933682], [38.5385799, 34.9935653], [38.51995, 34.99783], [38.5385799, 34.9935653], [38.5392286, 34.9933682], [38.5396021, 34.9934555], [38.5401121, 34.9930383], [38.5404632, 34.9929525], [38.5408596, 34.9928937], [38.5410147, 34.9929527], [38.5411054, 34.9929764], [38.5424161, 34.9932452], [38.557771, 34.9852674], [38.5581629, 34.9854585], [38.5583731, 34.9857128], [38.5592825, 34.9859954], [38.5599708, 34.9863471], [38.560652, 34.9865034], [38.5866975, 34.9930228], [38.5878475, 34.9919934], [38.5895452, 34.9910335], [38.5914051, 34.9912797], [38.5919449, 34.9910311], [38.5920548, 34.9910355], [38.6001793, 34.9939986], [38.6132288, 34.9768911], [38.6141316, 34.9764478], [38.6146922, 34.9757303], [38.6152948, 34.9742139], [38.6155087, 34.9736284], [38.6182216, 34.9698], [38.6305248, 34.9445663], [38.6306077, 34.9433461], [38.6312524, 34.9394369], [38.6317225, 34.9391607], [38.6326267, 34.9386688], [38.6332933, 34.9382648], [38.6333226, 34.9382466], [38.6336203, 34.9380926], [38.6338895, 34.937783], [38.6340262, 34.9375809], [38.6340053, 34.9374903], [38.6334378, 34.9340065], [38.6335506, 34.9325234], [38.6338841, 34.9297923], [38.6338992, 34.9284035], [38.633747, 34.9252676], [38.6333004, 34.9223048], [38.6332395, 34.9220002], [38.6332178, 34.9218794], [38.6331575, 34.9216001], [38.632391, 34.9168559], [38.6325386, 34.915062], [38.6324146, 34.9147847], [38.6318685, 34.91361], [38.6318258, 34.913526], [38.6313269, 34.9125185], [38.6311224, 34.9121398], [38.6306812, 34.9111761], [38.6306369, 34.9110326], [38.6305673, 34.9103836], [38.6304043, 34.9101897], [38.6299238, 34.9098845], [38.6298563, 34.9092406], [38.6295331, 34.9085971], [38.6293156, 34.9077152], [38.6287853, 34.9064429], [38.6281737, 34.9060527], [38.6275489, 34.9056373], [38.6264231, 34.9063053], [38.6256406, 34.9050214], [38.61469, 34.89302], [38.6256406, 34.9050214], [38.6264231, 34.9063053], [38.6251281, 34.9098082], [38.6251111, 34.9103142], [38.6249676, 34.911913], [38.6249149, 34.9120009], [38.6247973, 34.9124448], [38.6233618, 34.9145188], [38.6230392, 34.9144558], [38.6223433, 34.9143198], [38.622211, 34.914294], [38.6032275, 34.9080177], [38.6015456, 34.9068581], [38.5995038, 34.9068265], [38.5930572, 34.9053518], [38.5877987, 34.9009479], [38.5874923, 34.8995772], [38.5878561, 34.8989931], [38.5881749, 34.8984814], [38.5899138, 34.8979454], [38.58923, 34.89773], [38.5899138, 34.8979454], [38.5881749, 34.8984814], [38.587849, 34.8981473], [38.5877417, 34.8980464], [38.5869026, 34.8972116], [38.5865988, 34.8971658], [38.5856962, 34.8975535], [38.5849049, 34.8981388], [38.5843088, 34.8983403], [38.5839162, 34.8982327], [38.5836533, 34.898262], [38.5834747, 34.8981449], [38.5833193, 34.8978627], [38.5832615, 34.8973887], [38.5829631, 34.896832], [38.5820207, 34.8964782], [38.5806319, 34.8961746], [38.5805571, 34.8961918], [38.5802494, 34.8962627], [38.578572, 34.8961704], [38.5784832, 34.8961381], [38.57493, 34.89635]],
+                {"bubblingMouseEvents": true, "color": "#3498db", "dashArray": null, "dashOffset": null, "fill": false, "fillColor": "#3498db", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.8, "smoothFactor": 1.0, "stroke": true, "weight": 6}
+            ).addTo(feature_group_4d5367acfc0485d47be59660c80fcae0);
+        
+    
+        var popup_b9a5f39e21828f13966c100980324ede = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_6e9a96d78271a8d30b282b8491ad24be = $(`<div id="html_6e9a96d78271a8d30b282b8491ad24be" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 280px; padding: 15px;">             <h3 style="margin: 0 0 10px 0; color: #3498db; text-align: center;">                 📍 🏛️ Kültürel Rotası             </h3>                          <div style="background: linear-gradient(135deg, #3498db20, #3498db10);                          padding: 12px; border-radius: 8px; margin-bottom: 10px;">                 <p style="margin: 5px 0; font-size: 14px;"><strong>📏 Uzunluk:</strong> 67.01 km</p>                 <p style="margin: 5px 0; font-size: 14px;"><strong>🛣️ Tip:</strong> Yol Ağı Rotası</p>                 <p style="margin: 5px 0; font-size: 14px;"><strong>📍 Duraklar:</strong> 11 nokta</p>                 <p style="margin: 5px 0; font-size: 14px;"><strong>⏱️ Tahmini Süre:</strong> 134 dakika</p>             </div>                          <div style="font-size: 12px; color: #666;">                 <p style="margin: 5px 0;"><strong>💡 İpucu:</strong> Marker'lara tıklayarak detayları görebilirsiniz</p>                              </div>         </div>         </div>`)[0];
+                popup_b9a5f39e21828f13966c100980324ede.setContent(html_6e9a96d78271a8d30b282b8491ad24be);
+            
+        
+
+        poly_line_327464d4c94424e7d6aafa242af7f16b.bindPopup(popup_b9a5f39e21828f13966c100980324ede)
+        ;
+
+        
+    
+    
+            poly_line_327464d4c94424e7d6aafa242af7f16b.bindTooltip(
+                `<div>
+                     🛣️ 🏛️ Kültürel: 67.01 km (Yol Ağı Rotası)
+                 </div>`,
+                {
+  "sticky": false,
+}
+            );
+        
+    
+            feature_group_4d5367acfc0485d47be59660c80fcae0.addTo(map_45b59ceaa5a7f81b91c4e93e42cf978a);
+        
+    
+            L.control.fullscreen(
+                {
+  "position": "topleft",
+  "title": "\ud83d\udd0d Tam Ekran",
+  "titleCancel": "\u274c Tam Ekrandan \u00c7\u0131k",
+  "forceSeparateButton": true,
+}
+            ).addTo(map_45b59ceaa5a7f81b91c4e93e42cf978a);
+        
+    
+            var options = {
+              position: "topleft",
+              draw: {"circle": {"shapeOptions": {"color": "#e74c3c", "fillColor": "#e74c3c", "fillOpacity": 0.2}}, "circlemarker": {}, "marker": {}, "polygon": {"shapeOptions": {"color": "#2ecc71", "fillColor": "#2ecc71", "fillOpacity": 0.2}}, "polyline": {"shapeOptions": {"color": "#3498db", "opacity": 0.8, "weight": 4}}, "rectangle": {"shapeOptions": {"color": "#f39c12", "fillColor": "#f39c12", "fillOpacity": 0.2}}},
+              edit: {"edit": true, "remove": true},
+            }
+                // FeatureGroup is to store editable layers.
+                var drawnItems_draw_control_e647a2e03a57f2b16772f6d8076bb8ab =
+                    new L.featureGroup().addTo(
+                        map_45b59ceaa5a7f81b91c4e93e42cf978a
+                    );
+
+            options.edit.featureGroup = drawnItems_draw_control_e647a2e03a57f2b16772f6d8076bb8ab;
+            var draw_control_e647a2e03a57f2b16772f6d8076bb8ab = new L.Control.Draw(
+                options
+            ).addTo( map_45b59ceaa5a7f81b91c4e93e42cf978a );
+            map_45b59ceaa5a7f81b91c4e93e42cf978a.on(L.Draw.Event.CREATED, function(e) {
+                var layer = e.layer,
+                    type = e.layerType;
+                var coords = JSON.stringify(layer.toGeoJSON());
+                layer.on('click', function() {
+                    alert(coords);
+                    console.log(coords);
+                });
+                drawnItems_draw_control_e647a2e03a57f2b16772f6d8076bb8ab.addLayer(layer);
+            });
+            map_45b59ceaa5a7f81b91c4e93e42cf978a.on('draw:created', function(e) {
+                drawnItems_draw_control_e647a2e03a57f2b16772f6d8076bb8ab.addLayer(e.layer);
+            });
+
+            
+            document.getElementById('export').onclick = function(e) {
+                var data = drawnItems_draw_control_e647a2e03a57f2b16772f6d8076bb8ab.toGeoJSON();
+                var convertedData = 'text/json;charset=utf-8,'
+                    + encodeURIComponent(JSON.stringify(data));
+                document.getElementById('export').setAttribute(
+                    'href', 'data:' + convertedData
+                );
+                document.getElementById('export').setAttribute(
+                    'download', "kapadokya_cizimlerim.geojson"
+                );
+            }
+            
+        
+    
+            var measure_control_875eb0aacfde7f78e9096e820972f16e = new L.Control.Measure(
+                {
+  "position": "bottomleft",
+  "primaryLengthUnit": "kilometers",
+  "secondaryLengthUnit": "miles",
+  "primaryAreaUnit": "sqkilometers",
+  "secondaryAreaUnit": "sqmiles",
+  "completedColor": "#e74c3c",
+  "activeColor": "#3498db",
+});
+            map_45b59ceaa5a7f81b91c4e93e42cf978a.addControl(measure_control_875eb0aacfde7f78e9096e820972f16e);
+
+            // Workaround for using this plugin with Leaflet>=1.8.0
+            // https://github.com/ljagis/leaflet-measure/issues/171
+            L.Control.Measure.include({
+                _setCaptureMarkerIcon: function () {
+                    // disable autopan
+                    this._captureMarker.options.autoPanOnFocus = false;
+                    // default function
+                    this._captureMarker.setIcon(
+                        L.divIcon({
+                            iconSize: this._map.getSize().multiplyBy(2)
+                        })
+                    );
+                },
+            });
+
+        
+    
+            var tile_layer_31e1e7353c3bf66f79663a99a9baa90a = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {"attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors", "detect_retina": false, "max_native_zoom": 19, "max_zoom": 19, "min_zoom": 0, "no_wrap": false, "opacity": 1, "subdomains": "abc", "tms": false}
+            );
+            var mini_map_3a3266d7137f953a1df10eb0c6dc535b = new L.Control.MiniMap(
+                tile_layer_31e1e7353c3bf66f79663a99a9baa90a,
+                {
+  "position": "bottomright",
+  "width": 150,
+  "height": 150,
+  "collapsedWidth": 25,
+  "collapsedHeight": 25,
+  "zoomLevelOffset": -5,
+  "centerFixed": false,
+  "zoomAnimation": false,
+  "toggleDisplay": true,
+  "autoToggleDisplay": false,
+  "minimized": false,
+}
+            );
+            map_45b59ceaa5a7f81b91c4e93e42cf978a.addControl(mini_map_3a3266d7137f953a1df10eb0c6dc535b);
+        
+    
+            var layer_control_35511f905c2fdb93565a64d9e67b36e8_layers = {
+                base_layers : {
+                    "openstreetmap" : tile_layer_d1253d39fd0470424cbbb72ed0251077,
+                },
+                overlays :  {
+                    "\ud83c\udfdb\ufe0f K\u00fclt\u00fcrel" : feature_group_4d5367acfc0485d47be59660c80fcae0,
+                },
+            };
+            let layer_control_35511f905c2fdb93565a64d9e67b36e8 = L.control.layers(
+                layer_control_35511f905c2fdb93565a64d9e67b36e8_layers.base_layers,
+                layer_control_35511f905c2fdb93565a64d9e67b36e8_layers.overlays,
+                {
+  "position": "topright",
+  "collapsed": false,
+  "autoZIndex": true,
+}
+            ).addTo(map_45b59ceaa5a7f81b91c4e93e42cf978a);
+
+        
+</script>
+</html>

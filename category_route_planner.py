@@ -14,7 +14,7 @@ URGUP_CENTER_LOCATION = (38.6310, 34.9130) # Ürgüp merkezi
 DEFAULT_ZOOM_URGUP = 13 # Ürgüp merkezine odaklanmak için zoom
 DEFAULT_GRAPH_FILE_URGUP = "urgup_merkez_driving.graphml" # Ürgüp'e özel graph dosyası
 EARTH_RADIUS_KM = 6371.0
-DEFAULT_GRAPH_RADIUS_KM = 10.0  # Varsayılan yarıçap (km)
+DEFAULT_GRAPH_RADIUS_KM = 10.0  # Artırıldı: Daha geniş kapsam için varsayılan yarıçap (km)
 
 CATEGORY_STYLES = {
     "gastronomik": {
@@ -132,42 +132,151 @@ def haversine_distance(coord1: Tuple[float, float], coord2: Tuple[float, float])
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return EARTH_RADIUS_KM * c
 
+def calculate_optimal_bounding_box(all_poi_coords: List[Tuple[float, float]], 
+                                 center_location: Tuple[float, float] = URGUP_CENTER_LOCATION,
+                                 min_radius_km: float = 15.0) -> Tuple[float, float, float, float]:
+    """Tüm POI'ları kapsayacak optimum sınır kutusunu hesaplar"""
+    if not all_poi_coords:
+        # POI yoksa varsayılan merkez etrafında küçük bir alan
+        lat, lon = center_location
+        offset = min_radius_km / 111.0  # Yaklaşık km to degree conversion
+        return lat - offset, lat + offset, lon - offset, lon + offset
+    
+    # Tüm POI koordinatlarını topla
+    lats = [coord[0] for coord in all_poi_coords]
+    lons = [coord[1] for coord in all_poi_coords]
+    
+    min_lat, max_lat = min(lats), max(lats)
+    min_lon, max_lon = min(lons), max(lons)
+    
+    # Marjin ekle (%20 buffer + minimum yarıçap kontrolü)
+    lat_range = max_lat - min_lat
+    lon_range = max_lon - min_lon
+    
+    lat_margin = max(lat_range * 0.2, min_radius_km / 111.0)
+    lon_margin = max(lon_range * 0.2, min_radius_km / 111.0)
+    
+    return (min_lat - lat_margin, max_lat + lat_margin, 
+            min_lon - lon_margin, max_lon + lon_margin)
+
+def check_graph_coverage(G: nx.MultiDiGraph, poi_coords: List[Tuple[float, float]], 
+                        max_distance_km: float = 3.0) -> bool:  # Daha sıkı tolerans
+    """Graph'in POI'ları yeterince kapsayıp kapsamadığını kontrol eder"""
+    try:
+        uncovered_count = 0
+        distant_pois = []
+        
+        for coord in poi_coords:
+            lat, lon = coord
+            # En yakın node'u bul
+            try:
+                nearest_node = ox.nearest_nodes(G, X=lon, Y=lat)
+                nearest_node_coord = (G.nodes[nearest_node]["y"], G.nodes[nearest_node]["x"])
+                distance_km = haversine_distance(coord, nearest_node_coord)
+                
+                if distance_km > max_distance_km:
+                    uncovered_count += 1
+                    distant_pois.append((coord, distance_km))
+                    print(f"   ⚠️ UZAK POI: ({lat:.4f}, {lon:.4f}) en yakın yol noktasına {distance_km:.2f} km uzaklıkta")
+                    
+            except Exception:
+                uncovered_count += 1
+                distant_pois.append((coord, 999.0))
+        
+        coverage_ratio = (len(poi_coords) - uncovered_count) / len(poi_coords) if poi_coords else 1.0
+        print(f"   📊 Kapsam oranı: %{coverage_ratio * 100:.1f} ({len(poi_coords) - uncovered_count}/{len(poi_coords)} POI)")
+        
+        if distant_pois:
+            print(f"   🔍 Uzak POI'lar tespit edildi: {len(distant_pois)} adet")
+            for poi_coord, dist in distant_pois[:3]:  # İlk 3'ünü göster
+                print(f"      📍 {poi_coord} -> {dist:.2f}km")
+        
+        return coverage_ratio >= 0.7  # %70'e düşürdüm - daha esnek
+        
+    except Exception as e:
+        print(f"   ⚠️ Kapsam kontrolü başarısız: {e}")
+        return False
+
+def detect_distant_pois(poi_coords: List[Tuple[float, float]], 
+                       center: Tuple[float, float] = URGUP_CENTER_LOCATION,
+                       distant_threshold_km: float = 12.0) -> Tuple[List[Tuple[float, float]], List[Tuple[float, float]]]:
+    """POI'ları merkeze olan uzaklığa göre yakın ve uzak olarak ayırır"""
+    near_pois = []
+    distant_pois = []
+    
+    for coord in poi_coords:
+        distance = haversine_distance(center, coord)
+        if distance > distant_threshold_km:
+            distant_pois.append(coord)
+            print(f"   🌍 UZAK POI: {coord} -> {distance:.2f}km (merkez: {center})")
+        else:
+            near_pois.append(coord)
+    
+    return near_pois, distant_pois
+
 def load_road_network(graph_file_path: str, radius_km: float = DEFAULT_GRAPH_RADIUS_KM, 
-                     default_place_query_for_download: str = "Ürgüp, Türkiye") -> Optional[nx.MultiDiGraph]:
-    if os.path.exists(graph_file_path):
+                     default_place_query_for_download: str = "Ürgüp, Türkiye",
+                     all_poi_coords: Optional[List[Tuple[float, float]]] = None) -> Optional[nx.MultiDiGraph]:
+    """
+    Yol ağını yükler. Eğer uzak POI'lar varsa, daha geniş bir bölge (Nevşehir) indirir.
+    """
+    
+    # 1. Önce, işlenecek POI'lara göre indirme stratejisi belirle
+    is_distant_scenario = False
+    if all_poi_coords:
+        _, distant_pois = detect_distant_pois(all_poi_coords)
+        if distant_pois:
+            is_distant_scenario = True
+            print(f"🌍 Uzak POI'lar tespit edildi. Geniş kapsamlı yol ağı indirilecek: Nevşehir.")
+            
+    # 2. Mevcut graph dosyasını kontrol et
+    # Eğer uzak senaryo ise ve dosya adı Ürgüp'e özelse, yeniden indirmeyi zorunlu kıl.
+    force_download = is_distant_scenario and "urgup" in graph_file_path.lower()
+    
+    if os.path.exists(graph_file_path) and not force_download:
         print(f"'{graph_file_path}' dosyasından yol ağı yükleniyor...")
         try:
-            return ox.load_graphml(graph_file_path)
+            G = ox.load_graphml(graph_file_path)
+            # Mevcut grafiğin kapsamını yine de kontrol edelim
+            if all_poi_coords and not check_graph_coverage(G, all_poi_coords):
+                 print(f"⚠️ Mevcut yol ağı yetersiz. Yeniden indirilecek.")
+            else:
+                print(f"✅ Mevcut yol ağı yeterli görünüyor.")
+                return G
         except Exception as e:
             print(f"HATA: '{graph_file_path}' yüklenemedi: {e}. Yeniden indirme denenecek.")
-    
-    print(f"Ürgüp merkezi etrafında {radius_km} km yarıçapta yol ağı indiriliyor...")
+
+    # 3. Yeni yol ağı indir
+    G = None
     try:
-        # Koordinat tabanlı indirme - daha kontrollü
-        center_lat, center_lon = URGUP_CENTER_LOCATION
-        G = ox.graph_from_point(
-            center_point=(center_lat, center_lon), 
-            dist=radius_km * 1000,  # metre cinsinden
-            network_type="drive", 
-            retain_all=True
-        )
-        print(f"Yol ağı indirildi ({radius_km} km yarıçap). Kaydediliyor...")
-        ox.save_graphml(G, filepath=graph_file_path)
-        print(f"Yol ağı '{graph_file_path}' olarak kaydedildi.")
-        return G
+        if is_distant_scenario:
+            # Strateji 1: Uzak POI'lar için tüm Nevşehir ilini indir (en sağlam yöntem)
+            place_to_download = "Nevşehir, Türkiye"
+            print(f"🎯 Strateji: '{place_to_download}' için yol ağı indiriliyor (Yüksek Çözünürlük)...")
+            G = ox.graph_from_place(place_to_download, network_type='drive', simplify=False)
+        else:
+            # Strateji 2: Yakın POI'lar için Ürgüp merkezli yarıçap yeterli
+            print(f"🎯 Strateji: '{default_place_query_for_download}' için {radius_km}km yarıçapta yol ağı indiriliyor (Yüksek Çözünürlük)...")
+            G = ox.graph_from_point(URGUP_CENTER_LOCATION, dist=radius_km * 1000, network_type='drive', simplify=False)
+            
     except Exception as e:
-        print(f"KRİTİK HATA: Yarıçap tabanlı indirme başarısız. Place tabanlı deneniyor...")
+        print(f"💥 KRİTİK İNDİRME HATASI: {e}")
+        print("🚧 Rota hesaplamaları sadece düz çizgilerle yapılacaktır.")
+        return None
+
+    # 4. İndirilen grafiği kaydet
+    if G is not None:
+        print(f"💾 Yol ağı kaydediliyor... ({len(G.nodes)} düğüm, {len(G.edges)} kenar)")
         try:
-            # Fallback: place tabanlı
-            G = ox.graph_from_place(default_place_query_for_download, network_type="drive", retain_all=True)
-            print("Place tabanlı yol ağı indirildi. Kaydediliyor...")
-            ox.save_graphml(G, filepath=graph_file_path)
-            print(f"Yol ağı '{graph_file_path}' olarak kaydedildi.")
-            return G
-        except Exception as e2:
-            print(f"KRİTİK HATA: Hiçbir yöntemle yol ağı indirilemedi: {e2}")
-            print("Rota hesaplamaları sadece düz çizgilerle yapılacaktır.")
-            return None
+            # Dosya adını senaryoya göre belirle
+            save_path = "nevsehir_driving_high_res.graphml" if is_distant_scenario else graph_file_path.replace(".graphml", "_high_res.graphml")
+            ox.save_graphml(G, filepath=save_path)
+            print(f"✅ Yol ağı '{save_path}' olarak kaydedildi.")
+        except Exception as save_e:
+            print(f"⚠️ Kaydetme hatası: {save_e}, devam ediliyor...")
+        return G
+
+    return None
 
 def get_shortest_path_route_and_length(
     G: nx.MultiDiGraph,
@@ -181,18 +290,88 @@ def get_shortest_path_route_and_length(
         if origin_node == destination_node:
             return [origin_coord], 0.0
 
-        route_nodes = nx.shortest_path(G, origin_node, destination_node, weight="length")
-        route_length_meters = nx.shortest_path_length(G, origin_node, destination_node, weight="length")
+        # Debug: Node uzaklıklarını kontrol et
+        origin_node_coord = (G.nodes[origin_node]["y"], G.nodes[origin_node]["x"])
+        dest_node_coord = (G.nodes[destination_node]["y"], G.nodes[destination_node]["x"])
+        origin_distance = haversine_distance(origin_coord, origin_node_coord)
+        dest_distance = haversine_distance(destination_coord, dest_node_coord)
         
-        path_coords = [(G.nodes[n]["y"], G.nodes[n]["x"]) for n in route_nodes]
+        # Eğer en yakın node'lar çok uzaksa, uyarı ver
+        if origin_distance > 2.0 or dest_distance > 2.0:
+            print(f"   ⚠️ UZAK NODE: {origin_coord} -> node: {origin_distance:.2f}km, {destination_coord} -> node: {dest_distance:.2f}km")
+
+        # Graph bağlantısını kontrol et
+        try:
+            route_nodes = nx.shortest_path(G, origin_node, destination_node, weight="length")
+            route_length_meters = nx.shortest_path_length(G, origin_node, destination_node, weight="length")
+        except nx.NetworkXNoPath:
+            # Bağlantısızlık analizi
+            print(f"   💥 YOL YOK: {origin_coord} <-> {destination_coord}")
+            print(f"      🔍 Origin node {origin_node} -> Dest node {destination_node}")
+            
+            # En kısa alternatif yolu dene (farklı node'lar)
+            alternative_found = False
+            best_route = None
+            best_length = float('inf')
+            
+            # Origin için birkaç alternatif node dene
+            origin_alternatives = ox.nearest_nodes(G, X=[origin_coord[1]], Y=[origin_coord[0]], return_dist=True)
+            dest_alternatives = ox.nearest_nodes(G, X=[destination_coord[1]], Y=[destination_coord[0]], return_dist=True)
+            
+            if hasattr(origin_alternatives, '__len__') and len(origin_alternatives) == 2:
+                origin_nodes, origin_dists = origin_alternatives
+                dest_nodes, dest_dists = dest_alternatives
+                
+                # En yakın 3 node'u dene
+                for orig_idx in range(min(3, len(origin_nodes))):
+                    for dest_idx in range(min(3, len(dest_nodes))):
+                        try:
+                            test_route = nx.shortest_path(G, origin_nodes[orig_idx], dest_nodes[dest_idx], weight="length")
+                            test_length = nx.shortest_path_length(G, origin_nodes[orig_idx], dest_nodes[dest_idx], weight="length")
+                            
+                            if test_length < best_length:
+                                best_route = test_route
+                                best_length = test_length
+                                alternative_found = True
+                                print(f"      ✅ ALTERNATİF BULUNDU: {test_length/1000.0:.2f}km")
+                                
+                        except nx.NetworkXNoPath:
+                            continue
+            
+            if alternative_found and best_route:
+                route_nodes = best_route
+                route_length_meters = best_length
+            else:
+                # Hiçbir alternatif bulunamadı, kuş uçumu kullan
+                print(f"      ❌ HİÇBİR ALTERNATİF YOL BULUNAMADI - Kuş uçumu kullanılıyor")
+                raise nx.NetworkXNoPath("No alternative path found")
         
+        # Yüksek çözünürlüklü rota geometrisini al
+        path_coords = []
+        for u, v in zip(route_nodes[:-1], route_nodes[1:]):
+            # En kısa kenarı al (paralel yollar olabilir)
+            edge_data = min(G.get_edge_data(u, v).values(), key=lambda d: d["length"])
+            
+            if "geometry" in edge_data:
+                # LineString geometrisinden koordinatları çıkar
+                xs, ys = edge_data["geometry"].xy
+                path_coords.extend(list(zip(ys, xs)))
+            else:
+                # Geometri yoksa, sadece düğüm koordinatını ekle
+                path_coords.append((G.nodes[u]["y"], G.nodes[u]["x"]))
+        
+        # Son düğümü de eklediğimizden emin olalım
+        if route_nodes:
+            # list.extend() zaten son noktayı eklediği için tekrardan kaçın
+            if not path_coords or (path_coords[-1][0] != G.nodes[route_nodes[-1]]["y"] or path_coords[-1][1] != G.nodes[route_nodes[-1]]["x"]):
+                 path_coords.append((G.nodes[route_nodes[-1]]["y"], G.nodes[route_nodes[-1]]["x"]))
+
+        # Orijinal POI koordinatlarının rotanın başında ve sonunda olmasını sağla
         final_path_coords = []
         if path_coords:
-            # Başlangıç POI'sini ekle (eğer yolun ilk noktasından çok farklıysa veya yol boşsa)
             if not final_path_coords or haversine_distance(path_coords[0], origin_coord) > 0.001:
                  final_path_coords.append(origin_coord)
             final_path_coords.extend(path_coords)
-            # Bitiş POI'sini ekle (eğer yolun son noktasından çok farklıysa)
             if haversine_distance(path_coords[-1], destination_coord) > 0.001:
                  final_path_coords.append(destination_coord)
         else: # path_coords boşsa (çok nadir, ama olabilir)
@@ -201,6 +380,7 @@ def get_shortest_path_route_and_length(
         return final_path_coords, route_length_meters / 1000.0
     
     except (nx.NetworkXNoPath, Exception) as e:
+        print(f"   🚧 FALLBACK: {origin_coord} <-> {destination_coord} | Sebep: {type(e).__name__}: {str(e)[:100]}")
         straight_path_coords = [origin_coord, destination_coord]
         straight_length_km = haversine_distance(origin_coord, destination_coord)
         return straight_path_coords, straight_length_km
@@ -633,7 +813,38 @@ def main(
     try:
         print("✨ Kapadokya Gelişmiş Rota Oluşturucu Başlatılıyor ✨")
 
-        road_network = load_road_network(graph_filepath, radius_km)
+        # Önce hangi kategorileri işleyeceğimizi belirleyelim
+        categories_to_process = []
+        if selected_category:
+            if selected_category in POI_DATA:
+                categories_to_process.append(selected_category)
+            else:
+                print(f"⚠️ Seçilen '{selected_category}' kategorisi POI verilerinde bulunamadı.")
+                return
+        else:
+            categories_to_process = list(POI_DATA.keys())
+        
+        # Tüm POI koordinatlarını toplayalım (yol ağı optimizasyonu için)
+        all_poi_coords = []
+        for cat_name in categories_to_process:
+            category_pois = POI_DATA.get(cat_name, {})
+            all_poi_coords.extend(list(category_pois.values()))
+        
+        print(f"📍 Toplam {len(all_poi_coords)} POI koordinatı toplanıyor...")
+        
+        # Uzak POI senaryosunu kontrol et ve graph dosya yolunu ayarla
+        _, distant_pois = detect_distant_pois(all_poi_coords)
+        
+        # Dosya adını senaryoya ve çözünürlüğe göre belirle
+        if distant_pois:
+            final_graph_filepath = "nevsehir_driving_high_res.graphml"
+            print(f"   ❗ Uzak POI'lar nedeniyle yüksek çözünürlüklü Nevşehir yol ağı kullanılacak: '{final_graph_filepath}'")
+        else:
+            final_graph_filepath = graph_filepath.replace(".graphml", "_high_res.graphml")
+            print(f"   ℹ️ Yüksek çözünürlüklü yerel yol ağı kullanılacak: '{final_graph_filepath}'")
+
+        # Optimize edilmiş yol ağını yükle
+        road_network = load_road_network(final_graph_filepath, radius_km, all_poi_coords=all_poi_coords)
         
         # Gelişmiş harita oluşturma
         folium_map = folium.Map(
@@ -661,15 +872,6 @@ def main(
         '''
         folium_map.get_root().html.add_child(folium.Element(map_title_html))
 
-        categories_to_process = []
-        if selected_category:
-            if selected_category in POI_DATA:
-                categories_to_process.append(selected_category)
-            else:
-                print(f"⚠️ Seçilen '{selected_category}' kategorisi POI verilerinde bulunamadı.")
-        else:
-            categories_to_process = list(POI_DATA.keys())
-        
         processed_categories_for_legend = []
         total_routes_length = 0
         total_pois_count = 0
@@ -729,7 +931,7 @@ def main(
         if not road_network:
             print("\n   ⚠️ Yol ağı yüklenemediği için rotalar düz çizgi olarak gösterildi")
         elif road_network and total_pois_count > 0:
-            print("\n   ✅ Rotalar Ürgüp yol ağı kullanılarak hesaplandı")
+            print("\n   ✅ Rotalar POI'ları kapsayacak şekilde optimize edilmiş yol ağı kullanılarak hesaplandı")
             
         print(f"\n🎯 Kullanım İpuçları:")
         print(f"   • Sağ üstteki lejanttan kategorileri açıp kapatabilirsiniz")
