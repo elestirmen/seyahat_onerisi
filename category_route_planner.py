@@ -820,3 +820,4 @@ if __name__ == "__main__":
             output_file += ".html"
             
     main(args.category, output_file, args.graphfile, args.tiles)
+
