@@ -19,45 +19,63 @@ DEFAULT_GRAPH_RADIUS_KM = 10.0  # Artırıldı: Daha geniş kapsam için varsay�
 CATEGORY_STYLES = {
     "gastronomik": {
         "color": "#e74c3c", 
+        "gradient": "linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)",
         "icon": "utensils", 
         "icon_prefix": "fa",
         "display_name": "🍽️ Gastronomik",
-        "description": "Restoranlar, kafeler ve lezzet noktaları"
+        "description": "Restoranlar, kafeler ve lezzet noktaları",
+        "emoji": "🍽️",
+        "shadow_color": "rgba(231, 76, 60, 0.3)"
     },
     "kulturel": {
         "color": "#3498db", 
+        "gradient": "linear-gradient(135deg, #3498db 0%, #2980b9 100%)",
         "icon": "landmark", 
         "icon_prefix": "fa",
         "display_name": "🏛️ Kültürel",
-        "description": "Müzeler, tarihi yerler ve kültürel mekanlar"
+        "description": "Müzeler, tarihi yerler ve kültürel mekanlar",
+        "emoji": "🏛️",
+        "shadow_color": "rgba(52, 152, 219, 0.3)"
     },
     "sanatsal": {
         "color": "#2ecc71", 
+        "gradient": "linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)",
         "icon": "palette", 
         "icon_prefix": "fa",
         "display_name": "🎨 Sanatsal",
-        "description": "Sanat galerileri, atölyeler ve yaratıcı mekanlar"
+        "description": "Sanat galerileri, atölyeler ve yaratıcı mekanlar",
+        "emoji": "🎨",
+        "shadow_color": "rgba(46, 204, 113, 0.3)"
     },
     "doga_macera": {
         "color": "#f39c12", 
+        "gradient": "linear-gradient(135deg, #f39c12 0%, #e67e22 100%)",
         "icon": "hiking", 
         "icon_prefix": "fa",
         "display_name": "🌿 Doğa & Macera",
-        "description": "Doğal güzellikler ve macera aktiviteleri"
+        "description": "Doğal güzellikler ve macera aktiviteleri",
+        "emoji": "🌿",
+        "shadow_color": "rgba(243, 156, 18, 0.3)"
     },
     "konaklama": {
         "color": "#9b59b6", 
+        "gradient": "linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)",
         "icon": "bed", 
         "icon_prefix": "fa",
         "display_name": "🏨 Konaklama",
-        "description": "Oteller, pensiyonlar ve konaklama tesisleri"
+        "description": "Oteller, pensiyonlar ve konaklama tesisleri",
+        "emoji": "🏨",
+        "shadow_color": "rgba(155, 89, 182, 0.3)"
     },
     "default": {
         "color": "#95a5a6", 
+        "gradient": "linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%)",
         "icon": "info-circle", 
         "icon_prefix": "fa",
         "display_name": "ℹ️ Diğer",
-        "description": "Diğer ilgi çekici noktalar"
+        "description": "Diğer ilgi çekici noktalar",
+        "emoji": "ℹ️",
+        "shadow_color": "rgba(149, 165, 166, 0.3)"
     }
 }
 
@@ -463,36 +481,91 @@ def add_poi_markers_and_route_to_map(
         
         # Gelişmiş popup HTML
         popup_html = f"""
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; padding: 10px;">
-            <div style="border-left: 4px solid {style['color']}; padding-left: 10px; margin-bottom: 10px;">
-                <h3 style="margin: 0 0 5px 0; color: {style['color']}; font-size: 16px;">
-                    {style.get('icon', '📍')} {poi_name}
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 350px; padding: 0; 
+                    border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15);">
+            
+            <!-- Header with gradient -->
+            <div style="background: {style.get('gradient', style['color'])}; 
+                        padding: 16px; color: white; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; 
+                            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); 
+                            transform: rotate(45deg);"></div>
+                <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 700; position: relative; z-index: 1;">
+                    {style.get('emoji', '📍')} {poi_name}
                 </h3>
-                <p style="margin: 0; color: #666; font-size: 12px;">{style.get('description', '')}</p>
+                <div style="display: flex; align-items: center; position: relative; z-index: 1;">
+                    <i class="fa {style.get('icon', 'info-circle')}" 
+                       style="font-size: 16px; margin-right: 8px; opacity: 0.9;"></i>
+                    <p style="margin: 0; font-size: 13px; opacity: 0.95; font-weight: 500;">
+                        {style.get('description', '')}
+                    </p>
+                </div>
             </div>
             
-            <div style="background-color: #f8f9fa; padding: 8px; border-radius: 5px; margin-bottom: 10px;">
-                <p style="margin: 2px 0; font-size: 13px;"><strong>📍 Sıra:</strong> {i+1}. durak</p>
-                <p style="margin: 2px 0; font-size: 13px;"><strong>🗂️ Kategori:</strong> {display_name}</p>
-                <p style="margin: 2px 0; font-size: 13px;"><strong>📊 Koordinat:</strong> {coord[0]:.5f}, {coord[1]:.5f}</p>
-            </div>
-            
-            <div style="text-align: center;">
-                <a href="{gmaps_search_url}" target="_blank" rel="noopener noreferrer" 
-                   style="background-color: {style['color']}; color: white; padding: 8px 16px; 
-                          border-radius: 20px; text-decoration: none; font-size: 12px; 
-                          display: inline-block; transition: all 0.3s;">
-                    🗺️ Google Maps'te Aç
-                </a>
+            <!-- Content area -->
+            <div style="padding: 16px; background: white;">
+                <!-- Stats grid -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                    <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                                padding: 12px; border-radius: 8px; text-align: center; border-left: 3px solid {style['color']};">
+                        <div style="font-size: 20px; font-weight: 700; color: {style['color']}; margin-bottom: 4px;">
+                            {i+1}
+                        </div>
+                        <div style="font-size: 11px; color: #666; font-weight: 600; text-transform: uppercase;">
+                            DURAK SIRASI
+                        </div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                                padding: 12px; border-radius: 8px; text-align: center; border-left: 3px solid {style['color']};">
+                        <div style="font-size: 14px; font-weight: 700; color: #2c3e50; margin-bottom: 4px;">
+                            {display_name}
+                        </div>
+                        <div style="font-size: 11px; color: #666; font-weight: 600; text-transform: uppercase;">
+                            KATEGORİ
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Coordinates -->
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 16px; 
+                            border: 1px solid #e9ecef;">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 4px; font-weight: 600;">
+                        📍 KOORDINATLAR
+                    </div>
+                    <div style="font-family: 'Courier New', monospace; font-size: 12px; color: #495057; font-weight: 500;">
+                        {coord[0]:.5f}, {coord[1]:.5f}
+                    </div>
+                </div>
+                
+                <!-- Action button -->
+                <div style="text-align: center;">
+                    <a href="{gmaps_search_url}" target="_blank" rel="noopener noreferrer" 
+                       style="background: {style.get('gradient', style['color'])}; color: white; 
+                              padding: 12px 24px; border-radius: 25px; text-decoration: none; 
+                              font-size: 13px; font-weight: 600; display: inline-flex; 
+                              align-items: center; justify-content: center; transition: all 0.3s ease;
+                              box-shadow: 0 4px 15px {style.get('shadow_color', 'rgba(0,0,0,0.2)')};
+                              min-width: 160px;">
+                        <i class="fa fa-external-link-alt" style="margin-right: 8px; font-size: 12px;"></i>
+                        Google Maps'te Aç
+                    </a>
+                </div>
             </div>
         </div>
         """
         
         # Gelişmiş tooltip
         tooltip_html = f"""
-        <div style="font-weight: bold; color: {style['color']}; font-size: 14px;">
-            {i+1}. {poi_name}<br>
-            <small style="color: #666;">{display_name}</small>
+        <div style="background: {style.get('gradient', style['color'])}; color: white; 
+                    padding: 8px 12px; border-radius: 8px; font-family: 'Segoe UI', sans-serif;
+                    box-shadow: 0 4px 12px {style.get('shadow_color', 'rgba(0,0,0,0.3)')};
+                    border: 1px solid rgba(255,255,255,0.2); min-width: 160px;">
+            <div style="font-weight: 700; font-size: 14px; margin-bottom: 2px;">
+                {style.get('emoji', '📍')} {i+1}. {poi_name}
+            </div>
+            <div style="font-size: 11px; opacity: 0.9; font-weight: 500;">
+                {display_name}
+            </div>
         </div>
         """
         
@@ -526,22 +599,93 @@ def add_poi_markers_and_route_to_map(
         
         # Rota detayları için popup
         route_popup_html = f"""
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 280px; padding: 15px;">
-            <h3 style="margin: 0 0 10px 0; color: {style['color']}; text-align: center;">
-                📍 {display_name} Rotası
-            </h3>
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 320px; 
+                    padding: 0; border-radius: 12px; overflow: hidden; 
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.15); background: white;">
             
-            <div style="background: linear-gradient(135deg, {style['color']}20, {style['color']}10); 
-                        padding: 12px; border-radius: 8px; margin-bottom: 10px;">
-                <p style="margin: 5px 0; font-size: 14px;"><strong>📏 Uzunluk:</strong> {route_length_km:.2f} km</p>
-                <p style="margin: 5px 0; font-size: 14px;"><strong>🛣️ Tip:</strong> {route_type}</p>
-                <p style="margin: 5px 0; font-size: 14px;"><strong>📍 Duraklar:</strong> {len(category_pois)} nokta</p>
-                <p style="margin: 5px 0; font-size: 14px;"><strong>⏱️ Tahmini Süre:</strong> {int(route_length_km * 2)} dakika</p>
+            <!-- Header -->
+            <div style="background: {style.get('gradient', style['color'])}; 
+                        padding: 16px; color: white; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; 
+                            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); 
+                            transform: rotate(45deg);"></div>
+                <h3 style="margin: 0; font-size: 18px; font-weight: 700; text-align: center; position: relative; z-index: 1;">
+                    🛣️ {display_name} Rotası
+                </h3>
             </div>
             
-            <div style="font-size: 12px; color: #666;">
-                <p style="margin: 5px 0;"><strong>💡 İpucu:</strong> Marker'lara tıklayarak detayları görebilirsiniz</p>
-                {'<p style="margin: 5px 0; color: #e74c3c;"><strong>⚠️</strong> Bazı bölümler düz çizgi olarak gösterilmiştir</p>' if is_straight_line else ''}
+            <!-- Route info grid -->
+            <div style="padding: 16px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+                    <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                                padding: 12px; border-radius: 8px; text-align: center; border-left: 3px solid {style['color']};">
+                        <div style="font-size: 18px; font-weight: 700; color: {style['color']}; margin-bottom: 4px;">
+                            {route_length_km:.1f}
+                        </div>
+                        <div style="font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase;">
+                            KİLOMETRE
+                        </div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                                padding: 12px; border-radius: 8px; text-align: center; border-left: 3px solid {style['color']};">
+                        <div style="font-size: 18px; font-weight: 700; color: {style['color']}; margin-bottom: 4px;">
+                            {len(category_pois)}
+                        </div>
+                        <div style="font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase;">
+                            DURAK
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+                    <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                                padding: 12px; border-radius: 8px; text-align: center; border-left: 3px solid {style['color']};">
+                        <div style="font-size: 16px; font-weight: 700; color: {style['color']}; margin-bottom: 4px;">
+                            ~{int(route_length_km * 2)}
+                        </div>
+                        <div style="font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase;">
+                            DAKİKA
+                        </div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                                padding: 12px; border-radius: 8px; text-align: center; border-left: 3px solid {style['color']};">
+                        <div style="font-size: 12px; font-weight: 700; color: {style['color']}; margin-bottom: 4px;">
+                            {"YOL AĞI" if not is_straight_line else "HAVA"}
+                        </div>
+                        <div style="font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase;">
+                            TİP
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Route type indicator -->
+                <div style="background: {'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)' if not is_straight_line else 'linear-gradient(135deg, #f8d7da 0%, #f1c2c7 100%)'}; 
+                            padding: 12px; border-radius: 8px; margin-bottom: 16px; 
+                            border-left: 4px solid {'#28a745' if not is_straight_line else '#dc3545'};">
+                    <div style="display: flex; align-items: center;">
+                        <i class="fa {'fa-road' if not is_straight_line else 'fa-plane'}" 
+                           style="font-size: 16px; margin-right: 10px; color: {'#28a745' if not is_straight_line else '#dc3545'};"></i>
+                        <div>
+                            <div style="font-weight: 600; font-size: 13px; color: {'#155724' if not is_straight_line else '#721c24'}; margin-bottom: 2px;">
+                                {route_type}
+                            </div>
+                            <div style="font-size: 11px; color: {'#6c757d' if not is_straight_line else '#856404'};">
+                                {'Gerçek yollar takip ediliyor' if not is_straight_line else 'Bazı bölümler düz çizgi'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tips -->
+                <div style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); 
+                            padding: 12px; border-radius: 8px; border-left: 4px solid #ffc107;">
+                    <div style="display: flex; align-items: flex-start;">
+                        <i class="fa fa-lightbulb" style="font-size: 14px; margin-right: 8px; color: #856404; margin-top: 2px;"></i>
+                        <div style="font-size: 11px; color: #856404; line-height: 1.4;">
+                            <strong>💡 İpucu:</strong> Marker'lara tıklayarak POI detaylarını görebilirsiniz
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         """
@@ -584,36 +728,60 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
     
     # Ana lejant HTML
     legend_html = f"""
-    <div id="legend-panel" style="position: fixed; top: 20px; right: 20px; width: 320px; 
-                                  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-                                  border: none; border-radius: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    <div id="legend-panel" style="position: fixed; top: 20px; right: 20px; width: 340px; 
+                                  background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+                                  border: none; border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.15);
                                   z-index: 9999; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                                  backdrop-filter: blur(10px); overflow: hidden;">
+                                  backdrop-filter: blur(15px); overflow: hidden; border: 1px solid rgba(255,255,255,0.2);
+                                  animation: slideInFromRight 0.5s ease-out;">
         
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                    padding: 15px; color: white; position: relative;">
-            <h3 style="margin: 0; font-size: 18px; text-align: center; font-weight: 600;">
+                    padding: 18px; color: white; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; 
+                        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); 
+                        transform: rotate(45deg);"></div>
+            <h3 style="margin: 0; font-size: 19px; text-align: center; font-weight: 700; position: relative; z-index: 1;
+                       text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 🗺️ Kapadokya Rota Rehberi
             </h3>
-            <button id="legend-toggle" style="position: absolute; top: 15px; right: 15px; 
-                                              background: rgba(255,255,255,0.2); border: none; 
-                                              color: white; width: 30px; height: 30px; 
-                                              border-radius: 50%; cursor: pointer; font-size: 16px;">
-                ✕
+            <button id="legend-toggle" style="position: absolute; top: 18px; right: 18px; 
+                                              background: rgba(255,255,255,0.15); border: none; 
+                                              color: white; width: 32px; height: 32px; 
+                                              border-radius: 50%; cursor: pointer; font-size: 16px;
+                                              transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.2);
+                                              display: flex; align-items: center; justify-content: center;">
+                <i class="fa fa-times"></i>
             </button>
         </div>
         
         <!-- İstatistikler -->
-        <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e9ecef;">
-            <div style="display: flex; justify-content: space-between; font-size: 13px; color: #666;">
-                <span><strong>📍 Toplam Nokta:</strong> {total_pois}</span>
-                <span><strong>📏 Toplam Mesafe:</strong> {total_length:.1f} km</span>
+        <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                    padding: 16px; border-bottom: 1px solid #dee2e6;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div style="text-align: center; padding: 8px; background: white; border-radius: 8px; 
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 3px solid #667eea;">
+                    <div style="font-size: 20px; font-weight: 700; color: #667eea; margin-bottom: 4px;">
+                        {total_pois}
+                    </div>
+                    <div style="font-size: 11px; color: #666; font-weight: 600; text-transform: uppercase;">
+                        TOPLAM NOKTA
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 8px; background: white; border-radius: 8px; 
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 3px solid #764ba2;">
+                    <div style="font-size: 20px; font-weight: 700; color: #764ba2; margin-bottom: 4px;">
+                        {total_length:.1f}
+                    </div>
+                    <div style="font-size: 11px; color: #666; font-weight: 600; text-transform: uppercase;">
+                        KM MESAFE
+                    </div>
+                </div>
             </div>
         </div>
         
         <!-- Kategoriler -->
-        <div id="categories-container" style="padding: 15px; max-height: 400px; overflow-y: auto;">
+        <div id="categories-container" style="padding: 16px; max-height: 420px; overflow-y: auto;">
     """
     
     for cat_name, layer_var, length, poi_count in processed_categories:
@@ -623,28 +791,81 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
         
         legend_html += f"""
         <div class="category-item" onclick="toggleLayer('{layer_var}', this)" 
-             style="background: white; margin-bottom: 10px; padding: 12px; border-radius: 10px; 
-                    cursor: pointer; transition: all 0.3s; border-left: 4px solid {style['color']};
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);"
-             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'"
-             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)'">
+             style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); 
+                    margin-bottom: 12px; padding: 14px; border-radius: 12px; 
+                    cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+                    border-left: 4px solid {style['color']};
+                    box-shadow: 0 3px 12px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05);
+                    position: relative; overflow: hidden;"
+             onmouseover="this.style.transform='translateY(-3px) scale(1.02)'; 
+                         this.style.boxShadow='0 8px 25px {style.get('shadow_color', 'rgba(0,0,0,0.15)')}';
+                         this.style.borderColor='{style['color']}';"
+             onmouseout="this.style.transform='translateY(0) scale(1)'; 
+                        this.style.boxShadow='0 3px 12px rgba(0,0,0,0.08)';
+                        this.style.borderColor='rgba(0,0,0,0.05)';">
             
-            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <i class="fa {style.get('icon', 'info-circle')}" 
-                   style="color: {style['color']}; font-size: 18px; margin-right: 12px; width: 20px;"></i>
-                <div style="flex: 1;">
-                    <div style="font-weight: 600; color: #333; font-size: 14px;">{display_name}</div>
-                    <div style="font-size: 11px; color: #888; margin-top: 2px;">{description}</div>
+            <!-- Hover overlay -->
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+                        background: {style.get('gradient', style['color'])}; opacity: 0; 
+                        transition: opacity 0.3s ease; z-index: 0;"></div>
+            
+            <div style="display: flex; align-items: center; margin-bottom: 10px; position: relative; z-index: 1;">
+                <div style="background: {style.get('gradient', style['color'])}; 
+                           width: 42px; height: 42px; border-radius: 12px; 
+                           display: flex; align-items: center; justify-content: center;
+                           margin-right: 14px; box-shadow: 0 4px 12px {style.get('shadow_color', 'rgba(0,0,0,0.2)')};
+                           position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; 
+                               background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%); 
+                               transform: rotate(45deg);"></div>
+                    <i class="fa {style.get('icon', 'info-circle')}" 
+                       style="color: white; font-size: 18px; position: relative; z-index: 1;"></i>
                 </div>
-                <div class="toggle-indicator" style="width: 12px; height: 12px; border-radius: 50%; 
-                                                    background-color: {style['color']}; 
-                                                    box-shadow: 0 0 0 2px white, 0 0 0 3px {style['color']};"></div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; color: #2c3e50; font-size: 15px; margin-bottom: 2px;">
+                        {style.get('emoji', '📍')} {display_name}
+                    </div>
+                    <div style="font-size: 12px; color: #6c757d; line-height: 1.3; font-weight: 500;">
+                        {description}
+                    </div>
+                </div>
+                <div class="toggle-indicator" style="width: 14px; height: 14px; border-radius: 50%; 
+                                                    background: {style.get('gradient', style['color'])}; 
+                                                    box-shadow: 0 0 0 3px white, 0 0 0 4px {style['color']};
+                                                    transition: all 0.3s ease; position: relative;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                               width: 6px; height: 6px; background: white; border-radius: 50%;"></div>
+                </div>
             </div>
             
-            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
-                <span>📍 {poi_count} nokta</span>
-                <span>📏 {length:.1f} km</span>
-                <span>⏱️ ~{int(length * 2)} dk</span>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; position: relative; z-index: 1;">
+                <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.8); 
+                           border-radius: 8px; border-left: 2px solid {style['color']};">
+                    <div style="font-size: 16px; font-weight: 700; color: {style['color']}; margin-bottom: 2px;">
+                        {poi_count}
+                    </div>
+                    <div style="font-size: 9px; color: #666; font-weight: 600; text-transform: uppercase;">
+                        NOKTA
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.8); 
+                           border-radius: 8px; border-left: 2px solid {style['color']};">
+                    <div style="font-size: 16px; font-weight: 700; color: {style['color']}; margin-bottom: 2px;">
+                        {length:.1f}
+                    </div>
+                    <div style="font-size: 9px; color: #666; font-weight: 600; text-transform: uppercase;">
+                        KM
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.8); 
+                           border-radius: 8px; border-left: 2px solid {style['color']};">
+                    <div style="font-size: 14px; font-weight: 700; color: {style['color']}; margin-bottom: 2px;">
+                        {int(length * 2) if length > 0 else 0}
+                    </div>
+                    <div style="font-size: 9px; color: #666; font-weight: 600; text-transform: uppercase;">
+                        DK
+                    </div>
+                </div>
             </div>
         </div>
         """
@@ -653,11 +874,15 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
         </div>
         
         <!-- Footer -->
-        <div style="background: #f8f9fa; padding: 12px; text-align: center; border-top: 1px solid #e9ecef;">
+        <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                    padding: 16px; text-align: center; border-top: 1px solid #dee2e6;">
             <button onclick="toggleAllLayers()" 
                     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                           color: white; border: none; padding: 8px 16px; border-radius: 20px; 
-                           font-size: 12px; cursor: pointer; font-weight: 500;">
+                           color: white; border: none; padding: 12px 24px; border-radius: 25px; 
+                           font-size: 13px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;
+                           box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); min-width: 180px;
+                           display: inline-flex; align-items: center; justify-content: center;">
+                <i class="fa fa-eye" style="margin-right: 8px; font-size: 12px;"></i>
                 🔄 Tümünü Aç/Kapat
             </button>
         </div>
@@ -738,8 +963,45 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
             from {{ transform: translateX(0); opacity: 1; }}
             to {{ transform: translateX(100%); opacity: 0; }}
         }}
+        @keyframes slideInFromRight {{
+            from {{ transform: translateX(350px); opacity: 0; scale: 0.9; }}
+            to {{ transform: translateX(0); opacity: 1; scale: 1; }}
+        }}
+        @keyframes pulse {{
+            0%, 100% {{ transform: scale(1); }}
+            50% {{ transform: scale(1.05); }}
+        }}
+        @keyframes glow {{
+            0%, 100% {{ box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); }}
+            50% {{ box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5); }}
+        }}
         .category-item:hover {{
-            transform: translateY(-2px) !important;
+            transform: translateY(-3px) scale(1.02) !important;
+        }}
+        .category-item:hover .toggle-indicator {{
+            animation: pulse 1s infinite;
+        }}
+        #legend-toggle:hover {{
+            background: rgba(255,255,255,0.25) !important;
+            transform: rotate(90deg);
+        }}
+        button:hover {{
+            animation: glow 2s infinite;
+            transform: translateY(-1px);
+        }}
+        #categories-container::-webkit-scrollbar {{
+            width: 6px;
+        }}
+        #categories-container::-webkit-scrollbar-track {{
+            background: #f1f1f1;
+            border-radius: 3px;
+        }}
+        #categories-container::-webkit-scrollbar-thumb {{
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 3px;
+        }}
+        #categories-container::-webkit-scrollbar-thumb:hover {{
+            background: linear-gradient(135deg, #5a6fd8, #6a41a0);
         }}
     `;
     document.head.appendChild(style);
@@ -858,17 +1120,45 @@ def main(
         category_display = CATEGORY_STYLES.get(selected_category, {}).get("display_name", selected_category.capitalize()) if selected_category else "🌟 Tüm Kategoriler"
         map_title_html = f'''
         <div style="position: fixed; top: 20px; left: 20px; z-index: 1000; 
-                    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.95) 100%);
-                    padding: 15px 25px; border-radius: 15px; 
-                    box-shadow: 0 8px 32px rgba(0,0,0,0.1); backdrop-filter: blur(10px);
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-            <h2 style="margin: 0; color: #2c3e50; font-size: 20px; font-weight: 600;">
-                🗺️ Kapadokya Rota Haritası
-            </h2>
-            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 14px;">
-                📍 {category_display}
-            </p>
+                    background: linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.95) 100%);
+                    padding: 18px 28px; border-radius: 16px; 
+                    box-shadow: 0 12px 40px rgba(0,0,0,0.15); backdrop-filter: blur(15px);
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    border: 1px solid rgba(255,255,255,0.2); animation: slideInFromLeft 0.6s ease-out;
+                    min-width: 280px;">
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                           width: 36px; height: 36px; border-radius: 10px; 
+                           display: flex; align-items: center; justify-content: center;
+                           margin-right: 12px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                           position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; 
+                               background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%); 
+                               transform: rotate(45deg);"></div>
+                    <i class="fa fa-map-marked-alt" style="color: white; font-size: 16px; position: relative; z-index: 1;"></i>
+                </div>
+                <h2 style="margin: 0; color: #2c3e50; font-size: 21px; font-weight: 700;
+                           background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+                           -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                           background-clip: text;">
+                    Kapadokya Rota Haritası
+                </h2>
+            </div>
+            <div style="display: flex; align-items: center;">
+                <div style="width: 4px; height: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                           border-radius: 2px; margin-right: 10px;"></div>
+                <p style="margin: 0; color: #6c757d; font-size: 15px; font-weight: 600;">
+                    📍 {category_display}
+                </p>
+            </div>
         </div>
+        
+        <style>
+        @keyframes slideInFromLeft {{
+            from {{ transform: translateX(-300px); opacity: 0; scale: 0.9; }}
+            to {{ transform: translateX(0); opacity: 1; scale: 1; }}
+        }}
+        </style>
         '''
         folium_map.get_root().html.add_child(folium.Element(map_title_html))
 
