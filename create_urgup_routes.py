@@ -95,19 +95,65 @@ length2 = route_length(route2)
 # Original comment: # Seçildi (FeatureGroup, Draw plugin, LayerControl collapsed=False)
 fg1_name = f"Rota 1 ({length1:.2f} km)"
 fg1 = folium.FeatureGroup(name=fg1_name)
-folium.PolyLine(route1, color="blue", weight=5, opacity=0.7, tooltip=fg1_name).add_to(fg1)
+poly1 = folium.PolyLine(
+    route1,
+    color="blue",
+    weight=5,
+    opacity=0.7,
+    tooltip=fg1_name,
+    popup=folium.Popup(fg1_name, max_width=200),
+)
+poly1.add_to(fg1)
 fg1.add_to(m)
 
 fg2_name = f"Rota 2 ({length2:.2f} km)"
 fg2 = folium.FeatureGroup(name=fg2_name)
-folium.PolyLine(route2, color="red", weight=5, opacity=0.7, tooltip=fg2_name).add_to(fg2)
+poly2 = folium.PolyLine(
+    route2,
+    color="red",
+    weight=5,
+    opacity=0.7,
+    tooltip=fg2_name,
+    popup=folium.Popup(fg2_name, max_width=200),
+)
+poly2.add_to(fg2)
 fg2.add_to(m)
+
+# Capture layer variable names for custom legend
+fg1_id = fg1.get_name()
+fg2_id = fg2.get_name()
 
 # Add Draw plugin
 plugins.Draw(export=False).add_to(m)
 
 # Add LayerControl to toggle routes and other layers
 folium.LayerControl(collapsed=False).add_to(m)
+
+# Custom clickable legend
+legend_html = f"""
+<div id='route-legend' style='position: fixed; bottom: 40px; left: 10px; z-index:9999; background: white; padding:10px; border:2px solid #ccc;'>
+  <h4 style='margin:0 0 5px 0;'>Rotalar</h4>
+  <label style='display:block; margin-bottom:4px;'>
+    <input type='checkbox' checked onclick="toggleLayer('{fg1_id}')">
+    <span style='color: blue;'>■</span> Rota 1
+  </label>
+  <label style='display:block;'>
+    <input type='checkbox' checked onclick="toggleLayer('{fg2_id}')">
+    <span style='color: red;'>■</span> Rota 2
+  </label>
+</div>
+<script>
+function toggleLayer(layerId) {{
+  var layer = window[layerId];
+  if (map.hasLayer(layer)) {{
+    map.removeLayer(layer);
+  }} else {{
+    map.addLayer(layer);
+  }}
+}}
+</script>
+"""
+m.get_root().html.add_child(folium.Element(legend_html))
 
 # Save map to HTML
 m.save("urgup_rotalar.html")
