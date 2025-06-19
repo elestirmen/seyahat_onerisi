@@ -12,7 +12,7 @@ import json
 # --- Sabitler ve Konfigürasyon ---
 URGUP_CENTER_LOCATION = (38.6310, 34.9130) # Ürgüp merkezi
 DEFAULT_ZOOM_URGUP = 13 # Ürgüp merkezine odaklanmak için zoom
-DEFAULT_GRAPH_FILE_URGUP = "urgup_merkez_driving.graphml" # Ürgüp'e özel graph dosyası
+DEFAULT_GRAPH_FILE_URGUP = "urgup_merkez_walking.graphml" # Ürgüp'e özel graph dosyası
 EARTH_RADIUS_KM = 6371.0
 DEFAULT_GRAPH_RADIUS_KM = 10.0  # Artırıldı: Daha geniş kapsam için varsayılan yarıçap (km)
 
@@ -81,62 +81,51 @@ CATEGORY_STYLES = {
 
 POI_DATA: Dict[str, Dict[str, Tuple[float, float]]] = {
     "gastronomik": {
-        "Ziggy Cafe & Restaurant (Ürgüp)": (38.63294, 34.91489),
-        "Dimrit Cafe & Restaurant (Ürgüp)": (38.63309, 34.91522),
+        "Ziggy Cafe & Restaurant (Ürgüp)": (38.633115, 34.907022),
+        "ehlikeyf Restaurant (Ürgüp)": (38.630610, 34.911284),
         "Sofra Restaurant (Ürgüp)": (38.63099, 34.91382),
-        "Ehlikeyf Restaurant (Ürgüp)": (38.63188, 34.91307),
-        "Lagarto Restaurant (Kayakapı Premium Caves - Ürgüp)": (38.62883, 34.91285),
+        "Lagarto Restaurant (Kayakapı Premium Caves - Ürgüp)": (38.631862, 34.907135),
         "Fırın Express Pide & Kebap (Ürgüp)": (38.63161, 34.91537),
-        "Turasan Şarap Fabrikası Satış Yeri (Ürgüp)": (38.62939, 34.91888),
-        "Old Greek House Restaurant (Mustafapaşa)": (38.57741, 34.89868),
-        # Yeni eklenen ve koordinatı bulunanlar
         "Mahzen Şarap Evi (Ürgüp)": (38.63411, 34.91035),
-        "Revithia (Kayakapı - Ürgüp)": (38.62867, 34.91262),
-        "Apetito Restaurant (Ürgüp)": (38.63231, 34.91345),
+        "Apetino Restaurant (Ürgüp)": (38.63231, 34.91345),
+        "Kolcuoğlu Ürgüp (Ürgüp)": (38.63145, 34.91183),
+        "Han Çırağan Restaurant (Ürgüp)": (38.63309, 34.91522),
+        "Ürgüp Pide Salonu (Ürgüp)": (38.63102, 34.91251),
     },
     "kulturel": {
         "Ürgüp Müzesi": (38.63222, 34.91148),
-        "Temenni Tepesi (Kadir Kalesi ve Kılıçarslan Gazi Türbesi - Ürgüp)": (38.63194, 34.91054),
-        "Mustafapaşa (Sinasos) Köy Meydanı": (38.57593, 34.89694),
-        "Aziz Konstantin Elena Kilisesi (Mustafapaşa)": (38.57678, 34.89655),
-        "Gomeda Vadisi (Mustafapaşa Yakını)": (38.58790, 34.89010),
-        "Ortahisar Kalesi": (38.63359, 34.85871),
-        "Ortahisar Etnografya Müzesi": (38.63375, 34.85813),
-        "Sobesos Antik Kenti (Şahinefendi Köyü)": (38.51995, 34.99783),
-        # Yeni eklenen ve koordinatı bulunanlar
-        "Pancarlık Kilisesi (Ortahisar Yakını)": (38.61469, 34.89302),
-        "Aios Vasilios Kilisesi (Mustafapaşa)": (38.58923, 34.89773),
-        "Kapadokya Sanat ve Tarih Müzesi (Bebek Müzesi - Mustafapaşa)": (38.57493, 34.89635),
+        "Temenni Tepesi (Ürgüp)": (38.63194, 34.91054),
+        "Cappadocia Ebru Art House (Ürgüp)": (38.63161, 34.91537),
+        "Ürgüp Erhan Ayata At Müzesi ve Güzel Atlar Sergisi (Ürgüp)": (38.62985, 34.90882),
+        "Temenni Anıt Mezarı (Ürgüp)": (38.63194, 34.91054),
+        "Rum Hamamı (Ürgüp)": (38.63273, 34.90841),
     },
     "sanatsal": {
         "El Sanatları Çarşısı (Ürgüp Cumhuriyet Meydanı)": (38.63145, 34.91183),
         "Kapadokya Sanat ve El Sanatları Merkezi (Ürgüp)": (38.63102, 34.91251),
-        "Üç Güzeller Peri Bacaları (Ürgüp)": (38.65293, 34.93182),
-        "Devrent Vadisi (Hayal Vadisi - Pembe Vadi)": (38.66981, 34.89985),
-        "Kızılçukur Vadisi Gün Batımı İzleme Noktası (Ortahisar)": (38.64983, 34.85974),
-        "Ortahisar Panorama Seyir Terası": (38.63241, 34.85695),
-         # Yeni eklenen ve koordinatı bulunanlar
-        "Red Valley (Kızıl Vadi) Panorama": (38.65311, 34.86339),
+        "Kilim Art Gallery (Ürgüp)": (38.63231, 34.91345),
     },
     "doga_macera": {
-        "Pancarlık Vadisi ve Kilisesi (Ürgüp-Ortahisar arası)": (38.61502, 34.87363),
-         # Yeni eklenen ve koordinatı bulunanlar
-        "Manastır Vadisi (Mustafapaşa)": (38.58638, 34.89777),
-        "Ürgüp ATV Turu (Başlangıç noktası)": (38.63851, 34.91352),
+        "Temenni Hill (Ürgüp)": (38.63194, 34.91054),
+        "Ürgüp ATV Turu Başlangıç Noktası (Ürgüp)": (38.63851, 34.91352),
+        "Üç Güzeller Peribacaları (Ürgüp)": (38.635366, 34.890657),
+        "Vefa Küçük Parkı (Ürgüp)": (38.63161, 34.91537),
     },
-    "konaklama": {
-        "Kayakapı Premium Caves - Special Class (Ürgüp)": (38.62879, 34.91248),
-        "Yunak Evleri Cappadocia (Ürgüp)": (38.63381, 34.90784),
-        "Esbelli Evi Cave Hotel (Ürgüp)": (38.62985, 34.90882),
-        "Dere Suites Cappadocia (Ürgüp)": (38.63273, 34.90841),
-        "Seraphim Cave Hotel (Ürgüp)": (38.60942, 34.90375),
-        "Hezen Cave Hotel (Ortahisar)": (38.63445, 34.85942),
-        "Gamirasu Cave Hotel (Ayvalı Köyü)": (38.58291, 34.93485),
-         # Yeni eklenen ve koordinatı bulunanlar
-        "Utopia Cave Cappadocia (Ürgüp)": (38.63583, 34.90562),
-        "Romantic Cave Hotel (Ürgüp)": (38.63511, 34.90618),
-        "Helios Cave Hotel (Mustafapaşa)": (38.58354, 34.89781),
-    }
+    
+    # "konaklama": {
+    #     "Kayakapı Premium Caves (Ürgüp)": (38.62879, 34.91248),
+    #     "Yunak Evleri Cappadocia (Ürgüp)": (38.63381, 34.90784),
+    #     "Esbelli Evi Cave Hotel (Ürgüp)": (38.62985, 34.90882),
+    #     "Dere Suites Cappadocia (Ürgüp)": (38.63273, 34.90841),
+    #     "Seraphim Cave Hotel (Ürgüp)": (38.60942, 34.90375),
+    #     "Nujelm Cappadocia (Ürgüp)": (38.63445, 34.85942),
+    #     "Yedi Oda Kapadokya Cave House (Ürgüp)": (38.63583, 34.90562),
+    #     "Alden Hotel Cappadocia (Ürgüp)": (38.63511, 34.90618),
+    #     "Has Cave Konak (Ürgüp)": (38.63375, 34.85813),
+    #     "Demsos Caves Hotel (Ürgüp)": (38.63241, 34.85695),
+    #     "AJWA Cappadocia (Ürgüp)": (38.63411, 34.91035),
+    #     "Utopia Cave Cappadocia (Ürgüp)": (38.63583, 34.90562),
+    # }
 }
 
 # --- Yardımcı Fonksiyonlar ---
@@ -270,12 +259,12 @@ def load_road_network(graph_file_path: str, radius_km: float = DEFAULT_GRAPH_RAD
         if is_distant_scenario:
             # Strateji 1: Uzak POI'lar için tüm Nevşehir ilini indir (en sağlam yöntem)
             place_to_download = "Nevşehir, Türkiye"
-            print(f"🎯 Strateji: '{place_to_download}' için yol ağı indiriliyor (Yüksek Çözünürlük)...")
-            G = ox.graph_from_place(place_to_download, network_type='drive', simplify=False)
+            print(f"🎯 Strateji: '{place_to_download}' için yaya yol ağı indiriliyor (Yüksek Çözünürlük)...")
+            G = ox.graph_from_place(place_to_download, network_type='walk', simplify=False)
         else:
             # Strateji 2: Yakın POI'lar için Ürgüp merkezli yarıçap yeterli
-            print(f"🎯 Strateji: '{default_place_query_for_download}' için {radius_km}km yarıçapta yol ağı indiriliyor (Yüksek Çözünürlük)...")
-            G = ox.graph_from_point(URGUP_CENTER_LOCATION, dist=radius_km * 1000, network_type='drive', simplify=False)
+            print(f"🎯 Strateji: '{default_place_query_for_download}' için {radius_km}km yarıçapta yaya yol ağı indiriliyor (Yüksek Çözünürlük)...")
+            G = ox.graph_from_point(URGUP_CENTER_LOCATION, dist=radius_km * 1000, network_type='walk', simplify=False)
             
     except Exception as e:
         print(f"💥 KRİTİK İNDİRME HATASI: {e}")
@@ -465,12 +454,15 @@ def add_poi_markers_and_route_to_map(
     folium_map: folium.Map,
     category_name: str,
     category_pois: Dict[str, Tuple[float, float]],
-    road_network: Optional[nx.MultiDiGraph]
+    road_network: Optional[nx.MultiDiGraph],
+    poi_layer: folium.FeatureGroup
 ) -> Tuple[float, List[str], str]:
     style = CATEGORY_STYLES.get(category_name, CATEGORY_STYLES["default"])
     display_name = style.get("display_name", category_name.capitalize())
-    feature_group_name = f"{display_name}"
-    fg = folium.FeatureGroup(name=feature_group_name, show=True)
+    
+    # Sadece rotalar için ayrı katman oluştur
+    route_feature_group_name = f"🛣️ {display_name} Rotası"
+    route_fg = folium.FeatureGroup(name=route_feature_group_name, show=True)
 
     poi_coords_in_order = list(category_pois.values())
     route_path_coords, route_length_km, generation_warnings = generate_route_for_poi_order(road_network, poi_coords_in_order)
@@ -585,7 +577,7 @@ def add_poi_markers_and_route_to_map(
             tooltip=folium.Tooltip(tooltip_html, sticky=True),
             popup=folium.Popup(popup_html, max_width=350),
             icon=icon_to_use
-        ).add_to(fg)
+        ).add_to(poi_layer)  # POI'ları sabit katmana ekle
 
     # Rota çizgisini ekle (gelişmiş özelliklerle)
     if route_path_coords and len(route_path_coords) >= 2:
@@ -641,7 +633,7 @@ def add_poi_markers_and_route_to_map(
                     <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
                                 padding: 12px; border-radius: 8px; text-align: center; border-left: 3px solid {style['color']};">
                         <div style="font-size: 16px; font-weight: 700; color: {style['color']}; margin-bottom: 4px;">
-                            ~{int(route_length_km * 2)}
+                            ~{int(route_length_km * 12)}
                         </div>
                         <div style="font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase;">
                             DAKİKA
@@ -712,10 +704,10 @@ def add_poi_markers_and_route_to_map(
         route_tooltip = f"🛣️ {display_name}: {route_length_km:.2f} km ({route_type})"
         route_line.add_child(folium.Tooltip(route_tooltip, sticky=False))
         
-        route_line.add_to(fg)
+        route_line.add_to(route_fg)  # Rotayı ayrı katmana ekle
 
-    fg.add_to(folium_map)
-    return route_length_km, generation_warnings, fg.get_name()
+    route_fg.add_to(folium_map)
+    return route_length_km, generation_warnings, route_fg.get_name()
 
 def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categories: List[Tuple[str, str, float, int]], map_js_var: str):
     """Gelişmiş lejant ve kontrol paneli ekler"""
@@ -728,27 +720,27 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
     
     # Ana lejant HTML
     legend_html = f"""
-    <div id="legend-panel" style="position: fixed; top: 20px; right: 20px; width: 340px; 
+    <div id="legend-panel" style="position: fixed; bottom: 20px; left: 20px; width: 280px; 
                                   background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
-                                  border: none; border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+                                  border: none; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.12);
                                   z-index: 9999; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                                   backdrop-filter: blur(15px); overflow: hidden; border: 1px solid rgba(255,255,255,0.2);
-                                  animation: slideInFromRight 0.5s ease-out;">
+                                  animation: slideInFromLeft 0.5s ease-out;">
         
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                    padding: 18px; color: white; position: relative; overflow: hidden;">
+                    padding: 14px; color: white; position: relative; overflow: hidden;">
             <div style="position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; 
                         background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); 
                         transform: rotate(45deg);"></div>
-            <h3 style="margin: 0; font-size: 19px; text-align: center; font-weight: 700; position: relative; z-index: 1;
+            <h3 style="margin: 0; font-size: 16px; text-align: center; font-weight: 700; position: relative; z-index: 1;
                        text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 🗺️ Kapadokya Rota Rehberi
             </h3>
-            <button id="legend-toggle" style="position: absolute; top: 18px; right: 18px; 
+            <button id="legend-toggle" style="position: absolute; top: 14px; right: 14px; 
                                               background: rgba(255,255,255,0.15); border: none; 
-                                              color: white; width: 32px; height: 32px; 
-                                              border-radius: 50%; cursor: pointer; font-size: 16px;
+                                              color: white; width: 28px; height: 28px; 
+                                              border-radius: 50%; cursor: pointer; font-size: 14px;
                                               transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.2);
                                               display: flex; align-items: center; justify-content: center;">
                 <i class="fa fa-times"></i>
@@ -757,23 +749,23 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
         
         <!-- İstatistikler -->
         <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
-                    padding: 16px; border-bottom: 1px solid #dee2e6;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div style="text-align: center; padding: 8px; background: white; border-radius: 8px; 
+                    padding: 12px; border-bottom: 1px solid #dee2e6;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div style="text-align: center; padding: 6px; background: white; border-radius: 6px; 
                             box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 3px solid #667eea;">
-                    <div style="font-size: 20px; font-weight: 700; color: #667eea; margin-bottom: 4px;">
+                    <div style="font-size: 16px; font-weight: 700; color: #667eea; margin-bottom: 2px;">
                         {total_pois}
                     </div>
-                    <div style="font-size: 11px; color: #666; font-weight: 600; text-transform: uppercase;">
+                    <div style="font-size: 9px; color: #666; font-weight: 600; text-transform: uppercase;">
                         TOPLAM NOKTA
                     </div>
                 </div>
-                <div style="text-align: center; padding: 8px; background: white; border-radius: 8px; 
+                <div style="text-align: center; padding: 6px; background: white; border-radius: 6px; 
                             box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 3px solid #764ba2;">
-                    <div style="font-size: 20px; font-weight: 700; color: #764ba2; margin-bottom: 4px;">
+                    <div style="font-size: 16px; font-weight: 700; color: #764ba2; margin-bottom: 2px;">
                         {total_length:.1f}
                     </div>
-                    <div style="font-size: 11px; color: #666; font-weight: 600; text-transform: uppercase;">
+                    <div style="font-size: 9px; color: #666; font-weight: 600; text-transform: uppercase;">
                         KM MESAFE
                     </div>
                 </div>
@@ -781,7 +773,7 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
         </div>
         
         <!-- Kategoriler -->
-        <div id="categories-container" style="padding: 16px; max-height: 420px; overflow-y: auto;">
+        <div id="categories-container" style="padding: 12px; max-height: 350px; overflow-y: auto;">
     """
     
     for cat_name, layer_var, length, poi_count in processed_categories:
@@ -792,10 +784,10 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
         legend_html += f"""
         <div class="category-item" onclick="toggleLayer('{layer_var}', this)" 
              style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); 
-                    margin-bottom: 12px; padding: 14px; border-radius: 12px; 
+                    margin-bottom: 8px; padding: 10px; border-radius: 10px; 
                     cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-                    border-left: 4px solid {style['color']};
-                    box-shadow: 0 3px 12px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05);
+                    border-left: 3px solid {style['color']};
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05);
                     position: relative; overflow: hidden;"
              onmouseover="this.style.transform='translateY(-3px) scale(1.02)'; 
                          this.style.boxShadow='0 8px 25px {style.get('shadow_color', 'rgba(0,0,0,0.15)')}';
@@ -809,60 +801,60 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
                         background: {style.get('gradient', style['color'])}; opacity: 0; 
                         transition: opacity 0.3s ease; z-index: 0;"></div>
             
-            <div style="display: flex; align-items: center; margin-bottom: 10px; position: relative; z-index: 1;">
+            <div style="display: flex; align-items: center; margin-bottom: 8px; position: relative; z-index: 1;">
                 <div style="background: {style.get('gradient', style['color'])}; 
-                           width: 42px; height: 42px; border-radius: 12px; 
+                           width: 34px; height: 34px; border-radius: 10px; 
                            display: flex; align-items: center; justify-content: center;
-                           margin-right: 14px; box-shadow: 0 4px 12px {style.get('shadow_color', 'rgba(0,0,0,0.2)')};
+                           margin-right: 10px; box-shadow: 0 3px 8px {style.get('shadow_color', 'rgba(0,0,0,0.2)')};
                            position: relative; overflow: hidden;">
                     <div style="position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; 
                                background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%); 
                                transform: rotate(45deg);"></div>
                     <i class="fa {style.get('icon', 'info-circle')}" 
-                       style="color: white; font-size: 18px; position: relative; z-index: 1;"></i>
+                       style="color: white; font-size: 15px; position: relative; z-index: 1;"></i>
                 </div>
                 <div style="flex: 1;">
-                    <div style="font-weight: 700; color: #2c3e50; font-size: 15px; margin-bottom: 2px;">
+                    <div style="font-weight: 700; color: #2c3e50; font-size: 13px; margin-bottom: 2px;">
                         {style.get('emoji', '📍')} {display_name}
                     </div>
-                    <div style="font-size: 12px; color: #6c757d; line-height: 1.3; font-weight: 500;">
+                    <div style="font-size: 10px; color: #6c757d; line-height: 1.3; font-weight: 500;">
                         {description}
                     </div>
                 </div>
-                <div class="toggle-indicator" style="width: 14px; height: 14px; border-radius: 50%; 
+                <div class="toggle-indicator" style="width: 12px; height: 12px; border-radius: 50%; 
                                                     background: {style.get('gradient', style['color'])}; 
-                                                    box-shadow: 0 0 0 3px white, 0 0 0 4px {style['color']};
+                                                    box-shadow: 0 0 0 2px white, 0 0 0 3px {style['color']};
                                                     transition: all 0.3s ease; position: relative;">
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                               width: 6px; height: 6px; background: white; border-radius: 50%;"></div>
+                               width: 5px; height: 5px; background: white; border-radius: 50%;"></div>
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; position: relative; z-index: 1;">
-                <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.8); 
-                           border-radius: 8px; border-left: 2px solid {style['color']};">
-                    <div style="font-size: 16px; font-weight: 700; color: {style['color']}; margin-bottom: 2px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; position: relative; z-index: 1;">
+                <div style="text-align: center; padding: 6px; background: rgba(255,255,255,0.8); 
+                           border-radius: 6px; border-left: 2px solid {style['color']};">
+                    <div style="font-size: 14px; font-weight: 700; color: {style['color']}; margin-bottom: 1px;">
                         {poi_count}
                     </div>
-                    <div style="font-size: 9px; color: #666; font-weight: 600; text-transform: uppercase;">
+                    <div style="font-size: 8px; color: #666; font-weight: 600; text-transform: uppercase;">
                         NOKTA
                     </div>
                 </div>
-                <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.8); 
-                           border-radius: 8px; border-left: 2px solid {style['color']};">
-                    <div style="font-size: 16px; font-weight: 700; color: {style['color']}; margin-bottom: 2px;">
+                <div style="text-align: center; padding: 6px; background: rgba(255,255,255,0.8); 
+                           border-radius: 6px; border-left: 2px solid {style['color']};">
+                    <div style="font-size: 14px; font-weight: 700; color: {style['color']}; margin-bottom: 1px;">
                         {length:.1f}
                     </div>
-                    <div style="font-size: 9px; color: #666; font-weight: 600; text-transform: uppercase;">
+                    <div style="font-size: 8px; color: #666; font-weight: 600; text-transform: uppercase;">
                         KM
                     </div>
                 </div>
-                <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.8); 
-                           border-radius: 8px; border-left: 2px solid {style['color']};">
-                    <div style="font-size: 14px; font-weight: 700; color: {style['color']}; margin-bottom: 2px;">
-                        {int(length * 2) if length > 0 else 0}
+                <div style="text-align: center; padding: 6px; background: rgba(255,255,255,0.8); 
+                           border-radius: 6px; border-left: 2px solid {style['color']};">
+                    <div style="font-size: 12px; font-weight: 700; color: {style['color']}; margin-bottom: 1px;">
+                        {int(length * 12) if length > 0 else 0}
                     </div>
-                    <div style="font-size: 9px; color: #666; font-weight: 600; text-transform: uppercase;">
+                    <div style="font-size: 8px; color: #666; font-weight: 600; text-transform: uppercase;">
                         DK
                     </div>
                 </div>
@@ -875,14 +867,14 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
         
         <!-- Footer -->
         <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
-                    padding: 16px; text-align: center; border-top: 1px solid #dee2e6;">
+                    padding: 12px; text-align: center; border-top: 1px solid #dee2e6;">
             <button onclick="toggleAllLayers()" 
                     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                           color: white; border: none; padding: 12px 24px; border-radius: 25px; 
-                           font-size: 13px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;
-                           box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); min-width: 180px;
+                           color: white; border: none; padding: 10px 18px; border-radius: 20px; 
+                           font-size: 12px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;
+                           box-shadow: 0 3px 12px rgba(102, 126, 234, 0.3); min-width: 150px;
                            display: inline-flex; align-items: center; justify-content: center;">
-                <i class="fa fa-eye" style="margin-right: 8px; font-size: 12px;"></i>
+                <i class="fa fa-eye" style="margin-right: 6px; font-size: 11px;"></i>
                 🔄 Tümünü Aç/Kapat
             </button>
         </div>
@@ -945,9 +937,9 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
         const panel = document.getElementById('legend-panel');
         if (panel.style.display === 'none') {{
             panel.style.display = 'block';
-            panel.style.animation = 'slideInRight 0.3s ease-out';
+            panel.style.animation = 'slideInLeft 0.3s ease-out';
         }} else {{
-            panel.style.animation = 'slideOutRight 0.3s ease-in';
+            panel.style.animation = 'slideOutLeft 0.3s ease-in';
             setTimeout(() => panel.style.display = 'none', 300);
         }}
     }});
@@ -955,16 +947,16 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
     // Animasyonlar
     const style = document.createElement('style');
     style.textContent = `
-        @keyframes slideInRight {{
-            from {{ transform: translateX(100%); opacity: 0; }}
+        @keyframes slideInLeft {{
+            from {{ transform: translateX(-100%); opacity: 0; }}
             to {{ transform: translateX(0); opacity: 1; }}
         }}
-        @keyframes slideOutRight {{
+        @keyframes slideOutLeft {{
             from {{ transform: translateX(0); opacity: 1; }}
-            to {{ transform: translateX(100%); opacity: 0; }}
+            to {{ transform: translateX(-100%); opacity: 0; }}
         }}
-        @keyframes slideInFromRight {{
-            from {{ transform: translateX(350px); opacity: 0; scale: 0.9; }}
+        @keyframes slideInFromLeft {{
+            from {{ transform: translateX(-300px); opacity: 0; scale: 0.9; }}
             to {{ transform: translateX(0); opacity: 1; scale: 1; }}
         }}
         @keyframes pulse {{
@@ -1099,11 +1091,11 @@ def main(
         
         # Dosya adını senaryoya ve çözünürlüğe göre belirle
         if distant_pois:
-            final_graph_filepath = "nevsehir_driving_high_res.graphml"
-            print(f"   ❗ Uzak POI'lar nedeniyle yüksek çözünürlüklü Nevşehir yol ağı kullanılacak: '{final_graph_filepath}'")
+            final_graph_filepath = "nevsehir_walking_high_res.graphml"
+            print(f"   ❗ Uzak POI'lar nedeniyle yüksek çözünürlüklü Nevşehir yaya yol ağı kullanılacak: '{final_graph_filepath}'")
         else:
             final_graph_filepath = graph_filepath.replace(".graphml", "_high_res.graphml")
-            print(f"   ℹ️ Yüksek çözünürlüklü yerel yol ağı kullanılacak: '{final_graph_filepath}'")
+            print(f"   ℹ️ Yüksek çözünürlüklü yerel yaya yol ağı kullanılacak: '{final_graph_filepath}'")
 
         # Optimize edilmiş yol ağını yükle
         road_network = load_road_network(final_graph_filepath, radius_km, all_poi_coords=all_poi_coords)
@@ -1162,6 +1154,10 @@ def main(
         '''
         folium_map.get_root().html.add_child(folium.Element(map_title_html))
 
+        # Tüm POI'lar için sabit katman oluştur (her zaman görünür)
+        poi_layer = folium.FeatureGroup(name="📍 Tüm POI Noktaları", show=True)
+        poi_layer.add_to(folium_map)
+
         processed_categories_for_legend = []
         total_routes_length = 0
         total_pois_count = 0
@@ -1173,7 +1169,7 @@ def main(
                 continue
 
             print(f"\n🔄 '{CATEGORY_STYLES.get(cat_name, {}).get('display_name', cat_name.capitalize())}' kategorisi işleniyor...")
-            route_len, cat_warnings, layer_var = add_poi_markers_and_route_to_map(folium_map, cat_name, category_pois, road_network)
+            route_len, cat_warnings, layer_var = add_poi_markers_and_route_to_map(folium_map, cat_name, category_pois, road_network, poi_layer)
             all_warnings.extend(cat_warnings)
 
             if route_len > 0 or len(category_pois) == 1:
@@ -1197,7 +1193,7 @@ def main(
                     print(f"      {i+1}. {poi_name}")
                 if route_len > 0 and len(category_pois) > 1:
                     print(f"   📏 Toplam Rota Uzunluğu: {route_len:.2f} km")
-                    print(f"   ⏱️ Tahmini Sürüş Süresi: {int(route_len * 2)} dakika")
+                    print(f"   ⏱️ Tahmini Yürüyüş Süresi: {int(route_len * 12)} dakika")
         
         # Gelişmiş harita özelliklerini ekle
         add_enhanced_map_features(folium_map)
@@ -1209,7 +1205,7 @@ def main(
         folium_map.save(output_filename)
         print(f"\n🎉 Harita başarıyla '{output_filename}' olarak kaydedildi!")
         print(f"   📊 Toplam: {total_pois_count} nokta, {total_routes_length:.2f} km rota")
-        print(f"   ⏱️ Toplam tahmini süre: {int(total_routes_length * 2)} dakika")
+        print(f"   ⏱️ Toplam tahmini yürüyüş süresi: {int(total_routes_length * 12)} dakika")
 
         if all_warnings:
             print(f"\n⚠️ Rota Oluşturma Bildirimleri ({len(set(all_warnings))} adet):")
@@ -1219,12 +1215,13 @@ def main(
                 print(f"   ... ve {len(set(all_warnings)) - 5} uyarı daha")
         
         if not road_network:
-            print("\n   ⚠️ Yol ağı yüklenemediği için rotalar düz çizgi olarak gösterildi")
+            print("\n   ⚠️ Yaya yol ağı yüklenemediği için rotalar düz çizgi olarak gösterildi")
         elif road_network and total_pois_count > 0:
-            print("\n   ✅ Rotalar POI'ları kapsayacak şekilde optimize edilmiş yol ağı kullanılarak hesaplandı")
+            print("\n   ✅ Rotalar POI'ları kapsayacak şekilde optimize edilmiş yaya yol ağı kullanılarak hesaplandı")
             
         print(f"\n🎯 Kullanım İpuçları:")
-        print(f"   • Sağ üstteki lejanttan kategorileri açıp kapatabilirsiniz")
+        print(f"   • Sol alttaki lejanttan rota çizgilerini açıp kapatabilirsiniz")
+        print(f"   • POI noktaları her zaman görünür kalır")
         print(f"   • Rota çizgilerine tıklayarak detaylı bilgi alabilirsiniz")
         print(f"   • Marker'lara tıklayarak nokta detaylarını görebilirsiniz")
         print(f"   • Sol üstteki araçlarla haritada çizim yapabilirsiniz")
@@ -1260,10 +1257,10 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="📍 Ürgüp Merkezli POI Rota Oluşturucu 🗺️\n"
+        description="🚶 Ürgüp Merkezli POI Yürüyüş Rota Oluşturucu 🗺️\n"
                     "Belirtilen kategorideki veya tüm kategorilerdeki ilgi çekici noktalar (POI) için "
-                    "Ürgüp yol ağını kullanarak rotalar oluşturur ve interaktif bir harita üzerinde gösterir.\n"
-                    "Yol ağı bulunamazsa veya bazı bağlantılar kurulamıyorsa, noktalar arası düz çizgiler kullanılır.",
+                    "Ürgüp yaya yol ağını kullanarak yürüyüş rotaları oluşturur ve interaktif bir harita üzerinde gösterir.\n"
+                    "Yaya yol ağı bulunamazsa veya bazı bağlantılar kurulamıyorsa, noktalar arası düz çizgiler kullanılır.",
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
@@ -1282,7 +1279,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-g", "--graphfile",
         default=DEFAULT_GRAPH_FILE_URGUP,
-        help=f"Yol ağı için kullanılacak GraphML dosyasının yolu.\n"
+        help=f"Yaya yol ağı için kullanılacak GraphML dosyasının yolu.\n"
              f"Varsayılan: '{DEFAULT_GRAPH_FILE_URGUP}'\n(Eğer dosya yoksa, Ürgüp için otomatik olarak indirilir)."
     )
     parser.add_argument(
@@ -1297,7 +1294,7 @@ if __name__ == "__main__":
         "-r", "--radius",
         type=float,
         default=DEFAULT_GRAPH_RADIUS_KM,
-        help=f"Yol ağı indirme yarıçapı (km).\n"
+        help=f"Yaya yol ağı indirme yarıçapı (km).\n"
              f"Varsayılan: {DEFAULT_GRAPH_RADIUS_KM} km (Ürgüp merkezi etrafında)\n"
              f"Örnekler: 10 (dar alan), 50 (geniş alan)"
     )
