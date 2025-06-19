@@ -564,12 +564,14 @@ def add_poi_markers_and_route_to_map(
         icon_to_use = plugins.BeautifyIcon(
             icon=style.get("icon", "info-circle"),
             icon_prefix=style.get("icon_prefix", "fa"),
-            icon_style=f"color:white; font-size:14px;",
+            icon_style=f"color:white; font-size:20px;",
             border_color=style["color"],
             background_color=style["color"],
             text_color="white",
             number=i + 1,
-            icon_shape="marker"
+            icon_shape="marker",
+            border_width=3,
+            inner_icon_style="font-size:12px; padding-top:2px;"
         )
         
         folium.Marker(
@@ -1005,6 +1007,62 @@ def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categorie
 def add_enhanced_map_features(folium_map: folium.Map):
     """Gelişmiş harita özelliklerini ekler"""
     
+    # Farklı harita altlıkları (tile layers) ekle
+    tile_layers = [
+        {
+            'name': '🗺️ Varsayılan (OpenStreetMap)',
+            'tiles': 'OpenStreetMap',
+            'attr': '© OpenStreetMap contributors',
+            'description': 'Standart harita görünümü'
+        },
+
+        {
+            'name': '🗻 Topoğrafik (OpenTopoMap)',
+            'tiles': 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+            'attr': '© OpenTopoMap (CC-BY-SA) © OpenStreetMap contributors',
+            'description': 'Ücretsiz topoğrafik harita - yükseklik detayları'
+        },
+
+        {
+            'name': '🌍 Çok Renkli (CartoDB Voyager Labels)',
+            'tiles': 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/voyager_labels_under/{z}/{x}/{y}.png',
+            'attr': '© CartoDB © OpenStreetMap contributors',
+            'description': 'Renkli ve detaylı harita görünümü'
+        },
+        {
+            'name': '🛰️ Uydu Görüntüsü (Esri)',
+            'tiles': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            'attr': '© Esri © OpenStreetMap contributors',
+            'description': 'Gerçek uydu fotoğrafları'
+        },
+        {
+            'name': '🎨 Renkli Karmaşık (Esri World Street)',
+            'tiles': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+            'attr': '© Esri © OpenStreetMap contributors',
+            'description': 'Renkli ve detaylı karmaşık harita görünümü'
+        }
+    ]
+    
+    # Tile katmanlarını haritaya ekle
+    for tile_info in tile_layers:
+        if tile_info['tiles'] != 'OpenStreetMap':  # Varsayılan zaten mevcut
+            folium.TileLayer(
+                tiles=tile_info['tiles'],
+                attr=tile_info['attr'],
+                name=tile_info['name'],
+                overlay=False,
+                control=True
+            ).add_to(folium_map)
+        else:
+            # OpenStreetMap'i de katman kontrolünde görünür yap
+            folium.TileLayer(
+                tiles='OpenStreetMap',
+                attr='© OpenStreetMap contributors',
+                name=tile_info['name'],
+                overlay=False,
+                control=True
+            ).add_to(folium_map)
+    
     # Tam ekran
     plugins.Fullscreen(
         position="topleft",
@@ -1066,6 +1124,8 @@ def main(
     all_warnings = []
     try:
         print("✨ Kapadokya Gelişmiş Rota Oluşturucu Başlatılıyor ✨")
+        print("🗺️ Varsayılan olarak OpenStreetMap kullanılacak")
+        print("✅ Tüm harita katmanları ücretsiz servisler kullanılarak güncellendi")
 
         # Önce hangi kategorileri işleyeceğimizi belirleyelim
         categories_to_process = []
@@ -1101,10 +1161,16 @@ def main(
         road_network = load_road_network(final_graph_filepath, radius_km, all_poi_coords=all_poi_coords)
         
         # Gelişmiş harita oluşturma
+        # Varsayılan olarak OpenStreetMap kullan
+        if map_tiles == "OpenStreetMap":
+            default_tiles = "OpenStreetMap"
+        else:
+            default_tiles = map_tiles
+            
         folium_map = folium.Map(
             location=URGUP_CENTER_LOCATION, 
             zoom_start=DEFAULT_ZOOM_URGUP, 
-            tiles=map_tiles,
+            tiles=default_tiles,
             prefer_canvas=True
         )
         
@@ -1222,6 +1288,8 @@ def main(
         print(f"\n🎯 Kullanım İpuçları:")
         print(f"   • Sol alttaki lejanttan rota çizgilerini açıp kapatabilirsiniz")
         print(f"   • POI noktaları her zaman görünür kalır")
+        print(f"   • Sağ üstteki katman kontrolünden farklı harita görünümleri seçebilirsiniz")
+        print(f"   • 'Sade Beyaz' teması POI'ların en net görünmesini sağlar")
         print(f"   • Rota çizgilerine tıklayarak detaylı bilgi alabilirsiniz")
         print(f"   • Marker'lara tıklayarak nokta detaylarını görebilirsiniz")
         print(f"   • Sol üstteki araçlarla haritada çizim yapabilirsiniz")
