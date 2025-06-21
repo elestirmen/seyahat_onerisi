@@ -117,71 +117,49 @@ def solve_tsp(G: nx.MultiDiGraph, pois: Dict[str, Tuple[float, float]], start_po
 
 def get_elevation_profile(route_coords: List[Tuple[float, float]]) -> Optional[List[float]]:
     """
-    Kısa rotalar için GET, uzun rotalar için POST metodu kullanan hibrit bir yaklaşımla
-    API'den yükseklik verilerini alır.
+    API'den yükseklik verilerini alır. Uzun rotaları 100'lük parçalara bölerek
+    birden fazla GET isteği ile daha stabil bir şekilde veri çeker.
     """
     print("🏔️ Yükseklik profili verileri alınıyor...")
-    if len(route_coords) < 2: return None
+    if not route_coords:
+        return None
 
-    url = "https://api.open-meteo.com/v1/elevation"
-    MAX_POINTS_GET = 100  # GET isteği için daha güvenli bir limit
-    
-    # Rota uzunluğuna göre GET veya POST metodunu seç
-    if len(route_coords) <= MAX_POINTS_GET:
-        # --- KISA ROTALAR İÇİN: GET Metodu ---
-        print(f"   -> Kısa rota ({len(route_coords)} nokta), GET metodu kullanılıyor.")
-        latitudes_str = ",".join([str(round(c[0], 5)) for c in route_coords])
-        longitudes_str = ",".join([str(round(c[1], 5)) for c in route_coords])
+    all_elevations = []
+    chunk_size = 100  # GET isteği için güvenli chunk boyutu
+
+    print(f"   -> Rota {len(route_coords)} noktadan oluşuyor. {chunk_size} noktalık parçalar halinde işlenecek.")
+
+    for i in range(0, len(route_coords), chunk_size):
+        chunk = route_coords[i:i + chunk_size]
+        if not chunk:
+            continue
+        
+        print(f"   -> Parça {i//chunk_size + 1}/{len(range(0, len(route_coords), chunk_size))} işleniyor...")
+
+        latitudes_str = ",".join([str(round(c[0], 5)) for c in chunk])
+        longitudes_str = ",".join([str(round(c[1], 5)) for c in chunk])
+        
+        url = "https://api.open-meteo.com/v1/elevation"
         params = {"latitude": latitudes_str, "longitude": longitudes_str}
+        
         try:
             response = requests.get(url, params=params, timeout=20)
             response.raise_for_status()
             data = response.json()
+            
             if 'elevation' in data and data['elevation']:
-                print(f"✅ Yükseklik verisi GET ile başarıyla alındı.")
-                return data['elevation']
+                all_elevations.extend(data['elevation'])
             else:
-                print(f"⚠️ Yükseklik API'sinden (GET) geçerli veri alınamadı. Yanıt: {data}")
-                return None
+                print(f"⚠️ Yükseklik API'sinden (GET - Parça {i//chunk_size + 1}) geçerli veri alınamadı. Yanıt: {data}")
+                return None # Bir parça başarısız olursa, tüm işlem başarısız olsun.
         except requests.exceptions.RequestException as e:
-            print(f"💥 Yükseklik API hatası (GET): {e}")
-            return None
-
-    else:
-        # --- UZUN ROTALAR İÇİN: POST Metodu ---
-        print(f"   -> Uzun rota ({len(route_coords)} nokta), POST metodu kullanılıyor.")
-        MAX_POINTS_API = 900
-        coords_to_send = route_coords
-        if len(route_coords) > MAX_POINTS_API:
-            print(f"   -> Rota çok detaylı. Yükseklik profili için basitleştiriliyor...")
-            step = len(route_coords) // MAX_POINTS_API
-            coords_to_send = route_coords[::step]
-
-        # DÜZELTME: API'nin beklediği gibi koordinatları string formatına çevir.
-        payload = {
-            "latitude": [str(round(c[0], 5)) for c in coords_to_send],
-            "longitude": [str(round(c[1], 5)) for c in coords_to_send]
-        }
-        try:
-            response = requests.post(url, json=payload, timeout=30)
-            response.raise_for_status()
-            data = response.json()
-            if 'elevation' in data and data['elevation']:
-                print(f"✅ Yükseklik verisi POST ile başarıyla alındı.")
-                # Grafiğin pürüzsüz olması için sonucu orijinal rota uzunluğuna enterpole et
-                if len(coords_to_send) < len(route_coords):
-                    xp = np.linspace(0, 1, len(data['elevation']))
-                    fp = data['elevation']
-                    x_new = np.linspace(0, 1, len(route_coords))
-                    return np.interp(x_new, xp, fp).tolist()
-                return data['elevation']
-            else:
-                print(f"⚠️ Yükseklik API'sinden (POST) geçerli veri alınamadı. Yanıt: {data}")
-                return None
-        except requests.exceptions.RequestException as e:
-            print(f"💥 Yükseklik API hatası (POST): {e}")
-            if e.response is not None: print(f"   -> API Yanıtı: {e.response.text}")
-            return None
+            print(f"💥 Yükseklik API hatası (GET - Parça {i//chunk_size + 1}): {e}")
+            return None # Bir parça başarısız olursa, tüm işlem başarısız olsun.
+    
+    if all_elevations:
+        print(f"✅ Toplam {len(all_elevations)} nokta için yükseklik verisi başarıyla alındı.")
+        return all_elevations
+    
     return None
 
 def calculate_route_difficulty(elevations: List[float], length_km: float) -> Tuple[str, float, float]:
