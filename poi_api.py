@@ -94,6 +94,6 @@ def delete_poi(poi_id):
 
 if __name__ == '__main__':
     print("🚀 POI Yönetim Sistemi başlatılıyor...")
-    print("📊 Web arayüzü: http://localhost:5000/poi_manager_ui.html")
-    print("🔌 API endpoint'leri: http://localhost:5000/api/")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    print("📊 Web arayüzü: http://localhost:5505/poi_manager_ui.html")
+    print("🔌 API endpoint'leri: http://localhost:5505/api/")
+    app.run(debug=True, host='0.0.0.0', port=5505)

@@ -524,7 +524,7 @@ if __name__ == "__main__":
         mongo_db.connect()
         
         # Yakındaki POI'leri ara
-        # nearby = mongo_db.search_nearby_pois(38.6310, 34.9130, 5000)
+        # nearby = mongo_db.search_nearby_pois(38.6310, 34.9130, 5505)
         # POI güncelleme örneği
         # update_result = mongo_db.update_poi(poi_id, {"name": "Yeni Ad", "latitude": 38.63, "longitude": 34.91})
         
