@@ -12,84 +12,206 @@
         .pointer { cursor: pointer; }
         #map { height: 60vh; min-height: 350px; border-radius: 8px; margin-bottom: 1rem; }
         .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 9999; }
-        .poi-detail-panel { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 1rem; margin-bottom: 1rem; display: none; }
-        .poi-detail-panel.active { display: block; }
-        .loading-overlay { position: fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(255,255,255,0.7); z-index:9998; display:flex; align-items:center; justify-content:center; font-size:2rem; display:none; }
+        .poi-detail-panel { 
+            background: #fff; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+            padding: 1rem; 
+            margin-bottom: 1rem; 
+            display: none; 
+            opacity: 0;
+            transform: translateX(-20px);
+            transition: all 0.3s ease;
+        }
+        .poi-detail-panel.active { 
+            display: block; 
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .loading-overlay { 
+            position: fixed; 
+            top:0; 
+            left:0; 
+            width:100vw; 
+            height:100vh; 
+            background:rgba(255,255,255,0.7); 
+            z-index:9998; 
+            display:flex; 
+            align-items:center; 
+            justify-content:center; 
+            font-size:2rem; 
+            display:none; 
+        }
+        .sortable { 
+            cursor: pointer; 
+            user-select: none;
+            transition: background-color 0.2s ease;
+        }
+        .sortable:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        .sort-icon {
+            margin-left: 5px;
+            font-size: 0.8em;
+        }
+        .table-responsive {
+            border-radius: 8px;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        .card-header {
+            background: rgba(255,255,255,0.8);
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+        .btn-outline-primary:hover, .btn-outline-danger:hover {
+            transform: translateY(-1px);
+            transition: transform 0.2s ease;
+        }
+        @media (max-width: 768px) {
+            #map { height: 40vh; }
+            .container-fluid { padding: 0.5rem; }
+        }
     </style>
 </head>
 <body>
-<div class="container py-4">
-    <h2 class="mb-4">POI Yönetim Paneli</h2>
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Yükleniyor...</span>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="container-fluid py-4">
+    <h2 class="mb-4">🗺️ POI Yönetim Paneli</h2>
+    
+    <!-- Harita Bölümü -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Harita</h5>
+                    <small class="text-muted">POI'leri görmek için haritaya tıklayın. Yeni POI eklemek için haritada bir noktaya çift tıklayın.</small>
+                </div>
+                <div class="card-body">
+                    <div id="map"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
+        <!-- Sol Panel: Form ve Detay -->
         <div class="col-md-4">
+            <!-- POI Detay Paneli -->
+            <div class="poi-detail-panel" id="poiDetailPanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">POI Detayları</h5>
+                    <button type="button" class="btn-close" onclick="closeDetailPanel()"></button>
+                </div>
+                <div id="poiDetailContent"></div>
+                <div class="mt-3">
+                    <button class="btn btn-primary btn-sm me-2" onclick="editFromDetail()">Düzenle</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteFromDetail()">Sil</button>
+                </div>
+            </div>
+
+            <!-- Form Paneli -->
             <div class="card mb-3">
-                <div class="card-header">POI Ekle / Düzenle</div>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>POI Ekle / Düzenle</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectLocationFromMap()" id="mapSelectBtn">
+                        📍 Haritadan Seç
+                    </button>
+                </div>
                 <div class="card-body">
                     <form id="poiForm">
                         <input type="hidden" id="poiId">
                         <div class="mb-2">
-                            <label class="form-label">Adı</label>
+                            <label class="form-label">Adı *</label>
                             <input type="text" class="form-control" id="poiName" required>
                         </div>
                         <div class="mb-2">
-                            <label class="form-label">Kategori</label>
+                            <label class="form-label">Kategori *</label>
                             <select class="form-select" id="poiCategory" required>
                                 <option value="">Seçiniz</option>
-                                <option value="gastronomik">Gastronomik</option>
-                                <option value="kulturel">Kültürel</option>
-                                <option value="sanatsal">Sanatsal</option>
-                                <option value="doga_macera">Doğa & Macera</option>
-                                <option value="konaklama">Konaklama</option>
+                                <option value="gastronomik">🍽️ Gastronomik</option>
+                                <option value="kulturel">🏛️ Kültürel</option>
+                                <option value="sanatsal">🎨 Sanatsal</option>
+                                <option value="doga_macera">🌿 Doğa & Macera</option>
+                                <option value="konaklama">🏨 Konaklama</option>
                             </select>
                         </div>
-                        <div class="mb-2">
-                            <label class="form-label">Enlem (Latitude)</label>
-                            <input type="number" step="any" class="form-control" id="poiLat" required>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">Boylam (Longitude)</label>
-                            <input type="number" step="any" class="form-control" id="poiLon" required>
+                        <div class="row">
+                            <div class="col-6 mb-2">
+                                <label class="form-label">Enlem *</label>
+                                <input type="number" step="any" class="form-control" id="poiLat" required>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <label class="form-label">Boylam *</label>
+                                <input type="number" step="any" class="form-control" id="poiLon" required>
+                            </div>
                         </div>
                         <div class="mb-2">
                             <label class="form-label">Açıklama</label>
-                            <textarea class="form-control" id="poiDesc"></textarea>
+                            <textarea class="form-control" id="poiDesc" rows="3"></textarea>
                         </div>
                         <div class="mb-2">
-                            <label class="form-label">Etiketler (virgülle ayırın)</label>
-                            <input type="text" class="form-control" id="poiTags">
+                            <label class="form-label">Etiketler</label>
+                            <input type="text" class="form-control" id="poiTags" placeholder="etiket1, etiket2, etiket3...">
                         </div>
-                        <button type="submit" class="btn btn-primary w-100" id="saveBtn">Kaydet</button>
-                        <button type="button" class="btn btn-secondary w-100 mt-2 d-none" id="cancelEditBtn">İptal</button>
+                        <div class="mb-2">
+                            <label class="form-label">Resim URL'si</label>
+                            <input type="url" class="form-control" id="poiImageUrl" placeholder="https://...">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" id="saveBtn">💾 Kaydet</button>
+                        <button type="button" class="btn btn-secondary w-100 mt-2 d-none" id="cancelEditBtn">❌ İptal</button>
                     </form>
                 </div>
             </div>
         </div>
+
+        <!-- Sağ Panel: Liste -->
         <div class="col-md-8">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>POI Listesi</span>
-                    <select id="filterCategory" class="form-select w-auto">
-                        <option value="">Tümü</option>
-                        <option value="gastronomik">Gastronomik</option>
-                        <option value="kulturel">Kültürel</option>
-                        <option value="sanatsal">Sanatsal</option>
-                        <option value="doga_macera">Doğa & Macera</option>
-                        <option value="konaklama">Konaklama</option>
-                    </select>
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h5 class="mb-0">POI Listesi</h5>
+                        </div>
+                        <div class="col-auto">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="searchPOI" placeholder="POI ara...">
+                                <select id="filterCategory" class="form-select">
+                                    <option value="">Tüm Kategoriler</option>
+                                    <option value="gastronomik">🍽️ Gastronomik</option>
+                                    <option value="kulturel">🏛️ Kültürel</option>
+                                    <option value="sanatsal">🎨 Sanatsal</option>
+                                    <option value="doga_macera">🌿 Doğa & Macera</option>
+                                    <option value="konaklama">🏨 Konaklama</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body poi-list p-0">
                     <table class="table table-hover mb-0" id="poiTable">
                         <thead class="table-light">
                             <tr>
-                                <th>Adı</th>
-                                <th>Kategori</th>
-                                <th>Enlem</th>
-                                <th>Boylam</th>
-                                <th></th>
+                                <th class="sortable" data-sort="name">Adı <span class="sort-icon">↕️</span></th>
+                                <th class="sortable" data-sort="category">Kategori <span class="sort-icon">↕️</span></th>
+                                <th class="sortable" data-sort="lat">Enlem <span class="sort-icon">↕️</span></th>
+                                <th class="sortable" data-sort="lon">Boylam <span class="sort-icon">↕️</span></th>
+                                <th>İşlemler</th>
                             </tr>
                         </thead>
                         <tbody id="poiTableBody"></tbody>
                     </table>
+                    <div class="text-center p-3 d-none" id="noDataMessage">
+                        <p class="text-muted mb-0">Herhangi bir POI bulunamadı.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -99,122 +221,443 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 const apiBase = '/api';
+let map;
+let poiMarkers = [];
+let allPOIs = [];
+let currentSort = { field: 'name', direction: 'asc' };
+let isSelectingLocation = false;
+let selectedPOI = null;
 
-function fetchPOIs(category = '') {
-    let url = apiBase + '/pois';
-    if (category) url += '?category=' + encodeURIComponent(category);
-    fetch(url)
-        .then(r => r.json())
-        .then(data => {
-            let pois = [];
-            if (category) {
-                for (const [name, coords] of Object.entries(data)) {
-                    pois.push({ name, lat: coords[0], lon: coords[1], category });
-                }
-            } else {
-                for (const [cat, poisObj] of Object.entries(data)) {
-                    for (const [name, coords] of Object.entries(poisObj)) {
-                        pois.push({ name, lat: coords[0], lon: coords[1], category: cat });
-                    }
-                }
-            }
-            renderPOITable(pois);
-        });
+// Harita başlatma
+function initMap() {
+    map = L.map('map').setView([38.6322, 34.9115], 12); // Ürgüp merkezi
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Haritaya çift tıklama ile POI ekleme
+    map.on('dblclick', function(e) {
+        if (!isSelectingLocation) {
+            const { lat, lng } = e.latlng;
+            document.getElementById('poiLat').value = lat.toFixed(6);
+            document.getElementById('poiLon').value = lng.toFixed(6);
+            document.getElementById('poiName').focus();
+            showToast('Konum seçildi! POI bilgilerini doldurun.', 'success');
+        }
+    });
+
+    // Haritadan konum seçme modu
+    map.on('click', function(e) {
+        if (isSelectingLocation) {
+            const { lat, lng } = e.latlng;
+            document.getElementById('poiLat').value = lat.toFixed(6);
+            document.getElementById('poiLon').value = lng.toFixed(6);
+            exitLocationSelectionMode();
+            showToast('Konum seçildi!', 'success');
+        }
+    });
 }
 
+// Konum seçme modu
+function selectLocationFromMap() {
+    isSelectingLocation = true;
+    document.getElementById('mapSelectBtn').innerHTML = '❌ İptal';
+    document.getElementById('mapSelectBtn').onclick = exitLocationSelectionMode;
+    map.getContainer().style.cursor = 'crosshair';
+    showToast('Haritadan bir konum seçin...', 'info');
+}
+
+function exitLocationSelectionMode() {
+    isSelectingLocation = false;
+    document.getElementById('mapSelectBtn').innerHTML = '📍 Haritadan Seç';
+    document.getElementById('mapSelectBtn').onclick = selectLocationFromMap;
+    map.getContainer().style.cursor = '';
+}
+
+// Loading overlay
+function showLoading() {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+// Toast bildirimleri
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+// POI'leri getir
+async function fetchPOIs(category = '') {
+    showLoading();
+    try {
+        let url = apiBase + '/pois';
+        if (category) url += '?category=' + encodeURIComponent(category);
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        let pois = [];
+        if (category) {
+            for (const [name, coords] of Object.entries(data)) {
+                pois.push({ name, lat: coords[0], lon: coords[1], category });
+            }
+        } else {
+            for (const [cat, poisObj] of Object.entries(data)) {
+                for (const [name, coords] of Object.entries(poisObj)) {
+                    pois.push({ name, lat: coords[0], lon: coords[1], category: cat });
+                }
+            }
+        }
+        
+        allPOIs = pois;
+        updateMapMarkers(pois);
+        renderPOITable(pois);
+    } catch (error) {
+        showToast('POI'ler yüklenirken hata oluştu: ' + error.message, 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Harita markerlarını güncelle
+function updateMapMarkers(pois) {
+    // Mevcut markerları temizle
+    poiMarkers.forEach(marker => map.removeLayer(marker));
+    poiMarkers = [];
+    
+    // Kategori renkleri
+    const categoryColors = {
+        'gastronomik': '#e74c3c',
+        'kulturel': '#3498db',
+        'sanatsal': '#2ecc71',
+        'doga_macera': '#f39c12',
+        'konaklama': '#9b59b6'
+    };
+    
+    // Yeni markerları ekle
+    pois.forEach(poi => {
+        const marker = L.circleMarker([poi.lat, poi.lon], {
+            color: categoryColors[poi.category] || '#666',
+            fillColor: categoryColors[poi.category] || '#666',
+            fillOpacity: 0.8,
+            radius: 8
+        }).addTo(map);
+        
+        marker.bindPopup(`
+            <strong>${poi.name}</strong><br>
+            <small>${getCategoryDisplayName(poi.category)}</small><br>
+            <button class="btn btn-sm btn-primary mt-1" onclick="showPOIDetail('${poi.name}', '${poi.category}')">Detayları Gör</button>
+        `);
+        
+        marker.on('click', () => {
+            showPOIDetail(poi.name, poi.category);
+        });
+        
+        poiMarkers.push(marker);
+    });
+}
+
+// Kategori görüntü adını getir
+function getCategoryDisplayName(category) {
+    const names = {
+        'gastronomik': '🍽️ Gastronomik',
+        'kulturel': '🏛️ Kültürel',
+        'sanatsal': '🎨 Sanatsal',
+        'doga_macera': '🌿 Doğa & Macera',
+        'konaklama': '🏨 Konaklama'
+    };
+    return names[category] || category;
+}
+
+// POI tablosunu render et
 function renderPOITable(pois) {
     const tbody = document.getElementById('poiTableBody');
+    const noDataMessage = document.getElementById('noDataMessage');
+    
+    if (pois.length === 0) {
+        tbody.innerHTML = '';
+        noDataMessage.classList.remove('d-none');
+        return;
+    }
+    
+    noDataMessage.classList.add('d-none');
     tbody.innerHTML = '';
+    
     pois.forEach(poi => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td class="pointer text-primary" onclick="editPOI('${poi.name}', '${poi.category}')">${poi.name}</td>
-            <td>${poi.category}</td>
-            <td>${poi.lat}</td>
-            <td>${poi.lon}</td>
-            <td><button class="btn btn-danger btn-sm" onclick="deletePOI('${poi.name}', '${poi.category}')">Sil</button></td>
+            <td class="pointer text-primary" onclick="showPOIDetail('${poi.name}', '${poi.category}')">${poi.name}</td>
+            <td>${getCategoryDisplayName(poi.category)}</td>
+            <td>${poi.lat.toFixed(6)}</td>
+            <td>${poi.lon.toFixed(6)}</td>
+            <td>
+                <button class="btn btn-outline-primary btn-sm me-1" onclick="editPOI('${poi.name}', '${poi.category}')" title="Düzenle">✏️</button>
+                <button class="btn btn-outline-danger btn-sm" onclick="deletePOI('${poi.name}', '${poi.category}')" title="Sil">🗑️</button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
 }
 
-function editPOI(name, category) {
-    fetch(`${apiBase}/pois?category=${encodeURIComponent(category)}`)
-        .then(r => r.json())
-        .then(data => {
-            const coords = data[name];
-            if (!coords) return;
-            document.getElementById('poiId').value = name + '|' + category;
-            document.getElementById('poiName').value = name;
-            document.getElementById('poiCategory').value = category;
-            document.getElementById('poiLat').value = coords[0];
-            document.getElementById('poiLon').value = coords[1];
-            document.getElementById('poiDesc').value = '';
-            document.getElementById('poiTags').value = '';
-            document.getElementById('saveBtn').textContent = 'Güncelle';
-            document.getElementById('cancelEditBtn').classList.remove('d-none');
-        });
+// POI detayını göster
+async function showPOIDetail(name, category) {
+    try {
+        const response = await fetch(`${apiBase}/pois?category=${encodeURIComponent(category)}`);
+        const data = await response.json();
+        const coords = data[name];
+        
+        if (!coords) {
+            showToast('POI detayları bulunamadı', 'error');
+            return;
+        }
+        
+        selectedPOI = { name, category, lat: coords[0], lon: coords[1] };
+        
+        document.getElementById('poiDetailContent').innerHTML = `
+            <h6>${name}</h6>
+            <p class="mb-2"><strong>Kategori:</strong> ${getCategoryDisplayName(category)}</p>
+            <p class="mb-2"><strong>Konum:</strong> ${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}</p>
+            <button class="btn btn-sm btn-outline-secondary" onclick="focusOnMap(${coords[0]}, ${coords[1]})">🎯 Haritada Göster</button>
+        `;
+        
+        document.getElementById('poiDetailPanel').classList.add('active');
+        closeDetailPanel();
+        setTimeout(() => {
+            document.getElementById('poiDetailPanel').classList.add('active');
+        }, 100);
+        
+    } catch (error) {
+        showToast('POI detayları yüklenirken hata oluştu', 'error');
+    }
 }
 
+// Haritada odaklan
+function focusOnMap(lat, lon) {
+    map.setView([lat, lon], 16);
+}
+
+// Detay panelini kapat
+function closeDetailPanel() {
+    document.getElementById('poiDetailPanel').classList.remove('active');
+    selectedPOI = null;
+}
+
+// Detaydan düzenle
+function editFromDetail() {
+    if (selectedPOI) {
+        editPOI(selectedPOI.name, selectedPOI.category);
+        closeDetailPanel();
+    }
+}
+
+// Detaydan sil
+function deleteFromDetail() {
+    if (selectedPOI) {
+        deletePOI(selectedPOI.name, selectedPOI.category);
+        closeDetailPanel();
+    }
+}
+
+// POI düzenle
+async function editPOI(name, category) {
+    try {
+        const response = await fetch(`${apiBase}/pois?category=${encodeURIComponent(category)}`);
+        const data = await response.json();
+        const coords = data[name];
+        
+        if (!coords) return;
+        
+        document.getElementById('poiId').value = name + '|' + category;
+        document.getElementById('poiName').value = name;
+        document.getElementById('poiCategory').value = category;
+        document.getElementById('poiLat').value = coords[0];
+        document.getElementById('poiLon').value = coords[1];
+        document.getElementById('poiDesc').value = '';
+        document.getElementById('poiTags').value = '';
+        document.getElementById('poiImageUrl').value = '';
+        document.getElementById('saveBtn').innerHTML = '🔄 Güncelle';
+        document.getElementById('cancelEditBtn').classList.remove('d-none');
+        
+        // Formu scroll'a getir
+        document.getElementById('poiForm').scrollIntoView({ behavior: 'smooth' });
+    } catch (error) {
+        showToast('POI bilgileri yüklenirken hata oluştu', 'error');
+    }
+}
+
+// Form iptal
 document.getElementById('cancelEditBtn').onclick = function() {
     document.getElementById('poiForm').reset();
     document.getElementById('poiId').value = '';
-    document.getElementById('saveBtn').textContent = 'Kaydet';
+    document.getElementById('saveBtn').innerHTML = '💾 Kaydet';
     this.classList.add('d-none');
 };
 
-document.getElementById('poiForm').onsubmit = function(e) {
+// Form gönder
+document.getElementById('poiForm').onsubmit = async function(e) {
     e.preventDefault();
-    const idVal = document.getElementById('poiId').value;
-    const name = document.getElementById('poiName').value;
-    const category = document.getElementById('poiCategory').value;
-    const lat = parseFloat(document.getElementById('poiLat').value);
-    const lon = parseFloat(document.getElementById('poiLon').value);
-    const description = document.getElementById('poiDesc').value;
-    const tags = document.getElementById('poiTags').value.split(',').map(t => t.trim()).filter(Boolean);
-    const poiData = { name, category, latitude: lat, longitude: lon, description, tags };
-    if (idVal) {
-        // Güncelle
-        fetch(`${apiBase}/poi/${encodeURIComponent(name)}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(poiData)
-        }).then(r => r.json()).then(() => {
-            fetchPOIs(document.getElementById('filterCategory').value);
+    showLoading();
+    
+    try {
+        const idVal = document.getElementById('poiId').value;
+        const name = document.getElementById('poiName').value;
+        const category = document.getElementById('poiCategory').value;
+        const lat = parseFloat(document.getElementById('poiLat').value);
+        const lon = parseFloat(document.getElementById('poiLon').value);
+        const description = document.getElementById('poiDesc').value;
+        const tags = document.getElementById('poiTags').value.split(',').map(t => t.trim()).filter(Boolean);
+        const imageUrl = document.getElementById('poiImageUrl').value;
+        
+        const poiData = { 
+            name, category, latitude: lat, longitude: lon, 
+            description, tags, imageUrl 
+        };
+        
+        let response;
+        if (idVal) {
+            // Güncelle
+            response = await fetch(`${apiBase}/poi/${encodeURIComponent(name)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(poiData)
+            });
+        } else {
+            // Ekle
+            response = await fetch(`${apiBase}/poi`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(poiData)
+            });
+        }
+        
+        if (response.ok) {
+            showToast(idVal ? 'POI başarıyla güncellendi!' : 'POI başarıyla eklendi!', 'success');
             document.getElementById('poiForm').reset();
             document.getElementById('poiId').value = '';
-            document.getElementById('saveBtn').textContent = 'Kaydet';
+            document.getElementById('saveBtn').innerHTML = '💾 Kaydet';
             document.getElementById('cancelEditBtn').classList.add('d-none');
-        });
-    } else {
-        // Ekle
-        fetch(`${apiBase}/poi`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(poiData)
-        }).then(r => r.json()).then(() => {
-            fetchPOIs(document.getElementById('filterCategory').value);
-            document.getElementById('poiForm').reset();
-        });
+            await fetchPOIs(document.getElementById('filterCategory').value);
+        } else {
+            throw new Error('İşlem başarısız');
+        }
+    } catch (error) {
+        showToast('İşlem sırasında hata oluştu: ' + error.message, 'error');
+    } finally {
+        hideLoading();
     }
 };
 
-function deletePOI(name, category) {
-    if (!confirm('Bu POI silinsin mi?')) return;
-    // POI id'si olarak name kullanılıyor (örnek için). Gerçek uygulamada id kullanılmalı.
-    fetch(`${apiBase}/poi/${encodeURIComponent(name)}`, {
-        method: 'DELETE'
-    }).then(r => r.json()).then(() => {
-        fetchPOIs(document.getElementById('filterCategory').value);
-    });
+// POI sil
+async function deletePOI(name, category) {
+    if (!confirm(`"${name}" adlı POI silinsin mi?\n\nBu işlem geri alınamaz.`)) return;
+    
+    showLoading();
+    try {
+        const response = await fetch(`${apiBase}/poi/${encodeURIComponent(name)}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showToast('POI başarıyla silindi!', 'success');
+            await fetchPOIs(document.getElementById('filterCategory').value);
+        } else {
+            throw new Error('Silme işlemi başarısız');
+        }
+    } catch (error) {
+        showToast('Silme sırasında hata oluştu: ' + error.message, 'error');
+    } finally {
+        hideLoading();
+    }
 }
 
-document.getElementById('filterCategory').onchange = function() {
-    fetchPOIs(this.value);
-};
+// Arama ve filtreleme
+function filterAndSortPOIs() {
+    const searchTerm = document.getElementById('searchPOI').value.toLowerCase();
+    const categoryFilter = document.getElementById('filterCategory').value;
+    
+    let filteredPOIs = allPOIs.filter(poi => {
+        const matchesSearch = poi.name.toLowerCase().includes(searchTerm);
+        const matchesCategory = !categoryFilter || poi.category === categoryFilter;
+        return matchesSearch && matchesCategory;
+    });
+    
+    // Sıralama
+    filteredPOIs.sort((a, b) => {
+        let aVal = a[currentSort.field];
+        let bVal = b[currentSort.field];
+        
+        if (typeof aVal === 'string') {
+            aVal = aVal.toLowerCase();
+            bVal = bVal.toLowerCase();
+        }
+        
+        if (currentSort.direction === 'asc') {
+            return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        } else {
+            return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+        }
+    });
+    
+    updateMapMarkers(filteredPOIs);
+    renderPOITable(filteredPOIs);
+}
 
-// İlk yüklemede tüm POI'leri getir
-fetchPOIs();
+// Sıralama
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('sortable') || e.target.parentElement.classList.contains('sortable')) {
+        const sortField = e.target.dataset.sort || e.target.parentElement.dataset.sort;
+        
+        if (currentSort.field === sortField) {
+            currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.field = sortField;
+            currentSort.direction = 'asc';
+        }
+        
+        // Sıralama iconlarını güncelle
+        document.querySelectorAll('.sort-icon').forEach(icon => {
+            icon.textContent = '↕️';
+        });
+        
+        const currentIcon = document.querySelector(`[data-sort="${sortField}"] .sort-icon`);
+        if (currentIcon) {
+            currentIcon.textContent = currentSort.direction === 'asc' ? '⬆️' : '⬇️';
+        }
+        
+        filterAndSortPOIs();
+    }
+});
+
+// Event listeners
+document.getElementById('searchPOI').addEventListener('input', filterAndSortPOIs);
+document.getElementById('filterCategory').addEventListener('change', function() {
+    filterAndSortPOIs();
+});
+
+// Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+    fetchPOIs();
+});
 </script>
 </body>
 </html>
