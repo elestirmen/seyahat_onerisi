@@ -309,30 +309,32 @@ function showToast(message, type = 'info') {
 async function fetchPOIs(category = '') {
     showLoading();
     try {
-        let url = apiBase + '/pois';
-        if (category) url += '?category=' + encodeURIComponent(category);
-        
+        const url = `${apiBase}/pois${category ? `?category=${encodeURIComponent(category)}` : ''}`;
         const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`API call failed with status ${response.status}`);
+        }
         const data = await response.json();
-        
+
         let pois = [];
         if (category) {
-            for (const [name, coords] of Object.entries(data)) {
-                pois.push({ name, lat: coords[0], lon: coords[1], category });
-            }
+            // A single category is returned as an array of POIs
+            pois = data.map(poi => ({ ...poi, category: category }));
         } else {
-            for (const [cat, poisObj] of Object.entries(data)) {
-                for (const [name, coords] of Object.entries(poisObj)) {
-                    pois.push({ name, lat: coords[0], lon: coords[1], category: cat });
+            // All POIs are returned in a structured object by category
+            for (const cat in data) {
+                if (Array.isArray(data[cat])) {
+                    const categoryPois = data[cat].map(poi => ({ ...poi, category: cat }));
+                    pois.push(...categoryPois);
                 }
             }
         }
         
         allPOIs = pois;
-        updateMapMarkers(pois);
-        renderPOITable(pois);
+        filterAndSortPOIs(); // This function calls renderPOITable and updateMapMarkers
     } catch (error) {
-        showToast('POI'ler yüklenirken hata oluştu: ' + error.message, 'error');
+        console.error('Error fetching POIs:', error);
+        showToast('POIs could not be loaded: ' + error.message, 'error');
     } finally {
         hideLoading();
     }
@@ -355,7 +357,11 @@ function updateMapMarkers(pois) {
     
     // Yeni markerları ekle
     pois.forEach(poi => {
-        const marker = L.circleMarker([poi.lat, poi.lon], {
+        if (poi.latitude === undefined || poi.longitude === undefined) {
+            console.warn('Skipping POI with missing coordinates:', poi);
+            return;
+        }
+        const marker = L.circleMarker([poi.latitude, poi.longitude], {
             color: categoryColors[poi.category] || '#666',
             fillColor: categoryColors[poi.category] || '#666',
             fillOpacity: 0.8,
@@ -365,11 +371,11 @@ function updateMapMarkers(pois) {
         marker.bindPopup(`
             <strong>${poi.name}</strong><br>
             <small>${getCategoryDisplayName(poi.category)}</small><br>
-            <button class="btn btn-sm btn-primary mt-1" onclick="showPOIDetail('${poi.name}', '${poi.category}')">Detayları Gör</button>
+            <button class="btn btn-sm btn-primary mt-1" onclick="showPOIDetail('${poi._id}')">Details</button>
         `);
         
         marker.on('click', () => {
-            showPOIDetail(poi.name, poi.category);
+            showPOIDetail(poi._id);
         });
         
         poiMarkers.push(marker);
@@ -405,13 +411,13 @@ function renderPOITable(pois) {
     pois.forEach(poi => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td class="pointer text-primary" onclick="showPOIDetail('${poi.name}', '${poi.category}')">${poi.name}</td>
+            <td class="pointer text-primary" onclick="showPOIDetail('${poi._id}')">${poi.name}</td>
             <td>${getCategoryDisplayName(poi.category)}</td>
-            <td>${poi.lat.toFixed(6)}</td>
-            <td>${poi.lon.toFixed(6)}</td>
+            <td>${(poi.latitude || 0).toFixed(6)}</td>
+            <td>${(poi.longitude || 0).toFixed(6)}</td>
             <td>
-                <button class="btn btn-outline-primary btn-sm me-1" onclick="editPOI('${poi.name}', '${poi.category}')" title="Düzenle">✏️</button>
-                <button class="btn btn-outline-danger btn-sm" onclick="deletePOI('${poi.name}', '${poi.category}')" title="Sil">🗑️</button>
+                <button class="btn btn-outline-primary btn-sm me-1" onclick="editPOI('${poi._id}')" title="Edit">✏️</button>
+                <button class="btn btn-outline-danger btn-sm" onclick="deletePOI('${poi._id}')" title="Delete">🗑️</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -419,34 +425,40 @@ function renderPOITable(pois) {
 }
 
 // POI detayını göster
-async function showPOIDetail(name, category) {
+async function showPOIDetail(poiId) {
+    showLoading();
     try {
-        const response = await fetch(`${apiBase}/pois?category=${encodeURIComponent(category)}`);
-        const data = await response.json();
-        const coords = data[name];
+        const response = await fetch(`${apiBase}/poi/${poiId}`);
+        if (!response.ok) throw new Error('POI not found');
+        const poi = await response.json();
         
-        if (!coords) {
-            showToast('POI detayları bulunamadı', 'error');
-            return;
+        selectedPOI = poi;
+        
+        let detailHtml = `<h6>${poi.name}</h6>
+            <p class="mb-1"><strong>Category:</strong> ${getCategoryDisplayName(poi.category)}</p>
+            <p class="mb-1"><strong>Location:</strong> ${poi.latitude.toFixed(6)}, ${poi.longitude.toFixed(6)}</p>`;
+        
+        if (poi.description) {
+            detailHtml += `<p class="mb-1"><strong>Description:</strong> ${poi.description}</p>`;
+        }
+        if (poi.tags && poi.tags.length > 0) {
+            detailHtml += `<p class="mb-1"><strong>Tags:</strong> ${poi.tags.join(', ')}</p>`;
+        }
+        if (poi.imageUrl) {
+            detailHtml += `<img src="${poi.imageUrl}" class="img-fluid rounded mt-2" alt="${poi.name}">`;
+        }
+        detailHtml += `<hr><button class="btn btn-sm btn-outline-secondary" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">🎯 Center on Map</button>`;
+        
+        document.getElementById('poiDetailContent').innerHTML = detailHtml;
+        
+        if(!document.getElementById('poiDetailPanel').classList.contains('active')) {
+            document.getElementById('poiDetailPanel').classList.add('active');
         }
         
-        selectedPOI = { name, category, lat: coords[0], lon: coords[1] };
-        
-        document.getElementById('poiDetailContent').innerHTML = `
-            <h6>${name}</h6>
-            <p class="mb-2"><strong>Kategori:</strong> ${getCategoryDisplayName(category)}</p>
-            <p class="mb-2"><strong>Konum:</strong> ${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}</p>
-            <button class="btn btn-sm btn-outline-secondary" onclick="focusOnMap(${coords[0]}, ${coords[1]})">🎯 Haritada Göster</button>
-        `;
-        
-        document.getElementById('poiDetailPanel').classList.add('active');
-        closeDetailPanel();
-        setTimeout(() => {
-            document.getElementById('poiDetailPanel').classList.add('active');
-        }, 100);
-        
     } catch (error) {
-        showToast('POI detayları yüklenirken hata oluştu', 'error');
+        showToast('Error loading POI details', 'error');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -464,7 +476,7 @@ function closeDetailPanel() {
 // Detaydan düzenle
 function editFromDetail() {
     if (selectedPOI) {
-        editPOI(selectedPOI.name, selectedPOI.category);
+        editPOI(selectedPOI._id);
         closeDetailPanel();
     }
 }
@@ -472,35 +484,36 @@ function editFromDetail() {
 // Detaydan sil
 function deleteFromDetail() {
     if (selectedPOI) {
-        deletePOI(selectedPOI.name, selectedPOI.category);
+        deletePOI(selectedPOI._id);
         closeDetailPanel();
     }
 }
 
 // POI düzenle
-async function editPOI(name, category) {
+async function editPOI(poiId) {
+    showLoading();
     try {
-        const response = await fetch(`${apiBase}/pois?category=${encodeURIComponent(category)}`);
-        const data = await response.json();
-        const coords = data[name];
+        const response = await fetch(`${apiBase}/poi/${poiId}`);
+        if (!response.ok) throw new Error('POI not found');
+        const poi = await response.json();
         
-        if (!coords) return;
+        document.getElementById('poiId').value = poi._id;
+        document.getElementById('poiName').value = poi.name;
+        document.getElementById('poiCategory').value = poi.category;
+        document.getElementById('poiLat').value = poi.latitude;
+        document.getElementById('poiLon').value = poi.longitude;
+        document.getElementById('poiDesc').value = poi.description || '';
+        document.getElementById('poiTags').value = (poi.tags || []).join(', ');
+        document.getElementById('poiImageUrl').value = poi.imageUrl || '';
         
-        document.getElementById('poiId').value = name + '|' + category;
-        document.getElementById('poiName').value = name;
-        document.getElementById('poiCategory').value = category;
-        document.getElementById('poiLat').value = coords[0];
-        document.getElementById('poiLon').value = coords[1];
-        document.getElementById('poiDesc').value = '';
-        document.getElementById('poiTags').value = '';
-        document.getElementById('poiImageUrl').value = '';
-        document.getElementById('saveBtn').innerHTML = '🔄 Güncelle';
+        document.getElementById('saveBtn').innerHTML = '🔄 Update';
         document.getElementById('cancelEditBtn').classList.remove('d-none');
-        
-        // Formu scroll'a getir
         document.getElementById('poiForm').scrollIntoView({ behavior: 'smooth' });
+
     } catch (error) {
-        showToast('POI bilgileri yüklenirken hata oluştu', 'error');
+        showToast('Could not fetch POI details for editing.', 'error');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -535,7 +548,7 @@ document.getElementById('poiForm').onsubmit = async function(e) {
         let response;
         if (idVal) {
             // Güncelle
-            response = await fetch(`${apiBase}/poi/${encodeURIComponent(name)}`, {
+            response = await fetch(`${apiBase}/poi/${idVal}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(poiData)
@@ -567,23 +580,25 @@ document.getElementById('poiForm').onsubmit = async function(e) {
 };
 
 // POI sil
-async function deletePOI(name, category) {
-    if (!confirm(`"${name}" adlı POI silinsin mi?\n\nBu işlem geri alınamaz.`)) return;
+async function deletePOI(poiId) {
+    const poiToDelete = allPOIs.find(p => p._id === poiId);
+    const poiName = poiToDelete ? poiToDelete.name : "Unknown POI";
+    if (!confirm(`Are you sure you want to delete "${poiName}"?\n\nThis will set the POI as inactive.`)) return;
     
     showLoading();
     try {
-        const response = await fetch(`${apiBase}/poi/${encodeURIComponent(name)}`, {
+        const response = await fetch(`${apiBase}/poi/${poiId}`, {
             method: 'DELETE'
         });
         
         if (response.ok) {
-            showToast('POI başarıyla silindi!', 'success');
+            showToast('POI successfully deleted!', 'success');
             await fetchPOIs(document.getElementById('filterCategory').value);
         } else {
-            throw new Error('Silme işlemi başarısız');
+            throw new Error('Deletion failed');
         }
     } catch (error) {
-        showToast('Silme sırasında hata oluştu: ' + error.message, 'error');
+        showToast('Error during deletion: ' + error.message, 'error');
     } finally {
         hideLoading();
     }
@@ -650,7 +665,7 @@ document.addEventListener('click', function(e) {
 // Event listeners
 document.getElementById('searchPOI').addEventListener('input', filterAndSortPOIs);
 document.getElementById('filterCategory').addEventListener('change', function() {
-    filterAndSortPOIs();
+    fetchPOIs(this.value);
 });
 
 // Sayfa yüklendiğinde

@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src='https://cdn.jsdelivr.net/npm/chart.js'></script>
+    
+        <script>
+            L_NO_TOUCH = false;
+            L_DISABLE_3D = false;
+        </script>
+    
+    <style>html, body {width: 100%;height: 100%;margin: 0;padding: 0;}</style>
+    <style>#map {position:absolute;top:0;bottom:0;right:0;left:0;}</style>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_7be6296649b8483978da1554a4d143f9 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+        
+    <script src="https://cdn.jsdelivr.net/gh/marslan390/BeautifyMarker/leaflet-beautify-marker-icon.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/marslan390/BeautifyMarker/leaflet-beautify-marker-icon.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@3.0.0/Control.FullScreen.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@3.0.0/Control.FullScreen.css"/>
+    <script src="https://cdn.jsdelivr.net/gh/ljagis/leaflet-measure@2.1.7/dist/leaflet-measure.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ljagis/leaflet-measure@2.1.7/dist/leaflet-measure.min.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-minimap/3.6.1/Control.MiniMap.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-minimap/3.6.1/Control.MiniMap.css"/>
+</head>
+<body>
+    
+    <div id="legend-panel" style="position:fixed;bottom:20px;left:20px;width:280px;background:rgba(255,255,255,0.9);border:1px solid #ddd;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,0.12);z-index:9999;font-family:'Segoe UI',sans-serif;backdrop-filter:blur(10px);overflow:hidden;"><div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:14px;color:white;"><h3 style="margin:0;font-size:16px;text-align:center;">🗺️ Rota Lejantı</h3></div><div id="categories-container" style="padding:12px;max-height:350px;overflow-y:auto;"><div class="category-item" onclick="toggleLayer('feature_group_d194f81967c99d0aef1ef822f1ddb942', this)" style="display:flex;align-items:center;margin-bottom:8px;padding:10px;border-radius:10px;cursor:pointer;transition:all 0.3s ease;border-left:4px solid #e74c3c;background:#f8f9fa;"><div class="toggle-indicator" style="width:10px;height:10px;border-radius:50%;background:#e74c3c;margin-right:12px;"></div><div style="flex:1;"><div style="font-weight:600;font-size:13px;">🍽️ Gastronomik</div><div style="font-size:11px;color:#555;">3 Nokta | 0.9 km</div></div></div><div class="category-item" onclick="toggleLayer('feature_group_4b306d5336041d13b5dacb297d4eb049', this)" style="display:flex;align-items:center;margin-bottom:8px;padding:10px;border-radius:10px;cursor:pointer;transition:all 0.3s ease;border-left:4px solid #3498db;background:#f8f9fa;"><div class="toggle-indicator" style="width:10px;height:10px;border-radius:50%;background:#3498db;margin-right:12px;"></div><div style="flex:1;"><div style="font-weight:600;font-size:13px;">🏛️ Kültürel</div><div style="font-size:11px;color:#555;">3 Nokta | 0.8 km</div></div></div></div></div><script>function toggleLayer(layerVarName,element){const layer=window[layerVarName];if(!layer)return;const indicator=element.querySelector('.toggle-indicator');if(map_7be6296649b8483978da1554a4d143f9.hasLayer(layer)){map_7be6296649b8483978da1554a4d143f9.removeLayer(layer);indicator.style.opacity='0.3';element.style.background='#f8f9fa';}else{map_7be6296649b8483978da1554a4d143f9.addLayer(layer);indicator.style.opacity='1';element.style.background='#e9ecef';}}</script><style>.category-item:hover{transform:scale(1.03);box-shadow:0 4px 15px rgba(0,0,0,0.1);}</style>
+    
+            <div class="folium-map" id="map_7be6296649b8483978da1554a4d143f9" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_7be6296649b8483978da1554a4d143f9 = L.map(
+                "map_7be6296649b8483978da1554a4d143f9",
+                {
+                    center: [38.631, 34.913],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 13,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var feature_group_f18d4ddf9c47f375ff2b08a1a6f1380a = L.featureGroup(
+                {
+}
+            );
+        
+    
+            var marker_1f8021c6d576b1c5be68d86a4636538c = L.marker(
+                [38.633115, 34.907022],
+                {
+}
+            ).addTo(feature_group_f18d4ddf9c47f375ff2b08a1a6f1380a);
+        
+    
+            var beautify_icon_a4925d6fd0b0fbce49e9d4b30edc0bde = new L.BeautifyIcon.icon(
+                {
+  "icon": "utensils",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#e74c3c",
+  "textColor": "white",
+  "backgroundColor": "#e74c3c",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 3,
+  "iconPrefix": "fa",
+}
+            )
+            marker_1f8021c6d576b1c5be68d86a4636538c.setIcon(beautify_icon_a4925d6fd0b0fbce49e9d4b30edc0bde);
+        
+    
+        var popup_b6b2fb7501ac402407e1e9bcb3e92a39 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_24a17f00ddb140fcaf3a7e92ef5418cd = $(`<div id="html_24a17f00ddb140fcaf3a7e92ef5418cd" style="width: 100.0%; height: 100.0%;"><div style="font-family:'Segoe UI',sans-serif;max-width:350px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);"><div style="background:linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);padding:16px;color:white;"><h3 style="margin:0 0 8px 0;font-size:18px;">🍽️ Ziggy Cafe & Restaurant (Ürgüp)</h3><p style="margin:0;font-size:13px;opacity:0.95;">Restoranlar, kafeler ve lezzet noktaları</p></div><div style="padding:16px;background:white;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #e74c3c;"><div style="font-size:20px;font-weight:700;color:#e74c3c;">3</div><div style="font-size:11px;color:#666;font-weight:600;">DURAK SIRASI</div></div><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #e74c3c;"><div style="font-size:14px;font-weight:700;color:#2c3e50;">Gastronomik</div><div style="font-size:11px;color:#666;font-weight:600;">KATEGORİ</div></div></div><div style="text-align:center;"><a href="https://maps.google.com/?q=38.633115,34.907022" target="_blank" rel="noopener noreferrer" style="background:#e74c3c;color:white;padding:12px 24px;border-radius:25px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;transition:all 0.3s ease;box-shadow:0 4px 15px rgba(231, 76, 60, 0.3);"><i class="fa fa-external-link-alt" style="margin-right:8px;"></i> Google Maps'te Aç</a></div></div></div></div>`)[0];
+                popup_b6b2fb7501ac402407e1e9bcb3e92a39.setContent(html_24a17f00ddb140fcaf3a7e92ef5418cd);
+            
+        
+
+        marker_1f8021c6d576b1c5be68d86a4636538c.bindPopup(popup_b6b2fb7501ac402407e1e9bcb3e92a39)
+        ;
+
+        
+    
+    
+            marker_1f8021c6d576b1c5be68d86a4636538c.bindTooltip(
+                `<div>
+                     <div style='background:#e74c3c;color:white;padding:8px 12px;border-radius:8px;font-family:sans-serif;box-shadow:0 4px 12px rgba(231, 76, 60, 0.3);'><strong>3. Ziggy Cafe & Restaurant (Ürgüp)</strong></div>
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_1f8021c6d576b1c5be68d86a4636538c.setIcon(beautify_icon_a4925d6fd0b0fbce49e9d4b30edc0bde);
+            
+    
+            var marker_664e2662b588a07b5380c1718638c439 = L.marker(
+                [38.63061, 34.911284],
+                {
+}
+            ).addTo(feature_group_f18d4ddf9c47f375ff2b08a1a6f1380a);
+        
+    
+            var beautify_icon_710f2de82669a7b49e2cb57b2382067e = new L.BeautifyIcon.icon(
+                {
+  "icon": "utensils",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#e74c3c",
+  "textColor": "white",
+  "backgroundColor": "#e74c3c",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 2,
+  "iconPrefix": "fa",
+}
+            )
+            marker_664e2662b588a07b5380c1718638c439.setIcon(beautify_icon_710f2de82669a7b49e2cb57b2382067e);
+        
+    
+        var popup_44472eb9b71848111f696568105d379d = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_9b0f246001422aaaf9f3f9b46d693330 = $(`<div id="html_9b0f246001422aaaf9f3f9b46d693330" style="width: 100.0%; height: 100.0%;"><div style="font-family:'Segoe UI',sans-serif;max-width:350px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);"><div style="background:linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);padding:16px;color:white;"><h3 style="margin:0 0 8px 0;font-size:18px;">🍽️ Ehlikeyf Restaurant (Ürgüp)</h3><p style="margin:0;font-size:13px;opacity:0.95;">Restoranlar, kafeler ve lezzet noktaları</p></div><div style="padding:16px;background:white;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #e74c3c;"><div style="font-size:20px;font-weight:700;color:#e74c3c;">2</div><div style="font-size:11px;color:#666;font-weight:600;">DURAK SIRASI</div></div><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #e74c3c;"><div style="font-size:14px;font-weight:700;color:#2c3e50;">Gastronomik</div><div style="font-size:11px;color:#666;font-weight:600;">KATEGORİ</div></div></div><div style="text-align:center;"><a href="https://maps.google.com/?q=38.63061,34.911284" target="_blank" rel="noopener noreferrer" style="background:#e74c3c;color:white;padding:12px 24px;border-radius:25px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;transition:all 0.3s ease;box-shadow:0 4px 15px rgba(231, 76, 60, 0.3);"><i class="fa fa-external-link-alt" style="margin-right:8px;"></i> Google Maps'te Aç</a></div></div></div></div>`)[0];
+                popup_44472eb9b71848111f696568105d379d.setContent(html_9b0f246001422aaaf9f3f9b46d693330);
+            
+        
+
+        marker_664e2662b588a07b5380c1718638c439.bindPopup(popup_44472eb9b71848111f696568105d379d)
+        ;
+
+        
+    
+    
+            marker_664e2662b588a07b5380c1718638c439.bindTooltip(
+                `<div>
+                     <div style='background:#e74c3c;color:white;padding:8px 12px;border-radius:8px;font-family:sans-serif;box-shadow:0 4px 12px rgba(231, 76, 60, 0.3);'><strong>2. Ehlikeyf Restaurant (Ürgüp)</strong></div>
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_664e2662b588a07b5380c1718638c439.setIcon(beautify_icon_710f2de82669a7b49e2cb57b2382067e);
+            
+    
+            var marker_db557dbd0ec3f9f922a0a599b241a18c = L.marker(
+                [38.63099, 34.91382],
+                {
+}
+            ).addTo(feature_group_f18d4ddf9c47f375ff2b08a1a6f1380a);
+        
+    
+            var beautify_icon_b1d2f7b2ccbfce29478f0b73b22c3f46 = new L.BeautifyIcon.icon(
+                {
+  "icon": "utensils",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#e74c3c",
+  "textColor": "white",
+  "backgroundColor": "#e74c3c",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 1,
+  "iconPrefix": "fa",
+}
+            )
+            marker_db557dbd0ec3f9f922a0a599b241a18c.setIcon(beautify_icon_b1d2f7b2ccbfce29478f0b73b22c3f46);
+        
+    
+        var popup_20b25b0775fa7dedf866ee19c3fb776f = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_eaa91341840e0b31377cac4d7814c06c = $(`<div id="html_eaa91341840e0b31377cac4d7814c06c" style="width: 100.0%; height: 100.0%;"><div style="font-family:'Segoe UI',sans-serif;max-width:350px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);"><div style="background:linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);padding:16px;color:white;"><h3 style="margin:0 0 8px 0;font-size:18px;">🍽️ Sofra Restaurant (Ürgüp)</h3><p style="margin:0;font-size:13px;opacity:0.95;">Restoranlar, kafeler ve lezzet noktaları</p></div><div style="padding:16px;background:white;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #e74c3c;"><div style="font-size:20px;font-weight:700;color:#e74c3c;">1</div><div style="font-size:11px;color:#666;font-weight:600;">DURAK SIRASI</div></div><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #e74c3c;"><div style="font-size:14px;font-weight:700;color:#2c3e50;">Gastronomik</div><div style="font-size:11px;color:#666;font-weight:600;">KATEGORİ</div></div></div><div style="text-align:center;"><a href="https://maps.google.com/?q=38.63099,34.91382" target="_blank" rel="noopener noreferrer" style="background:#e74c3c;color:white;padding:12px 24px;border-radius:25px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;transition:all 0.3s ease;box-shadow:0 4px 15px rgba(231, 76, 60, 0.3);"><i class="fa fa-external-link-alt" style="margin-right:8px;"></i> Google Maps'te Aç</a></div></div></div></div>`)[0];
+                popup_20b25b0775fa7dedf866ee19c3fb776f.setContent(html_eaa91341840e0b31377cac4d7814c06c);
+            
+        
+
+        marker_db557dbd0ec3f9f922a0a599b241a18c.bindPopup(popup_20b25b0775fa7dedf866ee19c3fb776f)
+        ;
+
+        
+    
+    
+            marker_db557dbd0ec3f9f922a0a599b241a18c.bindTooltip(
+                `<div>
+                     <div style='background:#e74c3c;color:white;padding:8px 12px;border-radius:8px;font-family:sans-serif;box-shadow:0 4px 12px rgba(231, 76, 60, 0.3);'><strong>1. Sofra Restaurant (Ürgüp)</strong></div>
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_db557dbd0ec3f9f922a0a599b241a18c.setIcon(beautify_icon_b1d2f7b2ccbfce29478f0b73b22c3f46);
+            
+    
+            var marker_35b72f1a56f59d685ef4edecb1fabeb7 = L.marker(
+                [38.63222, 34.91148],
+                {
+}
+            ).addTo(feature_group_f18d4ddf9c47f375ff2b08a1a6f1380a);
+        
+    
+            var beautify_icon_8ff7e5637acb9d9bd2ddaf080190a33a = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 2,
+  "iconPrefix": "fa",
+}
+            )
+            marker_35b72f1a56f59d685ef4edecb1fabeb7.setIcon(beautify_icon_8ff7e5637acb9d9bd2ddaf080190a33a);
+        
+    
+        var popup_510e66df5e71a921c18277d102963015 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_61d6d37aa85ae2990d57fe80f832bf85 = $(`<div id="html_61d6d37aa85ae2990d57fe80f832bf85" style="width: 100.0%; height: 100.0%;"><div style="font-family:'Segoe UI',sans-serif;max-width:350px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);"><div style="background:linear-gradient(135deg, #3498db 0%, #2980b9 100%);padding:16px;color:white;"><h3 style="margin:0 0 8px 0;font-size:18px;">🏛️ Ürgüp Müzesi (ürgüp)</h3><p style="margin:0;font-size:13px;opacity:0.95;">Müzeler, tarihi yerler ve kültürel mekanlar</p></div><div style="padding:16px;background:white;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #3498db;"><div style="font-size:20px;font-weight:700;color:#3498db;">2</div><div style="font-size:11px;color:#666;font-weight:600;">DURAK SIRASI</div></div><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #3498db;"><div style="font-size:14px;font-weight:700;color:#2c3e50;">Kültürel</div><div style="font-size:11px;color:#666;font-weight:600;">KATEGORİ</div></div></div><div style="text-align:center;"><a href="https://maps.google.com/?q=38.63222,34.91148" target="_blank" rel="noopener noreferrer" style="background:#3498db;color:white;padding:12px 24px;border-radius:25px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;transition:all 0.3s ease;box-shadow:0 4px 15px rgba(52, 152, 219, 0.3);"><i class="fa fa-external-link-alt" style="margin-right:8px;"></i> Google Maps'te Aç</a></div></div></div></div>`)[0];
+                popup_510e66df5e71a921c18277d102963015.setContent(html_61d6d37aa85ae2990d57fe80f832bf85);
+            
+        
+
+        marker_35b72f1a56f59d685ef4edecb1fabeb7.bindPopup(popup_510e66df5e71a921c18277d102963015)
+        ;
+
+        
+    
+    
+            marker_35b72f1a56f59d685ef4edecb1fabeb7.bindTooltip(
+                `<div>
+                     <div style='background:#3498db;color:white;padding:8px 12px;border-radius:8px;font-family:sans-serif;box-shadow:0 4px 12px rgba(52, 152, 219, 0.3);'><strong>2. Ürgüp Müzesi (ürgüp)</strong></div>
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_35b72f1a56f59d685ef4edecb1fabeb7.setIcon(beautify_icon_8ff7e5637acb9d9bd2ddaf080190a33a);
+            
+    
+            var marker_4acd4a8514a533fce1087ca519dde829 = L.marker(
+                [38.63194, 34.91054],
+                {
+}
+            ).addTo(feature_group_f18d4ddf9c47f375ff2b08a1a6f1380a);
+        
+    
+            var beautify_icon_7e789fdaae5e94683f7d30ef24a6794f = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 1,
+  "iconPrefix": "fa",
+}
+            )
+            marker_4acd4a8514a533fce1087ca519dde829.setIcon(beautify_icon_7e789fdaae5e94683f7d30ef24a6794f);
+        
+    
+        var popup_e85d703a7428cc8d6e3c6ab48a9f59f9 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_c74fdae60a8346d7b3272b4297620386 = $(`<div id="html_c74fdae60a8346d7b3272b4297620386" style="width: 100.0%; height: 100.0%;"><div style="font-family:'Segoe UI',sans-serif;max-width:350px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);"><div style="background:linear-gradient(135deg, #3498db 0%, #2980b9 100%);padding:16px;color:white;"><h3 style="margin:0 0 8px 0;font-size:18px;">🏛️ Temenni Tepesi (Ürgüp)</h3><p style="margin:0;font-size:13px;opacity:0.95;">Müzeler, tarihi yerler ve kültürel mekanlar</p></div><div style="padding:16px;background:white;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #3498db;"><div style="font-size:20px;font-weight:700;color:#3498db;">1</div><div style="font-size:11px;color:#666;font-weight:600;">DURAK SIRASI</div></div><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #3498db;"><div style="font-size:14px;font-weight:700;color:#2c3e50;">Kültürel</div><div style="font-size:11px;color:#666;font-weight:600;">KATEGORİ</div></div></div><div style="text-align:center;"><a href="https://maps.google.com/?q=38.63194,34.91054" target="_blank" rel="noopener noreferrer" style="background:#3498db;color:white;padding:12px 24px;border-radius:25px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;transition:all 0.3s ease;box-shadow:0 4px 15px rgba(52, 152, 219, 0.3);"><i class="fa fa-external-link-alt" style="margin-right:8px;"></i> Google Maps'te Aç</a></div></div></div></div>`)[0];
+                popup_e85d703a7428cc8d6e3c6ab48a9f59f9.setContent(html_c74fdae60a8346d7b3272b4297620386);
+            
+        
+
+        marker_4acd4a8514a533fce1087ca519dde829.bindPopup(popup_e85d703a7428cc8d6e3c6ab48a9f59f9)
+        ;
+
+        
+    
+    
+            marker_4acd4a8514a533fce1087ca519dde829.bindTooltip(
+                `<div>
+                     <div style='background:#3498db;color:white;padding:8px 12px;border-radius:8px;font-family:sans-serif;box-shadow:0 4px 12px rgba(52, 152, 219, 0.3);'><strong>1. Temenni Tepesi (Ürgüp)</strong></div>
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_4acd4a8514a533fce1087ca519dde829.setIcon(beautify_icon_7e789fdaae5e94683f7d30ef24a6794f);
+            
+    
+            var marker_c4d31cfb031f83c638d4fb227a26170b = L.marker(
+                [38.630529, 34.915061],
+                {
+}
+            ).addTo(feature_group_f18d4ddf9c47f375ff2b08a1a6f1380a);
+        
+    
+            var beautify_icon_b30c8e4c25f96909b86c97ce2a18ee4b = new L.BeautifyIcon.icon(
+                {
+  "icon": "landmark",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#3498db",
+  "textColor": "white",
+  "backgroundColor": "#3498db",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 3,
+  "iconPrefix": "fa",
+}
+            )
+            marker_c4d31cfb031f83c638d4fb227a26170b.setIcon(beautify_icon_b30c8e4c25f96909b86c97ce2a18ee4b);
+        
+    
+        var popup_387789c284707e05a66bf36f20f37801 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_f04e60adb2330c60b0befabda2fbf07e = $(`<div id="html_f04e60adb2330c60b0befabda2fbf07e" style="width: 100.0%; height: 100.0%;"><div style="font-family:'Segoe UI',sans-serif;max-width:350px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);"><div style="background:linear-gradient(135deg, #3498db 0%, #2980b9 100%);padding:16px;color:white;"><h3 style="margin:0 0 8px 0;font-size:18px;">🏛️ duayeri cami</h3><p style="margin:0;font-size:13px;opacity:0.95;">Müzeler, tarihi yerler ve kültürel mekanlar</p></div><div style="padding:16px;background:white;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #3498db;"><div style="font-size:20px;font-weight:700;color:#3498db;">3</div><div style="font-size:11px;color:#666;font-weight:600;">DURAK SIRASI</div></div><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #3498db;"><div style="font-size:14px;font-weight:700;color:#2c3e50;">Kültürel</div><div style="font-size:11px;color:#666;font-weight:600;">KATEGORİ</div></div></div><div style="text-align:center;"><a href="https://maps.google.com/?q=38.630529,34.915061" target="_blank" rel="noopener noreferrer" style="background:#3498db;color:white;padding:12px 24px;border-radius:25px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;transition:all 0.3s ease;box-shadow:0 4px 15px rgba(52, 152, 219, 0.3);"><i class="fa fa-external-link-alt" style="margin-right:8px;"></i> Google Maps'te Aç</a></div></div></div></div>`)[0];
+                popup_387789c284707e05a66bf36f20f37801.setContent(html_f04e60adb2330c60b0befabda2fbf07e);
+            
+        
+
+        marker_c4d31cfb031f83c638d4fb227a26170b.bindPopup(popup_387789c284707e05a66bf36f20f37801)
+        ;
+
+        
+    
+    
+            marker_c4d31cfb031f83c638d4fb227a26170b.bindTooltip(
+                `<div>
+                     <div style='background:#3498db;color:white;padding:8px 12px;border-radius:8px;font-family:sans-serif;box-shadow:0 4px 12px rgba(52, 152, 219, 0.3);'><strong>3. duayeri cami</strong></div>
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_c4d31cfb031f83c638d4fb227a26170b.setIcon(beautify_icon_b30c8e4c25f96909b86c97ce2a18ee4b);
+            
+    
+            var marker_3122ca5050d758a1d18a07e47a1e6fce = L.marker(
+                [38.63145, 34.91183],
+                {
+}
+            ).addTo(feature_group_f18d4ddf9c47f375ff2b08a1a6f1380a);
+        
+    
+            var beautify_icon_04230bac4d3eafb522d8f85d175e89dd = new L.BeautifyIcon.icon(
+                {
+  "icon": "palette",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#2ecc71",
+  "textColor": "white",
+  "backgroundColor": "#2ecc71",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 1,
+  "iconPrefix": "fa",
+}
+            )
+            marker_3122ca5050d758a1d18a07e47a1e6fce.setIcon(beautify_icon_04230bac4d3eafb522d8f85d175e89dd);
+        
+    
+        var popup_e0a2abf3379a349c433b914629e5993a = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_e6ae455987896730b0165926a4139cee = $(`<div id="html_e6ae455987896730b0165926a4139cee" style="width: 100.0%; height: 100.0%;"><div style="font-family:'Segoe UI',sans-serif;max-width:350px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);"><div style="background:linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);padding:16px;color:white;"><h3 style="margin:0 0 8px 0;font-size:18px;">🎨 El Sanatları Çarşısı (Ürgüp Cumhuriyet Meydanı)</h3><p style="margin:0;font-size:13px;opacity:0.95;">Sanat galerileri, atölyeler ve yaratıcı mekanlar</p></div><div style="padding:16px;background:white;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #2ecc71;"><div style="font-size:20px;font-weight:700;color:#2ecc71;">1</div><div style="font-size:11px;color:#666;font-weight:600;">DURAK SIRASI</div></div><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #2ecc71;"><div style="font-size:14px;font-weight:700;color:#2c3e50;">Sanatsal</div><div style="font-size:11px;color:#666;font-weight:600;">KATEGORİ</div></div></div><div style="text-align:center;"><a href="https://maps.google.com/?q=38.63145,34.91183" target="_blank" rel="noopener noreferrer" style="background:#2ecc71;color:white;padding:12px 24px;border-radius:25px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;transition:all 0.3s ease;box-shadow:0 4px 15px rgba(46, 204, 113, 0.3);"><i class="fa fa-external-link-alt" style="margin-right:8px;"></i> Google Maps'te Aç</a></div></div></div></div>`)[0];
+                popup_e0a2abf3379a349c433b914629e5993a.setContent(html_e6ae455987896730b0165926a4139cee);
+            
+        
+
+        marker_3122ca5050d758a1d18a07e47a1e6fce.bindPopup(popup_e0a2abf3379a349c433b914629e5993a)
+        ;
+
+        
+    
+    
+            marker_3122ca5050d758a1d18a07e47a1e6fce.bindTooltip(
+                `<div>
+                     <div style='background:#2ecc71;color:white;padding:8px 12px;border-radius:8px;font-family:sans-serif;box-shadow:0 4px 12px rgba(46, 204, 113, 0.3);'><strong>1. El Sanatları Çarşısı (Ürgüp Cumhuriyet Meydanı)</strong></div>
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_3122ca5050d758a1d18a07e47a1e6fce.setIcon(beautify_icon_04230bac4d3eafb522d8f85d175e89dd);
+            
+    
+            var marker_901e7ceb73c806d6093d5d3ff2fa3a23 = L.marker(
+                [38.635366, 34.890657],
+                {
+}
+            ).addTo(feature_group_f18d4ddf9c47f375ff2b08a1a6f1380a);
+        
+    
+            var beautify_icon_9fe54588f4fed6cd6f89d8cb5a6bc113 = new L.BeautifyIcon.icon(
+                {
+  "icon": "hiking",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#f39c12",
+  "textColor": "white",
+  "backgroundColor": "#f39c12",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 1,
+  "iconPrefix": "fa",
+}
+            )
+            marker_901e7ceb73c806d6093d5d3ff2fa3a23.setIcon(beautify_icon_9fe54588f4fed6cd6f89d8cb5a6bc113);
+        
+    
+        var popup_30e43ab4dfdb02f67c0f2e72207f9c38 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_4940132ed61a422eaf8bed4d174507f6 = $(`<div id="html_4940132ed61a422eaf8bed4d174507f6" style="width: 100.0%; height: 100.0%;"><div style="font-family:'Segoe UI',sans-serif;max-width:350px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);"><div style="background:linear-gradient(135deg, #f39c12 0%, #e67e22 100%);padding:16px;color:white;"><h3 style="margin:0 0 8px 0;font-size:18px;">🌿 Üç Güzeller Peribacaları (Ürgüp)</h3><p style="margin:0;font-size:13px;opacity:0.95;">Doğal güzellikler ve macera aktiviteleri</p></div><div style="padding:16px;background:white;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #f39c12;"><div style="font-size:20px;font-weight:700;color:#f39c12;">1</div><div style="font-size:11px;color:#666;font-weight:600;">DURAK SIRASI</div></div><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #f39c12;"><div style="font-size:14px;font-weight:700;color:#2c3e50;">Macera</div><div style="font-size:11px;color:#666;font-weight:600;">KATEGORİ</div></div></div><div style="text-align:center;"><a href="https://maps.google.com/?q=38.635366,34.890657" target="_blank" rel="noopener noreferrer" style="background:#f39c12;color:white;padding:12px 24px;border-radius:25px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;transition:all 0.3s ease;box-shadow:0 4px 15px rgba(243, 156, 18, 0.3);"><i class="fa fa-external-link-alt" style="margin-right:8px;"></i> Google Maps'te Aç</a></div></div></div></div>`)[0];
+                popup_30e43ab4dfdb02f67c0f2e72207f9c38.setContent(html_4940132ed61a422eaf8bed4d174507f6);
+            
+        
+
+        marker_901e7ceb73c806d6093d5d3ff2fa3a23.bindPopup(popup_30e43ab4dfdb02f67c0f2e72207f9c38)
+        ;
+
+        
+    
+    
+            marker_901e7ceb73c806d6093d5d3ff2fa3a23.bindTooltip(
+                `<div>
+                     <div style='background:#f39c12;color:white;padding:8px 12px;border-radius:8px;font-family:sans-serif;box-shadow:0 4px 12px rgba(243, 156, 18, 0.3);'><strong>1. Üç Güzeller Peribacaları (Ürgüp)</strong></div>
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_901e7ceb73c806d6093d5d3ff2fa3a23.setIcon(beautify_icon_9fe54588f4fed6cd6f89d8cb5a6bc113);
+            
+    
+            var marker_2bb78a6190c5139e13306ccf4be15854 = L.marker(
+                [38.62879, 34.91248],
+                {
+}
+            ).addTo(feature_group_f18d4ddf9c47f375ff2b08a1a6f1380a);
+        
+    
+            var beautify_icon_e04a245a3990c0659b2b17b93b062cfe = new L.BeautifyIcon.icon(
+                {
+  "icon": "bed",
+  "iconShape": "marker",
+  "borderWidth": 3,
+  "borderColor": "#9b59b6",
+  "textColor": "white",
+  "backgroundColor": "#9b59b6",
+  "innerIconStyle": "",
+  "spin": false,
+  "isAlphaNumericIcon": true,
+  "text": 1,
+  "iconPrefix": "fa",
+}
+            )
+            marker_2bb78a6190c5139e13306ccf4be15854.setIcon(beautify_icon_e04a245a3990c0659b2b17b93b062cfe);
+        
+    
+        var popup_a8ee46a2621b56715b16b43e5be3ec82 = L.popup({
+  "maxWidth": 350,
+});
+
+        
+            
+                var html_5f0db4df50f2b1ad0800dc890dce5838 = $(`<div id="html_5f0db4df50f2b1ad0800dc890dce5838" style="width: 100.0%; height: 100.0%;"><div style="font-family:'Segoe UI',sans-serif;max-width:350px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);"><div style="background:linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);padding:16px;color:white;"><h3 style="margin:0 0 8px 0;font-size:18px;">🏨 Kayakapı Premium Caves (Ürgüp)</h3><p style="margin:0;font-size:13px;opacity:0.95;">Oteller, pansiyonlar ve konaklama tesisleri</p></div><div style="padding:16px;background:white;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #9b59b6;"><div style="font-size:20px;font-weight:700;color:#9b59b6;">1</div><div style="font-size:11px;color:#666;font-weight:600;">DURAK SIRASI</div></div><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid #9b59b6;"><div style="font-size:14px;font-weight:700;color:#2c3e50;">Konaklama</div><div style="font-size:11px;color:#666;font-weight:600;">KATEGORİ</div></div></div><div style="text-align:center;"><a href="https://maps.google.com/?q=38.62879,34.91248" target="_blank" rel="noopener noreferrer" style="background:#9b59b6;color:white;padding:12px 24px;border-radius:25px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;transition:all 0.3s ease;box-shadow:0 4px 15px rgba(155, 89, 182, 0.3);"><i class="fa fa-external-link-alt" style="margin-right:8px;"></i> Google Maps'te Aç</a></div></div></div></div>`)[0];
+                popup_a8ee46a2621b56715b16b43e5be3ec82.setContent(html_5f0db4df50f2b1ad0800dc890dce5838);
+            
+        
+
+        marker_2bb78a6190c5139e13306ccf4be15854.bindPopup(popup_a8ee46a2621b56715b16b43e5be3ec82)
+        ;
+
+        
+    
+    
+            marker_2bb78a6190c5139e13306ccf4be15854.bindTooltip(
+                `<div>
+                     <div style='background:#9b59b6;color:white;padding:8px 12px;border-radius:8px;font-family:sans-serif;box-shadow:0 4px 12px rgba(155, 89, 182, 0.3);'><strong>1. Kayakapı Premium Caves (Ürgüp)</strong></div>
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_2bb78a6190c5139e13306ccf4be15854.setIcon(beautify_icon_e04a245a3990c0659b2b17b93b062cfe);
+            
+    
+            feature_group_f18d4ddf9c47f375ff2b08a1a6f1380a.addTo(map_7be6296649b8483978da1554a4d143f9);
+        
+    
+            var feature_group_d194f81967c99d0aef1ef822f1ddb942 = L.featureGroup(
+                {
+}
+            );
+        
+    
+            var poly_line_d626443a5a647e77eef35224a283c426 = L.polyline(
+                [[38.6309107, 34.9136401], [38.630889, 34.913438], [38.6308103, 34.913258], [38.6308275, 34.9131928], [38.6309107, 34.9128957], [38.6309337, 34.9128084], [38.6310847, 34.9126938], [38.6306787, 34.9116597], [38.6308039, 34.9114531], [38.6306812, 34.9111761], [38.6305595, 34.9112588], [38.6306812, 34.9111761], [38.6306369, 34.9110326], [38.6305583, 34.9107443], [38.6305316, 34.9105684], [38.6305673, 34.9103836], [38.6306523, 34.9102057], [38.6308132, 34.9099745], [38.6312137, 34.9093228], [38.6314249, 34.9092103], [38.6315864, 34.9091648], [38.6317303, 34.9091692], [38.6318624, 34.9092065], [38.6321999, 34.9093716], [38.6323142, 34.9093834], [38.6324069, 34.9093449], [38.6324703, 34.9092598], [38.6325179, 34.9091425], [38.6325287, 34.9089974], [38.6324905, 34.9088407], [38.6324702, 34.9086514], [38.6324836, 34.9085442], [38.6325449, 34.908439], [38.6326377, 34.9083707], [38.6327028, 34.9083269], [38.6327467, 34.9082427], [38.6327732, 34.9081539], [38.6327847, 34.9080147], [38.6327957, 34.9078845], [38.6328309, 34.9074935], [38.6328721, 34.9073645], [38.6329276, 34.9072513], [38.6331736, 34.9067726]],
+                {"bubblingMouseEvents": true, "color": "#e74c3c", "dashArray": null, "dashOffset": null, "fill": false, "fillColor": "#e74c3c", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.8, "smoothFactor": 1.0, "stroke": true, "weight": 6}
+            ).addTo(feature_group_d194f81967c99d0aef1ef822f1ddb942);
+        
+    
+        var popup_51a7790c259ab13ab0f6a6f00430d3ce = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var i_frame_99f7f956651a7d35a1809d725ac63e35 = $(`<iframe src="data:text/html;charset=utf-8;base64,CiAgICA8ZGl2IHN0eWxlPSd3aWR0aDogMzgwcHg7IGhlaWdodDogMzg2cHg7IG92ZXJmbG93LXk6IGF1dG87Jz4KICAgICAgICA8ZGl2IHN0eWxlPSJmb250LWZhbWlseTogJ1NlZ29lIFVJJywgc2Fucy1zZXJpZjsiPgogICAgICAgICAgICA8aDQgc3R5bGU9Im1hcmdpbjo1cHggMCAxMHB4IDA7IGNvbG9yOiNlNzRjM2M7Ij7wn42977iPIEdhc3Ryb25vbWlrIFJvdGEgQmlsZ2lsZXJpPC9oND4KICAgICAgICAgICAgPHAgc3R5bGU9Im1hcmdpbjogMCAwIDEwcHggMDsiPgogICAgICAgICAgICAgICAgPGI+TWVzYWZlOjwvYj4gMC44NiBrbTxicj4KICAgICAgICAKICAgICAgICAgICAgICAgIDxiPlpvcmx1azo8L2I+IMOHb2sgS29sYXk8YnI+CiAgICAgICAgICAgICAgICA8Yj5Ub3BsYW0gVMSxcm1hbsSxxZ86PC9iPiA3MC4wIG08YnI+CiAgICAgICAgICAgICAgICA8Yj5Ub3BsYW0gxLBuacWfOjwvYj4gMTQuMCBtCiAgICAgICAgICAgIDwvcD48aDUgc3R5bGU9J21hcmdpbi10b3A6MTVweDsgbWFyZ2luLWJvdHRvbTo1cHg7IGJvcmRlci10b3A6IDFweCBzb2xpZCAjZWVlOyBwYWRkaW5nLXRvcDogMTBweDsnPkdlw6dpbGVjZWsgRHVyYWtsYXI8L2g1PjxvbCBzdHlsZT0ncGFkZGluZy1sZWZ0OiAyMHB4OyBtYXJnaW46IDA7Jz48bGkgc3R5bGU9J21hcmdpbi1ib3R0b206IDVweDsnPlNvZnJhIFJlc3RhdXJhbnQgKMOccmfDvHApPC9saT48bGkgc3R5bGU9J21hcmdpbi1ib3R0b206IDVweDsnPkVobGlrZXlmIFJlc3RhdXJhbnQgKMOccmfDvHApPC9saT48bGkgc3R5bGU9J21hcmdpbi1ib3R0b206IDVweDsnPlppZ2d5IENhZmUgJiBSZXN0YXVyYW50ICjDnHJnw7xwKTwvbGk+PC9vbD4KICAgICAgICAgICAgPGRpdiBzdHlsZT0ibWFyZ2luLXRvcDogMTVweDsgYm9yZGVyLXRvcDogMXB4IHNvbGlkICNlZWU7IHBhZGRpbmctdG9wOiAxMHB4OyI+CiAgICAgICAgICAgICAgICA8aDUgc3R5bGU9Im1hcmdpbi10b3A6MDsgbWFyZ2luLWJvdHRvbTo1cHg7Ij5Zw7xrc2VrbGlrIFByb2ZpbGk8L2g1PgogICAgICAgICAgICAgICAgPGNhbnZhcyBpZD0nY2hhcnRfZ2FzdHJvbm9taWsnIHdpZHRoPSczNTAnIGhlaWdodD0nMTUwJz48L2NhbnZhcz4KICAgICAgICAgICAgICAgIDxzY3JpcHQ+CiAgICAgICAgICAgICAgICAgICAgc2V0VGltZW91dCgoKSA9PiB7CiAgICAgICAgICAgICAgICAgICAgICAgIG5ldyBDaGFydChkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2hhcnRfZ2FzdHJvbm9taWsnKS5nZXRDb250ZXh0KCcyZCcpLCB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICB0eXBlOidsaW5lJywKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRhdGE6ewogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxhYmVsczpBcnJheS5mcm9tKEFycmF5KDQzKS5rZXlzKCkpLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRhdGFzZXRzOlt7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxhYmVsOidZw7xrc2VrbGlrIChtKScsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRhdGE6WzEwNjEuMCwgMTA2MS4wLCAxMDY0LjAsIDEwNjYuMCwgMTA2Ni4wLCAxMDY2LjAsIDEwNjYuMCwgMTA3OS4wLCAxMDc5LjAsIDEwNzkuMCwgMTA3OS4wLCAxMDc5LjAsIDEwNzkuMCwgMTA4MS4wLCAxMDgxLjAsIDEwODEuMCwgMTA4MS4wLCAxMDg3LjAsIDEwODYuMCwgMTA4Ni4wLCAxMDg2LjAsIDEwOTguMCwgMTA5OC4wLCAxMDk4LjAsIDEwOTguMCwgMTA5OC4wLCAxMDk4LjAsIDExMTguMCwgMTExOC4wLCAxMTA2LjAsIDExMDYuMCwgMTEwNi4wLCAxMTE4LjAsIDExMTguMCwgMTExNy4wLCAxMTE3LjAsIDExMTcuMCwgMTExNy4wLCAxMTE3LjAsIDExMTcuMCwgMTExNy4wLCAxMTE3LjAsIDExMTcuMF0sCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGJvcmRlckNvbG9yOicjZTc0YzNjJywKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYmFja2dyb3VuZENvbG9yOidyZ2JhKDIzMSw3Niw2MCwwLjIpJywKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYm9yZGVyV2lkdGg6MiwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgcG9pbnRSYWRpdXM6MCwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZmlsbDp0cnVlCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgfV0KICAgICAgICAgICAgICAgICAgICAgICAgICAgIH0sCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBvcHRpb25zOnsKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzY2FsZXM6ewogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB4OntkaXNwbGF5OmZhbHNlfSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgeTp7dGl0bGU6e2Rpc3BsYXk6dHJ1ZSx0ZXh0OidZw7xrc2VrbGlrIChtKSd9fQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIH0sCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgcGx1Z2luczp7bGVnZW5kOntkaXNwbGF5OmZhbHNlfX0KICAgICAgICAgICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgICAgICAgICAgfSk7CiAgICAgICAgICAgICAgICAgICAgfSwgMTAwKTsKICAgICAgICAgICAgICAgIDwvc2NyaXB0PgogICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgPC9kaXY+PC9kaXY+" width="400" style="border:none !important;" height="406"></iframe>`)[0];
+                popup_51a7790c259ab13ab0f6a6f00430d3ce.setContent(i_frame_99f7f956651a7d35a1809d725ac63e35);
+            
+        
+
+        poly_line_d626443a5a647e77eef35224a283c426.bindPopup(popup_51a7790c259ab13ab0f6a6f00430d3ce)
+        ;
+
+        
+    
+    
+            feature_group_d194f81967c99d0aef1ef822f1ddb942.addTo(map_7be6296649b8483978da1554a4d143f9);
+        
+    
+            var feature_group_4b306d5336041d13b5dacb297d4eb049 = L.featureGroup(
+                {
+}
+            );
+        
+    
+            var poly_line_4052e84682e0966d570b72ab651e308d = L.polyline(
+                [[38.6319851, 34.9102048], [38.6320253, 34.9101221], [38.6321033, 34.9100984], [38.6321647, 34.9101244], [38.6322579, 34.9100491], [38.632411, 34.9101217], [38.6324306, 34.9102203], [38.6325104, 34.9104276], [38.6324986, 34.9105489], [38.6324807, 34.9107317], [38.6324284, 34.9109379], [38.6323813, 34.9109737], [38.6322433, 34.9110305], [38.6321697, 34.9110878], [38.6321597, 34.9111907], [38.6322575, 34.9111662], [38.6323461, 34.9111526], [38.6323685, 34.911263], [38.6322873, 34.9116157], [38.6322149, 34.9115949], [38.6319963, 34.9116085], [38.6318419, 34.9115596], [38.6317908, 34.9115502], [38.6317424, 34.9118419], [38.632156, 34.9120118], [38.6319476, 34.912053], [38.6317403, 34.912096], [38.6316014, 34.9122139], [38.6314262, 34.9124234], [38.6313269, 34.9125185], [38.6310847, 34.9126938], [38.6309337, 34.9128084], [38.6309107, 34.9128957], [38.6308275, 34.9131928], [38.6308103, 34.913258], [38.630889, 34.913438], [38.6309107, 34.9136401], [38.6305486, 34.9141722], [38.6307726, 34.9144064], [38.6304817, 34.9147104], [38.6303566, 34.9148868]],
+                {"bubblingMouseEvents": true, "color": "#3498db", "dashArray": null, "dashOffset": null, "fill": false, "fillColor": "#3498db", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.8, "smoothFactor": 1.0, "stroke": true, "weight": 6}
+            ).addTo(feature_group_4b306d5336041d13b5dacb297d4eb049);
+        
+    
+        var popup_35537e9085e64bbb7ada648a2bf379ef = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var i_frame_b8a68a90679ae489cd037238a53fe4d2 = $(`<iframe src="data:text/html;charset=utf-8;base64,CiAgICA8ZGl2IHN0eWxlPSd3aWR0aDogMzgwcHg7IGhlaWdodDogMzg2cHg7IG92ZXJmbG93LXk6IGF1dG87Jz4KICAgICAgICA8ZGl2IHN0eWxlPSJmb250LWZhbWlseTogJ1NlZ29lIFVJJywgc2Fucy1zZXJpZjsiPgogICAgICAgICAgICA8aDQgc3R5bGU9Im1hcmdpbjo1cHggMCAxMHB4IDA7IGNvbG9yOiMzNDk4ZGI7Ij7wn4+b77iPIEvDvGx0w7xyZWwgUm90YSBCaWxnaWxlcmk8L2g0PgogICAgICAgICAgICA8cCBzdHlsZT0ibWFyZ2luOiAwIDAgMTBweCAwOyI+CiAgICAgICAgICAgICAgICA8Yj5NZXNhZmU6PC9iPiAwLjc1IGttPGJyPgogICAgICAgIAogICAgICAgICAgICAgICAgPGI+Wm9ybHVrOjwvYj4gw4dvayBLb2xheTxicj4KICAgICAgICAgICAgICAgIDxiPlRvcGxhbSBUxLFybWFuxLHFnzo8L2I+IDEwLjAgbTxicj4KICAgICAgICAgICAgICAgIDxiPlRvcGxhbSDEsG5pxZ86PC9iPiA0OC4wIG0KICAgICAgICAgICAgPC9wPjxoNSBzdHlsZT0nbWFyZ2luLXRvcDoxNXB4OyBtYXJnaW4tYm90dG9tOjVweDsgYm9yZGVyLXRvcDogMXB4IHNvbGlkICNlZWU7IHBhZGRpbmctdG9wOiAxMHB4Oyc+R2XDp2lsZWNlayBEdXJha2xhcjwvaDU+PG9sIHN0eWxlPSdwYWRkaW5nLWxlZnQ6IDIwcHg7IG1hcmdpbjogMDsnPjxsaSBzdHlsZT0nbWFyZ2luLWJvdHRvbTogNXB4Oyc+VGVtZW5uaSBUZXBlc2kgKMOccmfDvHApPC9saT48bGkgc3R5bGU9J21hcmdpbi1ib3R0b206IDVweDsnPsOccmfDvHAgTcO8emVzaSAow7xyZ8O8cCk8L2xpPjxsaSBzdHlsZT0nbWFyZ2luLWJvdHRvbTogNXB4Oyc+ZHVheWVyaSBjYW1pPC9saT48L29sPgogICAgICAgICAgICA8ZGl2IHN0eWxlPSJtYXJnaW4tdG9wOiAxNXB4OyBib3JkZXItdG9wOiAxcHggc29saWQgI2VlZTsgcGFkZGluZy10b3A6IDEwcHg7Ij4KICAgICAgICAgICAgICAgIDxoNSBzdHlsZT0ibWFyZ2luLXRvcDowOyBtYXJnaW4tYm90dG9tOjVweDsiPlnDvGtzZWtsaWsgUHJvZmlsaTwvaDU+CiAgICAgICAgICAgICAgICA8Y2FudmFzIGlkPSdjaGFydF9rdWx0dXJlbCcgd2lkdGg9JzM1MCcgaGVpZ2h0PScxNTAnPjwvY2FudmFzPgogICAgICAgICAgICAgICAgPHNjcmlwdD4KICAgICAgICAgICAgICAgICAgICBzZXRUaW1lb3V0KCgpID0+IHsKICAgICAgICAgICAgICAgICAgICAgICAgbmV3IENoYXJ0KGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjaGFydF9rdWx0dXJlbCcpLmdldENvbnRleHQoJzJkJyksIHsKICAgICAgICAgICAgICAgICAgICAgICAgICAgIHR5cGU6J2xpbmUnLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgZGF0YTp7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbGFiZWxzOkFycmF5LmZyb20oQXJyYXkoNDEpLmtleXMoKSksCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZGF0YXNldHM6W3sKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbGFiZWw6J1nDvGtzZWtsaWsgKG0pJywKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZGF0YTpbMTA5OC4wLCAxMDk4LjAsIDEwOTguMCwgMTA5OC4wLCAxMDk4LjAsIDEwOTguMCwgMTA5OC4wLCAxMTA4LjAsIDExMDguMCwgMTA5OC4wLCAxMDkzLjAsIDEwOTMuMCwgMTA5My4wLCAxMDkzLjAsIDEwOTMuMCwgMTA5My4wLCAxMDkzLjAsIDEwOTMuMCwgMTA5My4wLCAxMDkzLjAsIDEwOTMuMCwgMTA5My4wLCAxMDkzLjAsIDEwNzYuMCwgMTA3Ni4wLCAxMDc2LjAsIDEwNzYuMCwgMTA3NS4wLCAxMDc1LjAsIDEwNjYuMCwgMTA2Ni4wLCAxMDY2LjAsIDEwNjYuMCwgMTA2Ni4wLCAxMDY0LjAsIDEwNjEuMCwgMTA2MS4wLCAxMDYwLjAsIDEwNjAuMCwgMTA2MC4wLCAxMDYwLjBdLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBib3JkZXJDb2xvcjonIzM0OThkYicsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGJhY2tncm91bmRDb2xvcjoncmdiYSg1MiwxNTIsMjE5LDAuMiknLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBib3JkZXJXaWR0aDoyLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwb2ludFJhZGl1czowLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBmaWxsOnRydWUKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB9XQogICAgICAgICAgICAgICAgICAgICAgICAgICAgfSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgIG9wdGlvbnM6ewogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHNjYWxlczp7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHg6e2Rpc3BsYXk6ZmFsc2V9LAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB5Ont0aXRsZTp7ZGlzcGxheTp0cnVlLHRleHQ6J1nDvGtzZWtsaWsgKG0pJ319CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgfSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwbHVnaW5zOntsZWdlbmQ6e2Rpc3BsYXk6ZmFsc2V9fQogICAgICAgICAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgICAgICB9KTsKICAgICAgICAgICAgICAgICAgICB9LCAxMDApOwogICAgICAgICAgICAgICAgPC9zY3JpcHQ+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8L2Rpdj48L2Rpdj4=" width="400" style="border:none !important;" height="406"></iframe>`)[0];
+                popup_35537e9085e64bbb7ada648a2bf379ef.setContent(i_frame_b8a68a90679ae489cd037238a53fe4d2);
+            
+        
+
+        poly_line_4052e84682e0966d570b72ab651e308d.bindPopup(popup_35537e9085e64bbb7ada648a2bf379ef)
+        ;
+
+        
+    
+    
+            feature_group_4b306d5336041d13b5dacb297d4eb049.addTo(map_7be6296649b8483978da1554a4d143f9);
+        
+    
+            var tile_layer_cc13e453fc13b24406f2442fbee5bbf5 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u00a9 OpenStreetMap contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_cc13e453fc13b24406f2442fbee5bbf5.addTo(map_7be6296649b8483978da1554a4d143f9);
+        
+    
+            var tile_layer_5496a503093c0570d608729200920470 = L.tileLayer(
+                "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 18,
+  "maxNativeZoom": 18,
+  "noWrap": false,
+  "attribution": "\u00a9 OpenTopoMap (CC-BY-SA) \u00a9 OpenStreetMap contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_5496a503093c0570d608729200920470.addTo(map_7be6296649b8483978da1554a4d143f9);
+        
+    
+            var tile_layer_e9f411c78042880d2d01e66b55868302 = L.tileLayer(
+                "https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/voyager_labels_under/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 18,
+  "maxNativeZoom": 18,
+  "noWrap": false,
+  "attribution": "\u00a9 CartoDB \u00a9 OpenStreetMap contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_e9f411c78042880d2d01e66b55868302.addTo(map_7be6296649b8483978da1554a4d143f9);
+        
+    
+            var tile_layer_b1262a102162f6aea201e01d6588cfb8 = L.tileLayer(
+                "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                {
+  "minZoom": 0,
+  "maxZoom": 18,
+  "maxNativeZoom": 18,
+  "noWrap": false,
+  "attribution": "\u00a9 Esri \u0026 Community",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_b1262a102162f6aea201e01d6588cfb8.addTo(map_7be6296649b8483978da1554a4d143f9);
+        
+    
+            var tile_layer_728a6dea0f51583728e2e119593c3a2f = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u00a9 CartoDB \u00a9 OpenStreetMap contributors",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_728a6dea0f51583728e2e119593c3a2f.addTo(map_7be6296649b8483978da1554a4d143f9);
+        
+    
+            var tile_layer_721a597422844eef55c5c7332d649c00 = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u00a9 CartoDB \u00a9 OpenStreetMap contributors",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_721a597422844eef55c5c7332d649c00.addTo(map_7be6296649b8483978da1554a4d143f9);
+        
+    
+            L.control.fullscreen(
+                {
+  "position": "topleft",
+  "title": "Full Screen",
+  "titleCancel": "Exit Full Screen",
+  "forceSeparateButton": false,
+}
+            ).addTo(map_7be6296649b8483978da1554a4d143f9);
+        
+    
+            var measure_control_584892db844b2bebb1d75b2ecea7fa68 = new L.Control.Measure(
+                {
+  "position": "bottomleft",
+  "primaryLengthUnit": "kilometers",
+  "secondaryLengthUnit": "miles",
+  "primaryAreaUnit": "sqmeters",
+  "secondaryAreaUnit": "acres",
+});
+            map_7be6296649b8483978da1554a4d143f9.addControl(measure_control_584892db844b2bebb1d75b2ecea7fa68);
+
+            // Workaround for using this plugin with Leaflet>=1.8.0
+            // https://github.com/ljagis/leaflet-measure/issues/171
+            L.Control.Measure.include({
+                _setCaptureMarkerIcon: function () {
+                    // disable autopan
+                    this._captureMarker.options.autoPanOnFocus = false;
+                    // default function
+                    this._captureMarker.setIcon(
+                        L.divIcon({
+                            iconSize: this._map.getSize().multiplyBy(2)
+                        })
+                    );
+                },
+            });
+
+        
+    
+            var tile_layer_cd2c045db9445390a349966bf2dec187 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {"attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors", "detect_retina": false, "max_native_zoom": 19, "max_zoom": 19, "min_zoom": 0, "no_wrap": false, "opacity": 1, "subdomains": "abc", "tms": false}
+            );
+            var mini_map_35209cebb3206de49a718dc30bdf846e = new L.Control.MiniMap(
+                tile_layer_cd2c045db9445390a349966bf2dec187,
+                {
+  "position": "bottomright",
+  "width": 150,
+  "height": 150,
+  "collapsedWidth": 25,
+  "collapsedHeight": 25,
+  "zoomLevelOffset": -5,
+  "centerFixed": false,
+  "zoomAnimation": false,
+  "toggleDisplay": true,
+  "autoToggleDisplay": false,
+  "minimized": false,
+}
+            );
+            map_7be6296649b8483978da1554a4d143f9.addControl(mini_map_35209cebb3206de49a718dc30bdf846e);
+        
+    
+            var layer_control_e90871be7a3d618b675897f95d49f79d_layers = {
+                base_layers : {
+                    "Varsay\u0131lan (OpenStreetMap)" : tile_layer_cc13e453fc13b24406f2442fbee5bbf5,
+                    "Topo\u011frafik (OpenTopoMap)" : tile_layer_5496a503093c0570d608729200920470,
+                    "\u00c7ok Renkli (CartoDB Voyager)" : tile_layer_e9f411c78042880d2d01e66b55868302,
+                    "Uydu G\u00f6r\u00fcnt\u00fcs\u00fc (Esri)" : tile_layer_b1262a102162f6aea201e01d6588cfb8,
+                    "Sade Beyaz (CartoDB Positron)" : tile_layer_728a6dea0f51583728e2e119593c3a2f,
+                    "Karanl\u0131k Mod (CartoDB Dark Matter)" : tile_layer_721a597422844eef55c5c7332d649c00,
+                },
+                overlays :  {
+                    "\ud83d\udccd T\u00fcm POI Noktalar\u0131" : feature_group_f18d4ddf9c47f375ff2b08a1a6f1380a,
+                    "\ud83d\udee3\ufe0f \ud83c\udf7d\ufe0f Gastronomik Rotas\u0131" : feature_group_d194f81967c99d0aef1ef822f1ddb942,
+                    "\ud83d\udee3\ufe0f \ud83c\udfdb\ufe0f K\u00fclt\u00fcrel Rotas\u0131" : feature_group_4b306d5336041d13b5dacb297d4eb049,
+                },
+            };
+            let layer_control_e90871be7a3d618b675897f95d49f79d = L.control.layers(
+                layer_control_e90871be7a3d618b675897f95d49f79d_layers.base_layers,
+                layer_control_e90871be7a3d618b675897f95d49f79d_layers.overlays,
+                {
+  "position": "topright",
+  "collapsed": false,
+  "autoZIndex": true,
+}
+            ).addTo(map_7be6296649b8483978da1554a4d143f9);
+
+        
+</script>
+</html>

@@ -1,0 +1,181 @@
+{
+  "gastronomik": [
+    {
+      "_id": "64f1e2a3b2c4d5e6f7890001",
+      "name": "Ziggy Cafe & Restaurant (Ürgüp)",
+      "category": "gastronomik",
+      "latitude": 38.633115,
+      "longitude": 34.907022,
+      "description": "Kapadokya'nın en popüler restoranlarından biri. Türk ve dünya mutfağından lezzetler, romantik ambiyans ve mükemmel şehir manzarası.",
+      "tags": [
+        "Turkish",
+        "International",
+        "Vegetarian"
+      ],
+      "imageUrl": "",
+      "isActive": true
+    },
+    {
+      "_id": "64f1e2a3b2c4d5e6f7890002",
+      "name": "Ehlikeyf Restaurant (Ürgüp)",
+      "category": "gastronomik",
+      "latitude": 38.63061,
+      "longitude": 34.911284,
+      "description": "Geleneksel Türk mutfağının lezzetlerini sunan aile restoranı.",
+      "tags": [
+        "Turkish",
+        "Traditional"
+      ],
+      "imageUrl": "",
+      "isActive": true
+    },
+    {
+      "_id": "64f1e2a3b2c4d5e6f7890003",
+      "name": "Sofra Restaurant (Ürgüp)",
+      "category": "gastronomik",
+      "latitude": 38.63099,
+      "longitude": 34.91382,
+      "description": "Özel tariflerle hazırlanan yemeklerin bulunduğu nezih restoran.",
+      "tags": [
+        "Turkish",
+        "Fine Dining"
+      ],
+      "imageUrl": "",
+      "isActive": true
+    },
+    {
+      "_id": "e164b2b6-0293-4662-a5e8-2c5b1e2bc680",
+      "name": "test",
+      "category": "gastronomik",
+      "latitude": 38.618482,
+      "longitude": 34.898795,
+      "description": "",
+      "tags": [],
+      "imageUrl": "",
+      "isActive": false,
+      "createdAt": "2025-07-16T23:03:22.793055",
+      "deletedAt": "2025-07-16T23:04:07.342006"
+    }
+  ],
+  "kulturel": [
+    {
+      "_id": "64f1e2a3b2c4d5e6f7890004",
+      "name": "Ürgüp Müzesi (ürgüp)",
+      "category": "kulturel",
+      "latitude": 38.63222,
+      "longitude": 34.91148,
+      "description": "Kapadokya bölgesinin zengin tarihini ve kültürünü sergileyen önemli bir müze. Bizans dönemine ait eserler, yerel el sanatları ve arkeolojik buluntular sergilenmektedir.",
+      "tags": [
+        "Museum",
+        "History",
+        "Culture"
+      ],
+      "imageUrl": "",
+      "isActive": true,
+      "updatedAt": "2025-07-16T22:46:17.889445"
+    },
+    {
+      "_id": "64f1e2a3b2c4d5e6f7890005",
+      "name": "Temenni Tepesi (Ürgüp)",
+      "category": "kulturel",
+      "latitude": 38.63194,
+      "longitude": 34.91054,
+      "description": "Ürgüp'ün panoramik manzarasının görülebileceği tarihi tepe.",
+      "tags": [
+        "Viewpoint",
+        "Historic"
+      ],
+      "imageUrl": "",
+      "isActive": true,
+      "updatedAt": "2025-07-16T22:51:51.898033"
+    },
+    {
+      "_id": "6f7d6fa4-29f6-42a8-9624-e3901ecfd125",
+      "name": "duayeri cami",
+      "category": "kulturel",
+      "latitude": 38.630529,
+      "longitude": 34.915061,
+      "description": "duayeri cami",
+      "tags": [],
+      "imageUrl": "",
+      "isActive": true,
+      "createdAt": "2025-07-16T22:46:43.889914"
+    }
+  ],
+  "sanatsal": [
+    {
+      "_id": "64f1e2a3b2c4d5e6f7890006",
+      "name": "El Sanatları Çarşısı (Ürgüp Cumhuriyet Meydanı)",
+      "category": "sanatsal",
+      "latitude": 38.63145,
+      "longitude": 34.91183,
+      "description": "Yerel el sanatları ürünlerinin satıldığı geleneksel çarşı.",
+      "tags": [
+        "Handicrafts",
+        "Shopping",
+        "Traditional"
+      ],
+      "imageUrl": "",
+      "isActive": true
+    },
+    {
+      "_id": "533a39ae-d43c-4675-afb8-78eb5a12e0cb",
+      "name": "at müzesi",
+      "category": "sanatsal",
+      "latitude": 38.63121,
+      "longitude": 34.909492,
+      "description": "",
+      "tags": [],
+      "imageUrl": "",
+      "isActive": true,
+      "createdAt": "2025-07-16T22:57:29.517426",
+      "updatedAt": "2025-07-16T23:00:25.283734"
+    }
+  ],
+  "doga_macera": [
+    {
+      "_id": "64f1e2a3b2c4d5e6f7890007",
+      "name": "Üç Güzeller Peribacaları (Ürgüp)",
+      "category": "doga_macera",
+      "latitude": 38.635366,
+      "longitude": 34.890657,
+      "description": "Kapadokya'nın en ünlü peribacalarından olan Üç Güzeller.",
+      "tags": [
+        "Fairy Chimneys",
+        "Nature",
+        "Photography"
+      ],
+      "imageUrl": "",
+      "isActive": true
+    }
+  ],
+  "konaklama": [
+    {
+      "_id": "64f1e2a3b2c4d5e6f7890008",
+      "name": "Kayakapı Premium Caves (Ürgüp)",
+      "category": "konaklama",
+      "latitude": 38.62879,
+      "longitude": 34.91248,
+      "description": "Kapadokya'nın eşsiz mağara oteli deneyimi.",
+      "tags": [
+        "Cave Hotel",
+        "Luxury",
+        "Unique"
+      ],
+      "imageUrl": "",
+      "isActive": true
+    },
+    {
+      "_id": "98e6e06d-b81d-460b-a18c-8ab1cf0c095c",
+      "name": "Mustafa Otel",
+      "category": "konaklama",
+      "latitude": 38.634137,
+      "longitude": 34.925881,
+      "description": "",
+      "tags": [],
+      "imageUrl": "",
+      "isActive": true,
+      "createdAt": "2025-07-16T23:08:23.895251"
+    }
+  ]
+}

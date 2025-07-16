@@ -282,17 +282,17 @@ class MongoDBPOIDatabase(POIDatabase):
         self.database_name = database_name
         self.client = None
         self.db = None
-        self.collection = None
+        self.pois = None # Changed from self.collection to self.pois
     
     def connect(self):
         """MongoDB'ye bağlan"""
         try:
             self.client = MongoClient(self.connection_string)
             self.db = self.client[self.database_name]
-            self.collection = self.db.pois
+            self.pois = self.db.pois # Changed from self.collection to self.pois
             
             # Geospatial index oluştur
-            self.collection.create_index([("location", GEOSPHERE)])
+            self.pois.create_index([("location", GEOSPHERE)]) # Changed from self.collection to self.pois
             
             logger.info("MongoDB veritabanına bağlandı")
         except Exception as e:
@@ -305,48 +305,46 @@ class MongoDBPOIDatabase(POIDatabase):
             self.client.close()
             logger.info("MongoDB bağlantısı kapatıldı")
     
-    def get_pois_by_category(self, category: str) -> Dict[str, Tuple[float, float]]:
-        """Kategori bazında POI'leri getir"""
-        query = {
-            "category": category,
-            "isActive": {"$ne": False}
-        }
+    def get_pois_by_category(self, category: str) -> List[Dict[str, Any]]:
+        """Kategori bazında POI'leri ve tüm alanlarını getirir."""
+        if not self.client:
+            raise RuntimeError("Veritabanı bağlantısı yok")
         
-        pois = self.collection.find(query, {
-            "name": 1,
-            "location.coordinates": 1
-        })
+        query = {'category': category, 'isActive': True}
         
-        result = {}
-        for poi in pois:
-            coords = poi['location']['coordinates']
-            # MongoDB GeoJSON format: [longitude, latitude]
-            result[poi['name']] = (coords[1], coords[0])
+        # Projeksiyon ile gereksiz alanları çıkarabiliriz, şimdilik hepsi
+        results = list(self.pois.find(query))
         
-        return result
-    
+        # MongoDB'nin _id'sini string'e çevir
+        for r in results:
+            r['_id'] = str(r['_id'])
+            # Frontend'de beklenen 'latitude' ve 'longitude' alanlarını oluştur
+            if 'location' in r and 'coordinates' in r['location']:
+                r['longitude'], r['latitude'] = r['location']['coordinates']
+        
+        return results
+
     def get_poi_details(self, poi_id: str) -> Optional[Dict[str, Any]]:
-        """POI detaylarını getir"""
-        try:
-            from bson import ObjectId
-        except ImportError:
-            logger.error("bson modülü bulunamadı. pymongo kurulu mu?")
-            return None
+        """POI detaylarını getirir (MongoDB)"""
+        if not self.client:
+            raise RuntimeError("Veritabanı bağlantısı yok")
         
         try:
-            poi = self.collection.find_one({"_id": ObjectId(poi_id)})
-            if poi:
-                # _id'yi string'e çevir
-                poi['id'] = str(poi.pop('_id'))
-                # Koordinatları ayarla
-                coords = poi['location']['coordinates']
-                poi['coordinates'] = (coords[1], coords[0])
-            
-            return poi
-        except Exception as e:
-            logger.error(f"POI detay hatası: {e}")
+            from bson.objectid import ObjectId
+            obj_id = ObjectId(poi_id)
+        except Exception:
+            logger.error(f"Geçersiz POI ID formatı: {poi_id}")
             return None
-    
+
+        poi = self.pois.find_one({'_id': obj_id, 'isActive': True})
+        
+        if poi:
+            poi['_id'] = str(poi['_id'])
+            if 'location' in poi and 'coordinates' in poi['location']:
+                poi['longitude'], poi['latitude'] = poi['location']['coordinates']
+        
+        return poi
+
     def search_nearby_pois(self, lat: float, lon: float, radius_meters: float) -> List[Dict[str, Any]]:
         """Yakındaki POI'leri ara"""
         query = {
@@ -362,7 +360,7 @@ class MongoDBPOIDatabase(POIDatabase):
             "isActive": {"$ne": False}
         }
         
-        pois = self.collection.find(query).limit(50)
+        pois = self.pois.find(query).limit(50) # Changed from self.collection to self.pois
         
         results = []
         for poi in pois:
@@ -397,7 +395,7 @@ class MongoDBPOIDatabase(POIDatabase):
             "updatedAt": datetime.utcnow()
         }
         
-        result = self.collection.insert_one(document)
+        result = self.pois.insert_one(document) # Changed from self.collection to self.pois
         return str(result.inserted_id)
     
     def update_poi(self, poi_id: str, update_data: Dict[str, Any]) -> bool:
@@ -411,13 +409,22 @@ class MongoDBPOIDatabase(POIDatabase):
         """
         from bson import ObjectId
         update_fields = update_data.copy()
-        if "latitude" in update_fields and "longitude" in update_fields:
-            update_fields["location"] = {
-                "type": "Point",
-                "coordinates": [update_fields.pop("longitude"), update_fields.pop("latitude")]
+        # Gelen veride latitude/longitude varsa, GeoJSON formatına çevir
+        if 'latitude' in update_fields and 'longitude' in update_fields:
+            update_fields['location'] = {
+                'type': 'Point',
+                'coordinates': [update_fields.pop('longitude'), update_fields.pop('latitude')]
             }
-        update_fields["updatedAt"] = datetime.utcnow()
-        result = self.collection.update_one({"_id": ObjectId(poi_id)}, {"$set": update_fields})
+        
+        # ObjectId'ye çevir
+        try:
+            from bson.objectid import ObjectId
+            obj_id = ObjectId(poi_id)
+        except Exception:
+            logger.error(f"Geçersiz POI ID formatı: {poi_id}")
+            return False
+
+        result = self.pois.update_one({'_id': obj_id}, {'$set': update_fields}) # Changed from self.collection to self.pois
         return result.modified_count > 0
 
 
