@@ -154,8 +154,8 @@
       "_id": "64f1e2a3b2c4d5e6f7890008",
       "name": "Kayakapı Premium Caves (Ürgüp)",
       "category": "konaklama",
-      "latitude": 38.62879,
-      "longitude": 34.91248,
+      "latitude": 38.634483,
+      "longitude": 34.908972,
       "description": "Kapadokya'nın eşsiz mağara oteli deneyimi.",
       "tags": [
         "Cave Hotel",
@@ -163,7 +163,8 @@
         "Unique"
       ],
       "imageUrl": "",
-      "isActive": true
+      "isActive": true,
+      "updatedAt": "2025-07-16T23:16:27.101745"
     },
     {
       "_id": "98e6e06d-b81d-460b-a18c-8ab1cf0c095c",

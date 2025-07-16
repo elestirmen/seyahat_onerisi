@@ -10,6 +10,10 @@
         body { background: #f8f9fa; }
         .poi-list { max-height: 60vh; overflow-y: auto; }
         .pointer { cursor: pointer; }
+        .pointer:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+            transition: background-color 0.2s ease;
+        }
         #map { height: 60vh; min-height: 350px; border-radius: 8px; margin-bottom: 1rem; }
         .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 9999; }
         .poi-detail-panel { 
@@ -27,6 +31,14 @@
             display: block; 
             opacity: 1;
             transform: translateX(0);
+        }
+        .highlight-marker {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
         .loading-overlay { 
             position: fixed; 
@@ -227,6 +239,7 @@ let allPOIs = [];
 let currentSort = { field: 'name', direction: 'asc' };
 let isSelectingLocation = false;
 let selectedPOI = null;
+let highlightedMarker = null; // Vurgulanan POI marker'ı
 
 // Harita başlatma
 function initMap() {
@@ -305,12 +318,71 @@ function showToast(message, type = 'info') {
     });
 }
 
+// Loading states
+function showLoading() {
+    // Kaydet butonuna loading ekle
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Kaydediliyor...';
+        saveBtn.disabled = true;
+    }
+    
+    // POI tablosuna loading overlay ekle
+    const poiTableContainer = document.querySelector('.table-responsive');
+    if (poiTableContainer && !document.getElementById('tableLoading')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'tableLoading';
+        overlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        `;
+        overlay.innerHTML = '<div class="spinner-border text-primary"></div>';
+        poiTableContainer.style.position = 'relative';
+        poiTableContainer.appendChild(overlay);
+    }
+}
+
+function hideLoading() {
+    // Kaydet butonunu resetle
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+        saveBtn.innerHTML = '💾 Kaydet';
+        saveBtn.disabled = false;
+    }
+    
+    // Table loading overlay'i kaldır
+    const overlay = document.getElementById('tableLoading');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
 // POI'leri getir
 async function fetchPOIs(category = '') {
     showLoading();
     try {
         const url = `${apiBase}/pois${category ? `?category=${encodeURIComponent(category)}` : ''}`;
-        const response = await fetch(url);
+        
+        // Timeout ile fetch
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000); // 10 saniye timeout
+        
+        const response = await fetch(url, { 
+            signal: controller.signal,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        clearTimeout(timeout);
+        
         if (!response.ok) {
             throw new Error(`API call failed with status ${response.status}`);
         }
@@ -334,7 +406,13 @@ async function fetchPOIs(category = '') {
         filterAndSortPOIs(); // This function calls renderPOITable and updateMapMarkers
     } catch (error) {
         console.error('Error fetching POIs:', error);
-        showToast('POIs could not be loaded: ' + error.message, 'error');
+        if (error.name === 'AbortError') {
+            showToast('İstek zaman aşımına uğradı. Lütfen tekrar deneyin.', 'error');
+        } else if (error.message.includes('fetch')) {
+            showToast('Sunucuya bağlanılamıyor. API çalışıyor mu kontrol edin.', 'error');
+        } else {
+            showToast('POIs could not be loaded: ' + error.message, 'error');
+        }
     } finally {
         hideLoading();
     }
@@ -342,9 +420,15 @@ async function fetchPOIs(category = '') {
 
 // Harita markerlarını güncelle
 function updateMapMarkers(pois) {
-    // Mevcut markerları temizle
+    // Mevcut markerları ve vurgulamayı temizle
     poiMarkers.forEach(marker => map.removeLayer(marker));
     poiMarkers = [];
+    
+    // Vurgulama marker'ını da temizle
+    if (highlightedMarker) {
+        map.removeLayer(highlightedMarker);
+        highlightedMarker = null;
+    }
     
     // Kategori renkleri
     const categoryColors = {
@@ -394,6 +478,56 @@ function getCategoryDisplayName(category) {
     return names[category] || category;
 }
 
+// POI'yi haritada vurgula
+function highlightPOIOnMap(poiId) {
+    // Önceki vurgulamayı temizle
+    if (highlightedMarker) {
+        map.removeLayer(highlightedMarker);
+        highlightedMarker = null;
+    }
+    
+    // POI'yi bul
+    const poi = allPOIs.find(p => p._id === poiId);
+    if (!poi || poi.latitude === undefined || poi.longitude === undefined) {
+        console.warn('POI not found or missing coordinates:', poiId);
+        return;
+    }
+    
+    // Vurgulama marker'ı oluştur
+    highlightedMarker = L.circleMarker([poi.latitude, poi.longitude], {
+        color: '#ff0000',
+        fillColor: '#ff0000',
+        fillOpacity: 0.3,
+        radius: 15,
+        weight: 3,
+        className: 'highlight-marker'
+    }).addTo(map);
+    
+    // Haritayı POI'ye odakla
+    map.setView([poi.latitude, poi.longitude], Math.max(map.getZoom(), 15), {
+        animate: true,
+        duration: 0.5
+    });
+    
+    // Kullanıcıya bilgi ver
+    showToast(`📍 "${poi.name}" haritada vurgulandı`, 'success');
+    
+    // Vurgulama animasyonu için pulse efekti
+    let pulseCount = 0;
+    const pulseInterval = setInterval(() => {
+        if (highlightedMarker && pulseCount < 6) {
+            const currentRadius = highlightedMarker.getRadius();
+            highlightedMarker.setRadius(currentRadius === 15 ? 20 : 15);
+            pulseCount++;
+        } else {
+            clearInterval(pulseInterval);
+            if (highlightedMarker) {
+                highlightedMarker.setRadius(15);
+            }
+        }
+    }, 200);
+}
+
 // POI tablosunu render et
 function renderPOITable(pois) {
     const tbody = document.getElementById('poiTableBody');
@@ -411,13 +545,14 @@ function renderPOITable(pois) {
     pois.forEach(poi => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td class="pointer text-primary" onclick="showPOIDetail('${poi._id}')">${poi.name}</td>
-            <td>${getCategoryDisplayName(poi.category)}</td>
-            <td>${(poi.latitude || 0).toFixed(6)}</td>
-            <td>${(poi.longitude || 0).toFixed(6)}</td>
+            <td class="pointer text-primary" onclick="highlightPOIOnMap('${poi._id}'); showPOIDetail('${poi._id}')" title="Haritada göster ve detayları aç">${poi.name}</td>
+            <td class="pointer" onclick="highlightPOIOnMap('${poi._id}')" title="Haritada göster">${getCategoryDisplayName(poi.category)}</td>
+            <td class="pointer text-muted" onclick="highlightPOIOnMap('${poi._id}')" title="Haritada göster">${(poi.latitude || 0).toFixed(6)}</td>
+            <td class="pointer text-muted" onclick="highlightPOIOnMap('${poi._id}')" title="Haritada göster">${(poi.longitude || 0).toFixed(6)}</td>
             <td>
                 <button class="btn btn-outline-primary btn-sm me-1" onclick="editPOI('${poi._id}')" title="Edit">✏️</button>
                 <button class="btn btn-outline-danger btn-sm" onclick="deletePOI('${poi._id}')" title="Delete">🗑️</button>
+                <button class="btn btn-outline-success btn-sm" onclick="highlightPOIOnMap('${poi._id}')" title="Haritada göster">📍</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -659,6 +794,99 @@ document.addEventListener('click', function(e) {
         }
         
         filterAndSortPOIs();
+    }
+});
+
+// Form validation ve submit
+function validatePOIForm() {
+    const name = document.getElementById('poiName').value.trim();
+    const lat = parseFloat(document.getElementById('poiLatitude').value);
+    const lng = parseFloat(document.getElementById('poiLongitude').value);
+    const category = document.getElementById('poiCategory').value;
+    
+    if (!name) {
+        showToast('POI adı gerekli!', 'error');
+        return false;
+    }
+    
+    if (name.length < 2) {
+        showToast('POI adı en az 2 karakter olmalı!', 'error');
+        return false;
+    }
+    
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+        showToast('Geçerli bir enlem değeri girin (-90 ile 90 arasında)!', 'error');
+        return false;
+    }
+    
+    if (isNaN(lng) || lng < -180 || lng > 180) {
+        showToast('Geçerli bir boylam değeri girin (-180 ile 180 arasında)!', 'error');
+        return false;
+    }
+    
+    if (!category) {
+        showToast('Kategori seçimi gerekli!', 'error');
+        return false;
+    }
+    
+    return true;
+}
+
+// Form submit handler
+document.getElementById('poiForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    if (!validatePOIForm()) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const idVal = document.getElementById('poiId').value;
+        const name = document.getElementById('poiName').value.trim();
+        const latitude = parseFloat(document.getElementById('poiLatitude').value);
+        const longitude = parseFloat(document.getElementById('poiLongitude').value);
+        const category = document.getElementById('poiCategory').value;
+        const description = document.getElementById('poiDescription').value.trim();
+        const tags = document.getElementById('poiTags').value.trim();
+        const imageUrl = document.getElementById('poiImageUrl').value.trim();
+
+        const poiData = { 
+            name, category, latitude, longitude, 
+            description, tags, imageUrl 
+        };
+        
+        let response;
+        if (idVal) {
+            // Güncelle
+            response = await fetch(`${apiBase}/poi/${idVal}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(poiData)
+            });
+        } else {
+            // Ekle
+            response = await fetch(`${apiBase}/poi`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(poiData)
+            });
+        }
+        
+        if (response.ok) {
+            showToast(idVal ? 'POI başarıyla güncellendi!' : 'POI başarıyla eklendi!', 'success');
+            document.getElementById('poiForm').reset();
+            document.getElementById('poiId').value = '';
+            document.getElementById('saveBtn').innerHTML = '💾 Kaydet';
+            document.getElementById('cancelEditBtn').classList.add('d-none');
+            await fetchPOIs(document.getElementById('filterCategory').value);
+        } else {
+            throw new Error('İşlem başarısız');
+        }
+    } catch (error) {
+        showToast('İşlem sırasında hata oluştu: ' + error.message, 'error');
+    } finally {
+        hideLoading();
     }
 });
 

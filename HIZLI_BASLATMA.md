@@ -27,7 +27,7 @@ python poi_api.py
 ```
 
 ### 5. Web Arayüzünü Açın
-Tarayıcıda: `http://localhost:5000/poi_manager_ui.html`
+Tarayıcıda: `http://localhost:5505/poi_manager_ui.html`
 
 ---
 
@@ -44,7 +44,7 @@ Tarayıcıda: `http://localhost:5000/poi_manager_ui.html`
 
 **API başlamıyor?**
 ```bash
-netstat -an | grep 5000  # Port kontrolü
+netstat -an | grep 5505  # Port kontrolü
 ```
 
 **MongoDB bağlantı hatası?**
