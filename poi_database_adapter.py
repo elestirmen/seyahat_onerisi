@@ -61,6 +61,18 @@ class POIDatabase(ABC):
     def add_poi(self, poi_data: Dict[str, Any]) -> Any:
         """Yeni POI ekle"""
         pass
+    
+    @abstractmethod
+    def update_poi(self, poi_id: Any, update_data: Dict[str, Any]) -> bool:
+        """
+        POI güncelle
+        Args:
+            poi_id: POI'nin benzersiz kimliği
+            update_data: Güncellenecek alanlar (ör: {"name": "Yeni Ad", "latitude": 38.6, ...})
+        Returns:
+            bool: Başarılıysa True
+        """
+        pass
 
 
 class PostgreSQLPOIDatabase(POIDatabase):
@@ -200,6 +212,38 @@ class PostgreSQLPOIDatabase(POIDatabase):
             self._add_images(poi_id, poi_data['images'])
         
         return poi_id
+    
+    def update_poi(self, poi_id: int, update_data: Dict[str, Any]) -> bool:
+        """
+        POI güncelle (PostgreSQL)
+        Args:
+            poi_id: POI'nin id'si
+            update_data: Güncellenecek alanlar
+        Returns:
+            bool: Başarılıysa True
+        """
+        if not self.conn:
+            raise RuntimeError("Veritabanı bağlantısı yok")
+        set_clauses = []
+        values = []
+        for key, value in update_data.items():
+            if key in ["latitude", "longitude"]:
+                continue  # Koordinatlar özel işlenir
+            set_clauses.append(f"{key} = %s")
+            values.append(value)
+        if "latitude" in update_data and "longitude" in update_data:
+            set_clauses.append("location = ST_GeogFromText('POINT(%s %s)')")
+            values.append(update_data["longitude"])
+            values.append(update_data["latitude"])
+        if not set_clauses:
+            return False
+        set_clause = ", ".join(set_clauses)
+        query = f"UPDATE pois SET {set_clause}, updated_at = NOW() WHERE id = %s"
+        values.append(poi_id)
+        with self.conn.cursor() as cur:
+            cur.execute(query, tuple(values))
+            self.conn.commit()
+            return cur.rowcount > 0
     
     def _add_images(self, poi_id: int, images: List[Dict[str, Any]]):
         """POI'ye görüntüler ekle"""
@@ -355,6 +399,26 @@ class MongoDBPOIDatabase(POIDatabase):
         
         result = self.collection.insert_one(document)
         return str(result.inserted_id)
+    
+    def update_poi(self, poi_id: str, update_data: Dict[str, Any]) -> bool:
+        """
+        POI güncelle (MongoDB)
+        Args:
+            poi_id: POI'nin id'si (string)
+            update_data: Güncellenecek alanlar
+        Returns:
+            bool: Başarılıysa True
+        """
+        from bson import ObjectId
+        update_fields = update_data.copy()
+        if "latitude" in update_fields and "longitude" in update_fields:
+            update_fields["location"] = {
+                "type": "Point",
+                "coordinates": [update_fields.pop("longitude"), update_fields.pop("latitude")]
+            }
+        update_fields["updatedAt"] = datetime.utcnow()
+        result = self.collection.update_one({"_id": ObjectId(poi_id)}, {"$set": update_fields})
+        return result.modified_count > 0
 
 
 class POIDatabaseFactory:
@@ -443,6 +507,8 @@ if __name__ == "__main__":
             }
         }
         # poi_id = pg_db.add_poi(new_poi)
+        # POI güncelleme örneği
+        # update_result = pg_db.update_poi(poi_id, {"name": "Yeni Ad", "latitude": 38.63, "longitude": 34.91})
         
         pg_db.disconnect()
     
@@ -459,5 +525,7 @@ if __name__ == "__main__":
         
         # Yakındaki POI'leri ara
         # nearby = mongo_db.search_nearby_pois(38.6310, 34.9130, 5000)
+        # POI güncelleme örneği
+        # update_result = mongo_db.update_poi(poi_id, {"name": "Yeni Ad", "latitude": 38.63, "longitude": 34.91})
         
         mongo_db.disconnect()

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POI Yönetim Paneli</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .poi-list { max-height: 60vh; overflow-y: auto; }
+        .pointer { cursor: pointer; }
+    </style>
+</head>
+<body>
+<div class="container py-4">
+    <h2 class="mb-4">POI Yönetim Paneli</h2>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">POI Ekle / Düzenle</div>
+                <div class="card-body">
+                    <form id="poiForm">
+                        <input type="hidden" id="poiId">
+                        <div class="mb-2">
+                            <label class="form-label">Adı</label>
+                            <input type="text" class="form-control" id="poiName" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Kategori</label>
+                            <select class="form-select" id="poiCategory" required>
+                                <option value="">Seçiniz</option>
+                                <option value="gastronomik">Gastronomik</option>
+                                <option value="kulturel">Kültürel</option>
+                                <option value="sanatsal">Sanatsal</option>
+                                <option value="doga_macera">Doğa & Macera</option>
+                                <option value="konaklama">Konaklama</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Enlem (Latitude)</label>
+                            <input type="number" step="any" class="form-control" id="poiLat" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Boylam (Longitude)</label>
+                            <input type="number" step="any" class="form-control" id="poiLon" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Açıklama</label>
+                            <textarea class="form-control" id="poiDesc"></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Etiketler (virgülle ayırın)</label>
+                            <input type="text" class="form-control" id="poiTags">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" id="saveBtn">Kaydet</button>
+                        <button type="button" class="btn btn-secondary w-100 mt-2 d-none" id="cancelEditBtn">İptal</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>POI Listesi</span>
+                    <select id="filterCategory" class="form-select w-auto">
+                        <option value="">Tümü</option>
+                        <option value="gastronomik">Gastronomik</option>
+                        <option value="kulturel">Kültürel</option>
+                        <option value="sanatsal">Sanatsal</option>
+                        <option value="doga_macera">Doğa & Macera</option>
+                        <option value="konaklama">Konaklama</option>
+                    </select>
+                </div>
+                <div class="card-body poi-list p-0">
+                    <table class="table table-hover mb-0" id="poiTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Adı</th>
+                                <th>Kategori</th>
+                                <th>Enlem</th>
+                                <th>Boylam</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="poiTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const apiBase = '/api';
+
+function fetchPOIs(category = '') {
+    let url = apiBase + '/pois';
+    if (category) url += '?category=' + encodeURIComponent(category);
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            let pois = [];
+            if (category) {
+                for (const [name, coords] of Object.entries(data)) {
+                    pois.push({ name, lat: coords[0], lon: coords[1], category });
+                }
+            } else {
+                for (const [cat, poisObj] of Object.entries(data)) {
+                    for (const [name, coords] of Object.entries(poisObj)) {
+                        pois.push({ name, lat: coords[0], lon: coords[1], category: cat });
+                    }
+                }
+            }
+            renderPOITable(pois);
+        });
+}
+
+function renderPOITable(pois) {
+    const tbody = document.getElementById('poiTableBody');
+    tbody.innerHTML = '';
+    pois.forEach(poi => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="pointer text-primary" onclick="editPOI('${poi.name}', '${poi.category}')">${poi.name}</td>
+            <td>${poi.category}</td>
+            <td>${poi.lat}</td>
+            <td>${poi.lon}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="deletePOI('${poi.name}', '${poi.category}')">Sil</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function editPOI(name, category) {
+    fetch(`${apiBase}/pois?category=${encodeURIComponent(category)}`)
+        .then(r => r.json())
+        .then(data => {
+            const coords = data[name];
+            if (!coords) return;
+            document.getElementById('poiId').value = name + '|' + category;
+            document.getElementById('poiName').value = name;
+            document.getElementById('poiCategory').value = category;
+            document.getElementById('poiLat').value = coords[0];
+            document.getElementById('poiLon').value = coords[1];
+            document.getElementById('poiDesc').value = '';
+            document.getElementById('poiTags').value = '';
+            document.getElementById('saveBtn').textContent = 'Güncelle';
+            document.getElementById('cancelEditBtn').classList.remove('d-none');
+        });
+}
+
+document.getElementById('cancelEditBtn').onclick = function() {
+    document.getElementById('poiForm').reset();
+    document.getElementById('poiId').value = '';
+    document.getElementById('saveBtn').textContent = 'Kaydet';
+    this.classList.add('d-none');
+};
+
+document.getElementById('poiForm').onsubmit = function(e) {
+    e.preventDefault();
+    const idVal = document.getElementById('poiId').value;
+    const name = document.getElementById('poiName').value;
+    const category = document.getElementById('poiCategory').value;
+    const lat = parseFloat(document.getElementById('poiLat').value);
+    const lon = parseFloat(document.getElementById('poiLon').value);
+    const description = document.getElementById('poiDesc').value;
+    const tags = document.getElementById('poiTags').value.split(',').map(t => t.trim()).filter(Boolean);
+    const poiData = { name, category, latitude: lat, longitude: lon, description, tags };
+    if (idVal) {
+        // Güncelle
+        fetch(`${apiBase}/poi/${encodeURIComponent(name)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(poiData)
+        }).then(r => r.json()).then(() => {
+            fetchPOIs(document.getElementById('filterCategory').value);
+            document.getElementById('poiForm').reset();
+            document.getElementById('poiId').value = '';
+            document.getElementById('saveBtn').textContent = 'Kaydet';
+            document.getElementById('cancelEditBtn').classList.add('d-none');
+        });
+    } else {
+        // Ekle
+        fetch(`${apiBase}/poi`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(poiData)
+        }).then(r => r.json()).then(() => {
+            fetchPOIs(document.getElementById('filterCategory').value);
+            document.getElementById('poiForm').reset();
+        });
+    }
+};
+
+function deletePOI(name, category) {
+    if (!confirm('Bu POI silinsin mi?')) return;
+    // POI id'si olarak name kullanılıyor (örnek için). Gerçek uygulamada id kullanılmalı.
+    fetch(`${apiBase}/poi/${encodeURIComponent(name)}`, {
+        method: 'DELETE'
+    }).then(r => r.json()).then(() => {
+        fetchPOIs(document.getElementById('filterCategory').value);
+    });
+}
+
+document.getElementById('filterCategory').onchange = function() {
+    fetchPOIs(this.value);
+};
+
+// İlk yüklemede tüm POI'leri getir
+fetchPOIs();
+</script>
+</body>
+</html>
