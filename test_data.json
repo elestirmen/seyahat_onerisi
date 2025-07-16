@@ -107,8 +107,8 @@
       "_id": "64f1e2a3b2c4d5e6f7890006",
       "name": "El Sanatları Çarşısı (Ürgüp Cumhuriyet Meydanı)",
       "category": "sanatsal",
-      "latitude": 38.63145,
-      "longitude": 34.91183,
+      "latitude": 38.631917,
+      "longitude": 34.913458,
       "description": "Yerel el sanatları ürünlerinin satıldığı geleneksel çarşı.",
       "tags": [
         "Handicrafts",
@@ -116,7 +116,8 @@
         "Traditional"
       ],
       "imageUrl": "",
-      "isActive": true
+      "isActive": true,
+      "updatedAt": "2025-07-16T23:25:23.027866"
     },
     {
       "_id": "533a39ae-d43c-4675-afb8-78eb5a12e0cb",
@@ -147,6 +148,18 @@
       ],
       "imageUrl": "",
       "isActive": true
+    },
+    {
+      "_id": "11756c7f-378b-4840-8df9-fd06efd4cb53",
+      "name": "sivritaş",
+      "category": "doga_macera",
+      "latitude": 38.630212,
+      "longitude": 34.919659,
+      "description": "",
+      "tags": [],
+      "imageUrl": "",
+      "isActive": true,
+      "createdAt": "2025-07-16T23:38:12.817934"
     }
   ],
   "konaklama": [
@@ -177,6 +190,18 @@
       "imageUrl": "",
       "isActive": true,
       "createdAt": "2025-07-16T23:08:23.895251"
+    },
+    {
+      "_id": "4e46970b-70e8-49c6-a963-a0abd0693865",
+      "name": "dere suits",
+      "category": "konaklama",
+      "latitude": 38.63193,
+      "longitude": 34.907164,
+      "description": "",
+      "tags": [],
+      "imageUrl": "",
+      "isActive": true,
+      "createdAt": "2025-07-16T23:35:03.979791"
     }
   ]
 }
