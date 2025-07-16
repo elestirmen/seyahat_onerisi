@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from poi_database_adapter import POIDatabaseFactory
 import os
@@ -17,6 +17,27 @@ def get_db():
     )
     db.connect()
     return db
+
+@app.route('/')
+def index():
+    return '''
+    <h1>🗺️ POI Yönetim Sistemi</h1>
+    <p>POI Yönetim arayüzüne erişmek için: <a href="/poi_manager_ui.html">Buraya tıklayın</a></p>
+    <p>API Dokümantasyonu:</p>
+    <ul>
+        <li><a href="/api/pois">GET /api/pois</a> - Tüm POI'leri listele</li>
+        <li>POST /api/poi - Yeni POI ekle</li>
+        <li>PUT /api/poi/&lt;id&gt; - POI güncelle</li>
+        <li>DELETE /api/poi/&lt;id&gt; - POI sil</li>
+    </ul>
+    '''
+
+@app.route('/poi_manager_ui.html')
+def serve_ui():
+    try:
+        return send_from_directory('.', 'poi_manager_ui.html')
+    except FileNotFoundError:
+        return '<h1>❌ Hata</h1><p>poi_manager_ui.html dosyası bulunamadı!</p><p>Dosyanın API ile aynı klasörde olduğundan emin olun.</p>', 404
 
 @app.route('/api/pois', methods=['GET'])
 def list_pois():
@@ -72,4 +93,7 @@ def delete_poi(poi_id):
     return jsonify({'error': 'Delete failed'}), 400
 
 if __name__ == '__main__':
+    print("🚀 POI Yönetim Sistemi başlatılıyor...")
+    print("📊 Web arayüzü: http://localhost:5000/poi_manager_ui.html")
+    print("🔌 API endpoint'leri: http://localhost:5000/api/")
     app.run(debug=True, host='0.0.0.0', port=5000)
