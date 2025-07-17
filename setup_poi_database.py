@@ -229,7 +229,6 @@ def setup_postgresql_database(connection_string):
                 if result:
                     poi_id = result[0]
                     poi_count += 1
-                    
                     # Görüntüleri ekle
                     if 'images' in details:
                         for img in details['images']:
@@ -251,118 +250,29 @@ def setup_postgresql_database(connection_string):
         return False
 
 
-def setup_mongodb_database(connection_string, database_name="poi_db"):
-    """MongoDB veritabanını kur ve örnek verileri ekle"""
-    try:
-        from pymongo import MongoClient, GEOSPHERE
-    except ImportError:
-        print("❌ pymongo kurulu değil. 'pip install pymongo' komutunu çalıştırın.")
-        return False
-    
-    try:
-        # MongoDB'ye bağlan
-        client = MongoClient(connection_string)
-        db = client[database_name]
-        collection = db.pois
-        
-        print("📊 MongoDB veritabanına bağlanıldı")
-        
-        # Geospatial index oluştur
-        collection.create_index([("location", GEOSPHERE)])
-        collection.create_index("category")
-        collection.create_index("tags")
-        collection.create_index([("name", "text")])
-        
-        print("✅ İndeksler oluşturuldu")
-        
-        # POI'leri ekle
-        poi_count = 0
-        for category, pois in DEFAULT_POI_DATA.items():
-            for poi_name, (lat, lon) in pois.items():
-                # Detay bilgileri varsa kullan
-                details = SAMPLE_POI_DETAILS.get(poi_name, {})
-                
-                document = {
-                    "name": poi_name,
-                    "category": category,
-                    "location": {
-                        "type": "Point",
-                        "coordinates": [lon, lat]  # MongoDB: [longitude, latitude]
-                    },
-                    "description": details.get('description', {}),
-                    "images": details.get('images', []),
-                    "attributes": details.get('attributes', {}),
-                    "isActive": True,
-                    "createdAt": datetime.utcnow(),
-                    "updatedAt": datetime.utcnow()
-                }
-                
-                # Varsa güncelle, yoksa ekle
-                result = collection.update_one(
-                    {"name": poi_name, "category": category},
-                    {"$set": document},
-                    upsert=True
-                )
-                
-                if result.upserted_id or result.modified_count:
-                    poi_count += 1
-        
-        print(f"✅ {poi_count} POI başarıyla eklendi")
-        
-        client.close()
-        return True
-        
-    except Exception as e:
-        print(f"❌ MongoDB kurulum hatası: {e}")
-        return False
-
-
 def main():
     parser = argparse.ArgumentParser(
-        description="POI Veritabanı Kurulum ve Veri İmport Aracı",
+        description="POI Veritabanı Kurulum ve Veri Import Aracı",
         formatter_class=argparse.RawTextHelpFormatter
     )
     
     parser.add_argument(
-        "db_type",
-        choices=["postgresql", "mongodb"],
-        help="Veritabanı tipi"
-    )
-    
-    parser.add_argument(
         "connection_string",
-        help="Veritabanı bağlantı string'i\n"
-             "PostgreSQL örnek: postgresql://user:password@localhost/poi_db\n"
-             "MongoDB örnek: mongodb://localhost:27017/"
-    )
-    
-    parser.add_argument(
-        "--db-name",
-        default="poi_db",
-        help="MongoDB veritabanı adı (sadece MongoDB için)"
+        help="Veritabanı bağlantı string'i\nPostgreSQL örnek: postgresql://user:password@localhost/poi_db"
     )
     
     args = parser.parse_args()
     
-    print(f"🚀 {args.db_type.upper()} veritabanı kurulumu başlıyor...")
-    
-    if args.db_type == "postgresql":
-        success = setup_postgresql_database(args.connection_string)
-    else:  # mongodb
-        success = setup_mongodb_database(args.connection_string, args.db_name)
+    print(f"🚀 POSTGRESQL veritabanı kurulumu başlıyor...")
+    success = setup_postgresql_database(args.connection_string)
     
     if success:
         print("\n✨ Veritabanı kurulumu başarıyla tamamlandı!")
-        print("\n📝 Kullanım örnekleri:")
-        
-        if args.db_type == "postgresql":
-            print(f"python category_route_planner_with_db.py --db-type postgresql --db-connection \"{args.connection_string}\"")
-        else:
-            print(f"python category_route_planner_with_db.py --db-type mongodb --db-connection \"{args.connection_string}\" --db-name {args.db_name}")
+        print("\n📝 Kullanım örneği:")
+        print(f"python category_route_planner_with_db.py --db-type postgresql --db-connection \"{args.connection_string}\"")
     else:
         print("\n❌ Veritabanı kurulumu başarısız oldu.")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
