@@ -34,8 +34,8 @@ def save_test_data(data):
 def get_db():
     global JSON_FALLBACK
     try:
-        db_type = os.environ.get('POI_DB_TYPE', 'mongodb')
-        connection_string = os.environ.get('POI_DB_CONNECTION', 'mongodb://localhost:27017/')
+        db_type = os.environ.get('POI_DB_TYPE', 'postgresql')
+        connection_string = os.environ.get('POI_DB_CONNECTION', 'postgresql://user:password@localhost/poi_db')
         database_name = os.environ.get('POI_DB_NAME', 'poi_db')
         db = POIDatabaseFactory.create_database(
             db_type,

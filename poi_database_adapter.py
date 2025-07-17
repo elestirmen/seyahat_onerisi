@@ -437,7 +437,7 @@ class POIDatabaseFactory:
         Veritabanı tipine göre uygun adaptörü oluştur
         
         Args:
-            db_type: 'postgresql' veya 'mongodb'
+            db_type: 'postgresql' veya 'mongodb' (varsayılan: postgresql önerilir)
             **kwargs: Veritabanı bağlantı parametreleri
         
         Returns:
@@ -462,9 +462,9 @@ def load_poi_data_from_database(db_config: Dict[str, str]) -> Dict[str, Dict[str
     Args:
         db_config: Veritabanı konfigürasyonu
             {
-                'type': 'postgresql' veya 'mongodb',
+                'type': 'postgresql' veya 'mongodb' (varsayılan: postgresql önerilir),
                 'connection_string': '...',
-                'database_name': '...' (MongoDB için)
+                'database_name': '...' (sadece MongoDB için)
             }
     
     Returns:

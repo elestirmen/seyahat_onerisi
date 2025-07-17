@@ -587,8 +587,8 @@ if __name__ == "__main__":
     parser.add_argument("--start", help='Rotanın başlayacağı POI adını belirtin (örn: "Ürgüp Müzesi").\nBu özellik --no-optimize olmadan daha etkilidir.')
     
     # Veritabanı seçenekleri
-    parser.add_argument("--db-type", choices=['postgresql', 'mongodb'], help="Veritabanı tipi")
-    parser.add_argument("--db-connection", help="Veritabanı bağlantı string'i")
+    parser.add_argument("--db-type", choices=['postgresql', 'mongodb'], default='postgresql', help="Veritabanı tipi (varsayılan: postgresql)")
+    parser.add_argument("--db-connection", default='postgresql://user:password@localhost/poi_db', help="Veritabanı bağlantı string'i (varsayılan: postgresql://user:password@localhost/poi_db)")
     parser.add_argument("--db-name", help="MongoDB veritabanı adı (MongoDB için)")
 
     # Varsayılan olarak optimizasyon ve yükseklik özelliklerini AÇIK yap
