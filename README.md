@@ -33,106 +33,85 @@ Kapadokya bölgesindeki ilgi noktaları (POI) arasında optimize edilmiş rotala
 - **Responsive Tasarım**: Mobil uyumlu arayüz
 - **Ölçüm Araçları**: Mesafe ve alan ölçüm desteği
 
-## 🚀 Hızlı Başlangıç
+## 🚀 Ubuntu Sunucuda Kapsamlı Kurulum Rehberi
 
-### Kurulum
-
+### 1. Sistem Güncellemesi
 ```bash
-# Depoyu klonlayın
-git clone <repo-url>
-cd seyahat_onerisi
+sudo apt update && sudo apt upgrade -y
+```
 
-# Bağımlılıkları kurun
+### 2. Gerekli Sistem Paketlerini Kurun
+```bash
+sudo apt install python3 python3-pip python3-venv postgresql postgresql-contrib postgis build-essential libpq-dev -y
+```
+
+### 3. PostgreSQL’i Yapılandırın
+```bash
+sudo systemctl enable postgresql
+sudo systemctl start postgresql
+sudo -u postgres psql
+```
+Açılan psql konsolunda:
+```sql
+CREATE DATABASE poi_db;
+CREATE USER poi_user WITH PASSWORD 'strongpassword';
+GRANT ALL PRIVILEGES ON DATABASE poi_db TO poi_user;
+\c poi_db
+CREATE EXTENSION IF NOT EXISTS postgis;
+\q
+```
+
+### 4. Proje Dosyalarını Sunucuya Aktarın
+```bash
+cd /path/to/proje_klasoru
+```
+
+### 5. Python Ortamı Kurulumu
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Temel Kullanım
-
+### 6. Veritabanı Tablolarını ve Örnek Verileri Kurun
 ```bash
-# Tüm kategoriler için optimize edilmiş rotalar
-python category_route_planner.py
-
-# Belirli kategori için rota
-python category_route_planner.py gastronomik
-
-# Başlangıç noktası belirleyerek
-python category_route_planner.py kulturel --start "Ürgüp Müzesi"
-
-# Optimizasyon olmadan basit rota
-python category_route_planner.py --no-optimize
-
-# Yükseklik verisi olmadan
-python category_route_planner.py --no-elevation
+python setup_poi_database.py "postgresql://poi_user:strongpassword@localhost/poi_db"
 ```
 
-## 📚 Detaylı Kullanım
-
-### Komut Satırı Parametreleri
-
+### 7. Uygulamayı Çalıştırma
 ```bash
-python category_route_planner.py [kategori] [seçenekler]
-
-Pozisyonel Argümanlar:
-  kategori              İşlenecek POI kategorisi (gastronomik, kulturel, sanatsal, doga_macera, konaklama)
-
-Seçenekler:
-  -o, --output          Çıktı HTML dosya adı
-  -g, --graphfile       Yol ağı GraphML dosyası (varsayılan: urgup_merkez_walking.graphml)
-  -r, --radius          Yol ağı indirme yarıçapı (km, varsayılan: 10)
-  --start               Rotanın başlayacağı POI adı
-  --no-optimize         Rota optimizasyonunu devre dışı bırak
-  --no-elevation        Yükseklik profilini devre dışı bırak
-  -h, --help            Yardım mesajını göster
+python poi_api.py
+# veya
+python category_route_planner_with_db.py --db-type postgresql --db-connection "postgresql://poi_user:strongpassword@localhost/poi_db"
 ```
 
-### Örnek Kullanım Senaryoları
-
-#### 1. Gastronomik Tur Planı
+### 8. Kısa Test
 ```bash
-python category_route_planner.py gastronomik --start "Ziggy Cafe & Restaurant (Ürgüp)"
+python category_route_planner_with_db.py --db-type postgresql --db-connection "postgresql://poi_user:strongpassword@localhost/poi_db"
 ```
+Çıktı olarak `tum_kategoriler_optimized_rotasi.html` dosyası oluşmalı.
 
-#### 2. Kültürel Gezi Rotası
-```bash
-python category_route_planner.py kulturel --start "Ürgüp Müzesi" -o kulturel_tur.html
-```
+### 9. Sık Karşılaşılan Sorunlar
+- **psycopg2-binary hatası:**  `libpq-dev` ve `build-essential` kurulu olmalı.
+- **PostGIS uzantısı hatası:**  `CREATE EXTENSION postgis;` komutunu veritabanında manuel çalıştırın.
+- **Bağlantı hatası:**  Bağlantı stringindeki kullanıcı adı, şifre ve veritabanı adını kontrol edin.
+- **Port hatası:**  PostgreSQL’in 5432 portunda çalıştığından ve güvenlik duvarının izin verdiğinden emin olun.
 
-#### 3. Tam Kapsamlı Ürgüp Turu
-```bash
-python category_route_planner.py -o urgup_komple_tur.html
-```
+---
 
-## 💽 Veritabanı Kurulumu
-
-### PostgreSQL + PostGIS
+## 💽 Veritabanı Kurulumu (Sadece PostgreSQL)
 
 ```bash
-# PostgreSQL veritabanı kurulumu
-python setup_poi_database.py postgresql "postgresql://user:password@localhost/poi_db"
-
-# Veritabanı ile rota planlama
-python category_route_planner_with_db.py --db-type postgresql --db-connection "postgresql://user:password@localhost/poi_db"
+python setup_poi_database.py "postgresql://poi_user:strongpassword@localhost/poi_db"
 ```
-
-### MongoDB
+- Bu komut, gerekli tabloları oluşturur ve 30’a yakın örnek POI kaydını ekler.
 
 ```bash
-# MongoDB veritabanı kurulumu
-python setup_poi_database.py mongodb "mongodb://localhost:27017/" --db-name poi_cappadocia
-
-# MongoDB ile rota planlama
-python category_route_planner_with_db.py --db-type mongodb --db-connection "mongodb://localhost:27017/" --db-name poi_cappadocia
+python category_route_planner_with_db.py --db-type postgresql --db-connection "postgresql://poi_user:strongpassword@localhost/poi_db"
 ```
 
-### Veritabanı Şeması
-
-Detaylı veritabanı tasarımı için `poi_database_design.md` dosyasını inceleyin. Şema şunları içerir:
-
-- **POI Tablosu**: Ana ilgi noktaları bilgileri
-- **Kategoriler**: POI sınıflandırması
-- **Görseller**: POI fotoğrafları ve thumbnails
-- **3D Modeller**: 3 boyutlu model verileri
-- **Mekansal İndeksler**: Performanslı coğrafi sorgular
+---
 
 ## 📁 Proje Yapısı
 
