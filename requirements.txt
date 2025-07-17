@@ -1,8 +1,7 @@
-folium
-osmnx
 psycopg2-binary
-sqlalchemy
-geoalchemy2
-pymongo
 flask
 flask-cors
+folium
+osmnx
+networkx
+numpy
