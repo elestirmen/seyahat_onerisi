@@ -33,36 +33,350 @@ Kapadokya bölgesindeki ilgi noktaları (POI) arasında optimize edilmiş rotala
 - **Responsive Tasarım**: Mobil uyumlu arayüz
 - **Ölçüm Araçları**: Mesafe ve alan ölçüm desteği
 
-## 🚀 Hızlı Başlangıç
+## 🚀 Kurulum
 
-### Kurulum
+### Sistem Gereksinimleri
 
+**Minimum Gereksinimler:**
+- **Python**: 3.7 veya üzeri
+- **İşletim Sistemi**: Windows 10, macOS 10.14, Ubuntu 18.04 veya üzeri
+- **RAM**: En az 4GB (8GB önerilir)
+- **Disk Alanı**: En az 2GB boş alan
+- **İnternet Bağlantısı**: OSM verilerini indirmek ve yükseklik API'si için gerekli
+
+**Gerekli Sistem Paketleri:**
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install python3-pip python3-dev python3-venv
+sudo apt-get install libgeos-dev libproj-dev libgdal-dev
+sudo apt-get install build-essential libssl-dev libffi-dev
+```
+
+**CentOS/RHEL/Fedora:**
+```bash
+sudo yum install python3-pip python3-devel
+sudo yum install geos-devel proj-devel gdal-devel
+sudo yum install gcc openssl-devel libffi-devel
+```
+
+**macOS:**
+```bash
+# Homebrew ile
+brew install python3 geos proj gdal
+```
+
+**Windows:**
+- Python'u [python.org](https://python.org) adresinden indirin
+- Microsoft Visual C++ Build Tools'u yükleyin
+
+### Adım Adım Kurulum
+
+#### 1. Projeyi İndirin
 ```bash
 # Depoyu klonlayın
 git clone <repo-url>
-cd seyahat_onerisi
+cd kapadokya-rota-planlayicisi
 
-# Bağımlılıkları kurun
-pip install -r requirements.txt
+# Veya ZIP olarak indirin ve açın
 ```
 
-### Temel Kullanım
+#### 2. Python Sanal Ortamı Oluşturun (Önerilir)
+```bash
+# Sanal ortam oluştur
+python3 -m venv venv
+
+# Sanal ortamı aktifleştir
+# Linux/macOS:
+source venv/bin/activate
+# Windows:
+venv\Scripts\activate
+```
+
+#### 3. Python Bağımlılıklarını Kurun
+```bash
+# Bağımlılıkları kurun
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Eksik paketler varsa manuel kurulum:
+pip install pymongo psycopg2-binary geoalchemy2 requests
+```
+
+#### 4. Veritabanı Kurulumu (İsteğe Bağlı)
+
+**Sadece JSON Dosyası ile Çalışma (Hızlı Başlangıç):**
+```bash
+# Hiçbir ek kurulum gerekmez
+# Sistem otomatik olarak test_data.json dosyasını kullanacak
+```
+
+**MongoDB Kurulumu:**
+```bash
+# Ubuntu/Debian
+sudo apt-get install mongodb
+sudo systemctl start mongodb
+sudo systemctl enable mongodb
+
+# macOS (Homebrew ile)
+brew install mongodb-community
+brew services start mongodb-community
+
+# Windows - MongoDB Community Server indirin ve kurun
+```
+
+**PostgreSQL + PostGIS Kurulumu:**
+```bash
+# Ubuntu/Debian
+sudo apt-get install postgresql postgresql-contrib postgis
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+# macOS (Homebrew ile)
+brew install postgresql postgis
+brew services start postgresql
+
+# Windows - PostgreSQL'i resmi siteden indirin
+```
+
+#### 5. Çevre Değişkenlerini Ayarlayın
+
+**Linux/macOS (.bashrc veya .zshrc dosyasına ekleyin):**
+```bash
+# MongoDB için
+export POI_DB_TYPE=mongodb
+export POI_DB_CONNECTION=mongodb://localhost:27017/
+export POI_DB_NAME=poi_cappadocia
+
+# PostgreSQL için
+export POI_DB_TYPE=postgresql
+export POI_DB_CONNECTION=postgresql://kullanici:sifre@localhost/poi_db
+export POI_DB_NAME=poi_db
+
+# JSON dosyası için (varsayılan)
+# Hiçbir değişken ayarlamanıza gerek yok
+```
+
+**Windows (System Properties > Environment Variables):**
+```cmd
+# MongoDB için
+set POI_DB_TYPE=mongodb
+set POI_DB_CONNECTION=mongodb://localhost:27017/
+set POI_DB_NAME=poi_cappadocia
+
+# PostgreSQL için
+set POI_DB_TYPE=postgresql
+set POI_DB_CONNECTION=postgresql://kullanici:sifre@localhost/poi_db
+set POI_DB_NAME=poi_db
+```
+
+#### 6. Veritabanını Başlatın (Veritabanı Kullanıyorsanız)
+
+**MongoDB için:**
+```bash
+python setup_poi_database.py mongodb "mongodb://localhost:27017/" --db-name poi_cappadocia
+```
+
+**PostgreSQL için:**
+```bash
+# Önce veritabanı ve kullanıcı oluşturun
+sudo -u postgres psql
+CREATE DATABASE poi_db;
+CREATE USER poi_user WITH PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON DATABASE poi_db TO poi_user;
+CREATE EXTENSION postgis;
+\q
+
+# Sonra veritabanını hazırlayın
+python setup_poi_database.py postgresql "postgresql://poi_user:your_password@localhost/poi_db"
+```
+
+#### 7. Test ve Doğrulama
+
+**Kurulum testini çalıştırın:**
+```bash
+# Basit rota testi
+python category_route_planner.py gastronomik --no-elevation -o test_route.html
+
+# API testi (veritabanı varsa)
+python poi_api.py &
+curl http://localhost:5505/health
+```
+
+**Beklenen çıktılar:**
+- `test_route.html` dosyası oluşmalı
+- Cache klasöründe `.json` dosyaları oluşmalı
+- API health check'i başarılı olmalı
+
+### Hızlı Başlatma (5 Dakika)
+
+Eğer hızlıca test etmek istiyorsanız:
 
 ```bash
-# Tüm kategoriler için optimize edilmiş rotalar
+# 1. Temel paketleri kurun
+pip install folium osmnx networkx numpy requests
+
+# 2. Hemen çalıştırın (JSON verisi ile)
 python category_route_planner.py
 
-# Belirli kategori için rota
-python category_route_planner.py gastronomik
+# 3. Sonucu açın
+# tum_kategoriler_rotasi.html dosyası oluşacak
+```
 
-# Başlangıç noktası belirleyerek
-python category_route_planner.py kulturel --start "Ürgüp Müzesi"
+### Docker ile Kurulum (Gelişmiş)
 
-# Optimizasyon olmadan basit rota
-python category_route_planner.py --no-optimize
+```bash
+# Dockerfile oluşturun
+cat > Dockerfile << 'EOF'
+FROM python:3.9-slim
 
-# Yükseklik verisi olmadan
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+EXPOSE 5505
+
+CMD ["python", "poi_api.py"]
+EOF
+
+# Docker imajını oluşturun
+docker build -t kapadokya-poi .
+
+# Çalıştırın
+docker run -p 5505:5505 kapadokya-poi
+```
+
+## 🔧 Kurulum Sorunları ve Çözümleri
+
+### Yaygın Kurulum Sorunları
+
+**1. OSMnx Kurulum Hatası:**
+```bash
+# Çözüm 1: Conda ile kurun
+conda install -c conda-forge osmnx
+
+# Çözüm 2: Sistem paketlerini kurun
+sudo apt-get install libspatialindex-dev  # Ubuntu/Debian
+brew install spatialindex  # macOS
+```
+
+**2. GEOS/GDAL Hataları:**
+```bash
+# Ubuntu/Debian
+sudo apt-get install libgeos-dev libgdal-dev libproj-dev
+
+# macOS
+brew install geos gdal proj
+
+# Sonra tekrar kurun
+pip install --force-reinstall folium osmnx
+```
+
+**3. Psycopg2 Kurulum Hatası:**
+```bash
+# Ubuntu/Debian
+sudo apt-get install libpq-dev python3-dev
+
+# macOS
+brew install postgresql
+
+# Sonra tekrar kurun
+pip install psycopg2-binary
+```
+
+**4. MongoDB Bağlantı Hatası:**
+```bash
+# Servisi kontrol edin
+sudo systemctl status mongodb
+
+# Başlatın
+sudo systemctl start mongodb
+
+# Port kontrolü
+netstat -an | grep 27017
+```
+
+**5. Bellek Hatası (Büyük Veri Setleri):**
+```bash
+# Küçük bölge ile test edin
+python category_route_planner.py gastronomik --radius 2
+
+# Yükseklik verilerini devre dışı bırakın
 python category_route_planner.py --no-elevation
+```
+
+**6. İnternet Bağlantı Sorunları:**
+```bash
+# Mevcut cache verilerini kullanın
+ls cache/  # Cache dosyalarını kontrol edin
+
+# Offline mod için mevcut GraphML dosyalarını kullanın
+python category_route_planner.py -g urgup_merkez_walking.graphml
+```
+
+### Test Komutları
+
+**Kurulum doğrulama:**
+```bash
+# Python ve paket sürümlerini kontrol edin
+python --version
+pip list | grep -E "(folium|osmnx|networkx|numpy)"
+
+# İndirilen GraphML dosyalarını kontrol edin
+ls -la *.graphml
+
+# Cache klasörünü kontrol edin
+ls -la cache/
+
+# API test (veritabanı ile)
+python -c "from poi_database_adapter import POIDatabaseFactory; print('✅ Veritabanı adaptörü çalışıyor')"
+```
+
+**Performans testi:**
+```bash
+# Küçük alan testi
+time python category_route_planner.py gastronomik --radius 1
+
+# Büyük alan testi  
+time python category_route_planner.py --radius 15
+```
+
+### Güncelleme Prosedürü
+
+```bash
+# Güncel sürümü indirin
+git pull origin main
+
+# Bağımlılıkları güncelleyin
+pip install --upgrade -r requirements.txt
+
+# Cache'i temizleyin (isteğe bağlı)
+rm -rf cache/*
+
+# Veritabanını güncelleyin (varsa)
+python setup_poi_database.py <db_type> <connection_string>
+```
+
+### Kaldırma İşlemi
+
+```bash
+# Sanal ortamı kaldırın
+rm -rf venv/
+
+# Proje dosyalarını kaldırın
+cd .. && rm -rf kapadokya-rota-planlayicisi/
+
+# Veritabanını kaldırın (isteğe bağlı)
+# MongoDB:
+mongo
+use poi_cappadocia
+db.dropDatabase()
+
+# PostgreSQL:
+sudo -u postgres psql
+DROP DATABASE poi_db;
 ```
 
 ## 📚 Detaylı Kullanım
