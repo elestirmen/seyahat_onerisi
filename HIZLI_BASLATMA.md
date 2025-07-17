@@ -1,6 +1,6 @@
 # ⚡ Kapadokya POI Sistemi - Hızlı Başlatma
 
-## 🚀 3 Farklı Kurulum Seçeneği
+
 
 ### 🎯 Seçenek 1: Süper Hızlı Başlangıç (JSON ile - 2 dakika)
 ```bash

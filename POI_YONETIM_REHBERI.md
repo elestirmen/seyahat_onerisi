@@ -1,5 +1,12 @@
 # 🗺️ POI Yönetim Sistemi - Kurulum ve Kullanım Rehberi
 
+## ℹ️ Mevcut Durum
+- POI Yönetim Sistemi, Kapadokya bölgesindeki ilgi noktalarını (POI) yönetmek, harita üzerinde göstermek, kategori bazlı filtrelemek ve rota planlamak için geliştirilmiş bir Python tabanlı web uygulamasıdır.
+- Hem MongoDB hem PostgreSQL/PostGIS desteği vardır.
+- Web arayüzü ile POI ekleme, düzenleme, silme, arama, filtreleme ve harita üzerinde görselleştirme yapılabilir.
+- Rota planlama ve harita üretimi için ayrı scriptler (category_route_planner.py, category_route_planner_with_db.py) mevcuttur.
+- API ve web arayüzü ile tam entegre çalışır.
+
 ## 📋 İçindekiler
 1. [Sistem Gereksinimleri](#sistem-gereksinimleri)
 2. [Proje Kurulumu](#proje-kurulumu)
