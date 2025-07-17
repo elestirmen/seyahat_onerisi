@@ -487,7 +487,7 @@ def main(args: argparse.Namespace):
                 'type': args.db_type,
                 'connection_string': args.db_connection
             }
-            if args.db_type == 'mongodb' and args.db_name:
+            if args.db_type == 'postgresql' and args.db_name:
                 db_config['database_name'] = args.db_name
         
         # POI verilerini yükle
@@ -586,11 +586,10 @@ if __name__ == "__main__":
     
     parser.add_argument("--start", help='Rotanın başlayacağı POI adını belirtin (örn: "Ürgüp Müzesi").\nBu özellik --no-optimize olmadan daha etkilidir.')
     
-    # Veritabanı seçenekleri
-    parser.add_argument("--db-type", choices=['postgresql', 'mongodb'], default='postgresql', help="Veritabanı tipi (varsayılan: postgresql)")
+    # Sadece PostgreSQL için argümanlar
+    parser.add_argument("--db-type", choices=['postgresql'], default='postgresql', help="Veritabanı tipi (sadece postgresql destekleniyor)")
     parser.add_argument("--db-connection", default='postgresql://user:password@localhost/poi_db', help="Veritabanı bağlantı string'i (varsayılan: postgresql://user:password@localhost/poi_db)")
-    parser.add_argument("--db-name", help="MongoDB veritabanı adı (MongoDB için)")
-
+    
     # Varsayılan olarak optimizasyon ve yükseklik özelliklerini AÇIK yap
     parser.set_defaults(optimize=True, elevation=True)
     
