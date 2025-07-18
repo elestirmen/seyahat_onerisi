@@ -268,9 +268,15 @@ if __name__ == '__main__':
     print("📊 Web arayüzü: http://localhost:5505/poi_manager_ui.html")
     print("🔌 API endpoint'leri: http://localhost:5505/api/")
     
+    # Test database connection to show accurate status
+    db = get_db()
     if JSON_FALLBACK:
         print("⚠️  JSON fallback modu - tüm işlemler JSON dosyasında yapılacak")
+    elif db is not None:
+        db_type = os.environ.get('POI_DB_TYPE', 'postgresql')
+        print(f"✅ {db_type.upper()} veritabanı bağlantısı aktif")
+        db.disconnect()
     else:
-        print("✅ MongoDB bağlantısı aktif")
+        print("❌ Veritabanı bağlantısı başarısız")
     
     app.run(debug=True, host='0.0.0.0', port=5505)
