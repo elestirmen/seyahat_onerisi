@@ -147,7 +147,11 @@ class PostgreSQLPOIDatabase(POIDatabase):
             result = cur.fetchone()
         
         if result:
-            result['coordinates'] = (result.pop('lat'), result.pop('lon'))
+            # UI detay ekranı latitude ve longitude alanlarını bekliyor
+            result['latitude'] = result.pop('lat')
+            result['longitude'] = result.pop('lon')
+            # Geriye uyumluluk için coordinates tuple'ı da ekle
+            result['coordinates'] = (result['latitude'], result['longitude'])
         
         return dict(result) if result else None
     
@@ -233,6 +237,46 @@ class PostgreSQLPOIDatabase(POIDatabase):
             cur.execute(query, tuple(values))
             self.conn.commit()
             return cur.rowcount > 0
+
+    def list_pois(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Aktif POI'leri listele (opsiyonel kategori filtresi) ve UI ile uyumlu obje dizisi döndür"""
+        if not self.conn:
+            raise RuntimeError("Veritabanı bağlantısı yok")
+
+        base_query = """
+            SELECT 
+                id, 
+                name, 
+                category, 
+                ST_Y(location::geometry) as latitude, 
+                ST_X(location::geometry) as longitude, 
+                description
+            FROM pois
+            WHERE is_active = true
+        """
+        params: List[Any] = []
+        if category:
+            base_query += " AND category = %s"
+            params.append(category)
+
+        base_query += " ORDER BY name"
+
+        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(base_query, params)
+            results = cur.fetchall()
+
+        # UI JSON formatında `_id` alanı bekleniyor
+        formatted: List[Dict[str, Any]] = []
+        for row in results:
+            formatted.append({
+                "_id": row["id"],
+                "name": row["name"],
+                "category": row["category"],
+                "latitude": row["latitude"],
+                "longitude": row["longitude"],
+                "description": row["description"],
+            })
+        return formatted
 
 
 class POIDatabaseFactory:
