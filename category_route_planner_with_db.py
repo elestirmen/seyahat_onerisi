@@ -388,36 +388,70 @@ def generate_and_add_route(folium_map: folium.Map, road_network: Optional[nx.Mul
 
         if elevation_data_available:
             chart_id = f"chart_{category_name.replace(' ', '_')}"
+            # SVG yükseklik profili oluştur (Chart.js yerine)
+            svg_width = 350
+            svg_height = 120
+            margin = 20
+            chart_width = svg_width - 2 * margin
+            chart_height = svg_height - 2 * margin
+            
+            min_elevation = min(elevations)
+            max_elevation = max(elevations)
+            elevation_range = max_elevation - min_elevation
+            
+            if elevation_range == 0:
+                elevation_range = 1  # Sıfır bölme hatasını önle
+            
+            # SVG path oluştur
+            points = []
+            for i, elevation in enumerate(elevations):
+                x = margin + (i * chart_width / (len(elevations) - 1))
+                y = svg_height - margin - ((elevation - min_elevation) * chart_height / elevation_range)
+                points.append(f"{x},{y}")
+            
+            path_data = "M " + " L ".join(points)
+            
+            # Fill path için
+            fill_points = [f"{margin},{svg_height - margin}"] + points + [f"{svg_width - margin},{svg_height - margin}"]
+            fill_path = "M " + " L ".join(fill_points) + " Z"
+            
             popup_html += f"""
             <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
-                <h5 style="margin-top:0; margin-bottom:5px;">Yükseklik Profili</h5>
-                <canvas id='{chart_id}' width='350' height='150'></canvas>
-                <script>
-                    setTimeout(() => {{
-                        new Chart(document.getElementById('{chart_id}').getContext('2d'), {{
-                            type:'line',
-                            data:{{
-                                labels:Array.from(Array({len(elevations)}).keys()),
-                                datasets:[{{
-                                    label:'Yükseklik (m)',
-                                    data:{json.dumps(elevations)},
-                                    borderColor:'{style['color']}',
-                                    backgroundColor:'rgba({int(style['color'][1:3],16)},{int(style['color'][3:5],16)},{int(style['color'][5:7],16)},0.2)',
-                                    borderWidth:2,
-                                    pointRadius:0,
-                                    fill:true
-                                }}]
-                            }},
-                            options:{{
-                                scales:{{
-                                    x:{{display:false}},
-                                    y:{{title:{{display:true,text:'Yükseklik (m)'}}}}
-                                }},
-                                plugins:{{legend:{{display:false}}}}
-                            }}
-                        }});
-                    }}, 100);
-                </script>
+                <h5 style="margin-top:0; margin-bottom:10px;">Yükseklik Profili</h5>
+                <div style="text-align: center; background: #f8f9fa; border-radius: 8px; padding: 10px;">
+                    <svg width="{svg_width}" height="{svg_height}" style="background: white; border-radius: 4px;">
+                        <!-- Arka plan ızgarası -->
+                        <defs>
+                            <pattern id="grid_{category_name.replace(' ', '_')}" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
+                            </pattern>
+                        </defs>
+                        <rect width="{svg_width}" height="{svg_height}" fill="url(#grid_{category_name.replace(' ', '_')})"/>
+                        
+                        <!-- Yükseklik alanı (fill) -->
+                        <path d="{fill_path}" fill="rgba({int(style['color'][1:3],16)},{int(style['color'][3:5],16)},{int(style['color'][5:7],16)},0.3)" stroke="none"/>
+                        
+                        <!-- Yükseklik çizgisi -->
+                        <path d="{path_data}" fill="none" stroke="{style['color']}" stroke-width="2.5"/>
+                        
+                        <!-- Y ekseni etiketi -->
+                        <text x="5" y="15" font-family="Arial, sans-serif" font-size="11" fill="#666">
+                            {max_elevation:.0f}m
+                        </text>
+                        <text x="5" y="{svg_height - 5}" font-family="Arial, sans-serif" font-size="11" fill="#666">
+                            {min_elevation:.0f}m
+                        </text>
+                        
+                        <!-- Başlangıç ve bitiş noktaları -->
+                        <circle cx="{points[0].split(',')[0]}" cy="{points[0].split(',')[1]}" r="3" fill="{style['color']}" stroke="white" stroke-width="2"/>
+                        <circle cx="{points[-1].split(',')[0]}" cy="{points[-1].split(',')[1]}" r="3" fill="{style['color']}" stroke="white" stroke-width="2"/>
+                    </svg>
+                    <div style="margin-top: 8px; font-size: 12px; color: #666;">
+                        <strong>Min:</strong> {min_elevation:.0f}m &nbsp;|&nbsp; 
+                        <strong>Max:</strong> {max_elevation:.0f}m &nbsp;|&nbsp; 
+                        <strong>Fark:</strong> {elevation_range:.0f}m
+                    </div>
+                </div>
             </div>
             """
         
@@ -546,7 +580,6 @@ def main(args: argparse.Namespace):
             add_poi_markers(pois, ordered_names, style, poi_layer)
             print(f"   ✅ {len(pois)} nokta ve rota eklendi: {route_len:.2f} km")
 
-        folium_map.get_root().header.add_child(folium.Element("<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>"))
         for tile in TILE_LAYERS: folium.TileLayer(tiles=tile['tiles'], attr=tile['attr'], name=tile['name']).add_to(folium_map)
         plugins.Fullscreen(position="topleft").add_to(folium_map)
         plugins.MeasureControl(position='bottomleft', primary_length_unit='kilometers').add_to(folium_map)
