@@ -117,6 +117,12 @@ def get_poi(poi_id):
                         return jsonify(poi)
         return jsonify({'error': 'POI not found'}), 404
     
+    # POI ID'nin geçerli olup olmadığını kontrol et
+    try:
+        poi_id = int(poi_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid POI ID format'}), 400
+    
     db = get_db()
     if not db:
         return jsonify({'error': 'Database connection failed'}), 500
@@ -217,6 +223,15 @@ def update_poi(poi_id):
         except Exception as e:
             return jsonify({'error': f'Error updating POI: {str(e)}'}), 500
     
+    # POI ID'nin geçerli olup olmadığını kontrol et
+    if poi_id == 'undefined' or poi_id is None:
+        return jsonify({'error': 'Invalid POI ID'}), 400
+    
+    try:
+        poi_id = int(poi_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid POI ID format'}), 400
+    
     db = get_db()
     if not db:
         return jsonify({'error': 'Database connection failed'}), 500
@@ -251,6 +266,12 @@ def delete_poi(poi_id):
             
         except Exception as e:
             return jsonify({'error': f'Error deleting POI: {str(e)}'}), 500
+    
+    # POI ID'nin geçerli olup olmadığını kontrol et
+    try:
+        poi_id = int(poi_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid POI ID format'}), 400
     
     db = get_db()
     if not db:

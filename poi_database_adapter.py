@@ -152,6 +152,8 @@ class PostgreSQLPOIDatabase(POIDatabase):
             result['longitude'] = result.pop('lon')
             # Geriye uyumluluk için coordinates tuple'ı da ekle
             result['coordinates'] = (result['latitude'], result['longitude'])
+            # UI JSON formatında `_id` alanı bekleniyor
+            result['_id'] = result['id']
         
         return dict(result) if result else None
     
