@@ -212,6 +212,35 @@ def haversine_distance(coord1: Tuple[float, float], coord2: Tuple[float, float])
     a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
     return EARTH_RADIUS_KM * 2 * atan2(sqrt(a), sqrt(1 - a))
 
+def create_google_maps_route_url(ordered_pois: Dict[str, Tuple[float, float]]) -> str:
+    """
+    Sıralı POI'ler için Google Maps rotası URL'si oluşturur
+    
+    Args:
+        ordered_pois: Sıralı POI sözlüğü {name: (lat, lon)}
+    
+    Returns:
+        Google Maps route URL'si
+    """
+    if not ordered_pois or len(ordered_pois) < 2:
+        return ""
+    
+    coords = list(ordered_pois.values())
+    # İlk nokta origin, son nokta destination, aradakiler waypoint
+    origin = f"{coords[0][0]},{coords[0][1]}"
+    destination = f"{coords[-1][0]},{coords[-1][1]}"
+    
+    # Ara waypoint'ler (eğer varsa)
+    waypoints = ""
+    if len(coords) > 2:
+        waypoint_coords = [f"{coord[0]},{coord[1]}" for coord in coords[1:-1]]
+        waypoints = "/" + "/".join(waypoint_coords)
+    
+    # Google Maps yönlendirme URL'si
+    google_maps_url = f"https://www.google.com/maps/dir/{origin}{waypoints}/{destination}/"
+    
+    return google_maps_url
+
 def load_road_network(graph_file_path: str, radius_km: float) -> Optional[nx.MultiDiGraph]:
     if os.path.exists(graph_file_path):
         print(f"'{graph_file_path}' dosyasından yol ağı yükleniyor...")
@@ -385,6 +414,25 @@ def generate_and_add_route(folium_map: folium.Map, road_network: Optional[nx.Mul
             stops_html += f"<li style='margin-bottom: 5px;'>{poi_name}</li>"
         stops_html += "</ol>"
         popup_html += stops_html
+        
+        # Google Maps rota aktarma butonu
+        google_maps_url = create_google_maps_route_url(ordered_pois)
+        if google_maps_url:
+            popup_html += f"""
+            <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; text-align: center;">
+                <a href="{google_maps_url}" target="_blank" rel="noopener noreferrer" 
+                   style="background: linear-gradient(135deg, #4285f4 0%, #34a853 50%, #ea4335 100%);
+                          color: white; padding: 12px 20px; border-radius: 25px; text-decoration: none; 
+                          font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; 
+                          justify-content: center; transition: all 0.3s ease; 
+                          box-shadow: 0 4px 15px rgba(66, 133, 244, 0.3);">
+                    🗺️ Google Maps'te Rota Aç
+                </a>
+                <div style="margin-top: 8px; font-size: 11px; color: #666;">
+                    Rotayı Google Maps'te açar ({len(ordered_pois)} durak)
+                </div>
+            </div>
+            """
 
         if elevation_data_available:
             chart_id = f"chart_{category_name.replace(' ', '_')}"
@@ -460,6 +508,8 @@ def generate_and_add_route(folium_map: folium.Map, road_network: Optional[nx.Mul
         iframe_height = 100 
         if ordered_pois:
             iframe_height += 40 + (len(ordered_pois) * 22)
+            # Google Maps butonu için ek alan
+            iframe_height += 80
         if elevation_data_available:
             iframe_height += 200
         
