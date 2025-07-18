@@ -362,7 +362,11 @@ def load_poi_data_from_database(db_config: Dict[str, str]) -> Dict[str, Dict[str
     Returns:
         Mevcut POI_DATA formatında veri
     """
-    db = POIDatabaseFactory.create_database(**db_config)
+    db = POIDatabaseFactory.create_database(
+        db_config['type'],
+        connection_string=db_config['connection_string'],
+        database_name=db_config.get('database_name')
+    )
     
     try:
         db.connect()

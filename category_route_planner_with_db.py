@@ -487,7 +487,7 @@ def main(args: argparse.Namespace):
                 'type': args.db_type,
                 'connection_string': args.db_connection
             }
-            if args.db_type == 'postgresql' and args.db_name:
+            if args.db_type == 'postgresql' and hasattr(args, 'db_name') and args.db_name:
                 db_config['database_name'] = args.db_name
         
         # POI verilerini yükle
@@ -497,7 +497,11 @@ def main(args: argparse.Namespace):
         db = None
         if db_config:
             try:
-                db = POIDatabaseFactory.create_database(**db_config)
+                db = POIDatabaseFactory.create_database(
+                    db_config['type'],
+                    connection_string=db_config['connection_string'],
+                    database_name=db_config.get('database_name')
+                )
                 db.connect()
             except Exception as e:
                 print(f"⚠️ Veritabanı bağlantısı kurulamadı: {e}")
@@ -588,7 +592,8 @@ if __name__ == "__main__":
     
     # Sadece PostgreSQL için argümanlar
     parser.add_argument("--db-type", choices=['postgresql'], default='postgresql', help="Veritabanı tipi (sadece postgresql destekleniyor)")
-    parser.add_argument("--db-connection", default='postgresql://user:password@localhost/poi_db', help="Veritabanı bağlantı string'i (varsayılan: postgresql://user:password@localhost/poi_db)")
+    parser.add_argument("--db-connection", default='postgresql://poi_user:poi_password@localhost/poi_db', help="Veritabanı bağlantı string'i (varsayılan: postgresql://poi_user:poi_password@localhost/poi_db)")
+    parser.add_argument("--db-name", default='poi_db', help="Veritabanı adı (varsayılan: poi_db)")
     
     # Varsayılan olarak optimizasyon ve yükseklik özelliklerini AÇIK yap
     parser.set_defaults(optimize=True, elevation=True)
