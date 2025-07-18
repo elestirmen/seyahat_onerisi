@@ -221,8 +221,13 @@ def update_poi(poi_id):
     if not db:
         return jsonify({'error': 'Database connection failed'}), 500
     
-    update_data = request.json
-    result = db.update_poi(poi_id, update_data)
+    update_data = request.json or {}
+    try:
+        numeric_id = int(poi_id)
+    except ValueError:
+        return jsonify({'error': 'Invalid POI id'}), 400
+
+    result = db.update_poi(numeric_id, update_data)
     db.disconnect()
     if result:
         return jsonify({'success': True})

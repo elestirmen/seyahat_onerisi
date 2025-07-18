@@ -147,6 +147,8 @@ class PostgreSQLPOIDatabase(POIDatabase):
             result = cur.fetchone()
         
         if result:
+            # `_id` alanı UI tarafında bekleniyor
+            result['_id'] = result['id']
             # UI detay ekranı latitude ve longitude alanlarını bekliyor
             result['latitude'] = result.pop('lat')
             result['longitude'] = result.pop('lon')
@@ -217,12 +219,34 @@ class PostgreSQLPOIDatabase(POIDatabase):
         """
         if not self.conn:
             raise RuntimeError("Veritabanı bağlantısı yok")
-        set_clauses = []
-        values = []
+        # Desteklenen kolonu belirle ve camelCase'den snake_case'e dönüştür
+        allowed_columns = {
+            "name", "category", "description", "short_description", "altitude", "is_active", "attributes"
+        }
+
+        key_mapping = {
+            "isActive": "is_active",
+            "shortDescription": "short_description"
+        }
+
+        set_clauses: List[str] = []
+        values: List[Any] = []
+
         for key, value in update_data.items():
+            # Koordinatlar özel işlenir
             if key in ["latitude", "longitude"]:
-                continue  # Koordinatlar özel işlenir
-            set_clauses.append(f"{key} = %s")
+                continue
+
+            col_name = key_mapping.get(key, key)
+            if col_name not in allowed_columns:
+                # Desteklenmeyen alanları atla (ör. tags, imageUrl vb.)
+                continue
+
+            if col_name == "attributes":
+                # JSONB alanı olarak kaydet
+                value = Json(value)
+
+            set_clauses.append(f"{col_name} = %s")
             values.append(value)
         if "latitude" in update_data and "longitude" in update_data:
             set_clauses.append("location = ST_GeogFromText('POINT(%s %s)')")
