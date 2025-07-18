@@ -94,14 +94,15 @@ def list_pois():
     
     category = request.args.get('category')
     if category:
-        pois = db.get_pois_by_category(category)
+        # Yeni UI için uyumlu formatta aktif POI'leri getir
+        pois = db.list_pois(category)
         db.disconnect()
         return jsonify(pois)
     # Tüm kategorilerdeki POI'leri döndür
     categories = ['gastronomik', 'kulturel', 'sanatsal', 'doga_macera', 'konaklama']
     all_pois = {}
     for cat in categories:
-        all_pois[cat] = db.get_pois_by_category(cat)
+        all_pois[cat] = db.list_pois(cat)
     db.disconnect()
     return jsonify(all_pois)
 
