@@ -219,22 +219,66 @@ class PostgreSQLPOIDatabase(POIDatabase):
         """
         if not self.conn:
             raise RuntimeError("Veritabanı bağlantısı yok")
+        
+        # Valid database columns
+        valid_columns = {
+            'name', 'category', 'altitude', 'description', 'short_description', 
+            'is_active', 'created_at', 'updated_at'
+        }
+        
+        # Field mapping: API camelCase -> Database snake_case
+        field_mapping = {
+            'isActive': 'is_active',
+            'createdAt': 'created_at',
+            'updatedAt': 'updated_at',
+            'shortDescription': 'short_description'
+        }
+        
         set_clauses = []
         values = []
+        attributes_to_update = {}
+        
         for key, value in update_data.items():
             if key in ["latitude", "longitude"]:
                 continue  # Koordinatlar özel işlenir
-            set_clauses.append(f"{key} = %s")
-            values.append(value)
+            
+            # Map camelCase to snake_case if needed
+            db_column = field_mapping.get(key, key)
+            
+            if db_column in valid_columns:
+                # Valid database column - update directly
+                set_clauses.append(f"{db_column} = %s")
+                values.append(value)
+            else:
+                # Store in attributes JSONB column
+                attributes_to_update[key] = value
+        
+        # Handle coordinate updates
         if "latitude" in update_data and "longitude" in update_data:
             set_clauses.append("location = ST_GeogFromText('POINT(%s %s)')")
             values.append(update_data["longitude"])
             values.append(update_data["latitude"])
+        
+        # Handle attributes updates
+        if attributes_to_update:
+            # Get current attributes and merge with new ones
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT attributes FROM pois WHERE id = %s", (poi_id,))
+                result = cur.fetchone()
+                current_attributes = result['attributes'] if result and result['attributes'] else {}
+                
+            # Merge attributes
+            current_attributes.update(attributes_to_update)
+            set_clauses.append("attributes = %s")
+            values.append(Json(current_attributes))
+        
         if not set_clauses:
             return False
+            
         set_clause = ", ".join(set_clauses)
         query = f"UPDATE pois SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE id = %s"
         values.append(poi_id)
+        
         with self.conn.cursor() as cur:
             cur.execute(query, tuple(values))
             self.conn.commit()
