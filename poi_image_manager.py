@@ -67,18 +67,67 @@ class POIImageManager:
                 # Thumbnail oluştur
                 img.thumbnail(size, Image.Resampling.LANCZOS)
                 
-                # RGB'ye çevir (JPEG için)
+                # RGB'ye çevir (WebP için)
                 if img.mode in ('RGBA', 'LA', 'P'):
-                    background = Image.new('RGB', img.size, (255, 255, 255))
                     if img.mode == 'P':
                         img = img.convert('RGBA')
-                    background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-                    img = background
+                    # WebP RGBA'yı destekler, bu yüzden background gereksiz
+                    if img.mode == 'LA':
+                        img = img.convert('RGBA')
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
                 
-                img.save(thumbnail_path, 'JPEG', quality=85, optimize=True)
+                # WebP formatında kaydet - %85 kalite ile mükemmel boyut/kalite dengesi
+                img.save(thumbnail_path, 'WebP', quality=85, optimize=True)
                 return True
         except Exception as e:
             print(f"Thumbnail oluşturma hatası: {e}")
+            return False
+
+    def convert_to_webp(self, input_path: Path, output_path: Path, quality: int = 90) -> bool:
+        """Görseli WebP formatına dönüştür"""
+        try:
+            with Image.open(input_path) as img:
+                # EXIF verilerini koru ve döndür
+                if hasattr(img, '_getexif'):
+                    exif = img._getexif()
+                    if exif is not None:
+                        orientation = exif.get(274)  # Orientation tag
+                        if orientation == 3:
+                            img = img.rotate(180, expand=True)
+                        elif orientation == 6:
+                            img = img.rotate(270, expand=True)
+                        elif orientation == 8:
+                            img = img.rotate(90, expand=True)
+                
+                # Çok büyük görselleri yeniden boyutlandır (max 2048px)
+                max_size = 2048
+                if img.width > max_size or img.height > max_size:
+                    img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+                    print(f"📏 Görsel yeniden boyutlandırıldı: {img.size}")
+                
+                # RGB/RGBA moduna çevir
+                if img.mode in ('LA', 'P'):
+                    if img.mode == 'P':
+                        img = img.convert('RGBA')
+                    elif img.mode == 'LA':
+                        img = img.convert('RGBA')
+                elif img.mode not in ('RGB', 'RGBA'):
+                    img = img.convert('RGB')
+                
+                # WebP formatında kaydet
+                img.save(output_path, 'WebP', quality=quality, optimize=True, lossless=False)
+                
+                # Dosya boyutu karşılaştırması
+                original_size = os.path.getsize(input_path) if os.path.exists(input_path) else 0
+                new_size = os.path.getsize(output_path)
+                compression_ratio = ((original_size - new_size) / original_size * 100) if original_size > 0 else 0
+                
+                print(f"📦 WebP dönüşümü: {original_size/1024:.1f}KB → {new_size/1024:.1f}KB (%{compression_ratio:.1f} azalma)")
+                return True
+                
+        except Exception as e:
+            print(f"❌ WebP dönüşüm hatası: {e}")
             return False
     
     def add_poi_image(self, poi_name: str, category: str, image_file_path: str, 
@@ -155,37 +204,48 @@ class POIImageManager:
             
             # Dosya adı ve uzantısı
             original_name = Path(image_file_path).name
-            file_extension = Path(image_file_path).suffix.lower()
+            original_size = os.path.getsize(image_file_path)
             
-            # Benzersiz dosya adı oluştur
+            # Benzersiz dosya adı oluştur - her zaman .webp uzantısı
             unique_id = str(uuid.uuid4())[:8]
-            new_filename = f"{image_type}_{unique_id}{file_extension}"
+            new_filename = f"{image_type}_{unique_id}.webp"
             
             # Hedef yollar
             target_path = poi_dir / new_filename
-            thumbnail_path = thumbnail_dir / f"thumb_{new_filename.replace(file_extension, '.jpg')}"
+            thumbnail_path = thumbnail_dir / f"thumb_{new_filename}"
             
-            # Dosyayı kopyala
-            shutil.copy2(image_file_path, target_path)
+            # Dosyayı WebP formatına dönüştür ve kaydet
+            webp_success = self.convert_to_webp(Path(image_file_path), target_path, quality=90)
+            if not webp_success:
+                # WebP dönüşümü başarısızsa, orijinal dosyayı kopyala
+                print("⚠️ WebP dönüşümü başarısız, orijinal dosya kopyalanıyor...")
+                shutil.copy2(image_file_path, target_path)
             
-            # Thumbnail oluştur
+            # Thumbnail oluştur (WebP formatında)
             thumbnail_created = self.create_thumbnail(target_path, thumbnail_path)
+            
+            # Final dosya boyutu
+            final_size = os.path.getsize(target_path)
+            size_reduction = ((original_size - final_size) / original_size * 100) if original_size > 0 else 0
             
             # Görsel bilgilerini döndür
             image_info = {
                 'poi_id': poi_id,
                 'poi_name': poi_name,
                 'category': category,
-                'image_path': str(target_path.relative_to(self.base_path.parent)),
+                'path': str(target_path.relative_to(self.base_path.parent)),
                 'thumbnail_path': str(thumbnail_path.relative_to(self.base_path.parent)) if thumbnail_created else None,
                 'image_type': image_type,
                 'caption': caption,
                 'is_primary': is_primary,
-                'file_size': os.path.getsize(target_path),
-                'original_name': original_name
+                'file_size': final_size,
+                'original_name': original_name,
+                'filename': new_filename,
+                'format': 'webp',
+                'compression_ratio': f"{size_reduction:.1f}%"
             }
             
-            print(f"✅ Görsel eklendi (POI ID: {poi_id}): {poi_name} - {new_filename}")
+            print(f"✅ WebP görsel eklendi: {poi_name} - {new_filename} ({original_size/1024:.1f}KB → {final_size/1024:.1f}KB)")
             return image_info
             
         except Exception as e:
@@ -259,6 +319,40 @@ class POIImageManager:
                     results.append(result)
         
         return results
+
+    def delete_poi_image_by_id(self, poi_id: str, filename: str) -> bool:
+        """POI ID bazlı görsel silme"""
+        try:
+            poi_id_folder = f"poi_{poi_id}"
+            
+            # Ana görsel yolu
+            image_path = self.base_path / "by_poi_id" / poi_id_folder / filename
+            
+            # Thumbnail yolu - WebP için
+            # Dosya uzantısı ne olursa olsun thumbnail'in .webp olacağını varsayıyoruz
+            thumb_name = f"thumb_{Path(filename).stem}.webp"
+            thumbnail_path = self.thumbnails_path / "by_poi_id" / poi_id_folder / thumb_name
+
+            deleted_something = False
+            if image_path.exists() and image_path.is_file():
+                image_path.unlink()
+                print(f"✅ Görsel silindi: {image_path}")
+                deleted_something = True
+            else:
+                print(f"⚠️ Silinecek görsel bulunamadı: {image_path}")
+
+            if thumbnail_path.exists() and thumbnail_path.is_file():
+                thumbnail_path.unlink()
+                print(f"✅ Thumbnail silindi: {thumbnail_path}")
+                deleted_something = True
+            else:
+                print(f"⚠️ Silinecek thumbnail bulunamadı: {thumbnail_path}")
+                
+            return deleted_something
+
+        except Exception as e:
+            print(f"❌ Görsel silme hatası: {e}")
+            return False
 
 # Örnek kullanım
 if __name__ == "__main__":
