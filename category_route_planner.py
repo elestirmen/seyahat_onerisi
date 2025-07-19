@@ -21,12 +21,11 @@ DEFAULT_GRAPH_RADIUS_KM = 10.0
 
 # --- Harita Altlıkları (Tile Layers) ---
 TILE_LAYERS = [
-    {'name': 'Varsayılan (OpenStreetMap)', 'tiles': 'OpenStreetMap', 'attr': '© OpenStreetMap contributors'},
-    {'name': 'Topoğrafik (OpenTopoMap)', 'tiles': 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', 'attr': '© OpenTopoMap (CC-BY-SA) © OpenStreetMap contributors'},
-    {'name': 'Çok Renkli (CartoDB Voyager)', 'tiles': 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/voyager_labels_under/{z}/{x}/{y}.png', 'attr': '© CartoDB © OpenStreetMap contributors'},
-    {'name': 'Uydu Görüntüsü (Esri)', 'tiles': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 'attr': '© Esri & Community'},
-    {'name': 'Sade Beyaz (CartoDB Positron)', 'tiles': 'CartoDB positron', 'attr': '© CartoDB © OpenStreetMap contributors'},
-    {'name': 'Karanlık Mod (CartoDB Dark Matter)', 'tiles': 'CartoDB dark_matter', 'attr': '© CartoDB © OpenStreetMap contributors'}
+    {'name': '🗺️ OpenStreetMap (Varsayılan)', 'tiles': 'OpenStreetMap', 'attr': '© OpenStreetMap contributors'},
+    {'name': '🛰️ Uydu Görüntüsü (Esri)', 'tiles': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 'attr': '© Esri & Community'},
+    {'name': '🏔️ Topografik (OpenTopoMap)', 'tiles': 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', 'attr': '© OpenTopoMap (CC-BY-SA) © OpenStreetMap contributors'},
+    {'name': '🎨 Çok Renkli (CartoDB Voyager)', 'tiles': 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/voyager_labels_under/{z}/{x}/{y}.png', 'attr': '© CartoDB © OpenStreetMap contributors'},
+    {'name': '⚪ Sade Beyaz (CartoDB Positron)', 'tiles': 'CartoDB positron', 'attr': '© CartoDB © OpenStreetMap contributors'}
 ]
 
 # --- Kategori ve POI Verileri ---
@@ -357,7 +356,12 @@ def main(args: argparse.Namespace):
             print(f"   ✅ {len(pois)} nokta ve rota eklendi: {route_len:.2f} km")
 
         folium_map.get_root().header.add_child(folium.Element("<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>"))
-        for tile in TILE_LAYERS: folium.TileLayer(tiles=tile['tiles'], attr=tile['attr'], name=tile['name']).add_to(folium_map)
+        # Diğer katmanları ekle (OpenStreetMap hariç)
+        for tile in TILE_LAYERS[1:]: 
+            folium.TileLayer(tiles=tile['tiles'], attr=tile['attr'], name=tile['name']).add_to(folium_map)
+        
+        # OpenStreetMap'i en son ekle (böylece aktif kalır)
+        folium.TileLayer(tiles='OpenStreetMap', attr='© OpenStreetMap contributors', name='🗺️ OpenStreetMap (Varsayılan)').add_to(folium_map)
         plugins.Fullscreen(position="topleft").add_to(folium_map)
         plugins.MeasureControl(position='bottomleft', primary_length_unit='kilometers').add_to(folium_map)
         plugins.MiniMap(toggle_display=True).add_to(folium_map)
