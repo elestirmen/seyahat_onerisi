@@ -589,7 +589,7 @@ def add_poi_markers(pois: Dict[str, Tuple[float, float]], ordered_poi_names: Lis
         )
         folium.Marker(location=coord, tooltip=folium.Tooltip(tooltip_html), popup=folium.Popup(popup_html, max_width=450), icon=icon).add_to(poi_layer)
 
-def add_image_loading_javascript(html_file_path: str):
+def add_image_loading_javascript(html_file_path: str, api_host: str):
     """
     HTML dosyasına otomatik görsel yükleme JavaScript'i ekler
     """
@@ -597,52 +597,49 @@ def add_image_loading_javascript(html_file_path: str):
         with open(html_file_path, 'r', encoding='utf-8') as f:
             html_content = f.read()
         
-        # JavaScript kodunu HTML'in sonuna ekle
-        javascript_code = '''
-        
+        # Python f-string içinde JS template literal kullanmak için çift süslü parantez {{...}} gerekir
+        javascript_code = f'''<script>
         // Genel POI görsel yükleme fonksiyonu
-        function loadPOIImages(poiId, poiName) {
-            // API URL'ini dinamik olarak oluştur
-            const protocol = window.location.protocol;
-            const hostname = window.location.hostname;
-            const port = window.location.port || (protocol === 'https:' ? '443' : '80');
-            const apiUrl = protocol + '//' + hostname + ':' + port + '/api/poi/' + poiId + '/images';
+        function loadPOIImages(poiId, poiName) {{
+            // API URL'ini HER ZAMAN çalışan API sunucusuna göre ayarla
+            const apiBaseUrl = '{api_host}';
+            const apiUrl = `${{apiBaseUrl}}/api/poi/${{poiId}}/images`;
             
             const container = document.getElementById('poi-images-' + poiId);
             const countSpan = document.getElementById('image-count-' + poiId);
             
-            if (!container) {
+            if (!container) {{
                 console.log('❌ Container bulunamadı:', poiId);
                 return;
-            }
+            }}
             
             console.log('🔍 POI Görsel Yükleniyor:', poiName, 'ID:', poiId, 'URL:', apiUrl);
             
             fetch(apiUrl)
-                .then(response => {
+                .then(response => {{
                     console.log('📡 API Response Status:', response.status);
-                    if (!response.ok) {
+                    if (!response.ok) {{
                         throw new Error('HTTP ' + response.status);
-                    }
+                    }}
                     return response.json();
-                })
-                .then(data => {
+                }})
+                .then(data => {{
                     console.log('📦 API Response Data:', data);
                     const images = data.images || [];
                     console.log('🖼️ Images Array:', images, 'Length:', images.length);
                     
-                    if (images.length === 0) {
+                    if (images.length === 0) {{
                         console.log('⚠️ No images found for POI:', poiId);
                         container.innerHTML = '<small style="color:#999;text-align:center;padding:20px;display:block;">Henüz görsel eklenmemiş</small>';
                         return;
-                    }
+                    }}
                     
                     if (countSpan) countSpan.textContent = '(' + images.length + ')';
                     
                     // Container'ı temizle
                     container.innerHTML = '';
                     
-                    images.slice(0, 6).forEach((img, i) => {
+                    images.slice(0, 6).forEach((img, i) => {{
                         const imgPath = img.thumbnail_path || img.path;
                         const fullPath = img.path;
                         const caption = img.filename || 'Görsel ' + (i + 1);
@@ -651,13 +648,14 @@ def add_image_loading_javascript(html_file_path: str):
                         imgDiv.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);transition:transform 0.2s ease;';
                         
                         const imgElement = document.createElement('img');
-                        imgElement.src = '/' + imgPath;
+                        // Görsel yolunu tam API yoluyla oluştur
+                        imgElement.src = `${{apiBaseUrl}}/${{imgPath}}`;
                         imgElement.style.cssText = 'width:100%;height:80px;object-fit:cover;cursor:pointer;';
                         imgElement.alt = caption;
-                        imgElement.onclick = function() { window.open('/' + fullPath, '_blank'); };
-                        imgElement.onmouseover = function() { this.parentElement.style.transform = 'scale(1.05)'; };
-                        imgElement.onmouseout = function() { this.parentElement.style.transform = 'scale(1)'; };
-                        imgElement.onerror = function() { this.style.display = 'none'; console.log('Görsel yüklenemedi: ' + imgPath); };
+                        imgElement.onclick = function() {{ window.open(`${{apiBaseUrl}}/${{fullPath}}`, '_blank'); }};
+                        imgElement.onmouseover = function() {{ this.parentElement.style.transform = 'scale(1.05)'; }};
+                        imgElement.onmouseout = function() {{ this.parentElement.style.transform = 'scale(1)'; }};
+                        imgElement.onerror = function() {{ this.style.display = 'none'; console.log('Görsel yüklenemedi: ' + imgElement.src); }};
                         
                         const overlay = document.createElement('div');
                         overlay.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));padding:4px 8px;';
@@ -666,69 +664,63 @@ def add_image_loading_javascript(html_file_path: str):
                         imgDiv.appendChild(imgElement);
                         imgDiv.appendChild(overlay);
                         container.appendChild(imgDiv);
-                    });
+                    }});
                     
-                    if (images.length > 6) {
+                    if (images.length > 6) {{
                         const moreDiv = document.createElement('div');
                         moreDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;background:#f8f9fa;border-radius:8px;padding:20px;border:2px dashed #ddd;';
                         moreDiv.innerHTML = '<small style="color:#666;text-align:center;"><i class="fa fa-plus-circle" style="font-size:16px;margin-bottom:4px;display:block;"></i>+' + (images.length - 6) + ' görsel daha</small>';
                         container.appendChild(moreDiv);
-                    }
+                    }}
                     console.log('✅ Görseller yüklendi:', poiName, images.length, 'adet');
-                })
-                .catch(error => {
+                }})
+                .catch(error => {{
                     console.log('⚠️ Görsel yükleme hatası:', poiName, 'Error:', error.message);
                     console.log('🔗 Failed URL:', apiUrl);
                     container.innerHTML = '<small style="color:#999;text-align:center;padding:20px;display:block;">Görsel yüklenemedi: ' + error.message + '</small>';
-                });
-        }
-        
-        // Test - JavaScript çalışıyor mu?
-        console.log('🧪 JavaScript dosyası yüklendi!');
-        
+                }});
+        }}
+
         // Tüm popup'lar için otomatik görsel yükleme sistemi
-        window.onload = function() {
+        window.addEventListener('load', function() {{
             console.log('🚀 Sayfa tamamen yüklendi, popup event listener ekleniyor...');
-            
-            // Tüm popup açılma olaylarını dinle
-            const map = window[Object.keys(window).find(key => key.startsWith('map_'))];
-            console.log('🗺️ Harita objesi bulundu:', map ? 'Evet' : 'Hayır');
-            
-            if (map) {
-                map.on('popupopen', function(e) {
-                    console.log('📍 Popup açıldı, görsel yükleme başlatılıyor...');
-                    
-                    setTimeout(function() {
-                        // Popup içindeki POI ID'sini bul
-                        const popupContent = e.popup.getContent();
-                        console.log('📄 Popup içeriği tipi:', typeof popupContent);
-                        
-                        if (typeof popupContent === 'string') {
-                            const matches = popupContent.match(/poi-images-(\\d+)/);
-                            console.log('🔍 POI ID regex sonucu:', matches);
-                            
-                            if (matches && matches[1]) {
-                                const poiId = matches[1];
-                                // POI adını popup başlığından çıkar
-                                const titleMatch = popupContent.match(/<h3[^>]*>([^<]+)</);
-                                const poiName = titleMatch ? titleMatch[1].replace(/🍽️|🏛️|🎨|🌿|🏨|📍/g, '').trim() : 'POI';
-                                console.log('✅ POI bilgileri - ID:', poiId, 'Ad:', poiName);
-                                loadPOIImages(poiId, poiName);
-                            } else {
-                                console.log('❌ POI ID bulunamadı popup içeriğinde');
-                            }
-                        } else {
-                            console.log('❌ Popup içeriği string değil');
-                        }
-                    }, 500);
-                });
-                console.log('✅ Popup event listener başarıyla eklendi');
-            } else {
-                console.log('❌ Harita objesi bulunamadı');
-            }
-        });
-        </script>
-        </html>'''
+
+            const mapKey = Object.keys(window).find(key => key.startsWith('map_'));
+            const map = mapKey ? window[mapKey] : null;
+            console.log('🗺️ Harita objesi bulundu:', map ? mapKey : 'Yok');
+
+            if (!map) {{
+                console.warn('❌ Harita objesi bulunamadı, görsel yükleme sistemi devre dışı');
+                return;
+            }}
+
+            map.on('popupopen', function(e) {{
+                console.log('📍 Popup açıldı, görsel yükleme başlatılıyor...');
+
+                setTimeout(function() {{
+                    let popupContent = e.popup.getContent();
+
+                    if (typeof popupContent !== 'string') {{
+                        popupContent = popupContent && (popupContent.innerHTML || popupContent.outerHTML) || '';
+                    }}
+
+                    const match = popupContent.match(/poi-images-([A-Za-z0-9_-]+)/);
+                    if (!match) {{
+                        console.warn('❗ POI ID bulunamadı');
+                        return;
+                    }}
+
+                    const poiId = match[1];
+                    const titleMatch = popupContent.match(/<h3[^>]*>([^<]+)/);
+                    const poiName = titleMatch ? titleMatch[1].replace(/[🍽️🏛️🎨🌿🏨📍]/g, '').trim() : 'POI';
+
+                    loadPOIImages(poiId, poiName);
+                }}, 300);
+            }});
+
+            console.log('✅ Popup event listener eklendi');
+        }});
+        </script>'''
         
         # Basit test JavaScript'i ekle
         simple_test = '''
@@ -858,7 +850,7 @@ def main(args: argparse.Namespace):
         folium_map.save(output_file)
         
         # HTML dosyasına otomatik görsel yükleme JavaScript'i ekle
-        add_image_loading_javascript(output_file)
+        add_image_loading_javascript(output_file, args.api_host)
         
         print(f"\n🎉 Harita başarıyla '{output_file}' olarak kaydedildi!")
         
@@ -898,6 +890,13 @@ if __name__ == "__main__":
     parser.add_argument("--db-type", choices=['postgresql'], default='postgresql', help="Veritabanı tipi (sadece postgresql destekleniyor)")
     parser.add_argument("--db-connection", default='postgresql://poi_user:poi_password@localhost/poi_db', help="Veritabanı bağlantı string'i (varsayılan: postgresql://poi_user:poi_password@localhost/poi_db)")
     parser.add_argument("--db-name", default='poi_db', help="Veritabanı adı (varsayılan: poi_db)")
+    parser.add_argument(
+        "--api-host", 
+        default=os.environ.get('POI_API_HOST', 'http://localhost:5505'), 
+        help="Görselleri çekecek olan POI API sunucusunun adresi. "
+             "Aynı zamanda POI_API_HOST çevre değişkeni ile de ayarlanabilir. "
+             "(Varsayılan: POI_API_HOST veya http://localhost:5505)"
+    )
     
     # Varsayılan olarak optimizasyon ve yükseklik özelliklerini AÇIK yap
     parser.set_defaults(optimize=True, elevation=True)
