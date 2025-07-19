@@ -17,7 +17,7 @@ from poi_database_adapter import POIDatabaseFactory, load_poi_data_from_database
 
 # --- Sabitler ve Konfigürasyon ---
 URGUP_CENTER_LOCATION = (38.6310, 34.9130)
-DEFAULT_ZOOM_URGUP = 13
+DEFAULT_ZOOM_URGUP = 16
 DEFAULT_GRAPH_FILE_URGUP = "urgup_merkez_walking.graphml"
 EARTH_RADIUS_KM = 6371.0
 DEFAULT_GRAPH_RADIUS_KM = 10.0
@@ -596,7 +596,7 @@ def main(args: argparse.Namespace):
             print(f"⚠️ Kategori '{args.category}' bulunamadı. Tümü işleniyor.")
 
         road_network = load_road_network(args.graphfile, args.radius)
-        folium_map = folium.Map(location=URGUP_CENTER_LOCATION, zoom_start=DEFAULT_ZOOM_URGUP, tiles=None)
+        folium_map = folium.Map(location=URGUP_CENTER_LOCATION, zoom_start=DEFAULT_ZOOM_URGUP, tiles=None, max_zoom=20)
         
         poi_layer = folium.FeatureGroup(name="📍 Tüm POI Noktaları", show=True).add_to(folium_map)
         processed_for_legend = []
