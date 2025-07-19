@@ -233,6 +233,42 @@
                                 <label class="form-label">Resim URL'si</label>
                                 <input type="url" class="form-control" id="poiImageUrl" placeholder="https://...">
                             </div>
+                            
+                            <!-- Görsel Yönetimi Bölümü -->
+                            <div class="mb-3" id="imageManagementSection">
+                                <label class="form-label">📸 Görsel Yönetimi</label>
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="mb-2">
+                                        <input type="file" class="form-control form-control-sm" id="imageFile" accept="image/*">
+                                        <small class="form-text text-muted">PNG, JPG, JPEG, GIF, WEBP</small>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <select class="form-select form-select-sm" id="imageType">
+                                                <option value="photo">📷 Fotoğraf</option>
+                                                <option value="exterior">🏢 Dış Görünüm</option>
+                                                <option value="interior">🏠 İç Mekan</option>
+                                                <option value="food">🍽️ Yemek</option>
+                                                <option value="menu">📋 Menü</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="text" class="form-control form-control-sm" id="imageCaption" placeholder="Açıklama">
+                                        </div>
+                                    </div>
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="isPrimaryImage">
+                                        <label class="form-check-label" for="isPrimaryImage">Ana görsel</label>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm mt-2 w-100" onclick="uploadPOIImage()">
+                                        📤 Görsel Yükle
+                                    </button>
+                                </div>
+                                
+                                <!-- Mevcut Görseller -->
+                                <div id="currentImages" class="mt-2"></div>
+                            </div>
+                            
                             <button type="submit" class="btn btn-primary w-100" id="saveBtn">💾 Kaydet</button>
                             <button type="button" class="btn btn-secondary w-100 mt-2 d-none" id="cancelEditBtn">❌
                                 İptal</button>
@@ -673,20 +709,89 @@
 
                 selectedPOI = poi;
 
-                let detailHtml = `<h6>${poi.name}</h6>
-            <p class="mb-1"><strong>Category:</strong> ${getCategoryDisplayName(poi.category)}</p>
-            <p class="mb-1"><strong>Location:</strong> ${poi.latitude.toFixed(6)}, ${poi.longitude.toFixed(6)}</p>`;
+                let detailHtml = `
+                    <div class="poi-detail-header">
+                        <h5 class="mb-2">${poi.name}</h5>
+                        <span class="badge bg-primary mb-2">${getCategoryDisplayName(poi.category)}</span>
+                    </div>
+                    
+                    <div class="poi-detail-info">
+                        <p class="mb-2"><i class="fas fa-map-marker-alt text-danger"></i> <strong>Konum:</strong> ${poi.latitude.toFixed(6)}, ${poi.longitude.toFixed(6)}</p>`;
 
                 if (poi.description) {
-                    detailHtml += `<p class="mb-1"><strong>Description:</strong> ${poi.description}</p>`;
+                    detailHtml += `<p class="mb-2"><i class="fas fa-info-circle text-info"></i> <strong>Açıklama:</strong> ${poi.description}</p>`;
                 }
                 if (poi.tags && poi.tags.length > 0) {
-                    detailHtml += `<p class="mb-1"><strong>Tags:</strong> ${poi.tags.join(', ')}</p>`;
+                    detailHtml += `<p class="mb-2"><i class="fas fa-tags text-success"></i> <strong>Etiketler:</strong> ${poi.tags.join(', ')}</p>`;
                 }
-                if (poi.imageUrl) {
-                    detailHtml += `<img src="${poi.imageUrl}" class="img-fluid rounded mt-2" alt="${poi.name}">`;
+                
+                detailHtml += `</div>`;
+
+                // Görselleri yükle ve göster
+                try {
+                    const imagesResponse = await fetch(`${apiBase}/poi/${poiId}/images`);
+                    if (imagesResponse.ok) {
+                        const imagesData = await imagesResponse.json();
+                        const images = imagesData.images || [];
+                        
+                        if (images.length > 0) {
+                            detailHtml += `
+                                <div class="poi-detail-images mt-3">
+                                    <h6 class="mb-2"><i class="fas fa-images text-warning"></i> Görseller (${images.length})</h6>
+                                    <div class="row g-2">`;
+                            
+                            images.forEach((image, index) => {
+                                const imagePath = image.thumbnail_path || image.path;
+                                const fullImagePath = image.path;
+                                detailHtml += `
+                                    <div class="col-6">
+                                        <div class="image-card">
+                                            <img src="/${imagePath}" 
+                                                 class="img-fluid rounded shadow-sm" 
+                                                 style="height: 100px; width: 100%; object-fit: cover; cursor: pointer;" 
+                                                 alt="${image.filename}"
+                                                 onclick="showImageModal('/${fullImagePath}', '${poi.name}', '${image.filename}')">
+                                            <div class="image-overlay">
+                                                <small class="text-white">${getImageTypeIcon(image.filename)} ${(image.size / 1024).toFixed(0)}KB</small>
+                                            </div>
+                                        </div>
+                                    </div>`;
+                            });
+                            
+                            detailHtml += `
+                                    </div>
+                                </div>`;
+                        }
+                    }
+                } catch (imageError) {
+                    console.log('Görseller yüklenemedi:', imageError);
                 }
-                detailHtml += `<hr><button class="btn btn-sm btn-outline-secondary" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">🎯 Center on Map</button>`;
+
+                // Eski imageUrl desteği (geriye uyumluluk)
+                if (poi.imageUrl && !detailHtml.includes('poi-detail-images')) {
+                    detailHtml += `
+                        <div class="poi-detail-images mt-3">
+                            <h6 class="mb-2"><i class="fas fa-image text-warning"></i> Görsel</h6>
+                            <img src="${poi.imageUrl}" 
+                                 class="img-fluid rounded shadow" 
+                                 alt="${poi.name}"
+                                 onclick="showImageModal('${poi.imageUrl}', '${poi.name}', 'POI Görseli')">
+                        </div>`;
+                }
+
+                detailHtml += `
+                    <hr>
+                    <div class="poi-detail-actions">
+                        <button class="btn btn-outline-primary btn-sm me-2" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
+                            <i class="fas fa-crosshairs"></i> Haritada Göster
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm me-2" onclick="editPOI('${poi._id}')">
+                            <i class="fas fa-edit"></i> Düzenle
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deletePOI('${poi._id}')">
+                            <i class="fas fa-trash"></i> Sil
+                        </button>
+                    </div>`;
 
                 document.getElementById('poiDetailContent').innerHTML = detailHtml;
 
@@ -695,7 +800,7 @@
                 }
 
             } catch (error) {
-                showToast('Error loading POI details', 'error');
+                showToast('POI detayları yüklenirken hata oluştu', 'error');
             } finally {
                 hideLoading();
             }
@@ -999,6 +1104,157 @@
         document.getElementById('filterCategory').addEventListener('change', function () {
             fetchPOIs(this.value);
         });
+
+        // Görsel modal ve yardımcı fonksiyonlar
+        function showImageModal(imagePath, poiName, filename) {
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">📸 ${filename}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img src="${imagePath}" class="img-fluid rounded shadow" alt="${poiName}" style="max-height: 70vh;">
+                            <div class="mt-2">
+                                <small class="text-muted">${poiName}</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <a href="${imagePath}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-external-link-alt"></i> Yeni Sekmede Aç
+                            </a>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            modal.addEventListener('hidden.bs.modal', () => {
+                modal.remove();
+            });
+        }
+
+        function getImageTypeIcon(filename) {
+            const name = filename.toLowerCase();
+            if (name.includes('exterior') || name.includes('dis')) return '🏢';
+            if (name.includes('interior') || name.includes('ic')) return '🏠';
+            if (name.includes('food') || name.includes('yemek')) return '🍽️';
+            if (name.includes('menu')) return '📋';
+            if (name.includes('logo')) return '🏷️';
+            return '📷';
+        }
+
+        // Görsel yönetimi fonksiyonları
+        async function uploadPOIImage() {
+            const fileInput = document.getElementById('imageFile');
+            const imageType = document.getElementById('imageType').value;
+            const imageCaption = document.getElementById('imageCaption').value;
+            const isPrimary = document.getElementById('isPrimaryImage').checked;
+            
+            // POI ID'sini al (düzenleme modundaysa)
+            const poiId = document.getElementById('poiId').value;
+            if (!poiId) {
+                alert('Önce POI\'yi kaydedin, sonra görsel ekleyin.');
+                return;
+            }
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Lütfen bir görsel dosyası seçin.');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            
+            // Dosya boyutu kontrolü (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Dosya boyutu 5MB\'dan küçük olmalıdır.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('type', imageType);
+            formData.append('caption', imageCaption);
+            formData.append('is_primary', isPrimary);
+            
+            try {
+                showLoading();
+                const response = await fetch(`${apiBase}/poi/${poiId}/images`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Görsel yükleme başarısız');
+                }
+                
+                const result = await response.json();
+                alert('Görsel başarıyla yüklendi!');
+                
+                // Form alanlarını temizle
+                fileInput.value = '';
+                document.getElementById('imageCaption').value = '';
+                document.getElementById('isPrimaryImage').checked = false;
+                
+                // Mevcut görselleri yenile
+                await loadPOIImages(poiId);
+                
+            } catch (error) {
+                console.error('Görsel yükleme hatası:', error);
+                alert('Görsel yükleme hatası: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function loadPOIImages(poiId) {
+            if (!poiId) return;
+            
+            try {
+                const response = await fetch(`${apiBase}/poi/${poiId}/images`);
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                const images = data.images || [];
+                
+                const container = document.getElementById('currentImages');
+                if (images.length === 0) {
+                    container.innerHTML = '<small class="text-muted">Henüz görsel eklenmemiş.</small>';
+                    return;
+                }
+                
+                let imagesHtml = '<div class="row g-2">';
+                images.forEach((image, index) => {
+                    const imagePath = image.thumbnail_path || image.path;
+                    imagesHtml += `
+                        <div class="col-6">
+                            <div class="card">
+                                <img src="/${imagePath}" class="card-img-top" style="height: 80px; object-fit: cover;" 
+                                     alt="${image.filename}">
+                                <div class="card-body p-2">
+                                    <small class="text-muted">${image.filename}</small>
+                                    <br><small>${(image.size / 1024).toFixed(1)} KB</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                imagesHtml += '</div>';
+                
+                container.innerHTML = imagesHtml;
+                
+            } catch (error) {
+                console.error('Görseller yüklenirken hata:', error);
+            }
+        }
 
         // Sayfa yüklendiğinde
         document.addEventListener('DOMContentLoaded', function () {

@@ -1,10 +1,12 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from poi_database_adapter import POIDatabaseFactory
+from poi_image_manager import POIImageManager
 import os
 import json
 import uuid
 from datetime import datetime
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 CORS(app)
@@ -12,6 +14,13 @@ CORS(app)
 # JSON verileri için fallback
 JSON_FALLBACK = False
 JSON_FILE_PATH = 'test_data.json'
+
+# Görsel yönetimi
+image_manager = POIImageManager()
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def load_test_data():
     """Test verilerini JSON dosyasından yükle"""
@@ -66,7 +75,218 @@ def index():
 @app.route('/poi_manager_ui.html')
 def serve_ui():
     try:
-        return send_from_directory('.', 'poi_manager_ui.html')
+        # HTML dosyasını oku ve görsel desteği ekle
+        with open('poi_manager_ui.html', 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        
+        # Görsel desteği için JavaScript kodlarını ekle
+        enhanced_js = """
+        // Görsel modal ve yardımcı fonksiyonlar
+        function showImageModal(imagePath, poiName, filename) {
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">📸 ${filename}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img src="${imagePath}" class="img-fluid rounded shadow" alt="${poiName}" style="max-height: 70vh;">
+                            <div class="mt-2">
+                                <small class="text-muted">${poiName}</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <a href="${imagePath}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-external-link-alt"></i> Yeni Sekmede Aç
+                            </a>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            modal.addEventListener('hidden.bs.modal', () => {
+                modal.remove();
+            });
+        }
+
+        function getImageTypeIcon(filename) {
+            const name = filename.toLowerCase();
+            if (name.includes('exterior') || name.includes('dis')) return '🏢';
+            if (name.includes('interior') || name.includes('ic')) return '🏠';
+            if (name.includes('food') || name.includes('yemek')) return '🍽️';
+            if (name.includes('menu')) return '📋';
+            if (name.includes('logo')) return '🏷️';
+            return '📷';
+        }
+
+        // showPOIDetail fonksiyonunu güncelle
+        async function showPOIDetail(poiId) {
+            showLoading();
+            try {
+                const response = await fetch(`${apiBase}/poi/${poiId}`);
+                if (!response.ok) throw new Error('POI not found');
+                const poi = await response.json();
+
+                selectedPOI = poi;
+
+                let detailHtml = `
+                    <div class="poi-detail-header">
+                        <h5 class="mb-2">${poi.name}</h5>
+                        <span class="badge bg-primary mb-2">${getCategoryDisplayName(poi.category)}</span>
+                    </div>
+                    
+                    <div class="poi-detail-info">
+                        <p class="mb-2"><i class="fas fa-map-marker-alt text-danger"></i> <strong>Konum:</strong> ${poi.latitude.toFixed(6)}, ${poi.longitude.toFixed(6)}</p>`;
+
+                if (poi.description) {
+                    detailHtml += `<p class="mb-2"><i class="fas fa-info-circle text-info"></i> <strong>Açıklama:</strong> ${poi.description}</p>`;
+                }
+                if (poi.tags && poi.tags.length > 0) {
+                    detailHtml += `<p class="mb-2"><i class="fas fa-tags text-success"></i> <strong>Etiketler:</strong> ${poi.tags.join(', ')}</p>`;
+                }
+                
+                detailHtml += `</div>`;
+
+                // Görselleri yükle ve göster
+                try {
+                    const imagesResponse = await fetch(`${apiBase}/poi/${poiId}/images`);
+                    if (imagesResponse.ok) {
+                        const imagesData = await imagesResponse.json();
+                        const images = imagesData.images || [];
+                        
+                        if (images.length > 0) {
+                            detailHtml += `
+                                <div class="poi-detail-images mt-3">
+                                    <h6 class="mb-2"><i class="fas fa-images text-warning"></i> Görseller (${images.length})</h6>
+                                    <div class="row g-2">`;
+                            
+                            images.forEach((image, index) => {
+                                const imagePath = image.thumbnail_path || image.path;
+                                const fullImagePath = image.path;
+                                detailHtml += `
+                                    <div class="col-6">
+                                        <div class="image-card">
+                                            <img src="/${imagePath}" 
+                                                 class="img-fluid rounded shadow-sm" 
+                                                 style="height: 100px; width: 100%; object-fit: cover; cursor: pointer;" 
+                                                 alt="${image.filename}"
+                                                 onclick="showImageModal('/${fullImagePath}', '${poi.name}', '${image.filename}')">
+                                            <div class="image-overlay">
+                                                <small class="text-white">${getImageTypeIcon(image.filename)} ${(image.size / 1024).toFixed(0)}KB</small>
+                                            </div>
+                                        </div>
+                                    </div>`;
+                            });
+                            
+                            detailHtml += `
+                                    </div>
+                                </div>`;
+                        }
+                    }
+                } catch (imageError) {
+                    console.log('Görseller yüklenemedi:', imageError);
+                }
+
+                // Eski imageUrl desteği (geriye uyumluluk)
+                if (poi.imageUrl && !detailHtml.includes('poi-detail-images')) {
+                    detailHtml += `
+                        <div class="poi-detail-images mt-3">
+                            <h6 class="mb-2"><i class="fas fa-image text-warning"></i> Görsel</h6>
+                            <img src="${poi.imageUrl}" 
+                                 class="img-fluid rounded shadow" 
+                                 alt="${poi.name}"
+                                 onclick="showImageModal('${poi.imageUrl}', '${poi.name}', 'POI Görseli')">
+                        </div>`;
+                }
+
+                detailHtml += `
+                    <hr>
+                    <div class="poi-detail-actions">
+                        <button class="btn btn-outline-primary btn-sm me-2" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
+                            <i class="fas fa-crosshairs"></i> Haritada Göster
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm me-2" onclick="editPOI('${poi._id}')">
+                            <i class="fas fa-edit"></i> Düzenle
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deletePOI('${poi._id}')">
+                            <i class="fas fa-trash"></i> Sil
+                        </button>
+                    </div>`;
+
+                document.getElementById('poiDetailContent').innerHTML = detailHtml;
+
+                if (!document.getElementById('poiDetailPanel').classList.contains('active')) {
+                    document.getElementById('poiDetailPanel').classList.add('active');
+                }
+
+            } catch (error) {
+                showToast('POI detayları yüklenirken hata oluştu', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        """
+        
+        # CSS eklemeleri
+        enhanced_css = """
+        /* POI Detay Görselleri için CSS */
+        .poi-detail-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .poi-detail-info {
+            margin-bottom: 1rem;
+        }
+
+        .poi-detail-images .image-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            transition: transform 0.2s ease;
+        }
+
+        .poi-detail-images .image-card:hover {
+            transform: scale(1.05);
+        }
+
+        .poi-detail-images .image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            padding: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        .poi-detail-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        """
+        
+        # CSS'i head bölümüne ekle
+        html_content = html_content.replace('</style>', enhanced_css + '\n    </style>')
+        
+        # JavaScript'i script bölümünün başına ekle
+        html_content = html_content.replace(
+            '// Sayfa yüklendiğinde',
+            enhanced_js + '\n\n        // Sayfa yüklendiğinde'
+        )
+        
+        return html_content
+        
     except FileNotFoundError:
         return '<h1>❌ Hata</h1><p>poi_manager_ui.html dosyası bulunamadı!</p><p>Dosyanın API ile aynı klasörde olduğundan emin olun.</p>', 404
 
@@ -283,6 +503,143 @@ def delete_poi(poi_id):
     if result:
         return jsonify({'success': True})
     return jsonify({'error': 'Delete failed'}), 400
+
+# Görsel yönetimi endpoint'leri
+@app.route('/api/poi/<poi_id>/images', methods=['POST'])
+def upload_poi_image(poi_id):
+    """POI'ye görsel yükle"""
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file provided'}), 400
+    
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif, webp'}), 400
+    
+    try:
+        # POI bilgilerini al
+        if JSON_FALLBACK:
+            test_data = load_test_data()
+            poi = None
+            poi_category = None
+            for category, pois in test_data.items():
+                if isinstance(pois, list):
+                    for p in pois:
+                        if p.get('_id') == poi_id:
+                            poi = p
+                            poi_category = category
+                            break
+            if not poi:
+                return jsonify({'error': 'POI not found'}), 404
+            poi_name = poi['name']
+        else:
+            try:
+                poi_id_int = int(poi_id)
+            except (ValueError, TypeError):
+                return jsonify({'error': 'Invalid POI ID format'}), 400
+            
+            db = get_db()
+            if not db:
+                return jsonify({'error': 'Database connection failed'}), 500
+            
+            poi_details = db.get_poi_details(poi_id_int)
+            db.disconnect()
+            
+            if not poi_details:
+                return jsonify({'error': 'POI not found'}), 404
+            
+            poi_name = poi_details['name']
+            poi_category = poi_details['category']
+        
+        # Geçici dosya kaydet
+        filename = secure_filename(file.filename)
+        temp_path = f"/tmp/{uuid.uuid4()}_{filename}"
+        file.save(temp_path)
+        
+        # Form verilerini al
+        image_type = request.form.get('type', 'photo')
+        caption = request.form.get('caption', '')
+        is_primary = request.form.get('is_primary', 'false').lower() == 'true'
+        
+        # Görseli işle ve kaydet - POI ID bazlı klasör yapısı
+        result = image_manager.add_poi_image_by_id(
+            poi_id=poi_id,
+            poi_name=poi_name,
+            category=poi_category,
+            image_file_path=temp_path,
+            image_type=image_type,
+            caption=caption,
+            is_primary=is_primary
+        )
+        
+        # Geçici dosyayı sil
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        
+        if result:
+            return jsonify({
+                'success': True,
+                'image': result
+            }), 201
+        else:
+            return jsonify({'error': 'Failed to process image'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': f'Error uploading image: {str(e)}'}), 500
+
+@app.route('/api/poi/<poi_id>/images', methods=['GET'])
+def get_poi_images(poi_id):
+    """POI'nin görsellerini listele"""
+    try:
+        if JSON_FALLBACK:
+            test_data = load_test_data()
+            poi = None
+            poi_category = None
+            for category, pois in test_data.items():
+                if isinstance(pois, list):
+                    for p in pois:
+                        if p.get('_id') == poi_id:
+                            poi = p
+                            poi_category = category
+                            break
+            if not poi:
+                return jsonify({'error': 'POI not found'}), 404
+            poi_name = poi['name']
+        else:
+            try:
+                poi_id_int = int(poi_id)
+            except (ValueError, TypeError):
+                return jsonify({'error': 'Invalid POI ID format'}), 400
+            
+            db = get_db()
+            if not db:
+                return jsonify({'error': 'Database connection failed'}), 500
+            
+            poi_details = db.get_poi_details(poi_id_int)
+            db.disconnect()
+            
+            if not poi_details:
+                return jsonify({'error': 'POI not found'}), 404
+            
+            poi_name = poi_details['name']
+            poi_category = poi_details['category']
+        
+        # Görselleri getir - POI ID bazlı sistem
+        images = image_manager.get_poi_images_by_id(poi_id)
+        return jsonify({'images': images})
+        
+    except Exception as e:
+        return jsonify({'error': f'Error fetching images: {str(e)}'}), 500
+
+@app.route('/poi_images/<path:filename>')
+def serve_poi_image(filename):
+    """POI görsellerini serve et"""
+    try:
+        return send_from_directory('poi_images', filename)
+    except FileNotFoundError:
+        return jsonify({'error': 'Image not found'}), 404
 
 if __name__ == '__main__':
     print("🚀 POI Yönetim Sistemi başlatılıyor...")
