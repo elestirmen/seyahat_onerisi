@@ -107,7 +107,7 @@ def create_enhanced_poi_popup(poi_name: str, coord: Tuple[float, float], style: 
                             order_index: Any, db: Optional[Any] = None, 
                             poi_details: Optional[Dict] = None) -> str:
     """
-    Gelişmiş POI popup'ı oluştur
+    Gelişmiş POI popup'ı oluştur - Görsel desteği ile
     
     Args:
         poi_name: POI adı
@@ -123,8 +123,44 @@ def create_enhanced_poi_popup(poi_name: str, coord: Tuple[float, float], style: 
     display_name = style.get("display_name", "").split(" ")[-1]
     gmaps_url = f"https://maps.google.com/?q={coord[0]},{coord[1]}"
     
+    # Veritabanından POI detaylarını al (eğer db bağlantısı varsa)
+    poi_id = None
+    if db and not poi_details:
+        try:
+            # Önce koordinat eşleştirmesi ile POI bul (daha güvenilir)
+            all_pois = db.list_pois()  # Tüm kategoriler
+            for poi_data in all_pois:
+                poi_lat = poi_data.get('latitude', 0)
+                poi_lon = poi_data.get('longitude', 0)
+                # Koordinat farkı 0.001'den küçükse eşleşme var
+                if abs(poi_lat - coord[0]) < 0.001 and abs(poi_lon - coord[1]) < 0.001:
+                    poi_id = poi_data.get('_id') or poi_data.get('id')
+                    poi_details = db.get_poi_details(poi_id)
+                    print(f"✅ POI koordinat eşleştirmesi: {poi_name} -> ID: {poi_id}")
+                    break
+        except Exception as e:
+            print(f"⚠️ POI koordinat eşleştirmesi hatası: {e}")
+    
+    # Eğer hala POI ID'si yoksa, isim eşleştirmesi dene
+    if not poi_id and db:
+        try:
+            # POI adına göre ara
+            categories = ['gastronomik', 'kulturel', 'sanatsal', 'doga_macera', 'konaklama']
+            for category in categories:
+                pois = db.list_pois(category)
+                for poi_data in pois:
+                    if poi_data.get('name') == poi_name:
+                        poi_id = poi_data.get('_id') or poi_data.get('id')
+                        poi_details = db.get_poi_details(poi_id)
+                        print(f"✅ POI isim eşleştirmesi: {poi_name} -> ID: {poi_id}")
+                        break
+                if poi_id:
+                    break
+        except Exception as e:
+            print(f"⚠️ POI isim eşleştirmesi hatası: {e}")
+    
     # Temel popup
-    popup_html = f"""<div style="font-family:'Segoe UI',sans-serif;max-width:400px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);">
+    popup_html = f"""<div style="font-family:'Segoe UI',sans-serif;max-width:450px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);">
     <div style="background:{style.get('gradient',style['color'])};padding:16px;color:white;">
         <h3 style="margin:0 0 8px 0;font-size:18px;">{style.get('emoji','📍')} {poi_name}</h3>
         <p style="margin:0;font-size:13px;opacity:0.95;">{style.get('description','')}</p>
@@ -163,20 +199,25 @@ def create_enhanced_poi_popup(poi_name: str, coord: Tuple[float, float], style: 
             
             popup_html += "</div>"
         
-        # Görüntüler
-        if poi_details.get('images'):
-            popup_html += """<div style="margin-bottom:16px;">
-                <h4 style="margin:0 0 8px 0;font-size:14px;color:#666;">Görüntüler</h4>
-                <div style="display:flex;gap:8px;overflow-x:auto;">"""
-            
-            for img in poi_details['images'][:3]:  # İlk 3 görüntü
-                if img.get('thumbnail_url') or img.get('url'):
-                    img_url = img.get('thumbnail_url', img.get('url'))
-                    popup_html += f"""<img src="{img_url}" 
-                        style="width:100px;height:75px;object-fit:cover;border-radius:8px;" 
-                        alt="{img.get('caption', 'POI görüntüsü')}">"""
-            
-            popup_html += "</div></div>"
+    # Görüntüler - POI ID'si varsa görsel yükleme alanı ekle
+    if poi_id:
+        popup_html += f"""<div style="margin-bottom:16px;">
+            <h4 style="margin:0 0 12px 0;font-size:14px;color:#666;display:flex;align-items:center;">
+                <i class="fa fa-images" style="margin-right:8px;color:{style['color']};"></i>
+                Görseller
+                <span id="image-count-{poi_id}" style="margin-left:8px;font-size:12px;color:#999;"></span>
+            </h4>
+            <div id="poi-images-{poi_id}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;max-height:200px;overflow-y:auto;">
+                <div style="display:flex;align-items:center;justify-content:center;background:#f8f9fa;border-radius:8px;padding:20px;border:2px dashed #ddd;">
+                    <div style="text-align:center;">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status" style="margin-bottom:8px;">
+                            <span class="visually-hidden">Yükleniyor...</span>
+                        </div>
+                        <small style="color:#666;">Görseller yükleniyor...</small>
+                    </div>
+                </div>
+            </div>
+        </div>"""
     
     # Temel bilgiler
     popup_html += f"""<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
@@ -527,14 +568,14 @@ def generate_and_add_route(folium_map: folium.Map, road_network: Optional[nx.Mul
         return total_km, list(set(warnings)), route_fg.get_name()
     return 0.0, [], None
 
-def add_poi_markers(pois: Dict[str, Tuple[float, float]], ordered_poi_names: List[str], style: Dict, poi_layer: folium.FeatureGroup):
+def add_poi_markers(pois: Dict[str, Tuple[float, float]], ordered_poi_names: List[str], style: Dict, poi_layer: folium.FeatureGroup, db: Optional[Any] = None):
     display_name = style.get("display_name", "").split(" ")[-1]
     for poi_name, coord in pois.items():
         try: order_index = ordered_poi_names.index(poi_name) + 1
         except ValueError: order_index = '?'
 
-        gmaps_url = f"https://maps.google.com/?q={coord[0]},{coord[1]}"
-        popup_html = f"""<div style="font-family:'Segoe UI',sans-serif;max-width:350px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);"><div style="background:{style.get('gradient',style['color'])};padding:16px;color:white;"><h3 style="margin:0 0 8px 0;font-size:18px;">{style.get('emoji','📍')} {poi_name}</h3><p style="margin:0;font-size:13px;opacity:0.95;">{style.get('description','')}</p></div><div style="padding:16px;background:white;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid {style['color']};"><div style="font-size:20px;font-weight:700;color:{style['color']};">{order_index}</div><div style="font-size:11px;color:#666;font-weight:600;">DURAK SIRASI</div></div><div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;border-left:3px solid {style['color']};"><div style="font-size:14px;font-weight:700;color:#2c3e50;">{display_name}</div><div style="font-size:11px;color:#666;font-weight:600;">KATEGORİ</div></div></div><div style="text-align:center;"><a href="{gmaps_url}" target="_blank" rel="noopener noreferrer" style="background:{style['color']};color:white;padding:12px 24px;border-radius:25px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;transition:all 0.3s ease;box-shadow:0 4px 15px {style.get('shadow_color','rgba(0,0,0,0.2)')};"><i class="fa fa-external-link-alt" style="margin-right:8px;"></i> Google Maps'te Aç</a></div></div></div>"""
+        # Gelişmiş popup oluştur (görsel desteği ile)
+        popup_html = create_enhanced_poi_popup(poi_name, coord, style, order_index, db)
         tooltip_html = f"<div style='background:{style['color']};color:white;padding:8px 12px;border-radius:8px;font-family:sans-serif;box-shadow:0 4px 12px {style.get('shadow_color','rgba(0,0,0,0.3)')};'><strong>{order_index}. {poi_name}</strong></div>"
         
         icon = plugins.BeautifyIcon(
@@ -546,7 +587,179 @@ def add_poi_markers(pois: Dict[str, Tuple[float, float]], ordered_poi_names: Lis
             number=order_index,
             icon_shape="marker"
         )
-        folium.Marker(location=coord, tooltip=folium.Tooltip(tooltip_html), popup=folium.Popup(popup_html, max_width=350), icon=icon).add_to(poi_layer)
+        folium.Marker(location=coord, tooltip=folium.Tooltip(tooltip_html), popup=folium.Popup(popup_html, max_width=450), icon=icon).add_to(poi_layer)
+
+def add_image_loading_javascript(html_file_path: str):
+    """
+    HTML dosyasına otomatik görsel yükleme JavaScript'i ekler
+    """
+    try:
+        with open(html_file_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        
+        # JavaScript kodunu HTML'in sonuna ekle
+        javascript_code = '''
+        
+        // Genel POI görsel yükleme fonksiyonu
+        function loadPOIImages(poiId, poiName) {
+            // API URL'ini dinamik olarak oluştur
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+            const apiUrl = protocol + '//' + hostname + ':' + port + '/api/poi/' + poiId + '/images';
+            
+            const container = document.getElementById('poi-images-' + poiId);
+            const countSpan = document.getElementById('image-count-' + poiId);
+            
+            if (!container) {
+                console.log('❌ Container bulunamadı:', poiId);
+                return;
+            }
+            
+            console.log('🔍 POI Görsel Yükleniyor:', poiName, 'ID:', poiId, 'URL:', apiUrl);
+            
+            fetch(apiUrl)
+                .then(response => {
+                    console.log('📡 API Response Status:', response.status);
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('📦 API Response Data:', data);
+                    const images = data.images || [];
+                    console.log('🖼️ Images Array:', images, 'Length:', images.length);
+                    
+                    if (images.length === 0) {
+                        console.log('⚠️ No images found for POI:', poiId);
+                        container.innerHTML = '<small style="color:#999;text-align:center;padding:20px;display:block;">Henüz görsel eklenmemiş</small>';
+                        return;
+                    }
+                    
+                    if (countSpan) countSpan.textContent = '(' + images.length + ')';
+                    
+                    // Container'ı temizle
+                    container.innerHTML = '';
+                    
+                    images.slice(0, 6).forEach((img, i) => {
+                        const imgPath = img.thumbnail_path || img.path;
+                        const fullPath = img.path;
+                        const caption = img.filename || 'Görsel ' + (i + 1);
+                        
+                        const imgDiv = document.createElement('div');
+                        imgDiv.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);transition:transform 0.2s ease;';
+                        
+                        const imgElement = document.createElement('img');
+                        imgElement.src = '/' + imgPath;
+                        imgElement.style.cssText = 'width:100%;height:80px;object-fit:cover;cursor:pointer;';
+                        imgElement.alt = caption;
+                        imgElement.onclick = function() { window.open('/' + fullPath, '_blank'); };
+                        imgElement.onmouseover = function() { this.parentElement.style.transform = 'scale(1.05)'; };
+                        imgElement.onmouseout = function() { this.parentElement.style.transform = 'scale(1)'; };
+                        imgElement.onerror = function() { this.style.display = 'none'; console.log('Görsel yüklenemedi: ' + imgPath); };
+                        
+                        const overlay = document.createElement('div');
+                        overlay.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));padding:4px 8px;';
+                        overlay.innerHTML = '<small style="color:white;font-size:10px;">' + caption.substring(0, 20) + (caption.length > 20 ? '...' : '') + '</small>';
+                        
+                        imgDiv.appendChild(imgElement);
+                        imgDiv.appendChild(overlay);
+                        container.appendChild(imgDiv);
+                    });
+                    
+                    if (images.length > 6) {
+                        const moreDiv = document.createElement('div');
+                        moreDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;background:#f8f9fa;border-radius:8px;padding:20px;border:2px dashed #ddd;';
+                        moreDiv.innerHTML = '<small style="color:#666;text-align:center;"><i class="fa fa-plus-circle" style="font-size:16px;margin-bottom:4px;display:block;"></i>+' + (images.length - 6) + ' görsel daha</small>';
+                        container.appendChild(moreDiv);
+                    }
+                    console.log('✅ Görseller yüklendi:', poiName, images.length, 'adet');
+                })
+                .catch(error => {
+                    console.log('⚠️ Görsel yükleme hatası:', poiName, 'Error:', error.message);
+                    console.log('🔗 Failed URL:', apiUrl);
+                    container.innerHTML = '<small style="color:#999;text-align:center;padding:20px;display:block;">Görsel yüklenemedi: ' + error.message + '</small>';
+                });
+        }
+        
+        // Test - JavaScript çalışıyor mu?
+        console.log('🧪 JavaScript dosyası yüklendi!');
+        
+        // Tüm popup'lar için otomatik görsel yükleme sistemi
+        window.onload = function() {
+            console.log('🚀 Sayfa tamamen yüklendi, popup event listener ekleniyor...');
+            
+            // Tüm popup açılma olaylarını dinle
+            const map = window[Object.keys(window).find(key => key.startsWith('map_'))];
+            console.log('🗺️ Harita objesi bulundu:', map ? 'Evet' : 'Hayır');
+            
+            if (map) {
+                map.on('popupopen', function(e) {
+                    console.log('📍 Popup açıldı, görsel yükleme başlatılıyor...');
+                    
+                    setTimeout(function() {
+                        // Popup içindeki POI ID'sini bul
+                        const popupContent = e.popup.getContent();
+                        console.log('📄 Popup içeriği tipi:', typeof popupContent);
+                        
+                        if (typeof popupContent === 'string') {
+                            const matches = popupContent.match(/poi-images-(\\d+)/);
+                            console.log('🔍 POI ID regex sonucu:', matches);
+                            
+                            if (matches && matches[1]) {
+                                const poiId = matches[1];
+                                // POI adını popup başlığından çıkar
+                                const titleMatch = popupContent.match(/<h3[^>]*>([^<]+)</);
+                                const poiName = titleMatch ? titleMatch[1].replace(/🍽️|🏛️|🎨|🌿|🏨|📍/g, '').trim() : 'POI';
+                                console.log('✅ POI bilgileri - ID:', poiId, 'Ad:', poiName);
+                                loadPOIImages(poiId, poiName);
+                            } else {
+                                console.log('❌ POI ID bulunamadı popup içeriğinde');
+                            }
+                        } else {
+                            console.log('❌ Popup içeriği string değil');
+                        }
+                    }, 500);
+                });
+                console.log('✅ Popup event listener başarıyla eklendi');
+            } else {
+                console.log('❌ Harita objesi bulunamadı');
+            }
+        });
+        </script>
+        </html>'''
+        
+        # Basit test JavaScript'i ekle
+        simple_test = '''
+<script>
+console.log('🧪 BASIT TEST: JavaScript çalışıyor!');
+</script>
+'''
+        
+        # HTML dosyasının sonuna JavaScript kodunu ekle
+        # Son </script> etiketinden sonra JavaScript'i ekle
+        last_script_pos = html_content.rfind('</script>')
+        if last_script_pos != -1:
+            # Son </script> etiketinden sonra JavaScript'i ekle
+            insert_pos = last_script_pos + len('</script>')
+            html_content = html_content[:insert_pos] + '\n' + simple_test + '\n' + javascript_code + html_content[insert_pos:]
+        else:
+            # </body> etiketinden önce JavaScript'i ekle
+            if '</body>' in html_content:
+                html_content = html_content.replace('</body>', simple_test + '\n' + javascript_code + '\n</body>')
+            elif html_content.endswith('</html>'):
+                html_content = html_content.replace('</html>', simple_test + '\n' + javascript_code)
+            else:
+                html_content += simple_test + '\n' + javascript_code
+        
+        with open(html_file_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+            
+        print(f"✅ Otomatik görsel yükleme sistemi '{html_file_path}' dosyasına eklendi")
+        
+    except Exception as e:
+        print(f"⚠️ JavaScript ekleme hatası: {e}")
 
 def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categories: List[Tuple[str, str, float, int]], map_js_var: str):
     legend_html = """<div id="legend-panel" style="position:fixed;bottom:20px;left:20px;width:280px;background:rgba(255,255,255,0.9);border:1px solid #ddd;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,0.12);z-index:9999;font-family:'Segoe UI',sans-serif;backdrop-filter:blur(10px);overflow:hidden;"><div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:14px;color:white;"><h3 style="margin:0;font-size:16px;text-align:center;">🗺️ Rota Lejantı</h3></div><div id="categories-container" style="padding:12px;max-height:350px;overflow-y:auto;">"""
@@ -626,7 +839,7 @@ def main(args: argparse.Namespace):
                 single_poi_fg_name = f"📍 {style.get('display_name', cat_name.capitalize())} Noktası"
                 processed_for_legend.append((cat_name, single_poi_fg_name, 0.0, len(pois)))
 
-            add_poi_markers(pois, ordered_names, style, poi_layer)
+            add_poi_markers(pois, ordered_names, style, poi_layer, db)
             print(f"   ✅ {len(pois)} nokta ve rota eklendi: {route_len:.2f} km")
 
         # Diğer katmanları ekle (OpenStreetMap hariç)
@@ -643,6 +856,10 @@ def main(args: argparse.Namespace):
         
         output_file = args.output or f"{args.category or 'tum_kategoriler'}{'_optimized' if args.optimize else ''}_rotasi.html"
         folium_map.save(output_file)
+        
+        # HTML dosyasına otomatik görsel yükleme JavaScript'i ekle
+        add_image_loading_javascript(output_file)
+        
         print(f"\n🎉 Harita başarıyla '{output_file}' olarak kaydedildi!")
         
         # Cleanup

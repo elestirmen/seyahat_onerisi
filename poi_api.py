@@ -61,15 +61,78 @@ def get_db():
 @app.route('/')
 def index():
     return '''
-    <h1>🗺️ POI Yönetim Sistemi</h1>
-    <p>POI Yönetim arayüzüne erişmek için: <a href="/poi_manager_ui.html">Buraya tıklayın</a></p>
-    <p>API Dokümantasyonu:</p>
-    <ul>
-        <li><a href="/api/pois">GET /api/pois</a> - Tüm POI'leri listele</li>
-        <li>POST /api/poi - Yeni POI ekle</li>
-        <li>PUT /api/poi/&lt;id&gt; - POI güncelle</li>
-        <li>DELETE /api/poi/&lt;id&gt; - POI sil</li>
-    </ul>
+    <!DOCTYPE html>
+    <html lang="tr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>POI Yönetim Sistemi</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+        <style>
+            body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+            .container { max-width: 800px; margin: 0 auto; }
+            .card { background: white; border-radius: 12px; padding: 30px; margin: 20px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+            .btn { display: inline-block; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin: 10px 10px 10px 0; font-weight: 600; transition: all 0.3s ease; }
+            .btn-primary { background: #3498db; color: white; }
+            .btn-success { background: #27ae60; color: white; }
+            .btn-info { background: #17a2b8; color: white; }
+            .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+            h1 { color: #2c3e50; margin-bottom: 10px; }
+            .subtitle { color: #7f8c8d; margin-bottom: 30px; }
+            .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 30px 0; }
+            .feature-card { background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #3498db; }
+            .api-list { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .api-list ul { list-style: none; padding: 0; }
+            .api-list li { padding: 8px 0; border-bottom: 1px solid #e9ecef; }
+            .api-list li:last-child { border-bottom: none; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="card">
+                <h1><i class="fas fa-map-marked-alt"></i> POI Yönetim Sistemi</h1>
+                <p class="subtitle">Kapadokya POI'leri ve Rota Haritaları Yönetim Paneli</p>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3><i class="fas fa-cogs"></i> POI Yönetimi</h3>
+                        <p>POI'leri ekle, düzenle, sil ve görsellerini yönet</p>
+                        <a href="/poi_manager_ui.html" class="btn btn-primary">
+                            <i class="fas fa-tools"></i> Yönetim Paneli
+                        </a>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h3><i class="fas fa-map"></i> Harita Galerisi</h3>
+                        <p>Oluşturulan rota haritalarını görüntüle ve indir</p>
+                        <a href="/maps" class="btn btn-success">
+                            <i class="fas fa-images"></i> Harita Listesi
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="api-list">
+                    <h3><i class="fas fa-code"></i> API Dokümantasyonu</h3>
+                    <ul>
+                        <li><strong>GET</strong> <a href="/api/pois">/api/pois</a> - Tüm POI'leri listele</li>
+                        <li><strong>POST</strong> /api/poi - Yeni POI ekle</li>
+                        <li><strong>PUT</strong> /api/poi/&lt;id&gt; - POI güncelle</li>
+                        <li><strong>DELETE</strong> /api/poi/&lt;id&gt; - POI sil</li>
+                        <li><strong>GET</strong> /api/poi/&lt;id&gt;/images - POI görsellerini listele</li>
+                        <li><strong>POST</strong> /api/poi/&lt;id&gt;/images - POI'ye görsel yükle</li>
+                    </ul>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+                    <p style="color: #7f8c8d; margin: 0;">
+                        <i class="fas fa-info-circle"></i> 
+                        Harita oluşturmak için: <code>python category_route_planner_with_db.py</code>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
     '''
 
 @app.route('/poi_manager_ui.html')
@@ -640,6 +703,139 @@ def serve_poi_image(filename):
         return send_from_directory('poi_images', filename)
     except FileNotFoundError:
         return jsonify({'error': 'Image not found'}), 404
+
+# Statik HTML dosyalarını serve et
+@app.route('/<filename>')
+def serve_static_html(filename):
+    """Statik HTML dosyalarını serve et"""
+    try:
+        # Güvenlik kontrolü - sadece HTML dosyalarına izin ver
+        if not filename.endswith('.html') or filename == 'poi_manager_ui.html':
+            return jsonify({'error': 'File not found'}), 404
+        
+        # Dosya var mı kontrol et
+        if not os.path.exists(filename):
+            return jsonify({'error': 'File not found'}), 404
+            
+        with open(filename, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        return jsonify({'error': f'Error serving file: {str(e)}'}), 500
+
+# Maps klasörü altındaki HTML dosyalarını serve et
+@app.route('/maps/<filename>')
+def serve_maps_html(filename):
+    """Maps klasörü altındaki HTML dosyalarını serve et"""
+    try:
+        # Güvenlik kontrolü - sadece HTML dosyalarına izin ver
+        if not filename.endswith('.html'):
+            return jsonify({'error': 'File not found'}), 404
+        
+        # Dosya var mı kontrol et
+        if not os.path.exists(filename):
+            return jsonify({'error': 'File not found'}), 404
+            
+        with open(filename, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        return jsonify({'error': f'Error serving file: {str(e)}'}), 500
+
+@app.route('/maps')
+def list_maps():
+    """Mevcut harita dosyalarını listele"""
+    try:
+        import glob
+        html_files = glob.glob('*.html')
+        # poi_manager_ui.html'i hariç tut
+        map_files = [f for f in html_files if f != 'poi_manager_ui.html']
+        
+        maps_html = """
+        <h1>🗺️ Mevcut Harita Dosyaları</h1>
+        <div style="font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+        """
+        
+        if not map_files:
+            maps_html += """
+            <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px; margin: 20px 0;">
+                <h3>📭 Henüz harita dosyası bulunamadı</h3>
+                <p>Harita oluşturmak için:</p>
+                <code style="background: #e9ecef; padding: 8px 12px; border-radius: 4px; display: inline-block; margin: 10px;">
+                    python category_route_planner_with_db.py gastronomik
+                </code>
+            </div>
+            """
+        else:
+            for map_file in sorted(map_files):
+                file_size = os.path.getsize(map_file) / 1024  # KB
+                maps_html += f"""
+                <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 15px 0; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <h3 style="margin: 0 0 10px 0; color: #2c3e50;">
+                        <i class="fa fa-map" style="margin-right: 8px; color: #3498db;"></i>
+                        {map_file}
+                    </h3>
+                    <p style="margin: 5px 0; color: #666; font-size: 14px;">
+                        <i class="fa fa-file" style="margin-right: 5px;"></i>
+                        Boyut: {file_size:.1f} KB
+                    </p>
+                    <div style="margin-top: 15px;">
+                        <a href="/maps/{map_file}" target="_blank" 
+                           style="background: #3498db; color: white; padding: 10px 20px; border-radius: 5px; 
+                                  text-decoration: none; margin-right: 10px; display: inline-block;">
+                            <i class="fa fa-external-link-alt" style="margin-right: 5px;"></i>
+                            Haritayı Aç
+                        </a>
+                        <a href="/download/{map_file}" 
+                           style="background: #27ae60; color: white; padding: 10px 20px; border-radius: 5px; 
+                                  text-decoration: none; display: inline-block;">
+                            <i class="fa fa-download" style="margin-right: 5px;"></i>
+                            İndir
+                        </a>
+                    </div>
+                </div>
+                """
+        
+        maps_html += """
+        </div>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+        """
+        
+        return maps_html
+        
+    except Exception as e:
+        return f'<h1>Hata</h1><p>Harita dosyaları listelenemedi: {str(e)}</p>', 500
+
+@app.route('/maps/<filename>')
+def serve_map(filename):
+    """Harita HTML dosyalarını serve et"""
+    try:
+        # Güvenlik kontrolü - sadece HTML dosyalarına izin ver
+        if not filename.endswith('.html'):
+            return jsonify({'error': 'Invalid file type'}), 400
+        
+        # Dosya var mı kontrol et
+        if not os.path.exists(filename):
+            return jsonify({'error': 'Map file not found'}), 404
+        
+        return send_from_directory('.', filename)
+        
+    except Exception as e:
+        return jsonify({'error': f'Error serving map: {str(e)}'}), 500
+
+@app.route('/download/<filename>')
+def download_map(filename):
+    """Harita dosyalarını indirme"""
+    try:
+        # Güvenlik kontrolü
+        if not filename.endswith('.html'):
+            return jsonify({'error': 'Invalid file type'}), 400
+        
+        if not os.path.exists(filename):
+            return jsonify({'error': 'File not found'}), 404
+        
+        return send_from_directory('.', filename, as_attachment=True)
+        
+    except Exception as e:
+        return jsonify({'error': f'Error downloading file: {str(e)}'}), 500
 
 if __name__ == '__main__':
     print("🚀 POI Yönetim Sistemi başlatılıyor...")
