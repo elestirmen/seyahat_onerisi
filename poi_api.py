@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from poi_database_adapter import POIDatabaseFactory
-from poi_image_manager import POIImageManager
+from poi_media_manager import POIMediaManager
 import os
 import json
 import uuid
@@ -15,9 +15,14 @@ CORS(app)
 JSON_FALLBACK = False
 JSON_FILE_PATH = 'test_data.json'
 
-# Görsel yönetimi
-image_manager = POIImageManager()
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+# Medya yönetimi (görsel, video, ses, 3D model desteği)
+media_manager = POIMediaManager()
+
+# Desteklenen dosya uzantıları (tüm medya türleri)
+ALLOWED_EXTENSIONS = set()
+for media_type, config in media_manager.SUPPORTED_FORMATS.items():
+    for ext in config['extensions']:
+        ALLOWED_EXTENSIONS.add(ext[1:])  # nokta olmadan ekle
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -113,13 +118,33 @@ def index():
                 
                 <div class="api-list">
                     <h3><i class="fas fa-code"></i> API Dokümantasyonu</h3>
+                    <h4>📌 POI Yönetimi</h4>
                     <ul>
                         <li><strong>GET</strong> <a href="/api/pois">/api/pois</a> - Tüm POI'leri listele</li>
                         <li><strong>POST</strong> /api/poi - Yeni POI ekle</li>
                         <li><strong>PUT</strong> /api/poi/&lt;id&gt; - POI güncelle</li>
                         <li><strong>DELETE</strong> /api/poi/&lt;id&gt; - POI sil</li>
+                    </ul>
+                    
+                    <h4>🎬 Medya Yönetimi (Yeni!)</h4>
+                    <ul>
+                        <li><strong>GET</strong> /api/poi/&lt;id&gt;/media - POI medya dosyalarını listele</li>
+                        <li><strong>POST</strong> /api/poi/&lt;id&gt;/media - POI'ye medya yükle</li>
+                        <li><strong>DELETE</strong> /api/poi/&lt;id&gt;/media/&lt;filename&gt; - Medya dosyası sil</li>
+                        <li><em>Desteklenen türler:</em> Görsel, Video, Ses, 3D Model</li>
+                    </ul>
+                    
+                    <h4>🖼️ Görsel API (Geriye Uyumlu)</h4>
+                    <ul>
                         <li><strong>GET</strong> /api/poi/&lt;id&gt;/images - POI görsellerini listele</li>
                         <li><strong>POST</strong> /api/poi/&lt;id&gt;/images - POI'ye görsel yükle</li>
+                        <li><strong>DELETE</strong> /api/poi/&lt;id&gt;/images/&lt;filename&gt; - Görsel sil</li>
+                    </ul>
+                    
+                    <h4>🔧 Sistem Yönetimi</h4>
+                    <ul>
+                        <li><strong>GET</strong> <a href="/api/system/media-info">/api/system/media-info</a> - Medya sistemi bilgileri</li>
+                        <li><strong>POST</strong> /api/system/cleanup-media-folders - Gereksiz klasörleri temizle</li>
                     </ul>
                 </div>
                 
@@ -152,20 +177,24 @@ def serve_ui():
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">📸 ${filename}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <h5 class="modal-title fw-bold"><i class="fas fa-image me-2"></i>${filename}</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
-                        <div class="modal-body text-center">
-                            <img src="${imagePath}" class="img-fluid rounded shadow" alt="${poiName}" style="max-height: 70vh;">
-                            <div class="mt-2">
-                                <small class="text-muted">${poiName}</small>
+                        <div class="modal-body text-center p-4">
+                            <img src="${imagePath}" class="img-fluid rounded-3 shadow-lg" alt="${poiName}" style="max-height: 70vh; transition: transform 0.3s ease;" 
+                                 onload="this.style.opacity='1'" style="opacity: 0;">
+                            <div class="mt-3">
+                                <p class="text-muted mb-1"><i class="fas fa-map-marker-alt me-1"></i>${poiName}</p>
+                                <small class="text-muted">Görseli büyütmek için tıklayın</small>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <a href="${imagePath}" target="_blank" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-external-link-alt"></i> Yeni Sekmede Aç
+                        <div class="modal-footer justify-content-center">
+                            <a href="${imagePath}" target="_blank" class="btn btn-primary">
+                                <i class="fas fa-external-link-alt me-1"></i> Yeni Sekmede Aç
                             </a>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i> Kapat
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -200,20 +229,46 @@ def serve_ui():
 
                 selectedPOI = poi;
 
+                // Form alanlarını doldur (düzenleme için hazır hale getir)
+                document.getElementById('poiId').value = poi._id;
+                document.getElementById('poiName').value = poi.name;
+                document.getElementById('poiCategory').value = poi.category;
+                document.getElementById('poiLat').value = poi.latitude;
+                document.getElementById('poiLon').value = poi.longitude;
+                document.getElementById('poiDesc').value = poi.description || '';
+                document.getElementById('poiTags').value = (poi.tags || []).join(', ');
+                document.getElementById('poiImageUrl').value = poi.imageUrl || '';
+
+                // Formu düzenleme moduna geçir
+                document.getElementById('saveBtn').innerHTML = '🔄 Güncelle';
+                document.getElementById('deleteBtn').classList.remove('d-none');
+                document.getElementById('cancelEditBtn').classList.remove('d-none');
+
+                // Panel başlığını güncelle
+                document.getElementById('panelTitle').textContent = `📝 ${poi.name}`;
+                document.getElementById('newPoiBtn').classList.remove('d-none');
+
+                // Detaylar tab'ını göster ve aktif yap
+                document.getElementById('details-tab-container').style.display = 'block';
+                
+                // Bootstrap tab geçişi
+                const detailsTab = new bootstrap.Tab(document.getElementById('details-tab'));
+                detailsTab.show();
+
                 let detailHtml = `
                     <div class="poi-detail-header">
-                        <h5 class="mb-2">${poi.name}</h5>
-                        <span class="badge bg-primary mb-2">${getCategoryDisplayName(poi.category)}</span>
+                        <h5 class="mb-2 fw-bold">${poi.name}</h5>
+                        <span class="badge bg-light text-dark fs-6">${getCategoryDisplayName(poi.category)}</span>
                     </div>
                     
                     <div class="poi-detail-info">
-                        <p class="mb-2"><i class="fas fa-map-marker-alt text-danger"></i> <strong>Konum:</strong> ${poi.latitude.toFixed(6)}, ${poi.longitude.toFixed(6)}</p>`;
+                        <p class="mb-2"><i class="fas fa-map-marker-alt text-danger me-2"></i> <strong>Konum:</strong> ${poi.latitude.toFixed(6)}, ${poi.longitude.toFixed(6)}</p>`;
 
                 if (poi.description) {
-                    detailHtml += `<p class="mb-2"><i class="fas fa-info-circle text-info"></i> <strong>Açıklama:</strong> ${poi.description}</p>`;
+                    detailHtml += `<p class="mb-2"><i class="fas fa-info-circle text-info me-2"></i> <strong>Açıklama:</strong> ${poi.description}</p>`;
                 }
                 if (poi.tags && poi.tags.length > 0) {
-                    detailHtml += `<p class="mb-2"><i class="fas fa-tags text-success"></i> <strong>Etiketler:</strong> ${poi.tags.join(', ')}</p>`;
+                    detailHtml += `<p class="mb-2"><i class="fas fa-tags text-success me-2"></i> <strong>Etiketler:</strong> ${poi.tags.join(', ')}</p>`;
                 }
                 
                 detailHtml += `</div>`;
@@ -228,23 +283,33 @@ def serve_ui():
                         if (images.length > 0) {
                             detailHtml += `
                                 <div class="poi-detail-images mt-3">
-                                    <h6 class="mb-2"><i class="fas fa-images text-warning"></i> Görseller (${images.length})</h6>
-                                    <div class="row g-2">`;
+                                    <h6 class="mb-3"><i class="fas fa-images text-warning"></i> Görseller (${images.length})</h6>
+                                    <div class="row g-3">`;
                             
                             images.forEach((image, index) => {
                                 const imagePath = image.thumbnail_path || image.path;
                                 const fullImagePath = image.path;
                                 detailHtml += `
                                     <div class="col-6">
-                                        <div class="image-card">
+                                        <div class="image-card-enhanced" style="position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                                             <img src="/${imagePath}" 
-                                                 class="img-fluid rounded shadow-sm" 
-                                                 style="height: 100px; width: 100%; object-fit: cover; cursor: pointer;" 
+                                                 class="img-fluid" 
+                                                 style="height: 120px; width: 100%; object-fit: cover; cursor: pointer; transition: transform 0.3s ease;" 
                                                  alt="${image.filename}"
-                                                 onclick="showImageModal('/${fullImagePath}', '${poi.name}', '${image.filename}')">
-                                            <div class="image-overlay">
-                                                <small class="text-white">${getImageTypeIcon(image.filename)} ${(image.size / 1024).toFixed(0)}KB</small>
+                                                 onclick="showImageModal('/${fullImagePath}', '${poi.name}', '${image.filename}')"
+                                                 onmouseover="this.style.transform='scale(1.05)'"
+                                                 onmouseout="this.style.transform='scale(1)'">
+                                            <div class="image-info-overlay" style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding: 8px 12px;">
+                                                <small class="text-white fw-bold">${getImageTypeIcon(image.filename)} ${(image.size / 1024).toFixed(0)}KB</small>
                                             </div>
+                                            <button class="image-delete-btn-enhanced btn btn-danger" 
+                                                    style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; padding: 0; font-size: 0.9rem; z-index: 10; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(220,53,69,0.4); transition: all 0.3s ease;"
+                                                    onclick="deletePOIImageWithConfirm('${poi._id}', '${image.filename}', this)"
+                                                    title="Görseli sil - ${image.filename}"
+                                                    onmouseover="this.style.transform='scale(1.2)'; this.style.boxShadow='0 6px 16px rgba(220,53,69,0.6)'"
+                                                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(220,53,69,0.4)'">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                         </div>
                                     </div>`;
                             });
@@ -271,29 +336,124 @@ def serve_ui():
                 }
 
                 detailHtml += `
-                    <hr>
                     <div class="poi-detail-actions">
-                        <button class="btn btn-outline-primary btn-sm me-2" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
-                            <i class="fas fa-crosshairs"></i> Haritada Göster
+                        <button class="btn btn-primary btn-sm" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
+                            <i class="fas fa-crosshairs me-1"></i> Haritada Göster
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm me-2" onclick="editPOI('${poi._id}')">
-                            <i class="fas fa-edit"></i> Düzenle
+                        <button class="btn btn-secondary btn-sm" onclick="switchToFormTab()">
+                            <i class="fas fa-edit me-1"></i> Düzenle
                         </button>
-                        <button class="btn btn-outline-danger btn-sm" onclick="deletePOI('${poi._id}')">
-                            <i class="fas fa-trash"></i> Sil
+                        <button class="btn btn-danger btn-sm" onclick="deleteCurrentPOI()">
+                            <i class="fas fa-trash me-1"></i> Sil
                         </button>
                     </div>`;
 
                 document.getElementById('poiDetailContent').innerHTML = detailHtml;
 
-                if (!document.getElementById('poiDetailPanel').classList.contains('active')) {
-                    document.getElementById('poiDetailPanel').classList.add('active');
+                // Mevcut görselleri form bölümünde de yükle (eğer loadPOIImages fonksiyonu varsa)
+                if (typeof loadPOIImages === 'function') {
+                    await loadPOIImages(poiId);
                 }
 
             } catch (error) {
                 showToast('POI detayları yüklenirken hata oluştu', 'error');
             } finally {
                 hideLoading();
+            }
+        }
+        
+        // Görsel silme fonksiyonu
+        async function deletePOIImage(poiId, filename, imageCardElement) {
+            if (!confirm(`'${filename}' adlı görseli silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+                return;
+            }
+            showLoading();
+            try {
+                const response = await fetch(`${apiBase}/poi/${poiId}/images/${filename}`, {
+                    method: 'DELETE',
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Görsel silinemedi.');
+                }
+
+                showToast('Görsel başarıyla silindi', 'success');
+                
+                // Görsel kartını UI'dan kaldır
+                if(imageCardElement) {
+                    imageCardElement.remove();
+                }
+                
+                // Eğer hiç görsel kalmadıysa, "Görseller" başlığını da kaldır
+                const imageContainer = document.querySelector('.poi-detail-images .row');
+                if (imageContainer && imageContainer.childElementCount === 0) {
+                    document.querySelector('.poi-detail-images').remove();
+                }
+
+            } catch (error) {
+                showToast(`Hata: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Daha güvenli görsel silme fonksiyonu - event bubbling problemini çözer
+        async function deletePOIImageWithConfirm(poiId, filename, buttonElement) {
+            // Tüm event propagation'ları durdur
+            if (window.event) {
+                window.event.stopPropagation();
+                window.event.preventDefault();
+            }
+            
+            if (!confirm(`'${filename}' adlı görseli silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+                return false;
+            }
+            
+            showLoading();
+            try {
+                const response = await fetch(`${apiBase}/poi/${poiId}/images/${filename}`, {
+                    method: 'DELETE',
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Görsel silinemedi.');
+                }
+
+                showToast('Görsel başarıyla silindi', 'success');
+                
+                // Görsel kartının parent container'ını bul ve kaldır
+                const imageCard = buttonElement.closest('.col-6');
+                if (imageCard) {
+                    imageCard.remove();
+                }
+                
+                // Eğer hiç görsel kalmadıysa, "Görseller" başlığını da kaldır
+                const imageContainer = document.querySelector('.poi-detail-images .row');
+                if (imageContainer && imageContainer.childElementCount === 0) {
+                    document.querySelector('.poi-detail-images').remove();
+                }
+
+            } catch (error) {
+                showToast(`Hata: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+            
+            return false; // Prevent any further event handling
+        }
+
+        // Birleşik panel için yardımcı fonksiyonlar
+        function switchToFormTab() {
+            const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
+            formTab.show();
+        }
+
+        function deleteCurrentPOI() {
+            const poiId = document.getElementById('poiId').value;
+            if (poiId) {
+                deletePOI(poiId);
             }
         }
         """
@@ -336,6 +496,140 @@ def serve_ui():
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
+        }
+
+        /* Görsel silme butonu için gelişmiş stiller */
+        .image-delete-btn {
+            border-radius: 50% !important;
+            transition: all 0.2s ease;
+            background-color: #dc3545 !important;
+            border: 2px solid white !important;
+        }
+
+        .image-delete-btn:hover {
+            background-color: #c82333 !important;
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4) !important;
+        }
+
+        .image-card {
+            transition: transform 0.2s ease;
+        }
+
+        .image-card:hover {
+            transform: scale(1.02);
+        }
+
+        .image-card:hover .image-delete-btn {
+            opacity: 1;
+        }
+
+        .image-delete-btn {
+            opacity: 0.8;
+        }
+
+        /* Enhanced POI Detail Styles */
+        .poi-detail-images {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e9ecef;
+        }
+
+        .image-card-enhanced {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .image-card-enhanced:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25) !important;
+        }
+
+        .image-delete-btn-enhanced {
+            background: linear-gradient(135deg, #dc3545, #c82333) !important;
+            border: 2px solid white !important;
+            opacity: 0.9;
+        }
+
+        .image-delete-btn-enhanced:hover {
+            background: linear-gradient(135deg, #c82333, #bd2130) !important;
+            opacity: 1 !important;
+        }
+
+        .poi-detail-header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            margin: -1rem -1rem 1rem -1rem;
+        }
+
+        .poi-detail-info {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            border-left: 4px solid #007bff;
+            margin-bottom: 16px;
+        }
+
+        .poi-detail-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .poi-detail-actions .btn {
+            transition: all 0.2s ease;
+        }
+
+        .poi-detail-actions .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* Image Modal Improvements */
+        .modal-content {
+            border: none;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+        }
+
+        .modal-footer {
+            border: none;
+            background: #f8f9fa;
+        }
+
+        /* Toast Improvements */
+        .toast {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+
+        .toast-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .toast-error {
+            background: linear-gradient(135deg, #dc3545, #e74c3c);
+            color: white;
+        }
+
+        .toast-info {
+            background: linear-gradient(135deg, #17a2b8, #007bff);
+            color: white;
         }
         """
         
@@ -567,19 +861,34 @@ def delete_poi(poi_id):
         return jsonify({'success': True})
     return jsonify({'error': 'Delete failed'}), 400
 
-# Görsel yönetimi endpoint'leri
-@app.route('/api/poi/<poi_id>/images', methods=['POST'])
-def upload_poi_image(poi_id):
-    """POI'ye görsel yükle"""
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image file provided'}), 400
+# Medya yönetimi endpoint'leri (görsel, video, ses, 3D model)
+@app.route('/api/poi/<poi_id>/media', methods=['POST'])
+def upload_poi_media(poi_id):
+    """POI'ye medya dosyası yükle (görsel, video, ses, 3D model)"""
+    if 'media' not in request.files:
+        return jsonify({'error': 'No media file provided'}), 400
     
-    file = request.files['image']
+    file = request.files['media']
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
     
     if not allowed_file(file.filename):
-        return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif, webp'}), 400
+        supported_formats = []
+        for media_type, config in media_manager.SUPPORTED_FORMATS.items():
+            supported_formats.extend(config['extensions'])
+        return jsonify({'error': f'Invalid file type. Supported formats: {", ".join(supported_formats)}'}), 400
+    
+    # Medya türünü tespit et
+    media_type = media_manager.detect_media_type(file.filename)
+    if not media_type:
+        return jsonify({'error': 'Unsupported media type'}), 400
+    
+    # Dosya boyutu kontrolü - medya türüne göre
+    max_size = media_manager.SUPPORTED_FORMATS[media_type]['max_size']
+    max_size_mb = max_size / (1024 * 1024)
+    
+    if file.content_length and file.content_length > max_size:
+        return jsonify({'error': f'Dosya boyutu {max_size_mb:.0f}MB\'dan küçük olmalıdır.'}), 400
     
     try:
         # POI bilgilerini al
@@ -622,17 +931,16 @@ def upload_poi_image(poi_id):
         file.save(temp_path)
         
         # Form verilerini al
-        image_type = request.form.get('type', 'photo')
         caption = request.form.get('caption', '')
         is_primary = request.form.get('is_primary', 'false').lower() == 'true'
         
-        # Görseli işle ve kaydet - POI ID bazlı klasör yapısı
-        result = image_manager.add_poi_image_by_id(
+        # Medya dosyasını işle ve kaydet - POI ID bazlı klasör yapısı
+        result = media_manager.add_poi_media(
             poi_id=poi_id,
             poi_name=poi_name,
             category=poi_category,
-            image_file_path=temp_path,
-            image_type=image_type,
+            media_file_path=temp_path,
+            media_type=media_type,
             caption=caption,
             is_primary=is_primary
         )
@@ -644,17 +952,17 @@ def upload_poi_image(poi_id):
         if result:
             return jsonify({
                 'success': True,
-                'image': result
+                'media': result
             }), 201
         else:
-            return jsonify({'error': 'Failed to process image'}), 500
+            return jsonify({'error': 'Failed to process media file'}), 500
             
     except Exception as e:
-        return jsonify({'error': f'Error uploading image: {str(e)}'}), 500
+        return jsonify({'error': f'Error uploading media: {str(e)}'}), 500
 
-@app.route('/api/poi/<poi_id>/images', methods=['GET'])
-def get_poi_images(poi_id):
-    """POI'nin görsellerini listele"""
+@app.route('/api/poi/<poi_id>/media', methods=['GET'])
+def get_poi_media(poi_id):
+    """POI'nin tüm medya dosyalarını listele"""
     try:
         if JSON_FALLBACK:
             test_data = load_test_data()
@@ -689,18 +997,95 @@ def get_poi_images(poi_id):
             poi_name = poi_details['name']
             poi_category = poi_details['category']
         
-        # Görselleri getir - POI ID bazlı sistem
-        images = image_manager.get_poi_images_by_id(poi_id)
-        return jsonify({'images': images})
+        # Medya türünü filtrele (opsiyonel)
+        media_type = request.args.get('type')
+        
+        # Medya dosyalarını getir - POI ID bazlı sistem
+        media_files = media_manager.get_poi_media_by_id(poi_id, media_type)
+        return jsonify({'media': media_files})
+        
+    except Exception as e:
+        return jsonify({'error': f'Error fetching media: {str(e)}'}), 500
+
+@app.route('/api/poi/<poi_id>/media/<filename>', methods=['DELETE'])
+def delete_poi_media(poi_id, filename):
+    """POI'nin belirli bir medya dosyasını sil"""
+    try:
+        # Dosya adının güvenli olduğundan emin ol
+        if '..' in filename or filename.startswith('/'):
+            return jsonify({'error': 'Invalid filename'}), 400
+
+        # Medya dosyasını sil
+        success = media_manager.delete_poi_media_by_id(poi_id, filename)
+
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': True, 'message': 'Media file not found or already deleted'}), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Error deleting media: {str(e)}'}), 500
+
+# Geriye uyumluluk için eski image endpoint'leri
+@app.route('/api/poi/<poi_id>/images', methods=['POST'])
+def upload_poi_image_legacy(poi_id):
+    """Geriye uyumluluk için eski görsel yükleme endpoint'i"""
+    # Sadece media endpoint'ine yönlendir
+    return upload_poi_media(poi_id)
+
+@app.route('/api/poi/<poi_id>/images', methods=['GET'])
+def get_poi_images_legacy(poi_id):
+    """Geriye uyumluluk için eski görsel listeleme endpoint'i"""
+    try:
+        # Sadece görsel türündeki medyaları getir
+        request.args = request.args.copy()
+        request.args['type'] = 'image'
+        
+        response_data = get_poi_media(poi_id)
+        if isinstance(response_data, tuple):
+            data, status_code = response_data
+        else:
+            data = response_data
+            status_code = 200
+            
+        # Response formatını eski API ile uyumlu hale getir
+        if hasattr(data, 'get_json'):
+            json_data = data.get_json()
+        else:
+            json_data = data
+            
+        if 'media' in json_data:
+            json_data['images'] = json_data.pop('media')
+            
+        return jsonify(json_data), status_code
         
     except Exception as e:
         return jsonify({'error': f'Error fetching images: {str(e)}'}), 500
 
+@app.route('/api/poi/<poi_id>/images/<filename>', methods=['DELETE'])
+def delete_poi_image_legacy(poi_id, filename):
+    """Geriye uyumluluk için eski görsel silme endpoint'i"""
+    return delete_poi_media(poi_id, filename)
+
+# Medya dosyalarını serve etme endpoint'leri
+@app.route('/poi_media/<path:filename>')
+def serve_poi_media(filename):
+    """POI medya dosyalarını serve et"""
+    try:
+        return send_from_directory('poi_media', filename)
+    except FileNotFoundError:
+        return jsonify({'error': 'Media file not found'}), 404
+
 @app.route('/poi_images/<path:filename>')
 def serve_poi_image(filename):
-    """POI görsellerini serve et"""
+    """Geriye uyumluluk için POI görsellerini serve et"""
     try:
-        return send_from_directory('poi_images', filename)
+        # Önce eski klasörde ara
+        if os.path.exists(os.path.join('poi_images', filename)):
+            return send_from_directory('poi_images', filename)
+        # Yoksa yeni medya klasöründe ara
+        else:
+            return send_from_directory('poi_media', filename)
     except FileNotFoundError:
         return jsonify({'error': 'Image not found'}), 404
 
@@ -836,6 +1221,51 @@ def download_map(filename):
         
     except Exception as e:
         return jsonify({'error': f'Error downloading file: {str(e)}'}), 500
+
+# Sistem yönetimi endpoint'leri
+@app.route('/api/system/cleanup-media-folders', methods=['POST'])
+def cleanup_media_folders():
+    """Kullanılmayan medya klasörlerini temizle"""
+    try:
+        cleaned_folders = media_manager.cleanup_unused_directories()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{len(cleaned_folders)} adet kullanılmayan klasör temizlendi',
+            'cleaned_folders': cleaned_folders
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Temizleme hatası: {str(e)}'}), 500
+
+@app.route('/api/system/media-info', methods=['GET'])
+def get_media_system_info():
+    """Medya sistemi hakkında bilgi ver"""
+    try:
+        base_path = media_manager.base_path
+        info = {
+            'media_structure': 'POI ID bazlı sistem kullanılıyor',
+            'base_path': str(base_path),
+            'supported_formats': media_manager.SUPPORTED_FORMATS,
+            'directories': {
+                'main': str(base_path / "by_poi_id"),
+                'thumbnails': str(media_manager.thumbnails_path / "by_poi_id"),
+                'previews': str(media_manager.previews_path / "by_poi_id")
+            }
+        }
+        
+        # Mevcut POI'lerin medya istatistikleri
+        by_poi_dir = base_path / "by_poi_id"
+        if by_poi_dir.exists():
+            poi_count = len([d for d in by_poi_dir.iterdir() if d.is_dir()])
+            info['active_pois'] = poi_count
+        else:
+            info['active_pois'] = 0
+            
+        return jsonify(info)
+        
+    except Exception as e:
+        return jsonify({'error': f'Bilgi alınamadı: {str(e)}'}), 500
 
 if __name__ == '__main__':
     print("🚀 POI Yönetim Sistemi başlatılıyor...")

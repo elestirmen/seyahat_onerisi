@@ -41,22 +41,99 @@
             z-index: 9999;
         }
 
-        .poi-detail-panel {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            padding: 1rem;
-            margin-bottom: 1rem;
-            display: none;
-            opacity: 0;
-            transform: translateX(-20px);
+        /* Birleşik Panel Tab Stilleri */
+        .nav-tabs {
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            border-radius: 8px 8px 0 0;
+            background: transparent;
+            color: #6c757d;
+            font-weight: 500;
             transition: all 0.3s ease;
         }
 
-        .poi-detail-panel.active {
-            display: block;
-            opacity: 1;
-            transform: translateX(0);
+        .nav-tabs .nav-link.active {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+        }
+
+        .nav-tabs .nav-link:hover:not(.active) {
+            background: #f8f9fa;
+            color: #495057;
+            transform: translateY(-2px);
+        }
+
+        .tab-content {
+            border: none;
+            padding: 0;
+        }
+
+        .tab-pane {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Enhanced POI Detail Styles in Details Tab */
+        .poi-detail-header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .poi-detail-info {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            border-left: 4px solid #007bff;
+            margin-bottom: 16px;
+        }
+
+        .poi-detail-images {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 16px;
+        }
+
+        .image-card-enhanced {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .image-card-enhanced:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25) !important;
+        }
+
+        .poi-detail-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .poi-detail-actions .btn {
+            transition: all 0.2s ease;
+        }
+
+        .poi-detail-actions .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         .highlight-marker {
@@ -168,111 +245,150 @@
         </div>
 
         <div class="row">
-            <!-- Sol Panel: Form ve Detay -->
+            <!-- Sol Panel: Birleşik POI Yönetim Paneli -->
             <div class="col-md-4">
-                <!-- POI Detay Paneli -->
-                <div class="poi-detail-panel" id="poiDetailPanel">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0">POI Detayları</h5>
-                        <button type="button" class="btn-close" onclick="closeDetailPanel()"></button>
-                    </div>
-                    <div id="poiDetailContent"></div>
-                    <div class="mt-3">
-                        <button class="btn btn-primary btn-sm me-2" onclick="editFromDetail()">Düzenle</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteFromDetail()">Sil</button>
-                    </div>
-                </div>
-
-                <!-- Form Paneli -->
                 <div class="card mb-3">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>POI Ekle / Düzenle</span>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectLocationFromMap()"
-                            id="mapSelectBtn">
-                            📍 Haritadan Seç
-                        </button>
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0" id="panelTitle">🆕 Yeni POI Ekle</h5>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="selectLocationFromMap()" id="mapSelectBtn">
+                                    📍 Haritadan Seç
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info d-none" onclick="clearForm()" id="newPoiBtn">
+                                    ➕ Yeni POI
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab Navigation -->
+                        <ul class="nav nav-tabs mt-3" id="poiTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="form-tab" data-bs-toggle="tab" data-bs-target="#form-content" type="button" role="tab">
+                                    <i class="fas fa-edit me-1"></i>Form
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation" style="display: none;" id="details-tab-container">
+                                <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#details-content" type="button" role="tab">
+                                    <i class="fas fa-info-circle me-1"></i>Detaylar
+                                </button>
+                            </li>
+                        </ul>
                     </div>
+                    
                     <div class="card-body">
-                        <form id="poiForm">
-                            <input type="hidden" id="poiId">
-                            <div class="mb-2">
-                                <label class="form-label">Adı *</label>
-                                <input type="text" class="form-control" id="poiName" required>
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label">Kategori *</label>
-                                <select class="form-select" id="poiCategory" required>
-                                    <option value="">Seçiniz</option>
-                                    <option value="gastronomik">🍽️ Gastronomik</option>
-                                    <option value="kulturel">🏛️ Kültürel</option>
-                                    <option value="sanatsal">🎨 Sanatsal</option>
-                                    <option value="doga_macera">🌿 Doğa & Macera</option>
-                                    <option value="konaklama">🏨 Konaklama</option>
-                                </select>
-                            </div>
-                            <div class="row">
-                                <div class="col-6 mb-2">
-                                    <label class="form-label">Enlem *</label>
-                                    <input type="number" step="any" class="form-control" id="poiLat" required>
-                                </div>
-                                <div class="col-6 mb-2">
-                                    <label class="form-label">Boylam *</label>
-                                    <input type="number" step="any" class="form-control" id="poiLon" required>
-                                </div>
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label">Açıklama</label>
-                                <textarea class="form-control" id="poiDesc" rows="3"></textarea>
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label">Etiketler</label>
-                                <input type="text" class="form-control" id="poiTags"
-                                    placeholder="etiket1, etiket2, etiket3...">
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label">Resim URL'si</label>
-                                <input type="url" class="form-control" id="poiImageUrl" placeholder="https://...">
-                            </div>
-                            
-                            <!-- Görsel Yönetimi Bölümü -->
-                            <div class="mb-3" id="imageManagementSection">
-                                <label class="form-label">📸 Görsel Yönetimi</label>
-                                <div class="border rounded p-3 bg-light">
+                        <div class="tab-content" id="poiTabContent">
+                            <!-- Form Content -->
+                            <div class="tab-pane fade show active" id="form-content" role="tabpanel">
+                                <form id="poiForm">
+                                    <input type="hidden" id="poiId">
                                     <div class="mb-2">
-                                        <input type="file" class="form-control form-control-sm" id="imageFile" accept="image/*">
-                                        <small class="form-text text-muted">PNG, JPG, JPEG, GIF, WEBP</small>
+                                        <label class="form-label">Adı *</label>
+                                        <input type="text" class="form-control" id="poiName" required>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Kategori *</label>
+                                        <select class="form-select" id="poiCategory" required>
+                                            <option value="">Seçiniz</option>
+                                            <option value="gastronomik">🍽️ Gastronomik</option>
+                                            <option value="kulturel">🏛️ Kültürel</option>
+                                            <option value="sanatsal">🎨 Sanatsal</option>
+                                            <option value="doga_macera">🌿 Doğa & Macera</option>
+                                            <option value="konaklama">🏨 Konaklama</option>
+                                        </select>
                                     </div>
                                     <div class="row">
-                                        <div class="col-6">
-                                            <select class="form-select form-select-sm" id="imageType">
-                                                <option value="photo">📷 Fotoğraf</option>
-                                                <option value="exterior">🏢 Dış Görünüm</option>
-                                                <option value="interior">🏠 İç Mekan</option>
-                                                <option value="food">🍽️ Yemek</option>
-                                                <option value="menu">📋 Menü</option>
-                                            </select>
+                                        <div class="col-6 mb-2">
+                                            <label class="form-label">Enlem *</label>
+                                            <input type="number" step="any" class="form-control" id="poiLat" required>
                                         </div>
-                                        <div class="col-6">
-                                            <input type="text" class="form-control form-control-sm" id="imageCaption" placeholder="Açıklama">
+                                        <div class="col-6 mb-2">
+                                            <label class="form-label">Boylam *</label>
+                                            <input type="number" step="any" class="form-control" id="poiLon" required>
                                         </div>
                                     </div>
-                                    <div class="form-check mt-2">
-                                        <input class="form-check-input" type="checkbox" id="isPrimaryImage">
-                                        <label class="form-check-label" for="isPrimaryImage">Ana görsel</label>
+                                    <div class="mb-2">
+                                        <label class="form-label">Açıklama</label>
+                                        <textarea class="form-control" id="poiDesc" rows="3"></textarea>
                                     </div>
-                                    <button type="button" class="btn btn-outline-primary btn-sm mt-2 w-100" onclick="uploadPOIImage()">
-                                        📤 Görsel Yükle
-                                    </button>
-                                </div>
-                                
-                                <!-- Mevcut Görseller -->
-                                <div id="currentImages" class="mt-2"></div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Etiketler</label>
+                                        <input type="text" class="form-control" id="poiTags"
+                                            placeholder="etiket1, etiket2, etiket3...">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Resim URL'si</label>
+                                        <input type="url" class="form-control" id="poiImageUrl" placeholder="https://...">
+                                    </div>
+                                    
+                                    <!-- Medya Yönetimi Bölümü (Görsel, Video, Ses, 3D) -->
+                                    <div class="mb-3" id="mediaManagementSection">
+                                        <label class="form-label">🎬 Medya Yönetimi</label>
+                                        <div class="border rounded p-3 bg-light">
+                                            <div class="mb-2">
+                                                <input type="file" class="form-control form-control-sm" id="mediaFile" 
+                                                       accept="image/*,video/*,audio/*,.glb,.gltf,.obj,.fbx,.dae,.ply,.stl">
+                                                <small class="form-text text-muted">
+                                                    <i class="fas fa-info-circle text-primary"></i>
+                                                    <strong>Desteklenen formatlar:</strong><br>
+                                                    📸 <strong>Görsel:</strong> PNG, JPG, JPEG, GIF, WebP (Max: 15MB)<br>
+                                                    🎥 <strong>Video:</strong> MP4, AVI, MOV, WebM, MKV (Max: 100MB)<br>
+                                                    🎵 <strong>Ses:</strong> MP3, WAV, OGG, M4A, AAC, FLAC (Max: 50MB)<br>
+                                                    🧊 <strong>3D Model:</strong> GLB, GLTF, OBJ, FBX, DAE, PLY, STL (Max: 50MB)
+                                                </small>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <select class="form-select form-select-sm" id="mediaType" onchange="updateMediaTypeOptions()">
+                                                        <option value="auto">🔍 Otomatik Tespit</option>
+                                                        <option value="image">📸 Görsel</option>
+                                                        <option value="video">🎥 Video</option>
+                                                        <option value="audio">🎵 Ses</option>
+                                                        <option value="model_3d">🧊 3D Model</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <input type="text" class="form-control form-control-sm" id="mediaCaption" placeholder="Açıklama">
+                                                </div>
+                                            </div>
+                                            <div class="form-check mt-2">
+                                                <input class="form-check-input" type="checkbox" id="isPrimaryMedia">
+                                                <label class="form-check-label" for="isPrimaryMedia">Ana medya</label>
+                                            </div>
+                                            <button type="button" class="btn btn-outline-primary btn-sm mt-2 w-100" onclick="uploadPOIMedia()">
+                                                📤 Medya Yükle
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- Mevcut Medya Dosyaları -->
+                                        <div id="currentMedia" class="mt-2"></div>
+                                        
+                                        <!-- Geriye Uyumluluk için Eski Görsel Bölümü (Gizli) -->
+                                        <div id="currentImages" class="mt-2" style="display: none;"></div>
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-primary" id="saveBtn">💾 Kaydet</button>
+                                        <button type="button" class="btn btn-outline-danger d-none" id="deleteBtn" onclick="deleteCurrentPOI()">
+                                            🗑️ POI'yi Sil
+                                        </button>
+                                        <button type="button" class="btn btn-secondary d-none" id="cancelEditBtn" onclick="clearForm()">
+                                            ❌ İptal
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary w-100" id="saveBtn">💾 Kaydet</button>
-                            <button type="button" class="btn btn-secondary w-100 mt-2 d-none" id="cancelEditBtn">❌
-                                İptal</button>
-                        </form>
+                            <!-- Details Content -->
+                            <div class="tab-pane fade" id="details-content" role="tabpanel">
+                                <div id="poiDetailContent">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                                        <p>POI detayları burada görünecek</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -699,7 +815,7 @@
             });
         }
 
-        // POI detayını göster
+        // POI detayını göster - Yeni birleşik panel için güncellendi
         async function showPOIDetail(poiId) {
             showLoading();
             try {
@@ -709,20 +825,47 @@
 
                 selectedPOI = poi;
 
+                // Form alanlarını doldur (düzenleme için hazır hale getir)
+                document.getElementById('poiId').value = poi._id;
+                document.getElementById('poiName').value = poi.name;
+                document.getElementById('poiCategory').value = poi.category;
+                document.getElementById('poiLat').value = poi.latitude;
+                document.getElementById('poiLon').value = poi.longitude;
+                document.getElementById('poiDesc').value = poi.description || '';
+                document.getElementById('poiTags').value = (poi.tags || []).join(', ');
+                document.getElementById('poiImageUrl').value = poi.imageUrl || '';
+
+                // Formu düzenleme moduna geçir
+                document.getElementById('saveBtn').innerHTML = '🔄 Güncelle';
+                document.getElementById('deleteBtn').classList.remove('d-none');
+                document.getElementById('cancelEditBtn').classList.remove('d-none');
+
+                // Panel başlığını güncelle
+                document.getElementById('panelTitle').textContent = `📝 ${poi.name}`;
+                document.getElementById('newPoiBtn').classList.remove('d-none');
+
+                // Detaylar tab'ını göster ve aktif yap
+                document.getElementById('details-tab-container').style.display = 'block';
+                
+                // Bootstrap tab geçişi
+                const detailsTab = new bootstrap.Tab(document.getElementById('details-tab'));
+                detailsTab.show();
+
+                // Detay HTML'ini oluştur
                 let detailHtml = `
                     <div class="poi-detail-header">
-                        <h5 class="mb-2">${poi.name}</h5>
-                        <span class="badge bg-primary mb-2">${getCategoryDisplayName(poi.category)}</span>
+                        <h5 class="mb-2 fw-bold">${poi.name}</h5>
+                        <span class="badge bg-light text-dark fs-6">${getCategoryDisplayName(poi.category)}</span>
                     </div>
                     
                     <div class="poi-detail-info">
-                        <p class="mb-2"><i class="fas fa-map-marker-alt text-danger"></i> <strong>Konum:</strong> ${poi.latitude.toFixed(6)}, ${poi.longitude.toFixed(6)}</p>`;
+                        <p class="mb-2"><i class="fas fa-map-marker-alt text-danger me-2"></i> <strong>Konum:</strong> ${poi.latitude.toFixed(6)}, ${poi.longitude.toFixed(6)}</p>`;
 
                 if (poi.description) {
-                    detailHtml += `<p class="mb-2"><i class="fas fa-info-circle text-info"></i> <strong>Açıklama:</strong> ${poi.description}</p>`;
+                    detailHtml += `<p class="mb-2"><i class="fas fa-info-circle text-info me-2"></i> <strong>Açıklama:</strong> ${poi.description}</p>`;
                 }
                 if (poi.tags && poi.tags.length > 0) {
-                    detailHtml += `<p class="mb-2"><i class="fas fa-tags text-success"></i> <strong>Etiketler:</strong> ${poi.tags.join(', ')}</p>`;
+                    detailHtml += `<p class="mb-2"><i class="fas fa-tags text-success me-2"></i> <strong>Etiketler:</strong> ${poi.tags.join(', ')}</p>`;
                 }
                 
                 detailHtml += `</div>`;
@@ -737,23 +880,33 @@
                         if (images.length > 0) {
                             detailHtml += `
                                 <div class="poi-detail-images mt-3">
-                                    <h6 class="mb-2"><i class="fas fa-images text-warning"></i> Görseller (${images.length})</h6>
-                                    <div class="row g-2">`;
+                                    <h6 class="mb-3"><i class="fas fa-images text-warning"></i> Görseller (${images.length})</h6>
+                                    <div class="row g-3">`;
                             
                             images.forEach((image, index) => {
                                 const imagePath = image.thumbnail_path || image.path;
                                 const fullImagePath = image.path;
                                 detailHtml += `
                                     <div class="col-6">
-                                        <div class="image-card">
+                                        <div class="image-card-enhanced" style="position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                                             <img src="/${imagePath}" 
-                                                 class="img-fluid rounded shadow-sm" 
-                                                 style="height: 100px; width: 100%; object-fit: cover; cursor: pointer;" 
+                                                 class="img-fluid" 
+                                                 style="height: 120px; width: 100%; object-fit: cover; cursor: pointer; transition: transform 0.3s ease;" 
                                                  alt="${image.filename}"
-                                                 onclick="showImageModal('/${fullImagePath}', '${poi.name}', '${image.filename}')">
-                                            <div class="image-overlay">
-                                                <small class="text-white">${getImageTypeIcon(image.filename)} ${(image.size / 1024).toFixed(0)}KB</small>
+                                                 onclick="showImageModal('/${fullImagePath}', '${poi.name}', '${image.filename}')"
+                                                 onmouseover="this.style.transform='scale(1.05)'"
+                                                 onmouseout="this.style.transform='scale(1)'">
+                                            <div class="image-info-overlay" style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding: 8px 12px;">
+                                                <small class="text-white fw-bold">${getImageTypeIcon(image.filename)} ${(image.size / 1024).toFixed(0)}KB</small>
                                             </div>
+                                            <button class="image-delete-btn-enhanced btn btn-danger" 
+                                                    style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; padding: 0; font-size: 0.9rem; z-index: 10; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(220,53,69,0.4); transition: all 0.3s ease;"
+                                                    onclick="deletePOIImageWithConfirm('${poi._id}', '${image.filename}', this)"
+                                                    title="Görseli sil - ${image.filename}"
+                                                    onmouseover="this.style.transform='scale(1.2)'; this.style.boxShadow='0 6px 16px rgba(220,53,69,0.6)'"
+                                                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(220,53,69,0.4)'">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                         </div>
                                     </div>`;
                             });
@@ -780,24 +933,22 @@
                 }
 
                 detailHtml += `
-                    <hr>
                     <div class="poi-detail-actions">
-                        <button class="btn btn-outline-primary btn-sm me-2" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
-                            <i class="fas fa-crosshairs"></i> Haritada Göster
+                        <button class="btn btn-primary btn-sm" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
+                            <i class="fas fa-crosshairs me-1"></i> Haritada Göster
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm me-2" onclick="editPOI('${poi._id}')">
-                            <i class="fas fa-edit"></i> Düzenle
+                        <button class="btn btn-secondary btn-sm" onclick="switchToFormTab()">
+                            <i class="fas fa-edit me-1"></i> Düzenle
                         </button>
-                        <button class="btn btn-outline-danger btn-sm" onclick="deletePOI('${poi._id}')">
-                            <i class="fas fa-trash"></i> Sil
+                        <button class="btn btn-danger btn-sm" onclick="deleteCurrentPOI()">
+                            <i class="fas fa-trash me-1"></i> Sil
                         </button>
                     </div>`;
 
                 document.getElementById('poiDetailContent').innerHTML = detailHtml;
 
-                if (!document.getElementById('poiDetailPanel').classList.contains('active')) {
-                    document.getElementById('poiDetailPanel').classList.add('active');
-                }
+                // Mevcut görselleri form bölümünde de yükle
+                await loadPOIImages(poiId);
 
             } catch (error) {
                 showToast('POI detayları yüklenirken hata oluştu', 'error');
@@ -806,68 +957,66 @@
             }
         }
 
+        // Form tab'ına geçiş yap
+        function switchToFormTab() {
+            const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
+            formTab.show();
+        }
+
+        // Mevcut POI'yi sil
+        async function deleteCurrentPOI() {
+            const poiId = document.getElementById('poiId').value;
+            if (poiId) {
+                await deletePOI(poiId);
+            }
+        }
+
         // Haritada odaklan
         function focusOnMap(lat, lon) {
             map.setView([lat, lon], 16);
         }
 
-        // Detay panelini kapat
-        function closeDetailPanel() {
-            document.getElementById('poiDetailPanel').classList.remove('active');
-            selectedPOI = null;
-        }
-
-        // Detaydan düzenle
-        function editFromDetail() {
-            if (selectedPOI) {
-                editPOI(selectedPOI._id);
-                closeDetailPanel();
-            }
-        }
-
-        // Detaydan sil
-        function deleteFromDetail() {
-            if (selectedPOI) {
-                deletePOI(selectedPOI._id);
-                closeDetailPanel();
-            }
-        }
-
-        // POI düzenle
+        // POI düzenle - Yeni birleşik panel için güncellendi
         async function editPOI(poiId) {
-            showLoading();
-            try {
-                const response = await fetch(`${apiBase}/poi/${poiId}`);
-                if (!response.ok) throw new Error('POI not found');
-                const poi = await response.json();
-
-                document.getElementById('poiId').value = poi._id;
-                document.getElementById('poiName').value = poi.name;
-                document.getElementById('poiCategory').value = poi.category;
-                document.getElementById('poiLat').value = poi.latitude;
-                document.getElementById('poiLon').value = poi.longitude;
-                document.getElementById('poiDesc').value = poi.description || '';
-                document.getElementById('poiTags').value = (poi.tags || []).join(', ');
-                document.getElementById('poiImageUrl').value = poi.imageUrl || '';
-
-                document.getElementById('saveBtn').innerHTML = '🔄 Update';
-                document.getElementById('cancelEditBtn').classList.remove('d-none');
-                document.getElementById('poiForm').scrollIntoView({ behavior: 'smooth' });
-
-            } catch (error) {
-                showToast('Could not fetch POI details for editing.', 'error');
-            } finally {
-                hideLoading();
-            }
+            // Önce POI detaylarını yükle (form alanlarını doldurur)
+            await showPOIDetail(poiId);
+            
+            // Form tab'ına geçiş yap
+            setTimeout(() => {
+                switchToFormTab();
+                showToast('POI düzenleme moduna geçildi', 'info');
+            }, 300);
         }
 
-        // Form iptal
-        document.getElementById('cancelEditBtn').onclick = function () {
+        // Form temizle ve yeni POI moduna geç
+        function clearForm() {
             document.getElementById('poiForm').reset();
             document.getElementById('poiId').value = '';
             document.getElementById('saveBtn').innerHTML = '💾 Kaydet';
-            this.classList.add('d-none');
-        };
+            document.getElementById('deleteBtn').classList.add('d-none');
+            document.getElementById('cancelEditBtn').classList.add('d-none');
+            document.getElementById('panelTitle').textContent = '🆕 Yeni POI Ekle';
+            document.getElementById('newPoiBtn').classList.add('d-none');
+            
+            // Detaylar tab'ını gizle ve form tab'ını aktif yap
+            document.getElementById('details-tab-container').style.display = 'none';
+            const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
+            formTab.show();
+            
+            // Detay content'ini temizle
+            document.getElementById('poiDetailContent').innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                    <p>POI detayları burada görünecek</p>
+                </div>
+            `;
+            
+            // Mevcut görseller alanını temizle
+            document.getElementById('currentImages').innerHTML = '';
+            
+            selectedPOI = null;
+            showToast('Yeni POI ekleme moduna geçildi', 'info');
+        }
 
         // Form gönder
         document.getElementById('poiForm').onsubmit = async function (e) {
@@ -876,7 +1025,7 @@
 
             try {
                 const idVal = document.getElementById('poiId').value;
-                const name = document.getElementById('poiName').value;
+                const name = document.getElementById('poiName').value.trim();
                 const category = document.getElementById('poiCategory').value;
                 const lat = parseFloat(document.getElementById('poiLat').value);
                 const lon = parseFloat(document.getElementById('poiLon').value);
@@ -907,11 +1056,18 @@
                 }
 
                 if (response.ok) {
-                    showToast(idVal ? 'POI başarıyla güncellendi!' : 'POI başarıyla eklendi!', 'success');
-                    document.getElementById('poiForm').reset();
-                    document.getElementById('poiId').value = '';
-                    document.getElementById('saveBtn').innerHTML = '💾 Kaydet';
-                    document.getElementById('cancelEditBtn').classList.add('d-none');
+                    const isUpdate = idVal ? true : false;
+                    showToast(isUpdate ? 'POI başarıyla güncellendi!' : 'POI başarıyla eklendi!', 'success');
+                    
+                    if (isUpdate) {
+                        // Güncelleme sonrası detayları yenile
+                        await showPOIDetail(idVal);
+                        showToast('POI detayları güncellendi', 'info');
+                    } else {
+                        // Yeni POI eklendikten sonra formu temizle
+                        clearForm();
+                    }
+                    
                     await fetchPOIs(document.getElementById('filterCategory').value);
                 } else {
                     throw new Error('İşlem başarısız');
@@ -1009,8 +1165,8 @@
         // Form validation ve submit
         function validatePOIForm() {
             const name = document.getElementById('poiName').value.trim();
-            const lat = parseFloat(document.getElementById('poiLatitude').value);
-            const lng = parseFloat(document.getElementById('poiLongitude').value);
+            const lat = parseFloat(document.getElementById('poiLat').value);
+            const lng = parseFloat(document.getElementById('poiLon').value);
             const category = document.getElementById('poiCategory').value;
 
             if (!name) {
@@ -1053,10 +1209,10 @@
             try {
                 const idVal = document.getElementById('poiId').value;
                 const name = document.getElementById('poiName').value.trim();
-                const latitude = parseFloat(document.getElementById('poiLatitude').value);
-                const longitude = parseFloat(document.getElementById('poiLongitude').value);
+                const latitude = parseFloat(document.getElementById('poiLat').value);
+                const longitude = parseFloat(document.getElementById('poiLon').value);
                 const category = document.getElementById('poiCategory').value;
-                const description = document.getElementById('poiDescription').value.trim();
+                const description = document.getElementById('poiDesc').value.trim();
                 const tags = document.getElementById('poiTags').value.trim();
                 const imageUrl = document.getElementById('poiImageUrl').value.trim();
 
@@ -1083,11 +1239,18 @@
                 }
 
                 if (response.ok) {
-                    showToast(idVal ? 'POI başarıyla güncellendi!' : 'POI başarıyla eklendi!', 'success');
-                    document.getElementById('poiForm').reset();
-                    document.getElementById('poiId').value = '';
-                    document.getElementById('saveBtn').innerHTML = '💾 Kaydet';
-                    document.getElementById('cancelEditBtn').classList.add('d-none');
+                    const isUpdate = idVal ? true : false;
+                    showToast(isUpdate ? 'POI başarıyla güncellendi!' : 'POI başarıyla eklendi!', 'success');
+                    
+                    if (isUpdate) {
+                        // Güncelleme sonrası detayları yenile
+                        await showPOIDetail(idVal);
+                        showToast('POI detayları güncellendi', 'info');
+                    } else {
+                        // Yeni POI eklendikten sonra formu temizle
+                        clearForm();
+                    }
+                    
                     await fetchPOIs(document.getElementById('filterCategory').value);
                 } else {
                     throw new Error('İşlem başarısız');
@@ -1151,73 +1314,216 @@
             return '📷';
         }
 
-        // Görsel yönetimi fonksiyonları
-        async function uploadPOIImage() {
-            const fileInput = document.getElementById('imageFile');
-            const imageType = document.getElementById('imageType').value;
-            const imageCaption = document.getElementById('imageCaption').value;
-            const isPrimary = document.getElementById('isPrimaryImage').checked;
+        // Medya yönetimi fonksiyonları
+        function updateMediaTypeOptions() {
+            // Gelecekte medya türüne göre ek seçenekler eklenebilir
+        }
+        
+        function getMediaTypeIcon(mediaType, filename) {
+            switch(mediaType) {
+                case 'image': return '📸';
+                case 'video': return '🎥';
+                case 'audio': return '🎵';
+                case 'model_3d': return '🧊';
+                default: return '📄';
+            }
+        }
+        
+        function getMediaMaxSize(mediaType) {
+            const sizes = {
+                'image': 15,
+                'video': 100,
+                'audio': 50,
+                'model_3d': 50
+            };
+            return sizes[mediaType] || 15;
+        }
+        
+        async function uploadPOIMedia() {
+            const fileInput = document.getElementById('mediaFile');
+            const mediaTypeSelect = document.getElementById('mediaType');
+            const mediaCaption = document.getElementById('mediaCaption').value;
+            const isPrimary = document.getElementById('isPrimaryMedia').checked;
             
             // POI ID'sini al (düzenleme modundaysa)
             const poiId = document.getElementById('poiId').value;
             if (!poiId) {
-                alert('Önce POI\'yi kaydedin, sonra görsel ekleyin.');
+                alert('Önce POI\'yi kaydedin, sonra medya ekleyin.');
                 return;
             }
             
             if (!fileInput.files || fileInput.files.length === 0) {
-                alert('Lütfen bir görsel dosyası seçin.');
+                alert('Lütfen bir medya dosyası seçin.');
                 return;
             }
             
             const file = fileInput.files[0];
+            const filename = file.name.toLowerCase();
             
-            // Dosya boyutu kontrolü (5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                alert('Dosya boyutu 5MB\'dan küçük olmalıdır.');
+            // Medya türünü tespit et
+            let mediaType = mediaTypeSelect.value;
+            if (mediaType === 'auto') {
+                if (filename.match(/\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/)) {
+                    mediaType = 'image';
+                } else if (filename.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)$/)) {
+                    mediaType = 'video';
+                } else if (filename.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/)) {
+                    mediaType = 'audio';
+                } else if (filename.match(/\.(glb|gltf|obj|fbx|dae|ply|stl)$/)) {
+                    mediaType = 'model_3d';
+                } else {
+                    alert('Dosya türü tespit edilemedi. Lütfen medya türünü manuel olarak seçin.');
+                    return;
+                }
+            }
+            
+            // Dosya boyutu kontrolü
+            const maxSize = getMediaMaxSize(mediaType) * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert(`Dosya boyutu ${getMediaMaxSize(mediaType)}MB'dan küçük olmalıdır.\n\nSeçilen dosya: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
                 return;
             }
             
             const formData = new FormData();
-            formData.append('image', file);
-            formData.append('type', imageType);
-            formData.append('caption', imageCaption);
+            formData.append('media', file);
+            formData.append('caption', mediaCaption);
             formData.append('is_primary', isPrimary);
             
             try {
                 showLoading();
-                const response = await fetch(`${apiBase}/poi/${poiId}/images`, {
+                const response = await fetch(`${apiBase}/poi/${poiId}/media`, {
                     method: 'POST',
                     body: formData
                 });
                 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.error || 'Görsel yükleme başarısız');
+                    throw new Error(error.error || 'Medya yükleme başarısız');
                 }
                 
                 const result = await response.json();
-                alert('Görsel başarıyla yüklendi!');
+                
+                if (result.media && result.media.compression_ratio && result.media.compression_ratio !== "0%") {
+                    showToast(`${getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!\n📦 Boyut azalması: ${result.media.compression_ratio}`, 'success');
+                } else {
+                    showToast(`${getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!`, 'success');
+                }
                 
                 // Form alanlarını temizle
                 fileInput.value = '';
-                document.getElementById('imageCaption').value = '';
-                document.getElementById('isPrimaryImage').checked = false;
+                document.getElementById('mediaCaption').value = '';
+                document.getElementById('isPrimaryMedia').checked = false;
+                mediaTypeSelect.value = 'auto';
                 
-                // Mevcut görselleri yenile
-                await loadPOIImages(poiId);
+                // Mevcut medya dosyalarını yenile
+                await loadPOIMedia(poiId);
                 
             } catch (error) {
-                console.error('Görsel yükleme hatası:', error);
-                alert('Görsel yükleme hatası: ' + error.message);
+                console.error('Medya yükleme hatası:', error);
+                alert('Medya yükleme hatası: ' + error.message);
             } finally {
                 hideLoading();
             }
         }
         
-        async function loadPOIImages(poiId) {
+        // Geriye uyumluluk için eski görsel yükleme fonksiyonu
+        async function uploadPOIImage() {
+            // Yeni medya fonksiyonunu kullan
+            document.getElementById('mediaType').value = 'image';
+            await uploadPOIMedia();
+        }
+        
+        async function loadPOIMedia(poiId) {
             if (!poiId) return;
             
+            try {
+                const response = await fetch(`${apiBase}/poi/${poiId}/media`);
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                const mediaFiles = data.media || [];
+                
+                const container = document.getElementById('currentMedia');
+                if (mediaFiles.length === 0) {
+                    container.innerHTML = '<small class="text-muted">Henüz medya dosyası eklenmemiş.</small>';
+                    return;
+                }
+                
+                // Medya türlerine göre grupla
+                const groupedMedia = {};
+                mediaFiles.forEach(media => {
+                    const type = media.media_type || 'unknown';
+                    if (!groupedMedia[type]) groupedMedia[type] = [];
+                    groupedMedia[type].push(media);
+                });
+                
+                let mediaHtml = '';
+                
+                // Her medya türü için ayrı bölüm oluştur
+                Object.keys(groupedMedia).forEach(mediaType => {
+                    const typeIcon = getMediaTypeIcon(mediaType);
+                    const typeLabel = {
+                        'image': 'Görseller',
+                        'video': 'Videolar', 
+                        'audio': 'Ses Dosyaları',
+                        'model_3d': '3D Modeller',
+                        'unknown': 'Diğer'
+                    }[mediaType] || mediaType.toUpperCase();
+                    
+                    mediaHtml += `
+                        <div class="mb-3">
+                            <h6 class="fw-bold text-primary">${typeIcon} ${typeLabel} (${groupedMedia[mediaType].length})</h6>
+                            <div class="row g-2">`;
+                    
+                                         groupedMedia[mediaType].forEach((media, index) => {
+                         const previewPath = media.preview_path || media.thumbnail_path || media.path;
+                         const isImage = mediaType === 'image';
+                         
+                         mediaHtml += `
+                             <div class="col-6">
+                                 <div class="card">
+                                     <div class="position-relative">
+                                         ${isImage ? 
+                                             `<img src="/${previewPath}" class="card-img-top" style="height: 80px; object-fit: cover;" 
+                                                  alt="${media.filename}" onclick="showMediaModal('/${media.path}', '${media.filename}', '${mediaType}')">` :
+                                             `<div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 80px;" 
+                                                  onclick="showMediaModal('/${media.path}', '${media.filename}', '${mediaType}')">
+                                                  ${getMediaTypeIcon(mediaType)} <span class="ms-2 small">${media.format?.toUpperCase() || ''}</span>
+                                              </div>`
+                                         }
+                                         <button class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1" 
+                                                 style="width: 25px; height: 25px; padding: 0; font-size: 0.7rem;" 
+                                                 onclick="deleteMediaFile('${poiId}', '${media.filename}')" 
+                                                 title="Sil">
+                                             ×
+                                         </button>
+                                     </div>
+                                     <div class="card-body p-2">
+                                         <small class="text-muted d-block">${media.filename}</small>
+                                         <small class="text-muted">${(media.size / 1024).toFixed(0)}KB</small>
+                                     </div>
+                                 </div>
+                             </div>`;
+                     });
+                     
+                     mediaHtml += `
+                             </div>
+                         </div>`;
+                 });
+                 
+                 container.innerHTML = mediaHtml;
+                 
+            } catch (error) {
+                console.error('Medya yükleme hatası:', error);
+            }
+        }
+        
+        // Geriye uyumluluk için eski görsel yükleme fonksiyonu
+        async function loadPOIImages(poiId) {
+            // Yeni medya fonksiyonunu kullan
+            await loadPOIMedia(poiId);
+            
+            // Eski format için de görselleri currentImages container'ına yükle
             try {
                 const response = await fetch(`${apiBase}/poi/${poiId}/images`);
                 if (!response.ok) return;
@@ -1240,19 +1546,121 @@
                                 <img src="/${imagePath}" class="card-img-top" style="height: 80px; object-fit: cover;" 
                                      alt="${image.filename}">
                                 <div class="card-body p-2">
-                                    <small class="text-muted">${image.filename}</small>
-                                    <br><small>${(image.size / 1024).toFixed(1)} KB</small>
+                                    <small class="text-muted d-block">${image.filename}</small>
+                                    <small class="text-muted">${(image.size / 1024).toFixed(0)}KB</small>
+                                    <button class="btn btn-danger btn-sm mt-1" onclick="deleteMediaFile('${poiId}', '${image.filename}')">
+                                        🗑️ Sil
+                                    </button>
                                 </div>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 });
                 imagesHtml += '</div>';
-                
                 container.innerHTML = imagesHtml;
                 
             } catch (error) {
-                console.error('Görseller yüklenirken hata:', error);
+                console.error('Görsel yükleme hatası:', error);
+            }
+        }
+        
+        // Medya modal gösterimi
+        function showMediaModal(mediaPath, filename, mediaType) {
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            
+            let modalContent = '';
+            if (mediaType === 'image') {
+                modalContent = `<img src="${mediaPath}" class="img-fluid rounded-3 shadow-lg" alt="${filename}" style="max-height: 70vh;">`;
+            } else if (mediaType === 'video') {
+                modalContent = `
+                    <video controls class="w-100 rounded-3 shadow-lg" style="max-height: 70vh;">
+                        <source src="${mediaPath}" type="video/mp4">
+                        Tarayıcınız video oynatmayı desteklemiyor.
+                    </video>`;
+            } else if (mediaType === 'audio') {
+                modalContent = `
+                    <div class="text-center p-4">
+                        <i class="fas fa-music fa-3x text-primary mb-3"></i>
+                        <h5>${filename}</h5>
+                        <audio controls class="w-100 mt-3">
+                            <source src="${mediaPath}">
+                            Tarayıcınız ses oynatmayı desteklemiyor.
+                        </audio>
+                    </div>`;
+            } else if (mediaType === 'model_3d') {
+                modalContent = `
+                    <div class="text-center p-4">
+                        <i class="fas fa-cube fa-3x text-primary mb-3"></i>
+                        <h5>${filename}</h5>
+                        <p class="text-muted">3D model dosyası - indirip uygun bir uygulamada görüntüleyebilirsiniz.</p>
+                    </div>`;
+            } else {
+                modalContent = `
+                    <div class="text-center p-4">
+                        <i class="fas fa-file fa-3x text-primary mb-3"></i>
+                        <h5>${filename}</h5>
+                        <p class="text-muted">Medya dosyası</p>
+                    </div>`;
+            }
+            
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title fw-bold"><i class="fas fa-file me-2"></i>${filename}</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center p-4">
+                            ${modalContent}
+                        </div>
+                        <div class="modal-footer justify-content-center">
+                            <a href="${mediaPath}" target="_blank" class="btn btn-primary">
+                                <i class="fas fa-external-link-alt me-1"></i> Yeni Sekmede Aç/İndir
+                            </a>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i> Kapat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            modal.addEventListener('hidden.bs.modal', () => {
+                modal.remove();
+            });
+        }
+        
+        // Medya dosyası silme
+        async function deleteMediaFile(poiId, filename) {
+            if (!confirm(`'${filename}' dosyasını silmek istediğinizden emin misiniz?`)) {
+                return;
+            }
+            
+            try {
+                showLoading();
+                const response = await fetch(`${apiBase}/poi/${poiId}/media/${filename}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Dosya silinemedi');
+                }
+                
+                showToast('Medya dosyası başarıyla silindi', 'success');
+                
+                // Medya listesini yenile
+                await loadPOIMedia(poiId);
+                
+            } catch (error) {
+                console.error('Medya silme hatası:', error);
+                alert('Medya silme hatası: ' + error.message);
+            } finally {
+                hideLoading();
             }
         }
 
