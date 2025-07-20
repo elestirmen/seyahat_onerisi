@@ -5,6 +5,8 @@ from poi_media_manager import POIMediaManager
 import os
 import json
 import uuid
+import unicodedata
+import re
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
@@ -26,6 +28,61 @@ for media_type, config in media_manager.SUPPORTED_FORMATS.items():
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def normalize_turkish_text(text):
+    """
+    Türkçe karakterleri ve büyük/küçük harfleri normalize et
+    Arama için kullanılacak
+    """
+    if not text:
+        return ""
+    
+    # Küçük harfe çevir
+    text = text.lower()
+    
+    # Türkçe karakterleri ASCII karşılıklarıyla değiştir
+    turkish_map = {
+        'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
+        'Ç': 'c', 'Ğ': 'g', 'İ': 'i', 'Ö': 'o', 'Ş': 's', 'Ü': 'u'
+    }
+    
+    for turkish_char, ascii_char in turkish_map.items():
+        text = text.replace(turkish_char, ascii_char)
+    
+    # Ekstra boşlukları temizle
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    return text
+
+def fuzzy_search_match(search_term, target_text, threshold=0.6):
+    """
+    Bulanık arama - kısmi eşleşme ve Türkçe karakter desteği
+    """
+    if not search_term or not target_text:
+        return False
+    
+    # Her ikisini de normalize et
+    norm_search = normalize_turkish_text(search_term)
+    norm_target = normalize_turkish_text(target_text)
+    
+    # Tam eşleşme kontrolü
+    if norm_search in norm_target:
+        return True
+    
+    # Kelime kelime arama
+    search_words = norm_search.split()
+    target_words = norm_target.split()
+    
+    matched_words = 0
+    for search_word in search_words:
+        for target_word in target_words:
+            if search_word in target_word or target_word in search_word:
+                matched_words += 1
+                break
+    
+    # Eşik değerini kontrol et
+    match_ratio = matched_words / len(search_words)
+    return match_ratio >= threshold
 
 def load_test_data():
     """Test verilerini JSON dosyasından yükle"""
@@ -121,6 +178,8 @@ def index():
                     <h4>📌 POI Yönetimi</h4>
                     <ul>
                         <li><strong>GET</strong> <a href="/api/pois">/api/pois</a> - Tüm POI'leri listele</li>
+                        <li><strong>GET</strong> <a href="/api/pois?search=ajwa">/api/pois?search=terim</a> - POI'lerde arama yap</li>
+                        <li><strong>GET</strong> <a href="/api/search?q=ürgüp">/api/search?q=terim</a> - Gelişmiş arama (Türkçe karakter desteği)</li>
                         <li><strong>POST</strong> /api/poi - Yeni POI ekle</li>
                         <li><strong>PUT</strong> /api/poi/&lt;id&gt; - POI güncelle</li>
                         <li><strong>DELETE</strong> /api/poi/&lt;id&gt; - POI sil</li>
@@ -649,9 +708,12 @@ def serve_ui():
 
 @app.route('/api/pois', methods=['GET'])
 def list_pois():
+    # Arama parametrelerini al
+    search_query = request.args.get('search', '').strip()
+    category = request.args.get('category')
+    
     if JSON_FALLBACK:
         test_data = load_test_data()
-        category = request.args.get('category')
         
         # Sadece aktif POI'leri filtrele
         filtered_data = {}
@@ -661,6 +723,28 @@ def list_pois():
                 if active_pois:  # Sadece aktif POI'si olan kategorileri ekle
                     filtered_data[cat] = active_pois
         
+        # Arama filtresi uygula
+        if search_query:
+            search_results = {}
+            for cat, pois in filtered_data.items():
+                matched_pois = []
+                for poi in pois:
+                    # POI adı, açıklama ve etiketlerde ara
+                    search_fields = [
+                        poi.get('name', ''),
+                        poi.get('description', ''),
+                        ', '.join(poi.get('tags', []))
+                    ]
+                    
+                    # Herhangi bir alanda eşleşme var mı kontrol et
+                    if any(fuzzy_search_match(search_query, field) for field in search_fields):
+                        matched_pois.append(poi)
+                
+                if matched_pois:
+                    search_results[cat] = matched_pois
+            
+            return jsonify(search_results)
+        
         if category and category in filtered_data:
             return jsonify(filtered_data[category])
         return jsonify(filtered_data)
@@ -669,19 +753,243 @@ def list_pois():
     if not db:
         return jsonify({'error': 'Database connection failed'}), 500
     
-    category = request.args.get('category')
-    if category:
-        # Yeni UI için uyumlu formatta aktif POI'leri getir
-        pois = db.list_pois(category)
+    try:
+        if search_query:
+            # Veritabanında arama yap
+            search_results = perform_database_search(db, search_query, category)
+            db.disconnect()
+            return jsonify(search_results)
+        
+        if category:
+            # Yeni UI için uyumlu formatta aktif POI'leri getir
+            pois = db.list_pois(category)
+            db.disconnect()
+            return jsonify(pois)
+        
+        # Tüm kategorilerdeki POI'leri döndür
+        categories = ['gastronomik', 'kulturel', 'sanatsal', 'doga_macera', 'konaklama']
+        all_pois = {}
+        for cat in categories:
+            all_pois[cat] = db.list_pois(cat)
         db.disconnect()
-        return jsonify(pois)
-    # Tüm kategorilerdeki POI'leri döndür
-    categories = ['gastronomik', 'kulturel', 'sanatsal', 'doga_macera', 'konaklama']
-    all_pois = {}
-    for cat in categories:
-        all_pois[cat] = db.list_pois(cat)
-    db.disconnect()
-    return jsonify(all_pois)
+        return jsonify(all_pois)
+        
+    except Exception as e:
+        db.disconnect()
+        return jsonify({'error': f'Search error: {str(e)}'}), 500
+
+def perform_database_search(db, search_query, category_filter=None):
+    """
+    Veritabanında Türkçe karakter desteği ile POI arama
+    """
+    # PostgreSQL için Türkçe karakter destekli arama sorgusu
+    base_query = """
+        SELECT 
+            id as _id,
+            name, 
+            category, 
+            ST_Y(location::geometry) as latitude, 
+            ST_X(location::geometry) as longitude, 
+            description
+        FROM pois
+        WHERE is_active = true
+        AND (
+            LOWER(TRANSLATE(name, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+            LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
+            OR LOWER(TRANSLATE(COALESCE(description, ''), 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+            LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
+        )
+    """
+    
+    params = [f'%{search_query}%', f'%{search_query}%']
+    
+    if category_filter:
+        base_query += " AND category = %s"
+        params.append(category_filter)
+    
+    base_query += " ORDER BY name"
+    
+    with db.conn.cursor(cursor_factory=db.conn.cursor_factory.__class__) as cur:
+        cur.execute(base_query, params)
+        results = cur.fetchall()
+    
+    # Sonuçları kategorilere göre grupla
+    search_results = {}
+    for row in results:
+        category = row['category']
+        if category not in search_results:
+            search_results[category] = []
+        search_results[category].append(dict(row))
+    
+    return search_results
+
+@app.route('/api/search', methods=['GET'])
+def search_pois():
+    """
+    Gelişmiş POI arama endpoint'i - Türkçe karakter desteği ile
+    Parametreler:
+    - q: Arama terimi
+    - category: Kategori filtresi
+    - limit: Maksimum sonuç sayısı (varsayılan: 50)
+    """
+    search_query = request.args.get('q', '').strip()
+    category_filter = request.args.get('category')
+    limit = int(request.args.get('limit', 50))
+    
+    if not search_query:
+        return jsonify({'error': 'Arama terimi gerekli (q parametresi)'}), 400
+    
+    if len(search_query) < 2:
+        return jsonify({'error': 'Arama terimi en az 2 karakter olmalı'}), 400
+    
+    try:
+        if JSON_FALLBACK:
+            # JSON fallback arama
+            test_data = load_test_data()
+            results = []
+            
+            for cat, pois in test_data.items():
+                if category_filter and cat != category_filter:
+                    continue
+                    
+                if isinstance(pois, list):
+                    for poi in pois:
+                        if not poi.get('isActive', True):
+                            continue
+                            
+                        # Arama alanları
+                        search_fields = [
+                            poi.get('name', ''),
+                            poi.get('description', ''),
+                            ', '.join(poi.get('tags', [])),
+                            cat  # Kategori adı da arama kapsamında
+                        ]
+                        
+                        # Herhangi bir alanda eşleşme kontrolü
+                        if any(fuzzy_search_match(search_query, field) for field in search_fields):
+                            poi_result = dict(poi)
+                            poi_result['relevance_score'] = calculate_relevance_score(search_query, poi)
+                            results.append(poi_result)
+            
+            # Relevans skoruna göre sırala
+            results.sort(key=lambda x: x.get('relevance_score', 0), reverse=True)
+            
+            # Limit uygula
+            results = results[:limit]
+            
+            return jsonify({
+                'query': search_query,
+                'total_results': len(results),
+                'results': results
+            })
+        
+        else:
+            # Veritabanı arama
+            db = get_db()
+            if not db:
+                return jsonify({'error': 'Database connection failed'}), 500
+            
+            try:
+                results = perform_advanced_database_search(db, search_query, category_filter, limit)
+                db.disconnect()
+                
+                return jsonify({
+                    'query': search_query,
+                    'total_results': len(results),
+                    'results': results
+                })
+                
+            finally:
+                if db:
+                    db.disconnect()
+                    
+    except Exception as e:
+        return jsonify({'error': f'Arama hatası: {str(e)}'}), 500
+
+def calculate_relevance_score(search_query, poi):
+    """POI için relevans skoru hesapla"""
+    score = 0
+    norm_query = normalize_turkish_text(search_query)
+    
+    # İsim eşleşmesi (en yüksek puan)
+    poi_name = normalize_turkish_text(poi.get('name', ''))
+    if norm_query == poi_name:
+        score += 100
+    elif norm_query in poi_name:
+        score += 80
+    elif any(word in poi_name for word in norm_query.split()):
+        score += 60
+    
+    # Açıklama eşleşmesi
+    poi_desc = normalize_turkish_text(poi.get('description', ''))
+    if norm_query in poi_desc:
+        score += 40
+    elif any(word in poi_desc for word in norm_query.split()):
+        score += 20
+    
+    # Etiket eşleşmesi
+    poi_tags = normalize_turkish_text(', '.join(poi.get('tags', [])))
+    if norm_query in poi_tags:
+        score += 30
+    
+    return score
+
+def perform_advanced_database_search(db, search_query, category_filter=None, limit=50):
+    """Gelişmiş veritabanı arama"""
+    
+    # PostgreSQL için gelişmiş arama sorgusu
+    base_query = """
+        SELECT 
+            id as _id,
+            name, 
+            category, 
+            ST_Y(location::geometry) as latitude, 
+            ST_X(location::geometry) as longitude, 
+            description,
+            attributes,
+            -- Relevans skoru hesaplama
+            (
+                CASE 
+                    WHEN LOWER(TRANSLATE(name, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+                         = LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) THEN 100
+                    WHEN LOWER(TRANSLATE(name, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+                         LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) THEN 80
+                    ELSE 0
+                END +
+                CASE 
+                    WHEN LOWER(TRANSLATE(COALESCE(description, ''), 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+                         LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) THEN 40
+                    ELSE 0
+                END
+            ) as relevance_score
+        FROM pois
+        WHERE is_active = true
+        AND (
+            LOWER(TRANSLATE(name, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+            LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
+            OR LOWER(TRANSLATE(COALESCE(description, ''), 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+            LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
+        )
+    """
+    
+    # Parametreler: tam eşleşme, kısmi eşleşme, açıklama, name like, desc like
+    params = [search_query, f'%{search_query}%', f'%{search_query}%', f'%{search_query}%', f'%{search_query}%']
+    
+    if category_filter:
+        base_query += " AND category = %s"
+        params.append(category_filter)
+    
+    base_query += " ORDER BY relevance_score DESC, name ASC"
+    
+    if limit:
+        base_query += " LIMIT %s"
+        params.append(limit)
+    
+    with db.conn.cursor(cursor_factory=db.conn.cursor_factory.__class__) as cur:
+        cur.execute(base_query, params)
+        results = cur.fetchall()
+    
+    return [dict(row) for row in results]
 
 @app.route('/api/poi/<poi_id>', methods=['GET'])
 def get_poi(poi_id):
