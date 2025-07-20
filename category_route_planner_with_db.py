@@ -167,39 +167,98 @@ def create_enhanced_poi_popup(poi_name: str, coord: Tuple[float, float], style: 
     </div>
     <div style="padding:16px;background:white;">"""
     
-    # POI detayları varsa ekle
-    if poi_details:
-        if poi_details.get('description'):
-            popup_html += f"""<div style="margin-bottom:16px;padding:12px;background:#f8f9fa;border-radius:8px;">
-                <p style="margin:0;font-size:14px;color:#333;">{poi_details['description']}</p>
-            </div>"""
+    # POI açıklamasını belirle (çeşitli kaynaklardan)
+    description = None
+    
+    # 1. Veritabanından gelen POI detayları
+    if poi_details and poi_details.get('description'):
+        description = poi_details['description']
+    
+    # 2. Varsayılan POI açıklamaları (eğer veritabanından gelmeyen varsa)
+    if not description:
+        default_descriptions = {
+            "AJWA Cappadocia (Ürgüp)": "Lüks mağara konseptli otel. Cappadocia'nın eşsiz güzelliklerini modern konfor ile buluşturan özel konaklama deneyimi sunar.",
+            "Kayakapı Premium Caves (Ürgüp)": "Tarihi mağara evlerinden dönüştürülmüş butik otel. Kapadokya'nın autentik mimarisini koruyarak modern lüks standartları sunar.",
+            "Yunak Evleri Cappadocia (Ürgüp)": "Geleneksel Kapadokya mimarisi ile tasarlanmış cave hotel. Doğal kayaların içinde benzersiz konaklama deneyimi.",
+            "Esbelli Evi Cave Hotel (Ürgüp)": "Otantik cave hotel deneyimi sunan tarihi konaklama. Kapadokya'nın doğal güzelliklerini odanızdan izleyebilirsiniz.",
+            "Ürgüp Müzesi": "Kapadokya bölgesinin zengin tarihini ve kültürünü sergileyen önemli müze. Bizans eserleri ve yerel el sanatları koleksiyonu.",
+            "Temenni Tepesi (Ürgüp)": "Ürgüp şehrinin panoramik manzarasını izleyebileceğiniz tarihi tepe. Gün batımı için ideal nokta.",
+            "Ziggy Cafe & Restaurant (Ürgüp)": "Modern ve geleneksel Türk mutfağının buluştuğu özel restoran. Kapadokya'nın lezzet durakları arasında.",
+            "Ehlikeyf Restaurant (Ürgüp)": "Yerel tatlarıyla meşhur Kapadokya mutfağının özgün lezzetlerini sunan geleneksel restoran."
+        }
+        description = default_descriptions.get(poi_name)
+    
+    # 3. Kategori bazlı varsayılan açıklama
+    if not description:
+        category_descriptions = {
+            "gastronomik": "Kapadokya'nın yerel lezzetlerini ve dünya mutfağından seçkin tatları deneyimleyebileceğiniz özel bir mekan.",
+            "kulturel": "Kapadokya'nın zengin tarihini ve kültürünü keşfedebileceğiniz önemli bir kültürel miras noktası.",
+            "sanatsal": "Yerel sanatçıların eserlerini ve geleneksel el sanatlarını keşfedebileceğiniz yaratıcı bir mekan.",
+            "doga_macera": "Kapadokya'nın eşsiz doğal güzelliklerini ve macerasını deneyimleyebileceğiniz özel bir nokta.",
+            "konaklama": "Kapadokya'nın büyüleyici atmosferinde konforlu ve unutulmaz bir konaklama deneyimi sunan özel tesis."
+        }
+        # Kategoriyi belirle (poi_name'den veya style'dan)
+        poi_category = None
+        for category, style_info in CATEGORY_STYLES.items():
+            if style == style_info:
+                poi_category = category
+                break
         
+        if poi_category:
+            description = category_descriptions.get(poi_category, "Kapadokya'da keşfedilmeye değer özel bir nokta.")
+        else:
+            description = "Kapadokya'da ziyaret edilmesi gereken önemli bir mekan."
+    
+    # Açıklama her zaman gösterilsin
+    if description:
+        popup_html += f"""<div style="margin-bottom:16px;padding:14px;background:linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);border-radius:12px;border-left:4px solid {style['color']};box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+            <div style="display:flex;align-items:flex-start;margin-bottom:8px;">
+                <i class="fa fa-info-circle" style="color:{style['color']};margin-right:8px;margin-top:2px;font-size:16px;"></i>
+                <strong style="color:#2c3e50;font-size:14px;">Hakkında</strong>
+            </div>
+            <p style="margin:0;font-size:13px;color:#555;line-height:1.6;">{description}</p>
+        </div>"""
+    
+    # POI detayları varsa ek bilgileri göster
+    if poi_details:
         # Özellikler
         if poi_details.get('attributes'):
             attrs = poi_details['attributes']
-            popup_html += """<div style="margin-bottom:16px;">"""
+            popup_html += """<div style="margin-bottom:16px;padding:12px;background:#f8f9fa;border-radius:8px;">
+                <div style="display:flex;align-items:center;margin-bottom:10px;">
+                    <i class="fa fa-cog" style="color:{};margin-right:8px;"></i>
+                    <strong style="color:#2c3e50;font-size:13px;">Özellikler</strong>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;">""".format(style['color'])
             
             if attrs.get('opening_hours'):
-                popup_html += f"""<div style="margin-bottom:8px;">
-                    <i class="fa fa-clock" style="width:20px;color:{style['color']};"></i>
-                    <span style="font-size:13px;">Açılış: {attrs['opening_hours']}</span>
+                popup_html += f"""<div style="display:flex;align-items:center;padding:6px 8px;background:white;border-radius:6px;border-left:3px solid #27ae60;">
+                    <i class="fa fa-clock" style="width:16px;color:#27ae60;margin-right:8px;font-size:12px;"></i>
+                    <span style="font-size:12px;color:#333;"><strong>Açılış:</strong> {attrs['opening_hours']}</span>
                 </div>"""
             
             if attrs.get('phone'):
-                popup_html += f"""<div style="margin-bottom:8px;">
-                    <i class="fa fa-phone" style="width:20px;color:{style['color']};"></i>
-                    <span style="font-size:13px;">{attrs['phone']}</span>
+                popup_html += f"""<div style="display:flex;align-items:center;padding:6px 8px;background:white;border-radius:6px;border-left:3px solid #3498db;">
+                    <i class="fa fa-phone" style="width:16px;color:#3498db;margin-right:8px;font-size:12px;"></i>
+                    <span style="font-size:12px;color:#333;"><strong>Tel:</strong> {attrs['phone']}</span>
                 </div>"""
             
             if attrs.get('rating'):
-                popup_html += f"""<div style="margin-bottom:8px;">
-                    <i class="fa fa-star" style="width:20px;color:#f39c12;"></i>
-                    <span style="font-size:13px;">Puan: {attrs['rating']}/5</span>
+                stars = '★' * int(attrs['rating']) + '☆' * (5 - int(attrs['rating']))
+                popup_html += f"""<div style="display:flex;align-items:center;padding:6px 8px;background:white;border-radius:6px;border-left:3px solid #f39c12;">
+                    <i class="fa fa-star" style="width:16px;color:#f39c12;margin-right:8px;font-size:12px;"></i>
+                    <span style="font-size:12px;color:#333;"><strong>Puan:</strong> {stars} ({attrs['rating']}/5)</span>
                 </div>"""
             
-            popup_html += "</div>"
+            if attrs.get('website'):
+                popup_html += f"""<div style="display:flex;align-items:center;padding:6px 8px;background:white;border-radius:6px;border-left:3px solid #9b59b6;">
+                    <i class="fa fa-globe" style="width:16px;color:#9b59b6;margin-right:8px;font-size:12px;"></i>
+                    <a href="{attrs['website']}" target="_blank" style="font-size:12px;color:#9b59b6;text-decoration:none;"><strong>Website</strong></a>
+                </div>"""
+            
+            popup_html += "</div></div>"
         
-    # Görüntüler - POI ID'si varsa görsel yükleme alanı ekle
+    # Medya içerikleri - POI ID'si varsa görsel, ses ve video yükleme alanı ekle
     if poi_id:
         popup_html += f"""<div style="margin-bottom:16px;">
             <h4 style="margin:0 0 12px 0;font-size:14px;color:#666;display:flex;align-items:center;">
@@ -214,6 +273,42 @@ def create_enhanced_poi_popup(poi_name: str, coord: Tuple[float, float], style: 
                             <span class="visually-hidden">Yükleniyor...</span>
                         </div>
                         <small style="color:#666;">Görseller yükleniyor...</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-bottom:16px;">
+            <h4 style="margin:0 0 12px 0;font-size:14px;color:#666;display:flex;align-items:center;">
+                <i class="fa fa-video" style="margin-right:8px;color:{style['color']};"></i>
+                Videolar
+                <span id="video-count-{poi_id}" style="margin-left:8px;font-size:12px;color:#999;"></span>
+            </h4>
+            <div id="poi-videos-{poi_id}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;max-height:300px;overflow-y:auto;">
+                <div style="display:flex;align-items:center;justify-content:center;background:#f8f9fa;border-radius:8px;padding:20px;border:2px dashed #ddd;">
+                    <div style="text-align:center;">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status" style="margin-bottom:8px;">
+                            <span class="visually-hidden">Yükleniyor...</span>
+                        </div>
+                        <small style="color:#666;">Videolar yükleniyor...</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-bottom:16px;">
+            <h4 style="margin:0 0 12px 0;font-size:14px;color:#666;display:flex;align-items:center;">
+                <i class="fa fa-music" style="margin-right:8px;color:{style['color']};"></i>
+                Ses Dosyaları
+                <span id="audio-count-{poi_id}" style="margin-left:8px;font-size:12px;color:#999;"></span>
+            </h4>
+            <div id="poi-audios-{poi_id}" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;">
+                <div style="display:flex;align-items:center;justify-content:center;background:#f8f9fa;border-radius:8px;padding:20px;border:2px dashed #ddd;">
+                    <div style="text-align:center;">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status" style="margin-bottom:8px;">
+                            <span class="visually-hidden">Yükleniyor...</span>
+                        </div>
+                        <small style="color:#666;">Ses dosyaları yükleniyor...</small>
                     </div>
                 </div>
             </div>
@@ -599,17 +694,17 @@ def add_image_loading_javascript(html_file_path: str, api_host: str):
         
         # Python f-string içinde JS template literal kullanmak için çift süslü parantez {{...}} gerekir
         javascript_code = f'''<script>
-        // Genel POI görsel yükleme fonksiyonu
+        // Genel POI medya yükleme fonksiyonları
         function loadPOIImages(poiId, poiName) {{
-            // API URL'ini HER ZAMAN çalışan API sunucusuna göre ayarla
             const apiBaseUrl = '{api_host}';
-            const apiUrl = `${{apiBaseUrl}}/api/poi/${{poiId}}/images`;
+            const apiUrl = `${{apiBaseUrl}}/api/poi/${{poiId}}/media?type=image`;
             
             const container = document.getElementById('poi-images-' + poiId);
             const countSpan = document.getElementById('image-count-' + poiId);
+            const sectionDiv = container?.closest('div[style*="margin-bottom:16px"]');
             
             if (!container) {{
-                console.log('❌ Container bulunamadı:', poiId);
+                console.log('❌ Image container bulunamadı:', poiId);
                 return;
             }}
             
@@ -617,26 +712,19 @@ def add_image_loading_javascript(html_file_path: str, api_host: str):
             
             fetch(apiUrl)
                 .then(response => {{
-                    console.log('📡 API Response Status:', response.status);
-                    if (!response.ok) {{
-                        throw new Error('HTTP ' + response.status);
-                    }}
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
                     return response.json();
                 }})
                 .then(data => {{
-                    console.log('📦 API Response Data:', data);
-                    const images = data.images || [];
-                    console.log('🖼️ Images Array:', images, 'Length:', images.length);
+                    const images = data.media || [];
                     
                     if (images.length === 0) {{
-                        console.log('⚠️ No images found for POI:', poiId);
-                        container.innerHTML = '<small style="color:#999;text-align:center;padding:20px;display:block;">Henüz görsel eklenmemiş</small>';
+                        // Boş durum için bölümü tamamen gizle
+                        if (sectionDiv) sectionDiv.style.display = 'none';
                         return;
                     }}
                     
                     if (countSpan) countSpan.textContent = '(' + images.length + ')';
-                    
-                    // Container'ı temizle
                     container.innerHTML = '';
                     
                     images.slice(0, 6).forEach((img, i) => {{
@@ -648,14 +736,13 @@ def add_image_loading_javascript(html_file_path: str, api_host: str):
                         imgDiv.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);transition:transform 0.2s ease;';
                         
                         const imgElement = document.createElement('img');
-                        // Görsel yolunu tam API yoluyla oluştur
                         imgElement.src = `${{apiBaseUrl}}/${{imgPath}}`;
                         imgElement.style.cssText = 'width:100%;height:80px;object-fit:cover;cursor:pointer;';
                         imgElement.alt = caption;
                         imgElement.onclick = function() {{ window.open(`${{apiBaseUrl}}/${{fullPath}}`, '_blank'); }};
                         imgElement.onmouseover = function() {{ this.parentElement.style.transform = 'scale(1.05)'; }};
                         imgElement.onmouseout = function() {{ this.parentElement.style.transform = 'scale(1)'; }};
-                        imgElement.onerror = function() {{ this.style.display = 'none'; console.log('Görsel yüklenemedi: ' + imgElement.src); }};
+                        imgElement.onerror = function() {{ this.style.display = 'none'; }};
                         
                         const overlay = document.createElement('div');
                         overlay.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));padding:4px 8px;';
@@ -676,12 +763,218 @@ def add_image_loading_javascript(html_file_path: str, api_host: str):
                 }})
                 .catch(error => {{
                     console.log('⚠️ Görsel yükleme hatası:', poiName, 'Error:', error.message);
-                    console.log('🔗 Failed URL:', apiUrl);
-                    container.innerHTML = '<small style="color:#999;text-align:center;padding:20px;display:block;">Görsel yüklenemedi: ' + error.message + '</small>';
+                    // Hata durumunda da bölümü gizle
+                    if (sectionDiv) sectionDiv.style.display = 'none';
                 }});
         }}
 
-        // Tüm popup'lar için otomatik görsel yükleme sistemi
+        function loadPOIVideos(poiId, poiName) {{
+            const apiBaseUrl = '{api_host}';
+            const apiUrl = `${{apiBaseUrl}}/api/poi/${{poiId}}/media?type=video`;
+            
+            const container = document.getElementById('poi-videos-' + poiId);
+            const countSpan = document.getElementById('video-count-' + poiId);
+            const sectionDiv = container?.closest('div[style*="margin-bottom:16px"]');
+            
+            if (!container) {{
+                console.log('❌ Video container bulunamadı:', poiId);
+                return;
+            }}
+            
+            console.log('🎬 POI Video Yükleniyor:', poiName, 'ID:', poiId);
+            
+            fetch(apiUrl)
+                .then(response => {{
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.json();
+                }})
+                .then(data => {{
+                    const videos = data.media || [];
+                    
+                    if (videos.length === 0) {{
+                        // Boş durum için bölümü tamamen gizle
+                        if (sectionDiv) sectionDiv.style.display = 'none';
+                        return;
+                    }}
+                    
+                    if (countSpan) countSpan.textContent = '(' + videos.length + ')';
+                    container.innerHTML = '';
+                    
+                    videos.slice(0, 4).forEach((video, i) => {{
+                        const videoPath = video.path;
+                        const previewPath = video.preview_path || video.thumbnail_path;
+                        const caption = video.filename || 'Video ' + (i + 1);
+                        
+                        const videoDiv = document.createElement('div');
+                        videoDiv.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);background:#000;';
+                        
+                        const videoElement = document.createElement('video');
+                        videoElement.src = `${{apiBaseUrl}}/${{videoPath}}`;
+                        videoElement.style.cssText = 'width:100%;height:120px;object-fit:cover;';
+                        videoElement.controls = true;
+                        videoElement.preload = 'metadata';
+                        videoElement.title = caption;
+                        
+                        // Video poster (önizleme) ekle
+                        if (previewPath) {{
+                            videoElement.poster = `${{apiBaseUrl}}/${{previewPath}}`;
+                        }}
+                        
+                        const overlay = document.createElement('div');
+                        overlay.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.8));padding:6px 8px;pointer-events:none;';
+                        overlay.innerHTML = '<small style="color:white;font-size:10px;font-weight:600;"><i class="fa fa-play-circle" style="margin-right:4px;"></i>' + caption.substring(0, 25) + (caption.length > 25 ? '...' : '') + '</small>';
+                        
+                        videoDiv.appendChild(videoElement);
+                        videoDiv.appendChild(overlay);
+                        container.appendChild(videoDiv);
+                    }});
+                    
+                    if (videos.length > 4) {{
+                        const moreDiv = document.createElement('div');
+                        moreDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;background:#f8f9fa;border-radius:8px;padding:20px;border:2px dashed #ddd;';
+                        moreDiv.innerHTML = '<small style="color:#666;text-align:center;"><i class="fa fa-plus-circle" style="font-size:16px;margin-bottom:4px;display:block;"></i>+' + (videos.length - 4) + ' video daha</small>';
+                        container.appendChild(moreDiv);
+                    }}
+                    console.log('✅ Videolar yüklendi:', poiName, videos.length, 'adet');
+                }})
+                .catch(error => {{
+                    console.log('⚠️ Video yükleme hatası:', poiName, 'Error:', error.message);
+                    // Hata durumunda da bölümü gizle
+                    if (sectionDiv) sectionDiv.style.display = 'none';
+                }});
+        }}
+
+        function loadPOIAudios(poiId, poiName) {{
+            const apiBaseUrl = '{api_host}';
+            const apiUrl = `${{apiBaseUrl}}/api/poi/${{poiId}}/media?type=audio`;
+            
+            const container = document.getElementById('poi-audios-' + poiId);
+            const countSpan = document.getElementById('audio-count-' + poiId);
+            const sectionDiv = container?.closest('div[style*="margin-bottom:16px"]');
+            
+            if (!container) {{
+                console.log('❌ Audio container bulunamadı:', poiId);
+                return;
+            }}
+            
+            console.log('🎵 POI Ses Yükleniyor:', poiName, 'ID:', poiId);
+            
+            fetch(apiUrl)
+                .then(response => {{
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.json();
+                }})
+                .then(data => {{
+                    const audios = data.media || [];
+                    
+                    if (audios.length === 0) {{
+                        // Boş durum için bölümü tamamen gizle
+                        if (sectionDiv) sectionDiv.style.display = 'none';
+                        return;
+                    }}
+                    
+                    if (countSpan) countSpan.textContent = '(' + audios.length + ')';
+                    container.innerHTML = '';
+                    
+                    audios.slice(0, 5).forEach((audio, i) => {{
+                        const audioPath = audio.path;
+                        const caption = audio.filename || 'Ses ' + (i + 1);
+                        
+                        const audioDiv = document.createElement('div');
+                        audioDiv.style.cssText = 'display:flex;align-items:center;background:#f8f9fa;border-radius:8px;padding:12px;margin-bottom:8px;border-left:4px solid #3498db;transition:background 0.2s ease;';
+                        
+                        // Ses dosyası bilgileri
+                        const infoDiv = document.createElement('div');
+                        infoDiv.style.cssText = 'flex:1;margin-right:12px;min-width:0;';
+                        
+                        const titleDiv = document.createElement('div');
+                        titleDiv.style.cssText = 'font-weight:600;color:#333;font-size:13px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+                        titleDiv.innerHTML = '<i class="fa fa-music" style="margin-right:6px;color:#3498db;"></i>' + caption;
+                        
+                        const statusDiv = document.createElement('div');
+                        statusDiv.style.cssText = 'font-size:11px;color:#666;';
+                        statusDiv.textContent = 'Hazırlanıyor...';
+                        
+                        infoDiv.appendChild(titleDiv);
+                        infoDiv.appendChild(statusDiv);
+                        
+                        const audioElement = document.createElement('audio');
+                        audioElement.src = `${{apiBaseUrl}}/${{audioPath}}`;
+                        audioElement.controls = true;
+                        audioElement.preload = 'metadata';
+                        audioElement.style.cssText = 'height:36px;min-width:250px;max-width:300px;';
+                        
+                        // Ses dosyası yüklenme durumunu takip et
+                        audioElement.addEventListener('loadstart', function() {{
+                            statusDiv.textContent = 'Yükleniyor...';
+                            statusDiv.style.color = '#f39c12';
+                        }});
+                        
+                        audioElement.addEventListener('canplay', function() {{
+                            const duration = audioElement.duration;
+                            if (duration && !isNaN(duration)) {{
+                                const minutes = Math.floor(duration / 60);
+                                const seconds = Math.floor(duration % 60);
+                                statusDiv.textContent = `Hazır • ${{minutes}}:${{seconds.toString().padStart(2, '0')}}`;
+                                statusDiv.style.color = '#27ae60';
+                            }} else {{
+                                statusDiv.textContent = 'Hazır';
+                                statusDiv.style.color = '#27ae60';
+                            }}
+                        }});
+                        
+                        audioElement.addEventListener('error', function() {{
+                            statusDiv.textContent = 'Dosya hatası';
+                            statusDiv.style.color = '#e74c3c';
+                            audioElement.style.opacity = '0.5';
+                        }});
+                        
+                        audioElement.addEventListener('play', function() {{
+                            statusDiv.textContent = 'Oynatılıyor...';
+                            statusDiv.style.color = '#3498db';
+                            audioDiv.style.background = '#e3f2fd';
+                        }});
+                        
+                        audioElement.addEventListener('pause', function() {{
+                            const duration = audioElement.duration;
+                            if (duration && !isNaN(duration)) {{
+                                const minutes = Math.floor(duration / 60);
+                                const seconds = Math.floor(duration % 60);
+                                statusDiv.textContent = `Duraklatıldı • ${{minutes}}:${{seconds.toString().padStart(2, '0')}}`;
+                            }} else {{
+                                statusDiv.textContent = 'Duraklatıldı';
+                            }}
+                            statusDiv.style.color = '#666';
+                            audioDiv.style.background = '#f8f9fa';
+                        }});
+                        
+                        audioElement.addEventListener('ended', function() {{
+                            statusDiv.textContent = 'Tamamlandı';
+                            statusDiv.style.color = '#27ae60';
+                            audioDiv.style.background = '#f8f9fa';
+                        }});
+                        
+                        audioDiv.appendChild(infoDiv);
+                        audioDiv.appendChild(audioElement);
+                        container.appendChild(audioDiv);
+                    }});
+                    
+                    if (audios.length > 5) {{
+                        const moreDiv = document.createElement('div');
+                        moreDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;background:#f1f3f4;border-radius:8px;padding:16px;border:2px dashed #ccc;margin-top:8px;';
+                        moreDiv.innerHTML = '<small style="color:#666;text-align:center;font-weight:600;"><i class="fa fa-plus-circle" style="font-size:14px;margin-right:6px;color:#3498db;"></i>+' + (audios.length - 5) + ' ses dosyası daha var</small>';
+                        container.appendChild(moreDiv);
+                    }}
+                    console.log('✅ Ses dosyaları yüklendi:', poiName, audios.length, 'adet');
+                }})
+                .catch(error => {{
+                    console.log('⚠️ Ses yükleme hatası:', poiName, 'Error:', error.message);
+                    // Hata durumunda da bölümü gizle
+                    if (sectionDiv) sectionDiv.style.display = 'none';
+                }});
+        }}
+
+        // Tüm popup'lar için otomatik medya yükleme sistemi
         window.addEventListener('load', function() {{
             console.log('🚀 Sayfa tamamen yüklendi, popup event listener ekleniyor...');
 
@@ -690,12 +983,12 @@ def add_image_loading_javascript(html_file_path: str, api_host: str):
             console.log('🗺️ Harita objesi bulundu:', map ? mapKey : 'Yok');
 
             if (!map) {{
-                console.warn('❌ Harita objesi bulunamadı, görsel yükleme sistemi devre dışı');
+                console.warn('❌ Harita objesi bulunamadı, medya yükleme sistemi devre dışı');
                 return;
             }}
 
             map.on('popupopen', function(e) {{
-                console.log('📍 Popup açıldı, görsel yükleme başlatılıyor...');
+                console.log('📍 Popup açıldı, medya yükleme başlatılıyor...');
 
                 setTimeout(function() {{
                     let popupContent = e.popup.getContent();
@@ -704,21 +997,31 @@ def add_image_loading_javascript(html_file_path: str, api_host: str):
                         popupContent = popupContent && (popupContent.innerHTML || popupContent.outerHTML) || '';
                     }}
 
-                    const match = popupContent.match(/poi-images-([A-Za-z0-9_-]+)/);
-                    if (!match) {{
+                    // POI ID'sini bul (görsel, video veya ses container'larından herhangi birinden)
+                    const imageMatch = popupContent.match(/poi-images-([A-Za-z0-9_-]+)/);
+                    const videoMatch = popupContent.match(/poi-videos-([A-Za-z0-9_-]+)/);
+                    const audioMatch = popupContent.match(/poi-audios-([A-Za-z0-9_-]+)/);
+                    
+                    const poiId = (imageMatch && imageMatch[1]) || (videoMatch && videoMatch[1]) || (audioMatch && audioMatch[1]);
+                    
+                    if (!poiId) {{
                         console.warn('❗ POI ID bulunamadı');
                         return;
                     }}
 
-                    const poiId = match[1];
                     const titleMatch = popupContent.match(/<h3[^>]*>([^<]+)/);
                     const poiName = titleMatch ? titleMatch[1].replace(/[🍽️🏛️🎨🌿🏨📍]/g, '').trim() : 'POI';
 
+                    console.log('🎯 POI Medya Yükleme:', poiName, 'ID:', poiId);
+
+                    // Tüm medya türlerini paralel olarak yükle
                     loadPOIImages(poiId, poiName);
+                    loadPOIVideos(poiId, poiName);
+                    loadPOIAudios(poiId, poiName);
                 }}, 300);
             }});
 
-            console.log('✅ Popup event listener eklendi');
+            console.log('✅ Popup event listener eklendi (görsel, video, ses desteği ile)');
         }});
         </script>'''
         
