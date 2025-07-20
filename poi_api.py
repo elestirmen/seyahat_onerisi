@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from poi_database_adapter import POIDatabaseFactory
-from poi_image_manager import POIImageManager
+from poi_media_manager import POIMediaManager
 import os
 import json
 import uuid
@@ -15,9 +15,14 @@ CORS(app)
 JSON_FALLBACK = False
 JSON_FILE_PATH = 'test_data.json'
 
-# Görsel yönetimi
-image_manager = POIImageManager()
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+# Medya yönetimi (görsel, video, ses, 3D model desteği)
+media_manager = POIMediaManager()
+
+# Desteklenen dosya uzantıları (tüm medya türleri)
+ALLOWED_EXTENSIONS = set()
+for media_type, config in media_manager.SUPPORTED_FORMATS.items():
+    for ext in config['extensions']:
+        ALLOWED_EXTENSIONS.add(ext[1:])  # nokta olmadan ekle
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -113,13 +118,33 @@ def index():
                 
                 <div class="api-list">
                     <h3><i class="fas fa-code"></i> API Dokümantasyonu</h3>
+                    <h4>📌 POI Yönetimi</h4>
                     <ul>
                         <li><strong>GET</strong> <a href="/api/pois">/api/pois</a> - Tüm POI'leri listele</li>
                         <li><strong>POST</strong> /api/poi - Yeni POI ekle</li>
                         <li><strong>PUT</strong> /api/poi/&lt;id&gt; - POI güncelle</li>
                         <li><strong>DELETE</strong> /api/poi/&lt;id&gt; - POI sil</li>
+                    </ul>
+                    
+                    <h4>🎬 Medya Yönetimi (Yeni!)</h4>
+                    <ul>
+                        <li><strong>GET</strong> /api/poi/&lt;id&gt;/media - POI medya dosyalarını listele</li>
+                        <li><strong>POST</strong> /api/poi/&lt;id&gt;/media - POI'ye medya yükle</li>
+                        <li><strong>DELETE</strong> /api/poi/&lt;id&gt;/media/&lt;filename&gt; - Medya dosyası sil</li>
+                        <li><em>Desteklenen türler:</em> Görsel, Video, Ses, 3D Model</li>
+                    </ul>
+                    
+                    <h4>🖼️ Görsel API (Geriye Uyumlu)</h4>
+                    <ul>
                         <li><strong>GET</strong> /api/poi/&lt;id&gt;/images - POI görsellerini listele</li>
                         <li><strong>POST</strong> /api/poi/&lt;id&gt;/images - POI'ye görsel yükle</li>
+                        <li><strong>DELETE</strong> /api/poi/&lt;id&gt;/images/&lt;filename&gt; - Görsel sil</li>
+                    </ul>
+                    
+                    <h4>🔧 Sistem Yönetimi</h4>
+                    <ul>
+                        <li><strong>GET</strong> <a href="/api/system/media-info">/api/system/media-info</a> - Medya sistemi bilgileri</li>
+                        <li><strong>POST</strong> /api/system/cleanup-media-folders - Gereksiz klasörleri temizle</li>
                     </ul>
                 </div>
                 
@@ -836,23 +861,34 @@ def delete_poi(poi_id):
         return jsonify({'success': True})
     return jsonify({'error': 'Delete failed'}), 400
 
-# Görsel yönetimi endpoint'leri
-@app.route('/api/poi/<poi_id>/images', methods=['POST'])
-def upload_poi_image(poi_id):
-    """POI'ye görsel yükle"""
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image file provided'}), 400
+# Medya yönetimi endpoint'leri (görsel, video, ses, 3D model)
+@app.route('/api/poi/<poi_id>/media', methods=['POST'])
+def upload_poi_media(poi_id):
+    """POI'ye medya dosyası yükle (görsel, video, ses, 3D model)"""
+    if 'media' not in request.files:
+        return jsonify({'error': 'No media file provided'}), 400
     
-    file = request.files['image']
+    file = request.files['media']
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
     
     if not allowed_file(file.filename):
-        return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif, webp'}), 400
+        supported_formats = []
+        for media_type, config in media_manager.SUPPORTED_FORMATS.items():
+            supported_formats.extend(config['extensions'])
+        return jsonify({'error': f'Invalid file type. Supported formats: {", ".join(supported_formats)}'}), 400
     
-    # Dosya boyutu kontrolü - WebP dönüşümü sayesinde 15MB'a kadar kabul edebiliriz
-    if file.content_length and file.content_length > 15 * 1024 * 1024:
-        return jsonify({'error': 'Dosya boyutu 15MB\'dan küçük olmalıdır. WebP dönüşümü ile boyut otomatik olarak küçültülecektir.'}), 400
+    # Medya türünü tespit et
+    media_type = media_manager.detect_media_type(file.filename)
+    if not media_type:
+        return jsonify({'error': 'Unsupported media type'}), 400
+    
+    # Dosya boyutu kontrolü - medya türüne göre
+    max_size = media_manager.SUPPORTED_FORMATS[media_type]['max_size']
+    max_size_mb = max_size / (1024 * 1024)
+    
+    if file.content_length and file.content_length > max_size:
+        return jsonify({'error': f'Dosya boyutu {max_size_mb:.0f}MB\'dan küçük olmalıdır.'}), 400
     
     try:
         # POI bilgilerini al
@@ -895,17 +931,16 @@ def upload_poi_image(poi_id):
         file.save(temp_path)
         
         # Form verilerini al
-        image_type = request.form.get('type', 'photo')
         caption = request.form.get('caption', '')
         is_primary = request.form.get('is_primary', 'false').lower() == 'true'
         
-        # Görseli işle ve kaydet - POI ID bazlı klasör yapısı
-        result = image_manager.add_poi_image_by_id(
+        # Medya dosyasını işle ve kaydet - POI ID bazlı klasör yapısı
+        result = media_manager.add_poi_media(
             poi_id=poi_id,
             poi_name=poi_name,
             category=poi_category,
-            image_file_path=temp_path,
-            image_type=image_type,
+            media_file_path=temp_path,
+            media_type=media_type,
             caption=caption,
             is_primary=is_primary
         )
@@ -917,17 +952,17 @@ def upload_poi_image(poi_id):
         if result:
             return jsonify({
                 'success': True,
-                'image': result
+                'media': result
             }), 201
         else:
-            return jsonify({'error': 'Failed to process image'}), 500
+            return jsonify({'error': 'Failed to process media file'}), 500
             
     except Exception as e:
-        return jsonify({'error': f'Error uploading image: {str(e)}'}), 500
+        return jsonify({'error': f'Error uploading media: {str(e)}'}), 500
 
-@app.route('/api/poi/<poi_id>/images', methods=['GET'])
-def get_poi_images(poi_id):
-    """POI'nin görsellerini listele"""
+@app.route('/api/poi/<poi_id>/media', methods=['GET'])
+def get_poi_media(poi_id):
+    """POI'nin tüm medya dosyalarını listele"""
     try:
         if JSON_FALLBACK:
             test_data = load_test_data()
@@ -962,40 +997,95 @@ def get_poi_images(poi_id):
             poi_name = poi_details['name']
             poi_category = poi_details['category']
         
-        # Görselleri getir - POI ID bazlı sistem
-        images = image_manager.get_poi_images_by_id(poi_id)
-        return jsonify({'images': images})
+        # Medya türünü filtrele (opsiyonel)
+        media_type = request.args.get('type')
+        
+        # Medya dosyalarını getir - POI ID bazlı sistem
+        media_files = media_manager.get_poi_media_by_id(poi_id, media_type)
+        return jsonify({'media': media_files})
         
     except Exception as e:
-        return jsonify({'error': f'Error fetching images: {str(e)}'}), 500
+        return jsonify({'error': f'Error fetching media: {str(e)}'}), 500
 
-@app.route('/api/poi/<poi_id>/images/<filename>', methods=['DELETE'])
-def delete_poi_image(poi_id, filename):
-    """POI'nin belirli bir görselini sil"""
+@app.route('/api/poi/<poi_id>/media/<filename>', methods=['DELETE'])
+def delete_poi_media(poi_id, filename):
+    """POI'nin belirli bir medya dosyasını sil"""
     try:
         # Dosya adının güvenli olduğundan emin ol
         if '..' in filename or filename.startswith('/'):
             return jsonify({'error': 'Invalid filename'}), 400
 
-        # Görseli sil
-        success = image_manager.delete_poi_image_by_id(poi_id, filename)
+        # Medya dosyasını sil
+        success = media_manager.delete_poi_media_by_id(poi_id, filename)
 
         if success:
             return jsonify({'success': True})
         else:
-            # Belki dosya zaten yoktu, bu bir hata sayılmayabilir.
-            # Yine de istemciye başarılı bir yanıt dönebiliriz.
-            # Ancak loglarda "bulunamadı" uyarısı görünür.
-            return jsonify({'success': True, 'message': 'Image not found or already deleted'}), 200
+            return jsonify({'success': True, 'message': 'Media file not found or already deleted'}), 200
 
     except Exception as e:
-        return jsonify({'error': f'Error deleting image: {str(e)}'}), 500
+        return jsonify({'error': f'Error deleting media: {str(e)}'}), 500
+
+# Geriye uyumluluk için eski image endpoint'leri
+@app.route('/api/poi/<poi_id>/images', methods=['POST'])
+def upload_poi_image_legacy(poi_id):
+    """Geriye uyumluluk için eski görsel yükleme endpoint'i"""
+    # Sadece media endpoint'ine yönlendir
+    return upload_poi_media(poi_id)
+
+@app.route('/api/poi/<poi_id>/images', methods=['GET'])
+def get_poi_images_legacy(poi_id):
+    """Geriye uyumluluk için eski görsel listeleme endpoint'i"""
+    try:
+        # Sadece görsel türündeki medyaları getir
+        request.args = request.args.copy()
+        request.args['type'] = 'image'
+        
+        response_data = get_poi_media(poi_id)
+        if isinstance(response_data, tuple):
+            data, status_code = response_data
+        else:
+            data = response_data
+            status_code = 200
+            
+        # Response formatını eski API ile uyumlu hale getir
+        if hasattr(data, 'get_json'):
+            json_data = data.get_json()
+        else:
+            json_data = data
+            
+        if 'media' in json_data:
+            json_data['images'] = json_data.pop('media')
+            
+        return jsonify(json_data), status_code
+        
+    except Exception as e:
+        return jsonify({'error': f'Error fetching images: {str(e)}'}), 500
+
+@app.route('/api/poi/<poi_id>/images/<filename>', methods=['DELETE'])
+def delete_poi_image_legacy(poi_id, filename):
+    """Geriye uyumluluk için eski görsel silme endpoint'i"""
+    return delete_poi_media(poi_id, filename)
+
+# Medya dosyalarını serve etme endpoint'leri
+@app.route('/poi_media/<path:filename>')
+def serve_poi_media(filename):
+    """POI medya dosyalarını serve et"""
+    try:
+        return send_from_directory('poi_media', filename)
+    except FileNotFoundError:
+        return jsonify({'error': 'Media file not found'}), 404
 
 @app.route('/poi_images/<path:filename>')
 def serve_poi_image(filename):
-    """POI görsellerini serve et"""
+    """Geriye uyumluluk için POI görsellerini serve et"""
     try:
-        return send_from_directory('poi_images', filename)
+        # Önce eski klasörde ara
+        if os.path.exists(os.path.join('poi_images', filename)):
+            return send_from_directory('poi_images', filename)
+        # Yoksa yeni medya klasöründe ara
+        else:
+            return send_from_directory('poi_media', filename)
     except FileNotFoundError:
         return jsonify({'error': 'Image not found'}), 404
 
@@ -1131,6 +1221,51 @@ def download_map(filename):
         
     except Exception as e:
         return jsonify({'error': f'Error downloading file: {str(e)}'}), 500
+
+# Sistem yönetimi endpoint'leri
+@app.route('/api/system/cleanup-media-folders', methods=['POST'])
+def cleanup_media_folders():
+    """Kullanılmayan medya klasörlerini temizle"""
+    try:
+        cleaned_folders = media_manager.cleanup_unused_directories()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{len(cleaned_folders)} adet kullanılmayan klasör temizlendi',
+            'cleaned_folders': cleaned_folders
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Temizleme hatası: {str(e)}'}), 500
+
+@app.route('/api/system/media-info', methods=['GET'])
+def get_media_system_info():
+    """Medya sistemi hakkında bilgi ver"""
+    try:
+        base_path = media_manager.base_path
+        info = {
+            'media_structure': 'POI ID bazlı sistem kullanılıyor',
+            'base_path': str(base_path),
+            'supported_formats': media_manager.SUPPORTED_FORMATS,
+            'directories': {
+                'main': str(base_path / "by_poi_id"),
+                'thumbnails': str(media_manager.thumbnails_path / "by_poi_id"),
+                'previews': str(media_manager.previews_path / "by_poi_id")
+            }
+        }
+        
+        # Mevcut POI'lerin medya istatistikleri
+        by_poi_dir = base_path / "by_poi_id"
+        if by_poi_dir.exists():
+            poi_count = len([d for d in by_poi_dir.iterdir() if d.is_dir()])
+            info['active_pois'] = poi_count
+        else:
+            info['active_pois'] = 0
+            
+        return jsonify(info)
+        
+    except Exception as e:
+        return jsonify({'error': f'Bilgi alınamadı: {str(e)}'}), 500
 
 if __name__ == '__main__':
     print("🚀 POI Yönetim Sistemi başlatılıyor...")

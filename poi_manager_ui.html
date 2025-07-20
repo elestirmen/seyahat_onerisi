@@ -321,42 +321,50 @@
                                         <input type="url" class="form-control" id="poiImageUrl" placeholder="https://...">
                                     </div>
                                     
-                                    <!-- Görsel Yönetimi Bölümü -->
-                                    <div class="mb-3" id="imageManagementSection">
-                                        <label class="form-label">📸 Görsel Yönetimi</label>
+                                    <!-- Medya Yönetimi Bölümü (Görsel, Video, Ses, 3D) -->
+                                    <div class="mb-3" id="mediaManagementSection">
+                                        <label class="form-label">🎬 Medya Yönetimi</label>
                                         <div class="border rounded p-3 bg-light">
                                             <div class="mb-2">
-                                                <input type="file" class="form-control form-control-sm" id="imageFile" accept="image/*">
+                                                <input type="file" class="form-control form-control-sm" id="mediaFile" 
+                                                       accept="image/*,video/*,audio/*,.glb,.gltf,.obj,.fbx,.dae,.ply,.stl">
                                                 <small class="form-text text-muted">
                                                     <i class="fas fa-info-circle text-primary"></i>
-                                                    PNG, JPG, JPEG, GIF formatları kabul edilir. Görseller otomatik olarak WebP formatına dönüştürülür (boyut %50-80 küçülür).
+                                                    <strong>Desteklenen formatlar:</strong><br>
+                                                    📸 <strong>Görsel:</strong> PNG, JPG, JPEG, GIF, WebP (Max: 15MB)<br>
+                                                    🎥 <strong>Video:</strong> MP4, AVI, MOV, WebM, MKV (Max: 100MB)<br>
+                                                    🎵 <strong>Ses:</strong> MP3, WAV, OGG, M4A, AAC, FLAC (Max: 50MB)<br>
+                                                    🧊 <strong>3D Model:</strong> GLB, GLTF, OBJ, FBX, DAE, PLY, STL (Max: 50MB)
                                                 </small>
                                             </div>
                                             <div class="row">
                                                 <div class="col-6">
-                                                    <select class="form-select form-select-sm" id="imageType">
-                                                        <option value="photo">📷 Fotoğraf</option>
-                                                        <option value="exterior">🏢 Dış Görünüm</option>
-                                                        <option value="interior">🏠 İç Mekan</option>
-                                                        <option value="food">🍽️ Yemek</option>
-                                                        <option value="menu">📋 Menü</option>
+                                                    <select class="form-select form-select-sm" id="mediaType" onchange="updateMediaTypeOptions()">
+                                                        <option value="auto">🔍 Otomatik Tespit</option>
+                                                        <option value="image">📸 Görsel</option>
+                                                        <option value="video">🎥 Video</option>
+                                                        <option value="audio">🎵 Ses</option>
+                                                        <option value="model_3d">🧊 3D Model</option>
                                                     </select>
                                                 </div>
                                                 <div class="col-6">
-                                                    <input type="text" class="form-control form-control-sm" id="imageCaption" placeholder="Açıklama">
+                                                    <input type="text" class="form-control form-control-sm" id="mediaCaption" placeholder="Açıklama">
                                                 </div>
                                             </div>
                                             <div class="form-check mt-2">
-                                                <input class="form-check-input" type="checkbox" id="isPrimaryImage">
-                                                <label class="form-check-label" for="isPrimaryImage">Ana görsel</label>
+                                                <input class="form-check-input" type="checkbox" id="isPrimaryMedia">
+                                                <label class="form-check-label" for="isPrimaryMedia">Ana medya</label>
                                             </div>
-                                            <button type="button" class="btn btn-outline-primary btn-sm mt-2 w-100" onclick="uploadPOIImage()">
-                                                📤 Görsel Yükle
+                                            <button type="button" class="btn btn-outline-primary btn-sm mt-2 w-100" onclick="uploadPOIMedia()">
+                                                📤 Medya Yükle
                                             </button>
                                         </div>
                                         
-                                        <!-- Mevcut Görseller -->
-                                        <div id="currentImages" class="mt-2"></div>
+                                        <!-- Mevcut Medya Dosyaları -->
+                                        <div id="currentMedia" class="mt-2"></div>
+                                        
+                                        <!-- Geriye Uyumluluk için Eski Görsel Bölümü (Gizli) -->
+                                        <div id="currentImages" class="mt-2" style="display: none;"></div>
                                     </div>
                                     
                                     <div class="d-grid gap-2">
@@ -1306,78 +1314,216 @@
             return '📷';
         }
 
-        // Görsel yönetimi fonksiyonları
-        async function uploadPOIImage() {
-            const fileInput = document.getElementById('imageFile');
-            const imageType = document.getElementById('imageType').value;
-            const imageCaption = document.getElementById('imageCaption').value;
-            const isPrimary = document.getElementById('isPrimaryImage').checked;
+        // Medya yönetimi fonksiyonları
+        function updateMediaTypeOptions() {
+            // Gelecekte medya türüne göre ek seçenekler eklenebilir
+        }
+        
+        function getMediaTypeIcon(mediaType, filename) {
+            switch(mediaType) {
+                case 'image': return '📸';
+                case 'video': return '🎥';
+                case 'audio': return '🎵';
+                case 'model_3d': return '🧊';
+                default: return '📄';
+            }
+        }
+        
+        function getMediaMaxSize(mediaType) {
+            const sizes = {
+                'image': 15,
+                'video': 100,
+                'audio': 50,
+                'model_3d': 50
+            };
+            return sizes[mediaType] || 15;
+        }
+        
+        async function uploadPOIMedia() {
+            const fileInput = document.getElementById('mediaFile');
+            const mediaTypeSelect = document.getElementById('mediaType');
+            const mediaCaption = document.getElementById('mediaCaption').value;
+            const isPrimary = document.getElementById('isPrimaryMedia').checked;
             
             // POI ID'sini al (düzenleme modundaysa)
             const poiId = document.getElementById('poiId').value;
             if (!poiId) {
-                alert('Önce POI\'yi kaydedin, sonra görsel ekleyin.');
+                alert('Önce POI\'yi kaydedin, sonra medya ekleyin.');
                 return;
             }
             
             if (!fileInput.files || fileInput.files.length === 0) {
-                alert('Lütfen bir görsel dosyası seçin.');
+                alert('Lütfen bir medya dosyası seçin.');
                 return;
             }
             
             const file = fileInput.files[0];
+            const filename = file.name.toLowerCase();
             
-            // Dosya boyutu kontrolü (15MB - WebP dönüşümü sayesinde)
-            if (file.size > 15 * 1024 * 1024) {
-                alert('Dosya boyutu 15MB\'dan küçük olmalıdır.\n\nNot: Görseliniz otomatik olarak WebP formatına dönüştürülecek ve boyutu %50-80 oranında küçültülecektir.');
+            // Medya türünü tespit et
+            let mediaType = mediaTypeSelect.value;
+            if (mediaType === 'auto') {
+                if (filename.match(/\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/)) {
+                    mediaType = 'image';
+                } else if (filename.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)$/)) {
+                    mediaType = 'video';
+                } else if (filename.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/)) {
+                    mediaType = 'audio';
+                } else if (filename.match(/\.(glb|gltf|obj|fbx|dae|ply|stl)$/)) {
+                    mediaType = 'model_3d';
+                } else {
+                    alert('Dosya türü tespit edilemedi. Lütfen medya türünü manuel olarak seçin.');
+                    return;
+                }
+            }
+            
+            // Dosya boyutu kontrolü
+            const maxSize = getMediaMaxSize(mediaType) * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert(`Dosya boyutu ${getMediaMaxSize(mediaType)}MB'dan küçük olmalıdır.\n\nSeçilen dosya: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
                 return;
             }
             
             const formData = new FormData();
-            formData.append('image', file);
-            formData.append('type', imageType);
-            formData.append('caption', imageCaption);
+            formData.append('media', file);
+            formData.append('caption', mediaCaption);
             formData.append('is_primary', isPrimary);
             
             try {
                 showLoading();
-                const response = await fetch(`${apiBase}/poi/${poiId}/images`, {
+                const response = await fetch(`${apiBase}/poi/${poiId}/media`, {
                     method: 'POST',
                     body: formData
                 });
                 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.error || 'Görsel yükleme başarısız');
+                    throw new Error(error.error || 'Medya yükleme başarısız');
                 }
                 
                 const result = await response.json();
                 
-                if (result.image && result.image.compression_ratio) {
-                    showToast(`Görsel başarıyla yüklendi ve WebP formatına dönüştürüldü!\n📦 Boyut azalması: ${result.image.compression_ratio}`, 'success');
+                if (result.media && result.media.compression_ratio && result.media.compression_ratio !== "0%") {
+                    showToast(`${getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!\n📦 Boyut azalması: ${result.media.compression_ratio}`, 'success');
                 } else {
-                    showToast('Görsel başarıyla yüklendi!', 'success');
+                    showToast(`${getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!`, 'success');
                 }
                 
                 // Form alanlarını temizle
                 fileInput.value = '';
-                document.getElementById('imageCaption').value = '';
-                document.getElementById('isPrimaryImage').checked = false;
+                document.getElementById('mediaCaption').value = '';
+                document.getElementById('isPrimaryMedia').checked = false;
+                mediaTypeSelect.value = 'auto';
                 
-                // Mevcut görselleri yenile
-                await loadPOIImages(poiId);
+                // Mevcut medya dosyalarını yenile
+                await loadPOIMedia(poiId);
                 
             } catch (error) {
-                console.error('Görsel yükleme hatası:', error);
-                alert('Görsel yükleme hatası: ' + error.message);
+                console.error('Medya yükleme hatası:', error);
+                alert('Medya yükleme hatası: ' + error.message);
             } finally {
                 hideLoading();
             }
         }
         
-        async function loadPOIImages(poiId) {
+        // Geriye uyumluluk için eski görsel yükleme fonksiyonu
+        async function uploadPOIImage() {
+            // Yeni medya fonksiyonunu kullan
+            document.getElementById('mediaType').value = 'image';
+            await uploadPOIMedia();
+        }
+        
+        async function loadPOIMedia(poiId) {
             if (!poiId) return;
             
+            try {
+                const response = await fetch(`${apiBase}/poi/${poiId}/media`);
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                const mediaFiles = data.media || [];
+                
+                const container = document.getElementById('currentMedia');
+                if (mediaFiles.length === 0) {
+                    container.innerHTML = '<small class="text-muted">Henüz medya dosyası eklenmemiş.</small>';
+                    return;
+                }
+                
+                // Medya türlerine göre grupla
+                const groupedMedia = {};
+                mediaFiles.forEach(media => {
+                    const type = media.media_type || 'unknown';
+                    if (!groupedMedia[type]) groupedMedia[type] = [];
+                    groupedMedia[type].push(media);
+                });
+                
+                let mediaHtml = '';
+                
+                // Her medya türü için ayrı bölüm oluştur
+                Object.keys(groupedMedia).forEach(mediaType => {
+                    const typeIcon = getMediaTypeIcon(mediaType);
+                    const typeLabel = {
+                        'image': 'Görseller',
+                        'video': 'Videolar', 
+                        'audio': 'Ses Dosyaları',
+                        'model_3d': '3D Modeller',
+                        'unknown': 'Diğer'
+                    }[mediaType] || mediaType.toUpperCase();
+                    
+                    mediaHtml += `
+                        <div class="mb-3">
+                            <h6 class="fw-bold text-primary">${typeIcon} ${typeLabel} (${groupedMedia[mediaType].length})</h6>
+                            <div class="row g-2">`;
+                    
+                                         groupedMedia[mediaType].forEach((media, index) => {
+                         const previewPath = media.preview_path || media.thumbnail_path || media.path;
+                         const isImage = mediaType === 'image';
+                         
+                         mediaHtml += `
+                             <div class="col-6">
+                                 <div class="card">
+                                     <div class="position-relative">
+                                         ${isImage ? 
+                                             `<img src="/${previewPath}" class="card-img-top" style="height: 80px; object-fit: cover;" 
+                                                  alt="${media.filename}" onclick="showMediaModal('/${media.path}', '${media.filename}', '${mediaType}')">` :
+                                             `<div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 80px;" 
+                                                  onclick="showMediaModal('/${media.path}', '${media.filename}', '${mediaType}')">
+                                                  ${getMediaTypeIcon(mediaType)} <span class="ms-2 small">${media.format?.toUpperCase() || ''}</span>
+                                              </div>`
+                                         }
+                                         <button class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1" 
+                                                 style="width: 25px; height: 25px; padding: 0; font-size: 0.7rem;" 
+                                                 onclick="deleteMediaFile('${poiId}', '${media.filename}')" 
+                                                 title="Sil">
+                                             ×
+                                         </button>
+                                     </div>
+                                     <div class="card-body p-2">
+                                         <small class="text-muted d-block">${media.filename}</small>
+                                         <small class="text-muted">${(media.size / 1024).toFixed(0)}KB</small>
+                                     </div>
+                                 </div>
+                             </div>`;
+                     });
+                     
+                     mediaHtml += `
+                             </div>
+                         </div>`;
+                 });
+                 
+                 container.innerHTML = mediaHtml;
+                 
+            } catch (error) {
+                console.error('Medya yükleme hatası:', error);
+            }
+        }
+        
+        // Geriye uyumluluk için eski görsel yükleme fonksiyonu
+        async function loadPOIImages(poiId) {
+            // Yeni medya fonksiyonunu kullan
+            await loadPOIMedia(poiId);
+            
+            // Eski format için de görselleri currentImages container'ına yükle
             try {
                 const response = await fetch(`${apiBase}/poi/${poiId}/images`);
                 if (!response.ok) return;
@@ -1400,19 +1546,121 @@
                                 <img src="/${imagePath}" class="card-img-top" style="height: 80px; object-fit: cover;" 
                                      alt="${image.filename}">
                                 <div class="card-body p-2">
-                                    <small class="text-muted">${image.filename}</small>
-                                    <br><small>${(image.size / 1024).toFixed(1)} KB</small>
+                                    <small class="text-muted d-block">${image.filename}</small>
+                                    <small class="text-muted">${(image.size / 1024).toFixed(0)}KB</small>
+                                    <button class="btn btn-danger btn-sm mt-1" onclick="deleteMediaFile('${poiId}', '${image.filename}')">
+                                        🗑️ Sil
+                                    </button>
                                 </div>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 });
                 imagesHtml += '</div>';
-                
                 container.innerHTML = imagesHtml;
                 
             } catch (error) {
-                console.error('Görseller yüklenirken hata:', error);
+                console.error('Görsel yükleme hatası:', error);
+            }
+        }
+        
+        // Medya modal gösterimi
+        function showMediaModal(mediaPath, filename, mediaType) {
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            
+            let modalContent = '';
+            if (mediaType === 'image') {
+                modalContent = `<img src="${mediaPath}" class="img-fluid rounded-3 shadow-lg" alt="${filename}" style="max-height: 70vh;">`;
+            } else if (mediaType === 'video') {
+                modalContent = `
+                    <video controls class="w-100 rounded-3 shadow-lg" style="max-height: 70vh;">
+                        <source src="${mediaPath}" type="video/mp4">
+                        Tarayıcınız video oynatmayı desteklemiyor.
+                    </video>`;
+            } else if (mediaType === 'audio') {
+                modalContent = `
+                    <div class="text-center p-4">
+                        <i class="fas fa-music fa-3x text-primary mb-3"></i>
+                        <h5>${filename}</h5>
+                        <audio controls class="w-100 mt-3">
+                            <source src="${mediaPath}">
+                            Tarayıcınız ses oynatmayı desteklemiyor.
+                        </audio>
+                    </div>`;
+            } else if (mediaType === 'model_3d') {
+                modalContent = `
+                    <div class="text-center p-4">
+                        <i class="fas fa-cube fa-3x text-primary mb-3"></i>
+                        <h5>${filename}</h5>
+                        <p class="text-muted">3D model dosyası - indirip uygun bir uygulamada görüntüleyebilirsiniz.</p>
+                    </div>`;
+            } else {
+                modalContent = `
+                    <div class="text-center p-4">
+                        <i class="fas fa-file fa-3x text-primary mb-3"></i>
+                        <h5>${filename}</h5>
+                        <p class="text-muted">Medya dosyası</p>
+                    </div>`;
+            }
+            
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title fw-bold"><i class="fas fa-file me-2"></i>${filename}</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center p-4">
+                            ${modalContent}
+                        </div>
+                        <div class="modal-footer justify-content-center">
+                            <a href="${mediaPath}" target="_blank" class="btn btn-primary">
+                                <i class="fas fa-external-link-alt me-1"></i> Yeni Sekmede Aç/İndir
+                            </a>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i> Kapat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            modal.addEventListener('hidden.bs.modal', () => {
+                modal.remove();
+            });
+        }
+        
+        // Medya dosyası silme
+        async function deleteMediaFile(poiId, filename) {
+            if (!confirm(`'${filename}' dosyasını silmek istediğinizden emin misiniz?`)) {
+                return;
+            }
+            
+            try {
+                showLoading();
+                const response = await fetch(`${apiBase}/poi/${poiId}/media/${filename}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Dosya silinemedi');
+                }
+                
+                showToast('Medya dosyası başarıyla silindi', 'success');
+                
+                // Medya listesini yenile
+                await loadPOIMedia(poiId);
+                
+            } catch (error) {
+                console.error('Medya silme hatası:', error);
+                alert('Medya silme hatası: ' + error.message);
+            } finally {
+                hideLoading();
             }
         }
 
