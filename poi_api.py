@@ -5,6 +5,8 @@ from poi_media_manager import POIMediaManager
 import os
 import json
 import uuid
+import unicodedata
+import re
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
@@ -14,6 +16,20 @@ CORS(app)
 # JSON verileri için fallback
 JSON_FALLBACK = False
 JSON_FILE_PATH = 'test_data.json'
+
+# Rating kategorileri (yeni POI puanlama sistemi)
+RATING_CATEGORIES = {
+    'tarihi': {'name': 'Tarihi', 'description': 'Tarihi önem ve değer', 'icon': 'fa-landmark', 'color': '#8B4513'},
+    'sanat_kultur': {'name': 'Sanat ve Kültür', 'description': 'Sanatsal ve kültürel değer', 'icon': 'fa-palette', 'color': '#9B59B6'},
+    'doga': {'name': 'Doğa', 'description': 'Doğal güzellik ve çevre', 'icon': 'fa-leaf', 'color': '#27AE60'},
+    'eglence': {'name': 'Eğlence', 'description': 'Eğlence ve aktivite değeri', 'icon': 'fa-music', 'color': '#E74C3C'},
+    'alisveris': {'name': 'Alışveriş', 'description': 'Alışveriş olanakları', 'icon': 'fa-shopping-cart', 'color': '#F39C12'},
+    'spor': {'name': 'Spor', 'description': 'Spor aktiviteleri', 'icon': 'fa-dumbbell', 'color': '#34495E'},
+    'macera': {'name': 'Macera', 'description': 'Macera ve heyecan', 'icon': 'fa-mountain', 'color': '#D35400'},
+    'rahatlatici': {'name': 'Rahatlatıcı', 'description': 'Huzur ve dinlendirici', 'icon': 'fa-spa', 'color': '#1ABC9C'},
+    'yemek': {'name': 'Yemek', 'description': 'Gastronomi ve lezzet', 'icon': 'fa-utensils', 'color': '#E67E22'},
+    'gece_hayati': {'name': 'Gece Hayatı', 'description': 'Gece eğlencesi', 'icon': 'fa-moon', 'color': '#6C3483'}
+}
 
 # Medya yönetimi (görsel, video, ses, 3D model desteği)
 media_manager = POIMediaManager()
@@ -26,6 +42,61 @@ for media_type, config in media_manager.SUPPORTED_FORMATS.items():
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def normalize_turkish_text(text):
+    """
+    Türkçe karakterleri ve büyük/küçük harfleri normalize et
+    Arama için kullanılacak
+    """
+    if not text:
+        return ""
+    
+    # Küçük harfe çevir
+    text = text.lower()
+    
+    # Türkçe karakterleri ASCII karşılıklarıyla değiştir
+    turkish_map = {
+        'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
+        'Ç': 'c', 'Ğ': 'g', 'İ': 'i', 'Ö': 'o', 'Ş': 's', 'Ü': 'u'
+    }
+    
+    for turkish_char, ascii_char in turkish_map.items():
+        text = text.replace(turkish_char, ascii_char)
+    
+    # Ekstra boşlukları temizle
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    return text
+
+def fuzzy_search_match(search_term, target_text, threshold=0.6):
+    """
+    Bulanık arama - kısmi eşleşme ve Türkçe karakter desteği
+    """
+    if not search_term or not target_text:
+        return False
+    
+    # Her ikisini de normalize et
+    norm_search = normalize_turkish_text(search_term)
+    norm_target = normalize_turkish_text(target_text)
+    
+    # Tam eşleşme kontrolü
+    if norm_search in norm_target:
+        return True
+    
+    # Kelime kelime arama
+    search_words = norm_search.split()
+    target_words = norm_target.split()
+    
+    matched_words = 0
+    for search_word in search_words:
+        for target_word in target_words:
+            if search_word in target_word or target_word in search_word:
+                matched_words += 1
+                break
+    
+    # Eşik değerini kontrol et
+    match_ratio = matched_words / len(search_words)
+    return match_ratio >= threshold
 
 def load_test_data():
     """Test verilerini JSON dosyasından yükle"""
@@ -121,9 +192,20 @@ def index():
                     <h4>📌 POI Yönetimi</h4>
                     <ul>
                         <li><strong>GET</strong> <a href="/api/pois">/api/pois</a> - Tüm POI'leri listele</li>
+                        <li><strong>GET</strong> <a href="/api/pois?search=ajwa">/api/pois?search=terim</a> - POI'lerde arama yap</li>
+                        <li><strong>GET</strong> <a href="/api/search?q=ürgüp">/api/search?q=terim</a> - Gelişmiş arama (Türkçe karakter desteği)</li>
                         <li><strong>POST</strong> /api/poi - Yeni POI ekle</li>
                         <li><strong>PUT</strong> /api/poi/&lt;id&gt; - POI güncelle</li>
                         <li><strong>DELETE</strong> /api/poi/&lt;id&gt; - POI sil</li>
+                    </ul>
+                    
+                    <h4>⭐ Rating Sistemi (Yeni!)</h4>
+                    <ul>
+                        <li><strong>GET</strong> <a href="/api/ratings/categories">/api/ratings/categories</a> - Rating kategorilerini listele</li>
+                        <li><strong>GET</strong> /api/poi/&lt;id&gt;/ratings - POI rating'lerini getir</li>
+                        <li><strong>PUT</strong> /api/poi/&lt;id&gt;/ratings - POI rating'lerini güncelle</li>
+                        <li><strong>GET</strong> <a href="/api/pois/by-rating?category=tarihi&min_score=50">/api/pois/by-rating</a> - Rating'e göre POI ara</li>
+                        <li><em>Kategoriler:</em> Tarihi, Sanat&Kültür, Doğa, Eğlence, Alışveriş, Spor, Macera, Rahatlatıcı, Yemek, Gece Hayatı</li>
                     </ul>
                     
                     <h4>🎬 Medya Yönetimi (Yeni!)</h4>
@@ -649,9 +731,12 @@ def serve_ui():
 
 @app.route('/api/pois', methods=['GET'])
 def list_pois():
+    # Arama parametrelerini al
+    search_query = request.args.get('search', '').strip()
+    category = request.args.get('category')
+    
     if JSON_FALLBACK:
         test_data = load_test_data()
-        category = request.args.get('category')
         
         # Sadece aktif POI'leri filtrele
         filtered_data = {}
@@ -661,6 +746,28 @@ def list_pois():
                 if active_pois:  # Sadece aktif POI'si olan kategorileri ekle
                     filtered_data[cat] = active_pois
         
+        # Arama filtresi uygula
+        if search_query:
+            search_results = {}
+            for cat, pois in filtered_data.items():
+                matched_pois = []
+                for poi in pois:
+                    # POI adı, açıklama ve etiketlerde ara
+                    search_fields = [
+                        poi.get('name', ''),
+                        poi.get('description', ''),
+                        ', '.join(poi.get('tags', []))
+                    ]
+                    
+                    # Herhangi bir alanda eşleşme var mı kontrol et
+                    if any(fuzzy_search_match(search_query, field) for field in search_fields):
+                        matched_pois.append(poi)
+                
+                if matched_pois:
+                    search_results[cat] = matched_pois
+            
+            return jsonify(search_results)
+        
         if category and category in filtered_data:
             return jsonify(filtered_data[category])
         return jsonify(filtered_data)
@@ -669,19 +776,243 @@ def list_pois():
     if not db:
         return jsonify({'error': 'Database connection failed'}), 500
     
-    category = request.args.get('category')
-    if category:
-        # Yeni UI için uyumlu formatta aktif POI'leri getir
-        pois = db.list_pois(category)
+    try:
+        if search_query:
+            # Veritabanında arama yap
+            search_results = perform_database_search(db, search_query, category)
+            db.disconnect()
+            return jsonify(search_results)
+        
+        if category:
+            # Yeni UI için uyumlu formatta aktif POI'leri getir
+            pois = db.list_pois(category)
+            db.disconnect()
+            return jsonify(pois)
+        
+        # Tüm kategorilerdeki POI'leri döndür
+        categories = ['gastronomik', 'kulturel', 'sanatsal', 'doga_macera', 'konaklama']
+        all_pois = {}
+        for cat in categories:
+            all_pois[cat] = db.list_pois(cat)
         db.disconnect()
-        return jsonify(pois)
-    # Tüm kategorilerdeki POI'leri döndür
-    categories = ['gastronomik', 'kulturel', 'sanatsal', 'doga_macera', 'konaklama']
-    all_pois = {}
-    for cat in categories:
-        all_pois[cat] = db.list_pois(cat)
-    db.disconnect()
-    return jsonify(all_pois)
+        return jsonify(all_pois)
+        
+    except Exception as e:
+        db.disconnect()
+        return jsonify({'error': f'Search error: {str(e)}'}), 500
+
+def perform_database_search(db, search_query, category_filter=None):
+    """
+    Veritabanında Türkçe karakter desteği ile POI arama
+    """
+    # PostgreSQL için Türkçe karakter destekli arama sorgusu
+    base_query = """
+        SELECT 
+            id as _id,
+            name, 
+            category, 
+            ST_Y(location::geometry) as latitude, 
+            ST_X(location::geometry) as longitude, 
+            description
+        FROM pois
+        WHERE is_active = true
+        AND (
+            LOWER(TRANSLATE(name, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+            LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
+            OR LOWER(TRANSLATE(COALESCE(description, ''), 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+            LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
+        )
+    """
+    
+    params = [f'%{search_query}%', f'%{search_query}%']
+    
+    if category_filter:
+        base_query += " AND category = %s"
+        params.append(category_filter)
+    
+    base_query += " ORDER BY name"
+    
+    with db.conn.cursor(cursor_factory=db.conn.cursor_factory.__class__) as cur:
+        cur.execute(base_query, params)
+        results = cur.fetchall()
+    
+    # Sonuçları kategorilere göre grupla
+    search_results = {}
+    for row in results:
+        category = row['category']
+        if category not in search_results:
+            search_results[category] = []
+        search_results[category].append(dict(row))
+    
+    return search_results
+
+@app.route('/api/search', methods=['GET'])
+def search_pois():
+    """
+    Gelişmiş POI arama endpoint'i - Türkçe karakter desteği ile
+    Parametreler:
+    - q: Arama terimi
+    - category: Kategori filtresi
+    - limit: Maksimum sonuç sayısı (varsayılan: 50)
+    """
+    search_query = request.args.get('q', '').strip()
+    category_filter = request.args.get('category')
+    limit = int(request.args.get('limit', 50))
+    
+    if not search_query:
+        return jsonify({'error': 'Arama terimi gerekli (q parametresi)'}), 400
+    
+    if len(search_query) < 2:
+        return jsonify({'error': 'Arama terimi en az 2 karakter olmalı'}), 400
+    
+    try:
+        if JSON_FALLBACK:
+            # JSON fallback arama
+            test_data = load_test_data()
+            results = []
+            
+            for cat, pois in test_data.items():
+                if category_filter and cat != category_filter:
+                    continue
+                    
+                if isinstance(pois, list):
+                    for poi in pois:
+                        if not poi.get('isActive', True):
+                            continue
+                            
+                        # Arama alanları
+                        search_fields = [
+                            poi.get('name', ''),
+                            poi.get('description', ''),
+                            ', '.join(poi.get('tags', [])),
+                            cat  # Kategori adı da arama kapsamında
+                        ]
+                        
+                        # Herhangi bir alanda eşleşme kontrolü
+                        if any(fuzzy_search_match(search_query, field) for field in search_fields):
+                            poi_result = dict(poi)
+                            poi_result['relevance_score'] = calculate_relevance_score(search_query, poi)
+                            results.append(poi_result)
+            
+            # Relevans skoruna göre sırala
+            results.sort(key=lambda x: x.get('relevance_score', 0), reverse=True)
+            
+            # Limit uygula
+            results = results[:limit]
+            
+            return jsonify({
+                'query': search_query,
+                'total_results': len(results),
+                'results': results
+            })
+        
+        else:
+            # Veritabanı arama
+            db = get_db()
+            if not db:
+                return jsonify({'error': 'Database connection failed'}), 500
+            
+            try:
+                results = perform_advanced_database_search(db, search_query, category_filter, limit)
+                db.disconnect()
+                
+                return jsonify({
+                    'query': search_query,
+                    'total_results': len(results),
+                    'results': results
+                })
+                
+            finally:
+                if db:
+                    db.disconnect()
+                    
+    except Exception as e:
+        return jsonify({'error': f'Arama hatası: {str(e)}'}), 500
+
+def calculate_relevance_score(search_query, poi):
+    """POI için relevans skoru hesapla"""
+    score = 0
+    norm_query = normalize_turkish_text(search_query)
+    
+    # İsim eşleşmesi (en yüksek puan)
+    poi_name = normalize_turkish_text(poi.get('name', ''))
+    if norm_query == poi_name:
+        score += 100
+    elif norm_query in poi_name:
+        score += 80
+    elif any(word in poi_name for word in norm_query.split()):
+        score += 60
+    
+    # Açıklama eşleşmesi
+    poi_desc = normalize_turkish_text(poi.get('description', ''))
+    if norm_query in poi_desc:
+        score += 40
+    elif any(word in poi_desc for word in norm_query.split()):
+        score += 20
+    
+    # Etiket eşleşmesi
+    poi_tags = normalize_turkish_text(', '.join(poi.get('tags', [])))
+    if norm_query in poi_tags:
+        score += 30
+    
+    return score
+
+def perform_advanced_database_search(db, search_query, category_filter=None, limit=50):
+    """Gelişmiş veritabanı arama"""
+    
+    # PostgreSQL için gelişmiş arama sorgusu
+    base_query = """
+        SELECT 
+            id as _id,
+            name, 
+            category, 
+            ST_Y(location::geometry) as latitude, 
+            ST_X(location::geometry) as longitude, 
+            description,
+            attributes,
+            -- Relevans skoru hesaplama
+            (
+                CASE 
+                    WHEN LOWER(TRANSLATE(name, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+                         = LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) THEN 100
+                    WHEN LOWER(TRANSLATE(name, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+                         LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) THEN 80
+                    ELSE 0
+                END +
+                CASE 
+                    WHEN LOWER(TRANSLATE(COALESCE(description, ''), 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+                         LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) THEN 40
+                    ELSE 0
+                END
+            ) as relevance_score
+        FROM pois
+        WHERE is_active = true
+        AND (
+            LOWER(TRANSLATE(name, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+            LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
+            OR LOWER(TRANSLATE(COALESCE(description, ''), 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+            LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
+        )
+    """
+    
+    # Parametreler: tam eşleşme, kısmi eşleşme, açıklama, name like, desc like
+    params = [search_query, f'%{search_query}%', f'%{search_query}%', f'%{search_query}%', f'%{search_query}%']
+    
+    if category_filter:
+        base_query += " AND category = %s"
+        params.append(category_filter)
+    
+    base_query += " ORDER BY relevance_score DESC, name ASC"
+    
+    if limit:
+        base_query += " LIMIT %s"
+        params.append(limit)
+    
+    with db.conn.cursor(cursor_factory=db.conn.cursor_factory.__class__) as cur:
+        cur.execute(base_query, params)
+        results = cur.fetchall()
+    
+    return [dict(row) for row in results]
 
 @app.route('/api/poi/<poi_id>', methods=['GET'])
 def get_poi(poi_id):
@@ -860,6 +1191,165 @@ def delete_poi(poi_id):
     if result:
         return jsonify({'success': True})
     return jsonify({'error': 'Delete failed'}), 400
+
+# Rating sistemi endpoint'leri
+@app.route('/api/poi/<poi_id>/ratings', methods=['GET'])
+def get_poi_ratings(poi_id):
+    """POI'nin rating'lerini getir"""
+    if JSON_FALLBACK:
+        return jsonify({'error': 'Rating sistemi sadece veritabanı modunda çalışır'}), 400
+    
+    try:
+        poi_id_int = int(poi_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid POI ID format'}), 400
+    
+    db = get_db()
+    if not db:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        poi_details = db.get_poi_details(poi_id_int)
+        if not poi_details:
+            return jsonify({'error': 'POI not found'}), 404
+        
+        ratings = poi_details.get('ratings', db.get_default_ratings())
+        return jsonify({
+            'poi_id': poi_id_int,
+            'poi_name': poi_details.get('name', ''),
+            'ratings': ratings,
+            'rating_categories': RATING_CATEGORIES
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error fetching ratings: {str(e)}'}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/api/poi/<poi_id>/ratings', methods=['PUT'])
+def update_poi_ratings(poi_id):
+    """POI rating'lerini güncelle"""
+    if JSON_FALLBACK:
+        return jsonify({'error': 'Rating sistemi sadece veritabanı modunda çalışır'}), 400
+    
+    try:
+        poi_id_int = int(poi_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid POI ID format'}), 400
+    
+    ratings_data = request.json
+    if not ratings_data or 'ratings' not in ratings_data:
+        return jsonify({'error': 'Ratings data required'}), 400
+    
+    db = get_db()
+    if not db:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        # POI'nin var olup olmadığını kontrol et
+        poi_details = db.get_poi_details(poi_id_int)
+        if not poi_details:
+            return jsonify({'error': 'POI not found'}), 404
+        
+        # Rating'leri güncelle
+        result = db.update_poi(poi_id_int, {'ratings': ratings_data['ratings']})
+        
+        if result:
+            # Güncellenmiş rating'leri geri döndür
+            updated_poi = db.get_poi_details(poi_id_int)
+            return jsonify({
+                'success': True,
+                'poi_id': poi_id_int,
+                'ratings': updated_poi.get('ratings', {}),
+                'message': 'Rating\'ler başarıyla güncellendi'
+            })
+        else:
+            return jsonify({'error': 'Failed to update ratings'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': f'Error updating ratings: {str(e)}'}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/api/ratings/categories', methods=['GET'])
+def get_rating_categories():
+    """Rating kategorilerini getir"""
+    return jsonify({
+        'categories': RATING_CATEGORIES,
+        'description': 'POI rating kategorileri ve bilgileri'
+    })
+
+@app.route('/api/pois/by-rating', methods=['GET'])
+def search_pois_by_rating():
+    """Rating'e göre POI arama"""
+    if JSON_FALLBACK:
+        return jsonify({'error': 'Rating arama sadece veritabanı modunda çalışır'}), 400
+    
+    category = request.args.get('category')  # Rating kategorisi (tarihi, doga, vb.)
+    min_score = request.args.get('min_score', 0, type=int)  # Minimum puan
+    limit = request.args.get('limit', 20, type=int)
+    
+    if not category or category not in RATING_CATEGORIES:
+        return jsonify({
+            'error': 'Valid rating category required',
+            'valid_categories': list(RATING_CATEGORIES.keys())
+        }), 400
+    
+    if min_score < 0 or min_score > 100:
+        return jsonify({'error': 'min_score must be between 0-100'}), 400
+    
+    db = get_db()
+    if not db:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        # PostgreSQL JSONB sorgusu
+        query = """
+            SELECT 
+                id as _id,
+                name, 
+                category, 
+                ST_Y(location::geometry) as latitude, 
+                ST_X(location::geometry) as longitude, 
+                description,
+                attributes,
+                COALESCE(CAST(attributes->'ratings'->%s AS INTEGER), 0) as rating_score
+            FROM pois
+            WHERE is_active = true
+            AND COALESCE(CAST(attributes->'ratings'->%s AS INTEGER), 0) >= %s
+            ORDER BY rating_score DESC, name ASC
+            LIMIT %s
+        """
+        
+        with db.conn.cursor(cursor_factory=db.conn.cursor_factory.__class__) as cur:
+            cur.execute(query, (category, category, min_score, limit))
+            results = cur.fetchall()
+        
+        # Sonuçları formatla
+        formatted_results = []
+        for row in results:
+            poi_data = dict(row)
+            # Rating'leri ekle
+            if poi_data.get('attributes') and isinstance(poi_data['attributes'], dict):
+                ratings = poi_data['attributes'].get('ratings', {})
+                poi_data['ratings'] = ratings if ratings else db.get_default_ratings()
+            else:
+                poi_data['ratings'] = db.get_default_ratings()
+                
+            formatted_results.append(poi_data)
+        
+        return jsonify({
+            'category': category,
+            'category_info': RATING_CATEGORIES[category],
+            'min_score': min_score,
+            'total_results': len(formatted_results),
+            'results': formatted_results
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error searching by rating: {str(e)}'}), 500
+    finally:
+        db.disconnect()
 
 # Medya yönetimi endpoint'leri (görsel, video, ses, 3D model)
 @app.route('/api/poi/<poi_id>/media', methods=['POST'])

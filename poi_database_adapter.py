@@ -154,8 +154,31 @@ class PostgreSQLPOIDatabase(POIDatabase):
             result['coordinates'] = (result['latitude'], result['longitude'])
             # UI JSON formatında `_id` alanı bekleniyor
             result['_id'] = result['id']
+            
+            # Rating sistemini ekle (JSONB attributes'tan al)
+            if result.get('attributes') and isinstance(result['attributes'], dict):
+                ratings = result['attributes'].get('ratings', {})
+                result['ratings'] = ratings
+            else:
+                # Varsayılan rating'ler
+                result['ratings'] = self.get_default_ratings()
         
         return dict(result) if result else None
+
+    def get_default_ratings(self) -> Dict[str, int]:
+        """Varsayılan rating değerleri"""
+        return {
+            'tarihi': 0,
+            'sanat_kultur': 0,
+            'doga': 0,
+            'eglence': 0,
+            'alisveris': 0,
+            'spor': 0,
+            'macera': 0,
+            'rahatlatici': 0,
+            'yemek': 0,
+            'gece_hayati': 0
+        }
     
     def search_nearby_pois(self, lat: float, lon: float, radius_meters: float) -> List[Dict[str, Any]]:
         """Yakındaki POI'leri ara"""
@@ -213,7 +236,7 @@ class PostgreSQLPOIDatabase(POIDatabase):
         POI güncelle (PostgreSQL)
         Args:
             poi_id: POI'nin id'si
-            update_data: Güncellenecek alanlar
+            update_data: Güncellenecek alanlar (ratings dahil)
         Returns:
             bool: Başarılıysa True
         """
@@ -259,6 +282,15 @@ class PostgreSQLPOIDatabase(POIDatabase):
             values.append(update_data["longitude"])
             values.append(update_data["latitude"])
         
+        # Handle ratings updates - özel işlem
+        if "ratings" in update_data:
+            ratings_data = update_data["ratings"]
+            if isinstance(ratings_data, dict):
+                # Ratings'i validate et
+                validated_ratings = self.validate_ratings(ratings_data)
+                attributes_to_update["ratings"] = validated_ratings
+                print(f"✅ POI {poi_id} için rating'ler güncellendi: {validated_ratings}")
+        
         # Handle attributes updates
         if attributes_to_update:
             # Get current attributes and merge with new ones
@@ -267,7 +299,7 @@ class PostgreSQLPOIDatabase(POIDatabase):
                 result = cur.fetchone()
                 current_attributes = result['attributes'] if result and result['attributes'] else {}
                 
-            # Merge attributes
+            # Merge attributes (ratings dahil)
             current_attributes.update(attributes_to_update)
             set_clauses.append("attributes = %s")
             values.append(Json(current_attributes))
@@ -284,6 +316,27 @@ class PostgreSQLPOIDatabase(POIDatabase):
             self.conn.commit()
             return cur.rowcount > 0
 
+    def validate_ratings(self, ratings: Dict[str, Any]) -> Dict[str, int]:
+        """Rating verilerini validate et ve temizle"""
+        valid_categories = {
+            'tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 
+            'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'
+        }
+        
+        validated = {}
+        for category in valid_categories:
+            if category in ratings:
+                try:
+                    # 0-100 arası olup olmadığını kontrol et
+                    value = int(ratings[category])
+                    validated[category] = max(0, min(100, value))  # 0-100 arası sınırla
+                except (ValueError, TypeError):
+                    validated[category] = 0
+            else:
+                validated[category] = 0
+        
+        return validated
+
     def list_pois(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
         """Aktif POI'leri listele (opsiyonel kategori filtresi) ve UI ile uyumlu obje dizisi döndür"""
         if not self.conn:
@@ -296,7 +349,8 @@ class PostgreSQLPOIDatabase(POIDatabase):
                 category, 
                 ST_Y(location::geometry) as latitude, 
                 ST_X(location::geometry) as longitude, 
-                description
+                description,
+                attributes
             FROM pois
             WHERE is_active = true
         """
@@ -314,14 +368,24 @@ class PostgreSQLPOIDatabase(POIDatabase):
         # UI JSON formatında `_id` alanı bekleniyor
         formatted: List[Dict[str, Any]] = []
         for row in results:
-            formatted.append({
+            poi_data = {
                 "_id": row["id"],
                 "name": row["name"],
                 "category": row["category"],
                 "latitude": row["latitude"],
                 "longitude": row["longitude"],
                 "description": row["description"],
-            })
+            }
+            
+            # Rating sistemini ekle
+            if row.get('attributes') and isinstance(row['attributes'], dict):
+                ratings = row['attributes'].get('ratings', {})
+                poi_data['ratings'] = ratings if ratings else self.get_default_ratings()
+            else:
+                poi_data['ratings'] = self.get_default_ratings()
+            
+            formatted.append(poi_data)
+            
         return formatted
 
 
