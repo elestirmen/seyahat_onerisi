@@ -438,24 +438,37 @@ def solve_tsp(G: nx.MultiDiGraph, pois: Dict[str, Tuple[float, float]], start_po
 
 def get_elevation_profile(route_coords: List[Tuple[float, float]]) -> Optional[List[float]]:
     """
-    API'den yükseklik verilerini alır. Uzun rotaları 100'lük parçalara bölerek
-    birden fazla GET isteği ile daha stabil bir şekilde veri çeker.
+    API'den yükseklik verilerini alır. Rate limiting sorununu çözmek için:
+    - Daha büyük chunk'lar kullanır (50 nokta yerine 200)
+    - Request'ler arasında delay ekler
+    - Hata toleransını artırır
     """
     print("🏔️ Yükseklik profili verileri alınıyor...")
     if not route_coords:
         return None
 
+    # Route'u sadeşleştir - çok uzun rotalar için her 3. noktayı al
+    if len(route_coords) > 500:
+        route_coords = route_coords[::3]  # Her 3. noktayı al
+        print(f"   -> Uzun rota tespit edildi, {len(route_coords)} noktaya indirgenecek")
+
     all_elevations = []
-    chunk_size = 100  # GET isteği için güvenli chunk boyutu
+    chunk_size = 200  # Daha büyük chunk size - daha az request
+    failed_chunks = 0
+    max_failed_chunks = 2  # En fazla 2 chunk başarısız olabilir
 
     print(f"   -> Rota {len(route_coords)} noktadan oluşuyor. {chunk_size} noktalık parçalar halinde işlenecek.")
 
+    import time
+    
     for i in range(0, len(route_coords), chunk_size):
         chunk = route_coords[i:i + chunk_size]
         if not chunk:
             continue
         
-        print(f"   -> Parça {i//chunk_size + 1}/{len(range(0, len(route_coords), chunk_size))} işleniyor...")
+        chunk_num = i//chunk_size + 1
+        total_chunks = len(range(0, len(route_coords), chunk_size))
+        print(f"   -> Parça {chunk_num}/{total_chunks} işleniyor...")
 
         latitudes_str = ",".join([str(round(c[0], 5)) for c in chunk])
         longitudes_str = ",".join([str(round(c[1], 5)) for c in chunk])
@@ -463,25 +476,63 @@ def get_elevation_profile(route_coords: List[Tuple[float, float]]) -> Optional[L
         url = "https://api.open-meteo.com/v1/elevation"
         params = {"latitude": latitudes_str, "longitude": longitudes_str}
         
-        try:
-            response = requests.get(url, params=params, timeout=20)
-            response.raise_for_status()
-            data = response.json()
+        retry_count = 0
+        max_retries = 2
+        chunk_success = False
+        
+        while retry_count < max_retries and not chunk_success:
+            try:
+                # Request'ler arasında delay - rate limiting için
+                if i > 0:
+                    time.sleep(1)  # 1 saniye bekle
+                    
+                response = requests.get(url, params=params, timeout=30)
+                
+                if response.status_code == 429:  # Rate limit
+                    print(f"   ⏳ Rate limit - {5} saniye bekleniyor...")
+                    time.sleep(5)
+                    retry_count += 1
+                    continue
+                    
+                response.raise_for_status()
+                data = response.json()
+                
+                if 'elevation' in data and data['elevation']:
+                    all_elevations.extend(data['elevation'])
+                    chunk_success = True
+                    print(f"   ✅ Parça {chunk_num} başarılı ({len(data['elevation'])} nokta)")
+                else:
+                    print(f"   ⚠️ Parça {chunk_num} - geçersiz veri: {data}")
+                    retry_count += 1
+                    
+            except requests.exceptions.RequestException as e:
+                print(f"   💥 Parça {chunk_num} - Deneme {retry_count + 1}: {e}")
+                retry_count += 1
+                if retry_count < max_retries:
+                    time.sleep(2)  # Hata sonrası 2 saniye bekle
+        
+        if not chunk_success:
+            failed_chunks += 1
+            print(f"   ❌ Parça {chunk_num} başarısız oldu")
             
-            if 'elevation' in data and data['elevation']:
-                all_elevations.extend(data['elevation'])
-            else:
-                print(f"⚠️ Yükseklik API'sinden (GET - Parça {i//chunk_size + 1}) geçerli veri alınamadı. Yanıt: {data}")
-                return None # Bir parça başarısız olursa, tüm işlem başarısız olsun.
-        except requests.exceptions.RequestException as e:
-            print(f"💥 Yükseklik API hatası (GET - Parça {i//chunk_size + 1}): {e}")
-            return None # Bir parça başarısız olursa, tüm işlem başarısız olsun.
-    
-    if all_elevations:
-        print(f"✅ Toplam {len(all_elevations)} nokta için yükseklik verisi başarıyla alındı.")
+            # Çok fazla başarısız chunk varsa vazgeç
+            if failed_chunks > max_failed_chunks:
+                print(f"   💥 {failed_chunks} parça başarısız - elevation verisi alınamadı")
+                return None
+            
+            # Başarısız chunk için interpolasyon yap
+            if all_elevations:
+                last_elevation = all_elevations[-1]
+                # Sabit yükseklik ile doldur
+                all_elevations.extend([last_elevation] * len(chunk))
+                print(f"   🔧 Parça {chunk_num} için interpolasyon yapıldı")
+
+    if all_elevations and len(all_elevations) > 10:
+        print(f"✅ Toplam {len(all_elevations)} nokta için yükseklik verisi alındı ({failed_chunks} parça başarısız)")
         return all_elevations
-    
-    return None
+    else:
+        print(f"❌ Yeterli yükseklik verisi alınamadı (toplam: {len(all_elevations) if all_elevations else 0})")
+        return None
 
 def calculate_route_difficulty(elevations: List[float], length_km: float) -> Tuple[str, float, float]:
     if not elevations or len(elevations) < 2: return "Bilinmiyor", 0, 0

@@ -17,6 +17,20 @@ CORS(app)
 JSON_FALLBACK = False
 JSON_FILE_PATH = 'test_data.json'
 
+# Rating kategorileri (yeni POI puanlama sistemi)
+RATING_CATEGORIES = {
+    'tarihi': {'name': 'Tarihi', 'description': 'Tarihi önem ve değer', 'icon': 'fa-landmark', 'color': '#8B4513'},
+    'sanat_kultur': {'name': 'Sanat ve Kültür', 'description': 'Sanatsal ve kültürel değer', 'icon': 'fa-palette', 'color': '#9B59B6'},
+    'doga': {'name': 'Doğa', 'description': 'Doğal güzellik ve çevre', 'icon': 'fa-leaf', 'color': '#27AE60'},
+    'eglence': {'name': 'Eğlence', 'description': 'Eğlence ve aktivite değeri', 'icon': 'fa-music', 'color': '#E74C3C'},
+    'alisveris': {'name': 'Alışveriş', 'description': 'Alışveriş olanakları', 'icon': 'fa-shopping-cart', 'color': '#F39C12'},
+    'spor': {'name': 'Spor', 'description': 'Spor aktiviteleri', 'icon': 'fa-dumbbell', 'color': '#34495E'},
+    'macera': {'name': 'Macera', 'description': 'Macera ve heyecan', 'icon': 'fa-mountain', 'color': '#D35400'},
+    'rahatlatici': {'name': 'Rahatlatıcı', 'description': 'Huzur ve dinlendirici', 'icon': 'fa-spa', 'color': '#1ABC9C'},
+    'yemek': {'name': 'Yemek', 'description': 'Gastronomi ve lezzet', 'icon': 'fa-utensils', 'color': '#E67E22'},
+    'gece_hayati': {'name': 'Gece Hayatı', 'description': 'Gece eğlencesi', 'icon': 'fa-moon', 'color': '#6C3483'}
+}
+
 # Medya yönetimi (görsel, video, ses, 3D model desteği)
 media_manager = POIMediaManager()
 
@@ -183,6 +197,15 @@ def index():
                         <li><strong>POST</strong> /api/poi - Yeni POI ekle</li>
                         <li><strong>PUT</strong> /api/poi/&lt;id&gt; - POI güncelle</li>
                         <li><strong>DELETE</strong> /api/poi/&lt;id&gt; - POI sil</li>
+                    </ul>
+                    
+                    <h4>⭐ Rating Sistemi (Yeni!)</h4>
+                    <ul>
+                        <li><strong>GET</strong> <a href="/api/ratings/categories">/api/ratings/categories</a> - Rating kategorilerini listele</li>
+                        <li><strong>GET</strong> /api/poi/&lt;id&gt;/ratings - POI rating'lerini getir</li>
+                        <li><strong>PUT</strong> /api/poi/&lt;id&gt;/ratings - POI rating'lerini güncelle</li>
+                        <li><strong>GET</strong> <a href="/api/pois/by-rating?category=tarihi&min_score=50">/api/pois/by-rating</a> - Rating'e göre POI ara</li>
+                        <li><em>Kategoriler:</em> Tarihi, Sanat&Kültür, Doğa, Eğlence, Alışveriş, Spor, Macera, Rahatlatıcı, Yemek, Gece Hayatı</li>
                     </ul>
                     
                     <h4>🎬 Medya Yönetimi (Yeni!)</h4>
@@ -1168,6 +1191,165 @@ def delete_poi(poi_id):
     if result:
         return jsonify({'success': True})
     return jsonify({'error': 'Delete failed'}), 400
+
+# Rating sistemi endpoint'leri
+@app.route('/api/poi/<poi_id>/ratings', methods=['GET'])
+def get_poi_ratings(poi_id):
+    """POI'nin rating'lerini getir"""
+    if JSON_FALLBACK:
+        return jsonify({'error': 'Rating sistemi sadece veritabanı modunda çalışır'}), 400
+    
+    try:
+        poi_id_int = int(poi_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid POI ID format'}), 400
+    
+    db = get_db()
+    if not db:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        poi_details = db.get_poi_details(poi_id_int)
+        if not poi_details:
+            return jsonify({'error': 'POI not found'}), 404
+        
+        ratings = poi_details.get('ratings', db.get_default_ratings())
+        return jsonify({
+            'poi_id': poi_id_int,
+            'poi_name': poi_details.get('name', ''),
+            'ratings': ratings,
+            'rating_categories': RATING_CATEGORIES
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error fetching ratings: {str(e)}'}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/api/poi/<poi_id>/ratings', methods=['PUT'])
+def update_poi_ratings(poi_id):
+    """POI rating'lerini güncelle"""
+    if JSON_FALLBACK:
+        return jsonify({'error': 'Rating sistemi sadece veritabanı modunda çalışır'}), 400
+    
+    try:
+        poi_id_int = int(poi_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid POI ID format'}), 400
+    
+    ratings_data = request.json
+    if not ratings_data or 'ratings' not in ratings_data:
+        return jsonify({'error': 'Ratings data required'}), 400
+    
+    db = get_db()
+    if not db:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        # POI'nin var olup olmadığını kontrol et
+        poi_details = db.get_poi_details(poi_id_int)
+        if not poi_details:
+            return jsonify({'error': 'POI not found'}), 404
+        
+        # Rating'leri güncelle
+        result = db.update_poi(poi_id_int, {'ratings': ratings_data['ratings']})
+        
+        if result:
+            # Güncellenmiş rating'leri geri döndür
+            updated_poi = db.get_poi_details(poi_id_int)
+            return jsonify({
+                'success': True,
+                'poi_id': poi_id_int,
+                'ratings': updated_poi.get('ratings', {}),
+                'message': 'Rating\'ler başarıyla güncellendi'
+            })
+        else:
+            return jsonify({'error': 'Failed to update ratings'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': f'Error updating ratings: {str(e)}'}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/api/ratings/categories', methods=['GET'])
+def get_rating_categories():
+    """Rating kategorilerini getir"""
+    return jsonify({
+        'categories': RATING_CATEGORIES,
+        'description': 'POI rating kategorileri ve bilgileri'
+    })
+
+@app.route('/api/pois/by-rating', methods=['GET'])
+def search_pois_by_rating():
+    """Rating'e göre POI arama"""
+    if JSON_FALLBACK:
+        return jsonify({'error': 'Rating arama sadece veritabanı modunda çalışır'}), 400
+    
+    category = request.args.get('category')  # Rating kategorisi (tarihi, doga, vb.)
+    min_score = request.args.get('min_score', 0, type=int)  # Minimum puan
+    limit = request.args.get('limit', 20, type=int)
+    
+    if not category or category not in RATING_CATEGORIES:
+        return jsonify({
+            'error': 'Valid rating category required',
+            'valid_categories': list(RATING_CATEGORIES.keys())
+        }), 400
+    
+    if min_score < 0 or min_score > 100:
+        return jsonify({'error': 'min_score must be between 0-100'}), 400
+    
+    db = get_db()
+    if not db:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        # PostgreSQL JSONB sorgusu
+        query = """
+            SELECT 
+                id as _id,
+                name, 
+                category, 
+                ST_Y(location::geometry) as latitude, 
+                ST_X(location::geometry) as longitude, 
+                description,
+                attributes,
+                COALESCE(CAST(attributes->'ratings'->%s AS INTEGER), 0) as rating_score
+            FROM pois
+            WHERE is_active = true
+            AND COALESCE(CAST(attributes->'ratings'->%s AS INTEGER), 0) >= %s
+            ORDER BY rating_score DESC, name ASC
+            LIMIT %s
+        """
+        
+        with db.conn.cursor(cursor_factory=db.conn.cursor_factory.__class__) as cur:
+            cur.execute(query, (category, category, min_score, limit))
+            results = cur.fetchall()
+        
+        # Sonuçları formatla
+        formatted_results = []
+        for row in results:
+            poi_data = dict(row)
+            # Rating'leri ekle
+            if poi_data.get('attributes') and isinstance(poi_data['attributes'], dict):
+                ratings = poi_data['attributes'].get('ratings', {})
+                poi_data['ratings'] = ratings if ratings else db.get_default_ratings()
+            else:
+                poi_data['ratings'] = db.get_default_ratings()
+                
+            formatted_results.append(poi_data)
+        
+        return jsonify({
+            'category': category,
+            'category_info': RATING_CATEGORIES[category],
+            'min_score': min_score,
+            'total_results': len(formatted_results),
+            'results': formatted_results
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error searching by rating: {str(e)}'}), 500
+    finally:
+        db.disconnect()
 
 # Medya yönetimi endpoint'leri (görsel, video, ses, 3D model)
 @app.route('/api/poi/<poi_id>/media', methods=['POST'])

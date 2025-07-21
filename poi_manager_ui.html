@@ -321,6 +321,172 @@
                                         <input type="url" class="form-control" id="poiImageUrl" placeholder="https://...">
                                     </div>
                                     
+                                    <!-- POI Rating Sistemi (Yeni!) -->
+                                    <div class="mb-3" id="ratingSystemSection">
+                                        <label class="form-label">⭐ POI Nitelik Puanları (0-100)</label>
+                                        <div class="border rounded p-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                                            <small class="text-muted mb-3 d-block">
+                                                <i class="fas fa-info-circle text-primary"></i>
+                                                Bu POI'nin farklı niteliklerde ne kadar değerli olduğunu 0-100 arası puanlayın.
+                                            </small>
+                                            
+                                            <div class="row g-3">
+                                                <!-- Tarihi -->
+                                                <div class="col-md-6">
+                                                    <div class="rating-item">
+                                                        <label class="form-label small fw-bold" style="color: #8B4513;">
+                                                            <i class="fas fa-landmark me-1"></i> Tarihi
+                                                        </label>
+                                                        <div class="d-flex align-items-center">
+                                                            <input type="range" class="form-range me-2" min="0" max="100" value="0" 
+                                                                   id="rating_tarihi" oninput="updateRatingDisplay('tarihi', this.value)">
+                                                            <span class="badge bg-secondary" id="rating_tarihi_display">0</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Sanat ve Kültür -->
+                                                <div class="col-md-6">
+                                                    <div class="rating-item">
+                                                        <label class="form-label small fw-bold" style="color: #9B59B6;">
+                                                            <i class="fas fa-palette me-1"></i> Sanat & Kültür
+                                                        </label>
+                                                        <div class="d-flex align-items-center">
+                                                            <input type="range" class="form-range me-2" min="0" max="100" value="0" 
+                                                                   id="rating_sanat_kultur" oninput="updateRatingDisplay('sanat_kultur', this.value)">
+                                                            <span class="badge bg-secondary" id="rating_sanat_kultur_display">0</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Doğa -->
+                                                <div class="col-md-6">
+                                                    <div class="rating-item">
+                                                        <label class="form-label small fw-bold" style="color: #27AE60;">
+                                                            <i class="fas fa-leaf me-1"></i> Doğa
+                                                        </label>
+                                                        <div class="d-flex align-items-center">
+                                                            <input type="range" class="form-range me-2" min="0" max="100" value="0" 
+                                                                   id="rating_doga" oninput="updateRatingDisplay('doga', this.value)">
+                                                            <span class="badge bg-secondary" id="rating_doga_display">0</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Eğlence -->
+                                                <div class="col-md-6">
+                                                    <div class="rating-item">
+                                                        <label class="form-label small fw-bold" style="color: #E74C3C;">
+                                                            <i class="fas fa-music me-1"></i> Eğlence
+                                                        </label>
+                                                        <div class="d-flex align-items-center">
+                                                            <input type="range" class="form-range me-2" min="0" max="100" value="0" 
+                                                                   id="rating_eglence" oninput="updateRatingDisplay('eglence', this.value)">
+                                                            <span class="badge bg-secondary" id="rating_eglence_display">0</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Alışveriş -->
+                                                <div class="col-md-6">
+                                                    <div class="rating-item">
+                                                        <label class="form-label small fw-bold" style="color: #F39C12;">
+                                                            <i class="fas fa-shopping-cart me-1"></i> Alışveriş
+                                                        </label>
+                                                        <div class="d-flex align-items-center">
+                                                            <input type="range" class="form-range me-2" min="0" max="100" value="0" 
+                                                                   id="rating_alisveris" oninput="updateRatingDisplay('alisveris', this.value)">
+                                                            <span class="badge bg-secondary" id="rating_alisveris_display">0</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Spor -->
+                                                <div class="col-md-6">
+                                                    <div class="rating-item">
+                                                        <label class="form-label small fw-bold" style="color: #34495E;">
+                                                            <i class="fas fa-dumbbell me-1"></i> Spor
+                                                        </label>
+                                                        <div class="d-flex align-items-center">
+                                                            <input type="range" class="form-range me-2" min="0" max="100" value="0" 
+                                                                   id="rating_spor" oninput="updateRatingDisplay('spor', this.value)">
+                                                            <span class="badge bg-secondary" id="rating_spor_display">0</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Macera -->
+                                                <div class="col-md-6">
+                                                    <div class="rating-item">
+                                                        <label class="form-label small fw-bold" style="color: #D35400;">
+                                                            <i class="fas fa-mountain me-1"></i> Macera
+                                                        </label>
+                                                        <div class="d-flex align-items-center">
+                                                            <input type="range" class="form-range me-2" min="0" max="100" value="0" 
+                                                                   id="rating_macera" oninput="updateRatingDisplay('macera', this.value)">
+                                                            <span class="badge bg-secondary" id="rating_macera_display">0</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Rahatlatıcı -->
+                                                <div class="col-md-6">
+                                                    <div class="rating-item">
+                                                        <label class="form-label small fw-bold" style="color: #1ABC9C;">
+                                                            <i class="fas fa-spa me-1"></i> Rahatlatıcı
+                                                        </label>
+                                                        <div class="d-flex align-items-center">
+                                                            <input type="range" class="form-range me-2" min="0" max="100" value="0" 
+                                                                   id="rating_rahatlatici" oninput="updateRatingDisplay('rahatlatici', this.value)">
+                                                            <span class="badge bg-secondary" id="rating_rahatlatici_display">0</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Yemek -->
+                                                <div class="col-md-6">
+                                                    <div class="rating-item">
+                                                        <label class="form-label small fw-bold" style="color: #E67E22;">
+                                                            <i class="fas fa-utensils me-1"></i> Yemek
+                                                        </label>
+                                                        <div class="d-flex align-items-center">
+                                                            <input type="range" class="form-range me-2" min="0" max="100" value="0" 
+                                                                   id="rating_yemek" oninput="updateRatingDisplay('yemek', this.value)">
+                                                            <span class="badge bg-secondary" id="rating_yemek_display">0</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Gece Hayatı -->
+                                                <div class="col-md-6">
+                                                    <div class="rating-item">
+                                                        <label class="form-label small fw-bold" style="color: #6C3483;">
+                                                            <i class="fas fa-moon me-1"></i> Gece Hayatı
+                                                        </label>
+                                                        <div class="d-flex align-items-center">
+                                                            <input type="range" class="form-range me-2" min="0" max="100" value="0" 
+                                                                   id="rating_gece_hayati" oninput="updateRatingDisplay('gece_hayati', this.value)">
+                                                            <span class="badge bg-secondary" id="rating_gece_hayati_display">0</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Rating Özeti -->
+                                            <div class="mt-3 p-2 bg-white rounded">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-chart-bar me-1"></i> Toplam Puan:
+                                                    </small>
+                                                    <span class="badge bg-primary fs-6" id="totalRatingScore">0/1000</span>
+                                                </div>
+                                                <div class="progress mt-1" style="height: 8px;">
+                                                    <div class="progress-bar" id="totalRatingProgress" style="width: 0%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
                                     <!-- Medya Yönetimi Bölümü (Görsel, Video, Ses, 3D) -->
                                     <div class="mb-3" id="mediaManagementSection">
                                         <label class="form-label">🎬 Medya Yönetimi</label>
@@ -442,7 +608,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
-        const apiBase = '/api';
+        const apiBase = 'http://localhost:5505/api';
         let map;
         let poiMarkers = [];
         let allPOIs = [];
@@ -801,7 +967,17 @@
             pois.forEach(poi => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-            <td class="pointer text-primary" onclick="highlightPOIOnMap(${poi._id}); showPOIDetail(${poi._id})" title="Haritada göster ve detayları aç">${poi.name}</td>
+                                                <td class="pointer text-primary" onclick="
+                                        console.log('🖱️ POI tıklandı:', '${poi.name}', 'ID:', ${poi._id});
+                                        try {
+                                            highlightPOIOnMap(${poi._id}); 
+                                            showPOIDetail(${poi._id});
+                                            autoLoadRatingsOnPOIChange(${poi._id});
+                                        } catch(e) {
+                                            console.error('❌ POI tıklama hatası:', e);
+                                            autoLoadRatingsOnPOIChange(${poi._id});
+                                        }
+                                    " title="Haritada göster ve detayları aç">${poi.name}</td>
             <td class="pointer" onclick="highlightPOIOnMap(${poi._id})" title="Haritada göster">${getCategoryDisplayName(poi.category)}</td>
             <td class="pointer text-muted" onclick="highlightPOIOnMap(${poi._id})" title="Haritada göster">${(poi.latitude || 0).toFixed(6)}</td>
             <td class="pointer text-muted" onclick="highlightPOIOnMap(${poi._id})" title="Haritada göster">${(poi.longitude || 0).toFixed(6)}</td>
@@ -817,11 +993,14 @@
 
         // POI detayını göster - Yeni birleşik panel için güncellendi
         async function showPOIDetail(poiId) {
+            console.log('🎯 showPOIDetail ÇAĞRILDI! POI ID:', poiId);
             showLoading();
             try {
+                console.log('📡 POI detayı API\'den alınıyor...');
                 const response = await fetch(`${apiBase}/poi/${poiId}`);
                 if (!response.ok) throw new Error('POI not found');
                 const poi = await response.json();
+                console.log('✅ POI detayı alındı:', poi.name);
 
                 selectedPOI = poi;
 
@@ -835,6 +1014,14 @@
                 document.getElementById('poiTags').value = (poi.tags || []).join(', ');
                 document.getElementById('poiImageUrl').value = poi.imageUrl || '';
 
+                // Rating'leri yükle (DOM hazır olana kadar bekle)
+                setTimeout(() => {
+                    console.log('🚀 TIMING TEST: POI değişti, rating\'ler yüklenecek. POI ID:', poi._id);
+                    console.log('🚀 Form tab aktif mi?', document.getElementById('form-tab').classList.contains('active'));
+                    console.log('🚀 Doga slider var mı?', !!document.getElementById('rating_doga'));
+                    loadPOIRatings(poi._id);
+                }, 500); // 500ms'e çıkardım
+
                 // Formu düzenleme moduna geçir
                 document.getElementById('saveBtn').innerHTML = '🔄 Güncelle';
                 document.getElementById('deleteBtn').classList.remove('d-none');
@@ -844,12 +1031,12 @@
                 document.getElementById('panelTitle').textContent = `📝 ${poi.name}`;
                 document.getElementById('newPoiBtn').classList.remove('d-none');
 
-                // Detaylar tab'ını göster ve aktif yap
+                // Detaylar tab'ını göster ve FORM tab'ını aktif yap (rating'ler için)
                 document.getElementById('details-tab-container').style.display = 'block';
                 
-                // Bootstrap tab geçişi
-                const detailsTab = new bootstrap.Tab(document.getElementById('details-tab'));
-                detailsTab.show();
+                // Bootstrap tab geçişi - FORM tab'ını aktif yap ki rating'ler görünsün
+                const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
+                formTab.show();
 
                 // Detay HTML'ini oluştur
                 let detailHtml = `
@@ -951,7 +1138,11 @@
                 await loadPOIImages(poiId);
 
             } catch (error) {
-                showToast('POI detayları yüklenirken hata oluştu', 'error');
+                console.error('❌ showPOIDetail HATASI:', error);
+                showToast('POI detayları yüklenirken hata oluştu: ' + error.message, 'error');
+                
+                // Hata durumunda da rating'leri temizle
+                setDefaultRatings();
             } finally {
                 hideLoading();
             }
@@ -1013,6 +1204,9 @@
             
             // Mevcut görseller alanını temizle
             document.getElementById('currentImages').innerHTML = '';
+            
+            // Rating'leri sıfırla
+            setDefaultRatings();
             
             selectedPOI = null;
             showToast('Yeni POI ekleme moduna geçildi', 'info');
@@ -1240,11 +1434,29 @@
 
                 if (response.ok) {
                     const isUpdate = idVal ? true : false;
+                    let finalPoiId = idVal;
+                    
+                    // Yeni POI eklendiyse response'dan ID'yi al
+                    if (!isUpdate) {
+                        const responseData = await response.json();
+                        finalPoiId = responseData.id;
+                    }
+                    
+                    // Rating'leri kaydet
+                    const ratings = getRatingValues();
+                    const ratingSaved = await savePOIRatings(finalPoiId, ratings);
+                    
                     showToast(isUpdate ? 'POI başarıyla güncellendi!' : 'POI başarıyla eklendi!', 'success');
+                    
+                    if (ratingSaved) {
+                        showToast('Rating\'ler kaydedildi', 'success');
+                    } else {
+                        showToast('Rating kaydetme sırasında sorun oluştu', 'warning');
+                    }
                     
                     if (isUpdate) {
                         // Güncelleme sonrası detayları yenile
-                        await showPOIDetail(idVal);
+                        await showPOIDetail(finalPoiId);
                         showToast('POI detayları güncellendi', 'info');
                     } else {
                         // Yeni POI eklendikten sonra formu temizle
@@ -1337,6 +1549,310 @@
                 'model_3d': 50
             };
             return sizes[mediaType] || 15;
+        }
+
+        // Rating sistemi fonksiyonları
+        
+        // POI seçiminde otomatik rating yükleme (fallback)
+        function autoLoadRatingsOnPOIChange(poiId) {
+            if (!poiId) return;
+            
+            console.log('🔄 autoLoadRatingsOnPOIChange çağrıldı. POI ID:', poiId);
+            
+            // 1 saniye sonra kontrol et ve zorla doğru rating'leri yükle
+            setTimeout(() => {
+                console.log('🔍 Backup kontrol başlıyor. POI ID:', poiId);
+                
+                fetch(`${apiBase}/poi/${poiId}/ratings`)
+                    .then(r => r.json())
+                    .then(data => {
+                        console.log('🔍 Backup API response:', data.ratings);
+                        
+                        // Mevcut slider değerlerini kontrol et
+                        const currentDoga = document.getElementById('rating_doga')?.value || 0;
+                        const expectedDoga = data.ratings?.doga || 0;
+                        
+                        console.log(`🔍 Doğa slider kontrol: mevcut=${currentDoga}, beklenen=${expectedDoga}`);
+                        
+                        // Eğer değerler farklıysa zorla güncelle
+                        if (parseInt(currentDoga) !== parseInt(expectedDoga)) {
+                            console.log('⚡ Rating değerleri yanlış, ZORLA düzeltiliyor...');
+                            setRatingValues(data.ratings || {});
+                        } else {
+                            console.log('✅ Rating değerleri doğru');
+                        }
+                    })
+                    .catch(e => console.error('❌ Backup rating kontrol hatası:', e));
+                    
+            }, 1000); // 1 saniyeye düşürdüm
+        }
+        
+        // DEBUG: Manual test fonksiyonu (console'da çağırılabilir)
+        window.testRatings = function(poiId = 63) {
+            console.log('🧪 MANUAL TEST başlıyor...');
+            console.log('🧪 POI ID:', poiId);
+            
+            // 1. API test
+            fetch(`${apiBase}/poi/${poiId}/ratings`)
+                .then(r => {
+                    console.log('🧪 API Response status:', r.status);
+                    return r.json();
+                })
+                .then(data => {
+                    console.log('🧪 API Data:', data);
+                    console.log('🧪 Ratings:', data.ratings);
+                    
+                    // 2. Slider test
+                    console.log('🧪 Slider testleri:');
+                    Object.keys(data.ratings || {}).forEach(category => {
+                        const slider = document.getElementById(`rating_${category}`);
+                        console.log(`🧪 ${category} slider:`, !!slider);
+                        if (slider) {
+                            console.log(`🧪 ${category} mevcut değer:`, slider.value);
+                        }
+                    });
+                    
+                    // 3. Manual set test
+                    if (data.ratings && data.ratings.doga) {
+                        console.log('🧪 Manuel doğa slider set test...');
+                        const dogaSlider = document.getElementById('rating_doga');
+                        if (dogaSlider) {
+                            dogaSlider.value = data.ratings.doga;
+                            updateRatingDisplay('doga', data.ratings.doga);
+                            console.log('✅ Doğa slider manual set edildi:', data.ratings.doga);
+                        }
+                    }
+                })
+                .catch(e => console.error('🧪 Test hatası:', e));
+        };
+        
+        function updateRatingDisplay(category, value) {
+            const displayElement = document.getElementById(`rating_${category}_display`);
+            if (displayElement) {
+                displayElement.textContent = value;
+                
+                // Badge rengini puana göre ayarla
+                displayElement.className = 'badge ' + getRatingBadgeClass(parseInt(value));
+            }
+            
+            // Toplam puanı güncelle
+            updateTotalRating();
+        }
+
+        function getRatingBadgeClass(value) {
+            if (value >= 80) return 'bg-success';
+            if (value >= 60) return 'bg-info';
+            if (value >= 40) return 'bg-warning';
+            if (value >= 20) return 'bg-secondary';
+            return 'bg-light text-dark';
+        }
+
+        function updateTotalRating() {
+            const categories = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 
+                              'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'];
+            
+            let totalScore = 0;
+            categories.forEach(category => {
+                const slider = document.getElementById(`rating_${category}`);
+                if (slider) {
+                    totalScore += parseInt(slider.value);
+                }
+            });
+            
+            const totalScoreElement = document.getElementById('totalRatingScore');
+            const totalProgressElement = document.getElementById('totalRatingProgress');
+            
+            if (totalScoreElement) {
+                totalScoreElement.textContent = `${totalScore}/1000`;
+            }
+            
+            if (totalProgressElement) {
+                const percentage = (totalScore / 1000) * 100;
+                totalProgressElement.style.width = `${percentage}%`;
+                
+                // Progress bar rengini puana göre ayarla
+                totalProgressElement.className = 'progress-bar ' + getProgressBarClass(percentage);
+            }
+        }
+
+        function getProgressBarClass(percentage) {
+            if (percentage >= 80) return 'bg-success';
+            if (percentage >= 60) return 'bg-info';
+            if (percentage >= 40) return 'bg-warning';
+            if (percentage >= 20) return 'bg-secondary';
+            return 'bg-danger';
+        }
+
+        function loadPOIRatings(poiId) {
+            if (!poiId) {
+                console.log('❌ loadPOIRatings: POI ID yok');
+                setDefaultRatings();
+                return;
+            }
+            
+            console.log('🔄 Loading ratings for POI:', poiId);
+            console.log('🧹 ÖNCE rating\'ler temizleniyor...');
+            
+            // Önce mevcut rating'leri ZORLA temizle
+            const categories = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 
+                              'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'];
+            
+            categories.forEach(category => {
+                const slider = document.getElementById(`rating_${category}`);
+                if (slider) {
+                    console.log(`🧹 ${category} slider 0'a sıfırlanıyor (eski değer: ${slider.value})`);
+                    slider.value = 0;
+                    updateRatingDisplay(category, 0);
+                } else {
+                    console.warn(`⚠️ ${category} slider bulunamadı!`);
+                }
+            });
+            
+            console.log('✅ Tüm slider\'lar sıfırlandı, şimdi API\'den yeni rating\'ler yüklenecek...');
+            
+            fetch(`${apiBase}/poi/${poiId}/ratings`)
+                .then(response => {
+                    console.log('📡 Rating API response status:', response.status);
+                    if (!response.ok) {
+                        console.log('⚠️ Rating bulunamadı, varsayılan değerler kullanılıyor');
+                        setDefaultRatings();
+                        return null;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.ratings) {
+                        console.log('✅ Rating\'ler API\'den yüklendi:', data.ratings);
+                        setRatingValues(data.ratings);
+                        updateTotalRating(); // Toplam puanı güncelle
+                    } else {
+                        console.log('⚠️ Rating data boş, varsayılan değerler kullanılıyor');
+                        setDefaultRatings();
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Rating yükleme hatası:', error);
+                    setDefaultRatings();
+                });
+        }
+
+        function setDefaultRatings() {
+            console.log('🔄 setDefaultRatings: Tüm rating\'ler sıfırlanıyor');
+            const categories = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 
+                              'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'];
+            
+            categories.forEach(category => {
+                const slider = document.getElementById(`rating_${category}`);
+                if (slider) {
+                    slider.value = 0;
+                    updateRatingDisplay(category, 0);
+                } else {
+                    console.warn(`⚠️ ${category} slider'ı bulunamadı!`);
+                }
+            });
+            updateTotalRating();
+            console.log('✅ Varsayılan rating\'ler yüklendi');
+        }
+
+        function setRatingValues(ratings) {
+            console.log('🎛️ setRatingValues çağrıldı:', ratings);
+            
+            // ÖNCE TÜM SLIDER'LARI SIFIRLA
+            const allCategories = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 
+                                  'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'];
+            
+            console.log('🔄 Önce tüm kategoriler sıfırlanıyor...');
+            allCategories.forEach(category => {
+                const slider = document.getElementById(`rating_${category}`);
+                if (slider) {
+                    slider.value = 0;
+                    updateRatingDisplay(category, 0);
+                }
+            });
+            
+            // SONRA SADECE VAR OLAN RATING'LERİ SET ET
+            if (ratings && typeof ratings === 'object') {
+                Object.keys(ratings).forEach(category => {
+                    const slider = document.getElementById(`rating_${category}`);
+                    if (slider) {
+                        const value = parseInt(ratings[category]) || 0;
+                        console.log(`🎚️ ${category} slider'ına ${value} değeri yükleniyor (önceki: ${slider.value})`);
+                        slider.value = value;
+                        updateRatingDisplay(category, value);
+                        
+                        // Doğrulama
+                        setTimeout(() => {
+                            const currentValue = slider.value;
+                            console.log(`✅ ${category} slider doğrulama: beklenen=${value}, gerçek=${currentValue}`);
+                        }, 10);
+                    } else {
+                        console.warn(`⚠️ ${category} slider'ı bulunamadı!`);
+                    }
+                });
+            } else {
+                console.log('⚠️ Ratings boş veya geçersiz:', ratings);
+            }
+            
+            updateTotalRating();
+            console.log('✅ setRatingValues tamamlandı');
+        }
+
+        function getRatingValues() {
+            console.log('📊 getRatingValues çağrıldı');
+            const categories = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 
+                              'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'];
+            
+            const ratings = {};
+            categories.forEach(category => {
+                const slider = document.getElementById(`rating_${category}`);
+                if (slider) {
+                    const value = parseInt(slider.value);
+                    ratings[category] = value;
+                    console.log(`📊 ${category}: ${value}`);
+                } else {
+                    console.warn(`⚠️ ${category} slider'ı bulunamadı!`);
+                }
+            });
+            
+            console.log('📊 Toplanan rating değerleri:', ratings);
+            return ratings;
+        }
+
+        async function savePOIRatings(poiId, ratings) {
+            if (!poiId || !ratings) {
+                console.error('❌ savePOIRatings: POI ID veya ratings eksik', {poiId, ratings});
+                return false;
+            }
+            
+            console.log('💾 Rating kaydetme başlıyor...', {poiId, ratings});
+            
+            try {
+                const requestData = { ratings: ratings };
+                console.log('📤 API\'ye gönderilen data:', requestData);
+                
+                const response = await fetch(`${apiBase}/poi/${poiId}/ratings`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                console.log('📡 API response status:', response.status);
+                
+                if (response.ok) {
+                    const responseData = await response.json();
+                    console.log('✅ Rating\'ler başarıyla kaydedildi:', responseData);
+                    return true;
+                } else {
+                    const errorText = await response.text();
+                    console.error('❌ Rating kaydetme hatası - Status:', response.status, 'Error:', errorText);
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Rating kaydetme exception:', error);
+                return false;
+            }
         }
         
         async function uploadPOIMedia() {
