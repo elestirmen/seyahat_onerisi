@@ -154,7 +154,6 @@ def setup_postgresql_database(connection_string):
             CREATE TABLE IF NOT EXISTS poi_images (
                 id SERIAL PRIMARY KEY,
                 poi_id INTEGER REFERENCES pois(id) ON DELETE CASCADE,
-                image_url VARCHAR(500),
                 image_data BYTEA,
                 thumbnail_url VARCHAR(500),
                 caption VARCHAR(255),
@@ -233,9 +232,9 @@ def setup_postgresql_database(connection_string):
                     if 'images' in details:
                         for img in details['images']:
                             cur.execute("""
-                                INSERT INTO poi_images (poi_id, image_url, thumbnail_url, caption)
-                                VALUES (%s, %s, %s, %s);
-                            """, (poi_id, img['url'], img.get('thumbnail_url'), img.get('caption')))
+                                INSERT INTO poi_images (poi_id, thumbnail_url, caption)
+                                VALUES (%s, %s, %s);
+                            """, (poi_id, img.get('thumbnail_url'), img.get('caption')))
         
         conn.commit()
         print(f"✅ {poi_count} POI başarıyla eklendi")

@@ -316,10 +316,6 @@
                                         <input type="text" class="form-control" id="poiTags"
                                             placeholder="etiket1, etiket2, etiket3...">
                                     </div>
-                                    <div class="mb-2">
-                                        <label class="form-label">Resim URL'si</label>
-                                        <input type="url" class="form-control" id="poiImageUrl" placeholder="https://...">
-                                    </div>
                                     
                                     <!-- POI Rating Sistemi (Yeni!) -->
                                     <div class="mb-3" id="ratingSystemSection">
@@ -1012,7 +1008,6 @@
                 document.getElementById('poiLon').value = poi.longitude;
                 document.getElementById('poiDesc').value = poi.description || '';
                 document.getElementById('poiTags').value = (poi.tags || []).join(', ');
-                document.getElementById('poiImageUrl').value = poi.imageUrl || '';
 
                 // Rating'leri yükle (DOM hazır olana kadar bekle)
                 setTimeout(() => {
@@ -1107,17 +1102,6 @@
                     console.log('Görseller yüklenemedi:', imageError);
                 }
 
-                // Eski imageUrl desteği (geriye uyumluluk)
-                if (poi.imageUrl && !detailHtml.includes('poi-detail-images')) {
-                    detailHtml += `
-                        <div class="poi-detail-images mt-3">
-                            <h6 class="mb-2"><i class="fas fa-image text-warning"></i> Görsel</h6>
-                            <img src="${poi.imageUrl}" 
-                                 class="img-fluid rounded shadow" 
-                                 alt="${poi.name}"
-                                 onclick="showImageModal('${poi.imageUrl}', '${poi.name}', 'POI Görseli')">
-                        </div>`;
-                }
 
                 detailHtml += `
                     <div class="poi-detail-actions">
@@ -1225,11 +1209,9 @@
                 const lon = parseFloat(document.getElementById('poiLon').value);
                 const description = document.getElementById('poiDesc').value;
                 const tags = document.getElementById('poiTags').value.split(',').map(t => t.trim()).filter(Boolean);
-                const imageUrl = document.getElementById('poiImageUrl').value;
-
                 const poiData = {
                     name, category, latitude: lat, longitude: lon,
-                    description, tags, imageUrl
+                    description, tags
                 };
 
                 let response;
@@ -1408,11 +1390,10 @@
                 const category = document.getElementById('poiCategory').value;
                 const description = document.getElementById('poiDesc').value.trim();
                 const tags = document.getElementById('poiTags').value.trim();
-                const imageUrl = document.getElementById('poiImageUrl').value.trim();
 
                 const poiData = {
                     name, category, latitude, longitude,
-                    description, tags, imageUrl
+                    description, tags
                 };
 
                 let response;

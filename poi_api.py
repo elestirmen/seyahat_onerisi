@@ -319,7 +319,6 @@ def serve_ui():
                 document.getElementById('poiLon').value = poi.longitude;
                 document.getElementById('poiDesc').value = poi.description || '';
                 document.getElementById('poiTags').value = (poi.tags || []).join(', ');
-                document.getElementById('poiImageUrl').value = poi.imageUrl || '';
 
                 // Formu düzenleme moduna geçir
                 document.getElementById('saveBtn').innerHTML = '🔄 Güncelle';
@@ -405,17 +404,6 @@ def serve_ui():
                     console.log('Görseller yüklenemedi:', imageError);
                 }
 
-                // Eski imageUrl desteği (geriye uyumluluk)
-                if (poi.imageUrl && !detailHtml.includes('poi-detail-images')) {
-                    detailHtml += `
-                        <div class="poi-detail-images mt-3">
-                            <h6 class="mb-2"><i class="fas fa-image text-warning"></i> Görsel</h6>
-                            <img src="${poi.imageUrl}" 
-                                 class="img-fluid rounded shadow" 
-                                 alt="${poi.name}"
-                                 onclick="showImageModal('${poi.imageUrl}', '${poi.name}', 'POI Görseli')">
-                        </div>`;
-                }
 
                 detailHtml += `
                     <div class="poi-detail-actions">
@@ -1059,7 +1047,6 @@ def add_poi():
                 'longitude': float(poi_data.get('longitude', 0)),
                 'description': poi_data.get('description', ''),
                 'tags': poi_data.get('tags', []),
-                'imageUrl': poi_data.get('imageUrl', ''),
                 'isActive': True,
                 'createdAt': datetime.now().isoformat()
             }

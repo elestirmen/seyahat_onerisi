@@ -35,7 +35,6 @@ CREATE TABLE pois (
 CREATE TABLE poi_images (
     id SERIAL PRIMARY KEY,
     poi_id INTEGER REFERENCES pois(id) ON DELETE CASCADE,
-    image_url VARCHAR(500),
     image_data BYTEA, -- Binary veri için
     thumbnail_url VARCHAR(500),
     caption VARCHAR(255),
@@ -131,9 +130,9 @@ SELECT
     COALESCE(
         json_agg(
             json_build_object(
-                'url', pi.image_url,
                 'caption', pi.caption,
-                'is_primary', pi.is_primary
+                'is_primary', pi.is_primary,
+                'thumbnail_url', pi.thumbnail_url
             )
         ) FILTER (WHERE pi.id IS NOT NULL),
         '[]'
@@ -186,7 +185,6 @@ class POIImage(Base):
     
     id = Column(Integer, primary_key=True)
     poi_id = Column(Integer, ForeignKey('pois.id'))
-    image_url = Column(String(500))
     image_data = Column(LargeBinary)
     thumbnail_url = Column(String(500))
     caption = Column(String(255))
