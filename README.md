@@ -73,6 +73,11 @@ brew install python3 geos proj gdal
 
 ### Adım Adım Kurulum
 
+#### Otomatik Kurulum (Tercih Edilen)
+```bash
+./install.sh
+```
+
 #### 1. Projeyi İndirin
 ```bash
 # Depoyu klonlayın
@@ -378,6 +383,20 @@ db.dropDatabase()
 sudo -u postgres psql
 DROP DATABASE poi_db;
 ```
+
+### Yedekleme ve Geri Yükleme
+Projeyi ve veritabanını yedeklemek için `backup_restore.sh` scriptini kullanabilirsiniz.
+```bash
+# Yedek oluştur
+./backup_restore.sh backup
+
+# Yedekleri listele
+./backup_restore.sh list
+
+# Geri yükleme
+./backup_restore.sh restore <yedek_adi>
+```
+Detaylı açıklama için `YEDEKLEME_REHBERI.md` dosyasına bakabilirsiniz.
 
 ## 📚 Detaylı Kullanım
 
