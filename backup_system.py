@@ -232,7 +232,7 @@ class POIBackupSystem:
                 logger.warning(f"Yedekleme bilgisi okunamadı {info_file}: {e}")
         
         return backups 
-   def restore_files(self, backup_name):
+    def restore_files(self, backup_name):
         """Program dosyalarını geri yükle"""
         logger.info(f"Program dosyaları geri yükleniyor: {backup_name}")
         
