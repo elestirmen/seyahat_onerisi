@@ -131,9 +131,9 @@ class PostgreSQLPOIDatabase(POIDatabase):
                 array_agg(
                     json_build_object(
                         'id', pi.id,
-                        'url', pi.image_url,
                         'caption', pi.caption,
-                        'is_primary', pi.is_primary
+                        'is_primary', pi.is_primary,
+                        'thumbnail_url', pi.thumbnail_url
                     )
                 ) FILTER (WHERE pi.id IS NOT NULL) as images
             FROM pois p
