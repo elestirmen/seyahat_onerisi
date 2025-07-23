@@ -1108,14 +1108,720 @@ console.log('🧪 BASIT TEST: JavaScript çalışıyor!');
         print(f"⚠️ JavaScript ekleme hatası: {e}")
 
 def add_enhanced_legend_and_controls(folium_map: folium.Map, processed_categories: List[Tuple[str, str, float, int]], map_js_var: str):
-    legend_html = """<div id="legend-panel" style="position:fixed;bottom:20px;left:20px;width:280px;background:rgba(255,255,255,0.9);border:1px solid #ddd;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,0.12);z-index:9999;font-family:'Segoe UI',sans-serif;backdrop-filter:blur(10px);overflow:hidden;"><div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:14px;color:white;"><h3 style="margin:0;font-size:16px;text-align:center;">🗺️ Rota Lejantı</h3></div><div id="categories-container" style="padding:12px;max-height:350px;overflow-y:auto;">"""
+    # Responsive CSS system with mobile-first approach
+    responsive_css = """
+    <style>
+    :root {
+        --legend-width-mobile: 90vw;
+        --legend-width-desktop: 280px;
+        --legend-animation-duration: 300ms;
+        --legend-z-index: 9999;
+        --legend-backdrop-blur: 10px;
+        --toggle-button-size: 50px;
+        --touch-target-min: 44px;
+    }
+    
+    /* Mobile-first base styles */
+    #legend-panel {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%) translateY(100%);
+        width: var(--legend-width-mobile);
+        max-width: 400px;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid #ddd;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.15);
+        z-index: var(--legend-z-index);
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+        backdrop-filter: blur(var(--legend-backdrop-blur));
+        overflow: hidden;
+        transition: transform var(--legend-animation-duration) ease-out;
+        max-height: 70vh;
+    }
+    
+    #legend-panel.show {
+        transform: translateX(-50%) translateY(0);
+    }
+    
+    .legend-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 16px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+    }
+    
+    .legend-header h3 {
+        margin: 0;
+        font-size: 16px;
+        text-align: center;
+        flex: 1;
+    }
+    
+    .legend-close-btn {
+        display: block;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s ease;
+    }
+    
+    .legend-close-btn:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    #categories-container {
+        padding: 12px;
+        max-height: calc(70vh - 80px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .category-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        padding: 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+        min-height: var(--touch-target-min);
+        touch-action: manipulation;
+    }
+    
+    .category-item:active {
+        transform: scale(0.98);
+        background: #e9ecef;
+    }
+    
+    .toggle-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 12px;
+        transition: opacity 0.3s ease;
+    }
+    
+    .category-info {
+        flex: 1;
+    }
+    
+    .category-name {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 2px;
+    }
+    
+    .category-stats {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    /* Toggle button for mobile */
+    #legend-toggle-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: var(--toggle-button-size);
+        height: var(--toggle-button-size);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #ddd;
+        border-radius: 50%;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        z-index: calc(var(--legend-z-index) + 1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+        touch-action: manipulation;
+    }
+    
+    #legend-toggle-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    #legend-toggle-btn:active {
+        transform: scale(0.95);
+    }
+    
+    #legend-toggle-icon {
+        font-size: 20px;
+        color: #667eea;
+        transition: transform 0.3s ease;
+    }
+    
+    #legend-toggle-btn.active #legend-toggle-icon {
+        transform: rotate(180deg);
+    }
+    
+    /* Backdrop overlay for mobile */
+    #legend-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: calc(var(--legend-z-index) - 1);
+        opacity: 0;
+        visibility: hidden;
+        transition: all var(--legend-animation-duration) ease;
+    }
+    
+    #legend-backdrop.show {
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    /* Tablet styles */
+    @media (min-width: 769px) and (max-width: 1024px) {
+        #legend-panel {
+            width: 320px;
+            max-width: none;
+        }
+        
+        .category-item:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+    }
+    
+    /* Desktop styles */
+    @media (min-width: 1025px) {
+        #legend-panel {
+            bottom: 20px;
+            left: 20px;
+            transform: none;
+            width: var(--legend-width-desktop);
+            border-radius: 12px;
+            max-height: 400px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+        
+        #legend-panel.show {
+            transform: none;
+        }
+        
+        .legend-header {
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .legend-close-btn {
+            display: none;
+        }
+        
+        #legend-toggle-btn {
+            display: none;
+        }
+        
+        #legend-backdrop {
+            display: none;
+        }
+        
+        #categories-container {
+            max-height: 350px;
+        }
+        
+        .category-item:hover {
+            transform: scale(1.03);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .category-item:active {
+            transform: scale(1.01);
+        }
+    }
+    
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+        #legend-panel,
+        .category-item,
+        #legend-toggle-btn,
+        #legend-backdrop {
+            transition: none;
+        }
+        
+        #legend-toggle-icon {
+            transition: none;
+        }
+    }
+    
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+        #legend-panel {
+            background: white;
+            border: 2px solid black;
+        }
+        
+        .category-item {
+            border: 1px solid #666;
+        }
+    }
+    
+    /* Fallbacks for older browsers */
+    @supports not (backdrop-filter: blur(10px)) {
+        #legend-panel {
+            background: rgba(255, 255, 255, 0.95) !important;
+        }
+        
+        #legend-toggle-btn {
+            background: rgba(255, 255, 255, 0.95) !important;
+        }
+    }
+    
+    /* Fallback for browsers without CSS Grid support */
+    @supports not (display: grid) {
+        .category-item {
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+        }
+    }
+    
+    /* Fallback for browsers without CSS custom properties */
+    .no-css-variables #legend-panel {
+        width: 90vw;
+        z-index: 9999;
+    }
+    
+    .no-css-variables #legend-toggle-btn {
+        width: 50px;
+        height: 50px;
+    }
+    
+    @media (min-width: 1025px) {
+        .no-css-variables #legend-panel {
+            width: 280px;
+        }
+    }
+    
+    /* Touch device optimizations */
+    .touch-device .category-item {
+        min-height: 44px;
+        padding: 14px 12px;
+    }
+    
+    .touch-device #legend-toggle-btn {
+        min-width: 50px;
+        min-height: 50px;
+    }
+    
+    /* Fallback for missing FontAwesome */
+    .no-fontawesome #legend-toggle-icon::before {
+        content: '☰';
+        font-family: Arial, sans-serif;
+    }
+    
+    .no-fontawesome #legend-toggle-btn.active #legend-toggle-icon::before {
+        content: '×';
+    }
+    </style>
+    """
+    
+    # Mobile toggle button
+    toggle_button_html = """
+    <div id="legend-toggle-btn" onclick="toggleLegend()">
+        <i id="legend-toggle-icon" class="fa fa-list"></i>
+    </div>
+    """
+    
+    # Backdrop for mobile
+    backdrop_html = """
+    <div id="legend-backdrop" onclick="hideLegend()"></div>
+    """
+    
+    # Legend panel with responsive structure
+    legend_html = f"""
+    {backdrop_html}
+    {toggle_button_html}
+    <div id="legend-panel" class="legend-panel">
+        <div class="legend-header">
+            <h3>🗺️ Rota Lejantı</h3>
+            <button class="legend-close-btn" onclick="hideLegend()">×</button>
+        </div>
+        <div id="categories-container">
+    """
+    
+    # Add category items with responsive structure
     for cat_name, layer_var, length, poi_count in processed_categories:
         style = CATEGORY_STYLES.get(cat_name, CATEGORY_STYLES["default"])
         display_name = style.get("display_name", cat_name.capitalize())
-        legend_html += f"""<div class="category-item" onclick="toggleLayer('{layer_var}', this)" style="display:flex;align-items:center;margin-bottom:8px;padding:10px;border-radius:10px;cursor:pointer;transition:all 0.3s ease;border-left:4px solid {style['color']};background:#f8f9fa;"><div class="toggle-indicator" style="width:10px;height:10px;border-radius:50%;background:{style['color']};margin-right:12px;"></div><div style="flex:1;"><div style="font-weight:600;font-size:13px;">{display_name}</div><div style="font-size:11px;color:#555;">{poi_count} Nokta | {length:.1f} km</div></div></div>"""
+        legend_html += f"""
+        <div class="category-item" onclick="toggleLayer('{layer_var}', this)" style="border-left: 4px solid {style['color']};">
+            <div class="toggle-indicator" style="background: {style['color']};"></div>
+            <div class="category-info">
+                <div class="category-name">{display_name}</div>
+                <div class="category-stats">{poi_count} Nokta | {length:.1f} km</div>
+            </div>
+        </div>
+        """
+    
     legend_html += "</div></div>"
-    control_script = f"""<script>function toggleLayer(layerVarName,element){{const layer=window[layerVarName];if(!layer)return;const indicator=element.querySelector('.toggle-indicator');if({map_js_var}.hasLayer(layer)){{{map_js_var}.removeLayer(layer);indicator.style.opacity='0.3';element.style.background='#f8f9fa';}}else{{{map_js_var}.addLayer(layer);indicator.style.opacity='1';element.style.background='#e9ecef';}}}}</script><style>.category-item:hover{{transform:scale(1.03);box-shadow:0 4px 15px rgba(0,0,0,0.1);}}</style>"""
-    folium_map.get_root().html.add_child(folium.Element(legend_html + control_script))
+    
+    # Enhanced JavaScript with responsive legend functionality
+    control_script = f"""
+    <script>
+    // Responsive Legend Controller
+    const ResponsiveLegend = (function() {{
+        let state = {{
+            isVisible: false,
+            isMobile: window.innerWidth <= 768,
+            isAnimating: false
+        }};
+        
+        const elements = {{}};
+        
+        function init() {{
+            try {{
+                // Cache DOM elements with error checking
+                elements.panel = document.getElementById('legend-panel');
+                elements.toggleBtn = document.getElementById('legend-toggle-btn');
+                elements.toggleIcon = document.getElementById('legend-toggle-icon');
+                elements.backdrop = document.getElementById('legend-backdrop');
+                elements.closeBtn = document.querySelector('.legend-close-btn');
+                
+                // Check if essential elements exist
+                if (!elements.panel) {{
+                    console.warn('⚠️ Legend panel not found, falling back to basic mode');
+                    return;
+                }}
+                
+                // Feature detection for CSS support
+                const supportsBackdropFilter = CSS.supports('backdrop-filter', 'blur(10px)') || 
+                                             CSS.supports('-webkit-backdrop-filter', 'blur(10px)');
+                if (!supportsBackdropFilter && elements.panel) {{
+                    elements.panel.style.background = 'rgba(255, 255, 255, 0.95)';
+                }}
+                
+                // Feature detection for touch support
+                const supportsTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                if (supportsTouch) {{
+                    document.body.classList.add('touch-device');
+                }}
+                
+                // Set initial state based on screen size
+                updateForScreenSize();
+                
+                // Add event listeners with error handling
+                try {{
+                    window.addEventListener('resize', debounce(handleResize, 250));
+                }} catch (e) {{
+                    console.warn('⚠️ Resize listener failed:', e);
+                }}
+                
+                // Add map click handler for auto-hide
+                setTimeout(() => {{
+                    try {{
+                        addMapClickHandler();
+                    }} catch (e) {{
+                        console.warn('⚠️ Map click handler failed:', e);
+                    }}
+                }}, 1000);
+                
+                console.log('📱 Responsive Legend initialized successfully');
+            }} catch (error) {{
+                console.error('❌ Responsive Legend initialization failed:', error);
+                // Fallback to basic functionality
+                if (elements.panel) {{
+                    elements.panel.style.display = 'block';
+                    elements.panel.style.position = 'fixed';
+                    elements.panel.style.bottom = '20px';
+                    elements.panel.style.left = '20px';
+                }}
+            }}
+        }}
+        
+        function updateForScreenSize() {{
+            const wasMobile = state.isMobile;
+            state.isMobile = window.innerWidth <= 768;
+            
+            if (state.isMobile) {{
+                // Mobile mode: legend hidden by default
+                if (!wasMobile) {{
+                    hideLegend(false); // Hide without animation when switching to mobile
+                }}
+            }} else {{
+                // Desktop mode: legend always visible
+                showLegend(false); // Show without animation when switching to desktop
+            }}
+        }}
+        
+        function toggleLegend() {{
+            if (state.isAnimating) return;
+            
+            if (state.isVisible) {{
+                hideLegend();
+            }} else {{
+                showLegend();
+            }}
+        }}
+        
+        function showLegend(animate = true) {{
+            if (state.isAnimating) return;
+            
+            try {{
+                state.isVisible = true;
+                state.isAnimating = animate;
+                
+                if (elements.panel) {{
+                    elements.panel.classList.add('show');
+                }}
+                
+                if (elements.backdrop && state.isMobile) {{
+                    elements.backdrop.classList.add('show');
+                }}
+                
+                if (elements.toggleBtn) {{
+                    elements.toggleBtn.classList.add('active');
+                }}
+                
+                if (elements.toggleIcon) {{
+                    elements.toggleIcon.className = 'fa fa-times';
+                }} else if (elements.toggleIcon) {{
+                    // Fallback if FontAwesome not loaded
+                    elements.toggleIcon.innerHTML = '×';
+                }}
+                
+                if (animate) {{
+                    setTimeout(() => {{
+                        state.isAnimating = false;
+                    }}, 300);
+                }} else {{
+                    state.isAnimating = false;
+                }}
+            }} catch (error) {{
+                console.error('❌ Show legend failed:', error);
+                state.isAnimating = false;
+                // Fallback: just make it visible
+                if (elements.panel) {{
+                    elements.panel.style.display = 'block';
+                }}
+            }}
+        }}
+        
+        function hideLegend(animate = true) {{
+            if (state.isAnimating) return;
+            
+            try {{
+                state.isVisible = false;
+                state.isAnimating = animate;
+                
+                if (elements.panel) {{
+                    elements.panel.classList.remove('show');
+                    // Reset any transform from swipe gesture
+                    elements.panel.style.transform = '';
+                }}
+                
+                if (elements.backdrop) {{
+                    elements.backdrop.classList.remove('show');
+                }}
+                
+                if (elements.toggleBtn) {{
+                    elements.toggleBtn.classList.remove('active');
+                }}
+                
+                if (elements.toggleIcon) {{
+                    elements.toggleIcon.className = 'fa fa-list';
+                }} else if (elements.toggleIcon) {{
+                    // Fallback if FontAwesome not loaded
+                    elements.toggleIcon.innerHTML = '☰';
+                }}
+                
+                if (animate) {{
+                    setTimeout(() => {{
+                        state.isAnimating = false;
+                    }}, 300);
+                }} else {{
+                    state.isAnimating = false;
+                }}
+            }} catch (error) {{
+                console.error('❌ Hide legend failed:', error);
+                state.isAnimating = false;
+                // Fallback: just hide it
+                if (elements.panel && state.isMobile) {{
+                    elements.panel.style.display = 'none';
+                }}
+            }}
+        }}
+        
+        function handleResize() {{
+            updateForScreenSize();
+        }}
+        
+        function addMapClickHandler() {{
+            const mapContainer = document.querySelector('.folium-map');
+            if (mapContainer) {{
+                // Add both click and touch handlers for better mobile support
+                const hideOnMapInteraction = function(e) {{
+                    if (state.isMobile && state.isVisible) {{
+                        // Only hide if clicking on map, not on legend or controls
+                        if (!e.target.closest('#legend-panel') && 
+                            !e.target.closest('#legend-toggle-btn')) {{
+                            hideLegend();
+                        }}
+                    }}
+                }};
+                
+                mapContainer.addEventListener('click', hideOnMapInteraction);
+                mapContainer.addEventListener('touchstart', hideOnMapInteraction, {{ passive: true }});
+            }}
+            
+            // Add swipe down gesture to close legend
+            if (elements.panel && state.isMobile) {{
+                let startY = 0;
+                let currentY = 0;
+                let isDragging = false;
+                
+                elements.panel.addEventListener('touchstart', function(e) {{
+                    startY = e.touches[0].clientY;
+                    isDragging = true;
+                }}, {{ passive: true }});
+                
+                elements.panel.addEventListener('touchmove', function(e) {{
+                    if (!isDragging) return;
+                    currentY = e.touches[0].clientY;
+                    const deltaY = currentY - startY;
+                    
+                    // Only allow downward swipe to close
+                    if (deltaY > 0 && deltaY > 50) {{
+                        e.preventDefault();
+                        elements.panel.style.transform = `translateX(-50%) translateY(${{deltaY}}px)`;
+                    }}
+                }});
+                
+                elements.panel.addEventListener('touchend', function(e) {{
+                    if (!isDragging) return;
+                    isDragging = false;
+                    
+                    const deltaY = currentY - startY;
+                    
+                    if (deltaY > 100) {{
+                        // Swipe down threshold reached - close legend
+                        hideLegend();
+                    }} else {{
+                        // Reset position
+                        elements.panel.style.transform = 'translateX(-50%) translateY(0)';
+                    }}
+                }});
+            }}
+        }}
+        
+        function debounce(func, wait) {{
+            let timeout;
+            return function executedFunction(...args) {{
+                const later = () => {{
+                    clearTimeout(timeout);
+                    func(...args);
+                }};
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            }};
+        }}
+        
+        // Public API
+        return {{
+            init: init,
+            toggle: toggleLegend,
+            show: showLegend,
+            hide: hideLegend,
+            getState: () => state
+        }};
+    }})();
+    
+    // Global functions for backward compatibility and HTML onclick handlers
+    function toggleLegend() {{
+        ResponsiveLegend.toggle();
+    }}
+    
+    function showLegend() {{
+        ResponsiveLegend.show();
+    }}
+    
+    function hideLegend() {{
+        ResponsiveLegend.hide();
+    }}
+    
+    // Enhanced layer toggle function with responsive support
+    function toggleLayer(layerVarName, element) {{
+        try {{
+            const layer = window[layerVarName];
+            if (!layer) {{
+                console.warn('⚠️ Layer not found:', layerVarName);
+                return;
+            }}
+            
+            const indicator = element ? element.querySelector('.toggle-indicator') : null;
+            
+            if ({map_js_var} && {map_js_var}.hasLayer && {map_js_var}.hasLayer(layer)) {{
+                {map_js_var}.removeLayer(layer);
+                if (indicator) indicator.style.opacity = '0.3';
+                if (element) element.style.background = '#f8f9fa';
+            }} else if ({map_js_var} && {map_js_var}.addLayer) {{
+                {map_js_var}.addLayer(layer);
+                if (indicator) indicator.style.opacity = '1';
+                if (element) element.style.background = '#e9ecef';
+            }}
+            
+            // Add haptic feedback simulation (with error handling)
+            try {{
+                if (element && 'vibrate' in navigator && navigator.vibrate) {{
+                    navigator.vibrate(50);
+                }}
+            }} catch (vibrateError) {{
+                // Vibration not supported or failed, ignore silently
+            }}
+        }} catch (error) {{
+            console.error('❌ Layer toggle failed:', error);
+            // Try to provide visual feedback even if layer toggle fails
+            if (element) {{
+                element.style.opacity = '0.5';
+                setTimeout(() => {{
+                    if (element) element.style.opacity = '1';
+                }}, 200);
+            }}
+        }}
+    }}
+    
+    // Initialize responsive legend when page loads
+    document.addEventListener('DOMContentLoaded', function() {{
+        ResponsiveLegend.init();
+    }});
+    
+    // Fallback initialization if DOMContentLoaded already fired
+    if (document.readyState === 'loading') {{
+        document.addEventListener('DOMContentLoaded', ResponsiveLegend.init);
+    }} else {{
+        ResponsiveLegend.init();
+    }}
+    </script>
+    """
+    
+    # Add responsive meta viewport tag
+    viewport_meta = '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">'
+    
+    # Combine all components
+    full_html = responsive_css + legend_html + control_script
+    
+    # Add viewport meta to the document head
+    folium_map.get_root().header.add_child(folium.Element(viewport_meta))
+    folium_map.get_root().html.add_child(folium.Element(full_html))
 
 # --- Ana Fonksiyon ---
 def main(args: argparse.Namespace):
