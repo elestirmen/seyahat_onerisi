@@ -87,6 +87,25 @@ class PostgreSQLPOIDatabase(POIDatabase):
         """PostgreSQL'e bağlan"""
         try:
             self.conn = psycopg2.connect(self.connection_string)
+            # Ratings tablosu mevcut mu kontrol et, yoksa oluştur
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS poi_ratings (
+                        poi_id INTEGER REFERENCES pois(id) ON DELETE CASCADE,
+                        category TEXT,
+                        rating INTEGER CHECK (rating BETWEEN 0 AND 100),
+                        PRIMARY KEY (poi_id, category)
+                    );
+                    """
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_poi_ratings_poi_id ON poi_ratings(poi_id);"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_poi_ratings_category ON poi_ratings(category);"
+                )
+                self.conn.commit()
             logger.info("PostgreSQL veritabanına bağlandı")
         except Exception as e:
             logger.error(f"PostgreSQL bağlantı hatası: {e}")
@@ -155,13 +174,9 @@ class PostgreSQLPOIDatabase(POIDatabase):
             # UI JSON formatında `_id` alanı bekleniyor
             result['_id'] = result['id']
             
-            # Rating sistemini ekle (JSONB attributes'tan al)
-            if result.get('attributes') and isinstance(result['attributes'], dict):
-                ratings = result['attributes'].get('ratings', {})
-                result['ratings'] = ratings
-            else:
-                # Varsayılan rating'ler
-                result['ratings'] = self.get_default_ratings()
+            # Ratingleri yeni tablodan oku
+            ratings = self.get_poi_ratings(poi_id)
+            result['ratings'] = ratings if ratings else self.get_default_ratings()
         
         return dict(result) if result else None
 
@@ -179,6 +194,26 @@ class PostgreSQLPOIDatabase(POIDatabase):
             'yemek': 0,
             'gece_hayati': 0
         }
+
+    def get_poi_ratings(self, poi_id: int) -> Dict[str, int]:
+        """Belirli bir POI'nin tüm puanlarını döndür"""
+        query = "SELECT category, rating FROM poi_ratings WHERE poi_id = %s"
+        with self.conn.cursor() as cur:
+            cur.execute(query, (poi_id,))
+            rows = cur.fetchall()
+        return {row[0]: row[1] for row in rows}
+
+    def update_poi_ratings(self, poi_id: int, ratings: Dict[str, int]) -> None:
+        """POI ratinglerini upsert et"""
+        insert_q = (
+            "INSERT INTO poi_ratings (poi_id, category, rating) "
+            "VALUES (%s, %s, %s) "
+            "ON CONFLICT (poi_id, category) DO UPDATE SET rating = EXCLUDED.rating"
+        )
+        with self.conn.cursor() as cur:
+            for category, rating in ratings.items():
+                cur.execute(insert_q, (poi_id, category, rating))
+        self.conn.commit()
     
     def search_nearby_pois(self, lat: float, lon: float, radius_meters: float) -> List[Dict[str, Any]]:
         """Yakındaki POI'leri ara"""
@@ -260,6 +295,7 @@ class PostgreSQLPOIDatabase(POIDatabase):
         set_clauses = []
         values = []
         attributes_to_update = {}
+        ratings_updated = False
         
         for key, value in update_data.items():
             if key in ["latitude", "longitude"]:
@@ -282,13 +318,13 @@ class PostgreSQLPOIDatabase(POIDatabase):
             values.append(update_data["longitude"])
             values.append(update_data["latitude"])
         
-        # Handle ratings updates - özel işlem
+        # Handle ratings updates - yeni tablo
         if "ratings" in update_data:
             ratings_data = update_data["ratings"]
             if isinstance(ratings_data, dict):
-                # Ratings'i validate et
                 validated_ratings = self.validate_ratings(ratings_data)
-                attributes_to_update["ratings"] = validated_ratings
+                self.update_poi_ratings(poi_id, validated_ratings)
+                ratings_updated = True
                 print(f"✅ POI {poi_id} için rating'ler güncellendi: {validated_ratings}")
         
         # Handle attributes updates
@@ -304,8 +340,8 @@ class PostgreSQLPOIDatabase(POIDatabase):
             set_clauses.append("attributes = %s")
             values.append(Json(current_attributes))
         
-        if not set_clauses:
-            return False
+        if not set_clauses and not attributes_to_update:
+            return ratings_updated
             
         set_clause = ", ".join(set_clauses)
         query = f"UPDATE pois SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE id = %s"
@@ -343,14 +379,18 @@ class PostgreSQLPOIDatabase(POIDatabase):
             raise RuntimeError("Veritabanı bağlantısı yok")
 
         base_query = """
-            SELECT 
-                id, 
-                name, 
-                category, 
-                ST_Y(location::geometry) as latitude, 
-                ST_X(location::geometry) as longitude, 
+            SELECT
+                id,
+                name,
+                category,
+                ST_Y(location::geometry) as latitude,
+                ST_X(location::geometry) as longitude,
                 description,
-                attributes
+                (
+                    SELECT json_object_agg(category, rating)
+                    FROM poi_ratings pr
+                    WHERE pr.poi_id = pois.id
+                ) AS ratings
             FROM pois
             WHERE is_active = true
         """
@@ -378,9 +418,8 @@ class PostgreSQLPOIDatabase(POIDatabase):
             }
             
             # Rating sistemini ekle
-            if row.get('attributes') and isinstance(row['attributes'], dict):
-                ratings = row['attributes'].get('ratings', {})
-                poi_data['ratings'] = ratings if ratings else self.get_default_ratings()
+            if row.get('ratings') and isinstance(row['ratings'], dict):
+                poi_data['ratings'] = row['ratings']
             else:
                 poi_data['ratings'] = self.get_default_ratings()
             

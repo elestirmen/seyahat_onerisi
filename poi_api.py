@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from poi_database_adapter import POIDatabaseFactory
 from poi_media_manager import POIMediaManager
+from psycopg2.extras import RealDictCursor
 import os
 import json
 import uuid
@@ -820,7 +821,7 @@ def perform_database_search(db, search_query, category_filter=None):
     
     base_query += " ORDER BY name"
     
-    with db.conn.cursor(cursor_factory=db.conn.cursor_factory.__class__) as cur:
+    with db.conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(base_query, params)
         results = cur.fetchall()
     
@@ -996,7 +997,7 @@ def perform_advanced_database_search(db, search_query, category_filter=None, lim
         base_query += " LIMIT %s"
         params.append(limit)
     
-    with db.conn.cursor(cursor_factory=db.conn.cursor_factory.__class__) as cur:
+    with db.conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(base_query, params)
         results = cur.fetchall()
     
@@ -1290,38 +1291,33 @@ def search_pois_by_rating():
         return jsonify({'error': 'Database connection failed'}), 500
     
     try:
-        # PostgreSQL JSONB sorgusu
+        # Rating tablosu sorgusu
         query = """
-            SELECT 
-                id as _id,
-                name, 
-                category, 
-                ST_Y(location::geometry) as latitude, 
-                ST_X(location::geometry) as longitude, 
-                description,
-                attributes,
-                COALESCE(CAST(attributes->'ratings'->%s AS INTEGER), 0) as rating_score
-            FROM pois
-            WHERE is_active = true
-            AND COALESCE(CAST(attributes->'ratings'->%s AS INTEGER), 0) >= %s
-            ORDER BY rating_score DESC, name ASC
+            SELECT
+                p.id as _id,
+                p.name,
+                p.category,
+                ST_Y(p.location::geometry) as latitude,
+                ST_X(p.location::geometry) as longitude,
+                p.description,
+                COALESCE(pr.rating, 0) as rating_score
+            FROM pois p
+            LEFT JOIN poi_ratings pr ON pr.poi_id = p.id AND pr.category = %s
+            WHERE p.is_active = true AND COALESCE(pr.rating, 0) >= %s
+            ORDER BY rating_score DESC, p.name ASC
             LIMIT %s
         """
-        
-        with db.conn.cursor(cursor_factory=db.conn.cursor_factory.__class__) as cur:
-            cur.execute(query, (category, category, min_score, limit))
+
+        with db.conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(query, (category, min_score, limit))
             results = cur.fetchall()
         
         # Sonuçları formatla
         formatted_results = []
         for row in results:
             poi_data = dict(row)
-            # Rating'leri ekle
-            if poi_data.get('attributes') and isinstance(poi_data['attributes'], dict):
-                ratings = poi_data['attributes'].get('ratings', {})
-                poi_data['ratings'] = ratings if ratings else db.get_default_ratings()
-            else:
-                poi_data['ratings'] = db.get_default_ratings()
+            # Tüm rating'leri ekle
+            poi_data['ratings'] = db.get_poi_ratings(poi_data['_id']) or db.get_default_ratings()
                 
             formatted_results.append(poi_data)
         
