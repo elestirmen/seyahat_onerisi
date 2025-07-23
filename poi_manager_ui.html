@@ -530,7 +530,7 @@
                                     </div>
                                     
                                     <div class="d-grid gap-2">
-                                        <button type="submit" class="btn btn-primary" id="saveBtn">💾 Kaydet</button>
+                                        <button type="button" class="btn btn-primary" id="saveBtn" onclick="handleFormSubmit(event)">💾 Kaydet</button>
                                         <button type="button" class="btn btn-outline-danger d-none" id="deleteBtn" onclick="deleteCurrentPOI()">
                                             🗑️ POI'yi Sil
                                         </button>
@@ -1009,13 +1009,15 @@
                 document.getElementById('poiDesc').value = poi.description || '';
                 document.getElementById('poiTags').value = (poi.tags || []).join(', ');
 
-                // Rating'leri yükle (DOM hazır olana kadar bekle)
+                // Bootstrap tab geçişi - FORM tab'ını aktif yap ki rating'ler görünsün
+                const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
+                formTab.show();
+                
+                // Rating'leri yükle - BASİT VERSİYON
                 setTimeout(() => {
-                    console.log('🚀 TIMING TEST: POI değişti, rating\'ler yüklenecek. POI ID:', poi._id);
-                    console.log('🚀 Form tab aktif mi?', document.getElementById('form-tab').classList.contains('active'));
-                    console.log('🚀 Doga slider var mı?', !!document.getElementById('rating_doga'));
+                    console.log('🚀 POI değişti, rating\'ler yüklenecek. POI ID:', poi._id);
                     loadPOIRatings(poi._id);
-                }, 500); // 500ms'e çıkardım
+                }, 500); // Biraz daha uzun bekle
 
                 // Formu düzenleme moduna geçir
                 document.getElementById('saveBtn').innerHTML = '🔄 Güncelle';
@@ -1026,12 +1028,8 @@
                 document.getElementById('panelTitle').textContent = `📝 ${poi.name}`;
                 document.getElementById('newPoiBtn').classList.remove('d-none');
 
-                // Detaylar tab'ını göster ve FORM tab'ını aktif yap (rating'ler için)
+                // Detaylar tab'ını göster
                 document.getElementById('details-tab-container').style.display = 'block';
-                
-                // Bootstrap tab geçişi - FORM tab'ını aktif yap ki rating'ler görünsün
-                const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
-                formTab.show();
 
                 // Detay HTML'ini oluştur
                 let detailHtml = `
@@ -1153,14 +1151,35 @@
 
         // POI düzenle - Yeni birleşik panel için güncellendi
         async function editPOI(poiId) {
-            // Önce POI detaylarını yükle (form alanlarını doldurur)
+            console.log('🎯 editPOI BAŞLADI, POI ID:', poiId);
+            
+            // Önce POI detaylarını yükle
             await showPOIDetail(poiId);
             
-            // Form tab'ına geçiş yap
+            // Form tab'ına geç ve tab değişimi tamamlanana kadar bekle
+            const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
+            formTab.show();
+            
+            // Tab değişimi event'ini dinle
+            document.getElementById('form-tab').addEventListener('shown.bs.tab', function tabShownHandler() {
+                console.log('📋 Form tab aktif oldu, rating\'ler yükleniyor...');
+                
+                // Event listener'ı kaldır (sadece bir kez çalışsın)
+                document.getElementById('form-tab').removeEventListener('shown.bs.tab', tabShownHandler);
+                
+                // Rating'leri yükle
+                setTimeout(() => {
+                    loadRatingsSimple(poiId);
+                }, 200);
+            });
+            
+            // Fallback - eğer event çalışmazsa
             setTimeout(() => {
-                switchToFormTab();
-                showToast('POI düzenleme moduna geçildi', 'info');
-            }, 300);
+                console.log('🔄 Fallback: Rating\'ler yükleniyor...');
+                loadRatingsSimple(poiId);
+            }, 2000);
+            
+            showToast('POI düzenleme moduna geçildi', 'info');
         }
 
         // Form temizle ve yeni POI moduna geç
@@ -1196,10 +1215,29 @@
             showToast('Yeni POI ekleme moduna geçildi', 'info');
         }
 
-        // Form gönder
-        document.getElementById('poiForm').onsubmit = async function (e) {
+        // Form gönder - Tamamen yeni yaklaşım
+        function handleFormSubmit(e) {
             e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('🚀 Form submit başladı');
+            
+            // Çift submit'i önle
+            const submitBtn = document.getElementById('saveBtn');
+            if (submitBtn.disabled) {
+                console.log('⚠️ Form zaten gönderiliyor, çift submit önlendi');
+                return false;
+            }
+            
+            submitBtn.disabled = true;
             showLoading();
+            
+            // Async işlemi ayrı fonksiyonda yap
+            processFormSubmit();
+            return false;
+        }
+        
+        async function processFormSubmit() {
 
             try {
                 const idVal = document.getElementById('poiId').value;
@@ -1209,9 +1247,12 @@
                 const lon = parseFloat(document.getElementById('poiLon').value);
                 const description = document.getElementById('poiDesc').value;
                 const tags = document.getElementById('poiTags').value.split(',').map(t => t.trim()).filter(Boolean);
+                // Rating'leri al
+                const ratings = getRatingValues();
+                
                 const poiData = {
                     name, category, latitude: lat, longitude: lon,
-                    description, tags
+                    description, tags, ratings
                 };
 
                 let response;
@@ -1252,8 +1293,12 @@
                 showToast('İşlem sırasında hata oluştu: ' + error.message, 'error');
             } finally {
                 hideLoading();
+                // Submit butonunu tekrar aktif et
+                document.getElementById('saveBtn').disabled = false;
             }
-        };
+        }
+        
+        // Form submit event'i artık gerekli değil - buton onclick kullanıyor
 
         // POI sil
         async function deletePOI(poiId) {
@@ -1555,13 +1600,9 @@
                         
                         console.log(`🔍 Doğa slider kontrol: mevcut=${currentDoga}, beklenen=${expectedDoga}`);
                         
-                        // Eğer değerler farklıysa zorla güncelle
-                        if (parseInt(currentDoga) !== parseInt(expectedDoga)) {
-                            console.log('⚡ Rating değerleri yanlış, ZORLA düzeltiliyor...');
-                            setRatingValues(data.ratings || {});
-                        } else {
-                            console.log('✅ Rating değerleri doğru');
-                        }
+                        // ZORLA rating'leri güncelle
+                        console.log('⚡ Rating değerleri ZORLA güncelleniyor...');
+                        updateSlidersDirectly(data.ratings || {});
                     })
                     .catch(e => console.error('❌ Backup rating kontrol hatası:', e));
                     
@@ -1664,57 +1705,93 @@
             return 'bg-danger';
         }
 
+        // BASIT VE DİREKT YAKLAŞIM
         function loadPOIRatings(poiId) {
+            console.log('🚀 BASIT loadPOIRatings başladı, POI ID:', poiId);
+            
+            // Önce tüm slider'ları sıfırla
+            clearAllRatings();
+            
             if (!poiId) {
-                console.log('❌ loadPOIRatings: POI ID yok');
-                setDefaultRatings();
+                console.log('❌ POI ID yok, rating\'ler temizlendi');
                 return;
             }
             
-            console.log('🔄 Loading ratings for POI:', poiId);
-            console.log('🧹 ÖNCE rating\'ler temizleniyor...');
-            
-            // Önce mevcut rating'leri ZORLA temizle
+            // API'den rating'leri al
+            console.log('📡 API\'den rating\'ler alınıyor...');
+            fetch(`${apiBase}/poi/${poiId}/ratings`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('📦 API Response:', data);
+                    if (data && data.ratings) {
+                        console.log('✅ Rating\'ler bulundu:', data.ratings);
+                        // Direkt slider'ları güncelle
+                        updateSlidersDirectly(data.ratings);
+                    } else {
+                        console.log('⚠️ Rating data boş');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Rating API hatası:', error);
+                });
+        }
+        
+        // Tüm rating'leri temizle
+        function clearAllRatings() {
+            console.log('🧹 Tüm rating\'ler temizleniyor...');
             const categories = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 
                               'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'];
             
             categories.forEach(category => {
                 const slider = document.getElementById(`rating_${category}`);
+                const display = document.getElementById(`rating_${category}_display`);
+                
                 if (slider) {
-                    console.log(`🧹 ${category} slider 0'a sıfırlanıyor (eski değer: ${slider.value})`);
                     slider.value = 0;
-                    updateRatingDisplay(category, 0);
+                    // ZORLA GÖRSELİ GÜNCELLE
+                    slider.dispatchEvent(new Event('input'));
+                    slider.dispatchEvent(new Event('change'));
+                    console.log(`🧹 ${category} slider = 0`);
+                }
+                if (display) {
+                    display.textContent = '0';
+                    display.className = 'badge bg-secondary';
+                }
+            });
+        }
+        
+        // Slider'ları direkt güncelle
+        function updateSlidersDirectly(ratings) {
+            console.log('🎚️ Slider\'lar direkt güncelleniyor:', ratings);
+            
+            Object.keys(ratings).forEach(category => {
+                const value = parseInt(ratings[category]) || 0;
+                const slider = document.getElementById(`rating_${category}`);
+                const display = document.getElementById(`rating_${category}_display`);
+                
+                if (slider && display) {
+                    slider.value = value;
+                    
+                    // ZORLA GÖRSELİ GÜNCELLE
+                    slider.dispatchEvent(new Event('input'));
+                    slider.dispatchEvent(new Event('change'));
+                    
+                    display.textContent = value;
+                    
+                    // Badge rengini güncelle
+                    if (value >= 80) display.className = 'badge bg-success';
+                    else if (value >= 60) display.className = 'badge bg-info';
+                    else if (value >= 40) display.className = 'badge bg-warning';
+                    else if (value >= 20) display.className = 'badge bg-secondary';
+                    else display.className = 'badge bg-danger';
+                    
+                    console.log(`✅ ${category}: ${value} (slider=${slider.value}, display=${display.textContent})`);
                 } else {
-                    console.warn(`⚠️ ${category} slider bulunamadı!`);
+                    console.warn(`⚠️ ${category} elementleri bulunamadı: slider=${!!slider}, display=${!!display}`);
                 }
             });
             
-            console.log('✅ Tüm slider\'lar sıfırlandı, şimdi API\'den yeni rating\'ler yüklenecek...');
-            
-            fetch(`${apiBase}/poi/${poiId}/ratings`)
-                .then(response => {
-                    console.log('📡 Rating API response status:', response.status);
-                    if (!response.ok) {
-                        console.log('⚠️ Rating bulunamadı, varsayılan değerler kullanılıyor');
-                        setDefaultRatings();
-                        return null;
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data && data.ratings) {
-                        console.log('✅ Rating\'ler API\'den yüklendi:', data.ratings);
-                        setRatingValues(data.ratings);
-                        updateTotalRating(); // Toplam puanı güncelle
-                    } else {
-                        console.log('⚠️ Rating data boş, varsayılan değerler kullanılıyor');
-                        setDefaultRatings();
-                    }
-                })
-                .catch(error => {
-                    console.error('❌ Rating yükleme hatası:', error);
-                    setDefaultRatings();
-                });
+            updateTotalRating();
         }
 
         function setDefaultRatings() {
@@ -1736,46 +1813,132 @@
         }
 
         function setRatingValues(ratings) {
-            console.log('🎛️ setRatingValues çağrıldı:', ratings);
+            console.log('🎛️ setRatingValues çağrıldı (YENİ BASIT VERSİYON):', ratings);
+            // Yeni basit fonksiyonu kullan
+            updateSlidersDirectly(ratings || {});
+        }
+        
+        // ACIL TEST FONKSIYONU - Tarayıcı konsolundan çağır
+        function testSliders() {
+            console.log('🧪 ACIL TEST başlıyor...');
             
-            // ÖNCE TÜM SLIDER'LARI SIFIRLA
-            const allCategories = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 
-                                  'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'];
+            // 1. Slider'ları bul
+            const tarihi = document.getElementById('rating_tarihi');
+            const doga = document.getElementById('rating_doga');
+            const yemek = document.getElementById('rating_yemek');
             
-            console.log('🔄 Önce tüm kategoriler sıfırlanıyor...');
-            allCategories.forEach(category => {
-                const slider = document.getElementById(`rating_${category}`);
-                if (slider) {
-                    slider.value = 0;
-                    updateRatingDisplay(category, 0);
-                }
-            });
+            console.log('Slider durumu:');
+            console.log('- Tarihi:', tarihi ? 'VAR' : 'YOK');
+            console.log('- Doğa:', doga ? 'VAR' : 'YOK');
+            console.log('- Yemek:', yemek ? 'VAR' : 'YOK');
             
-            // SONRA SADECE VAR OLAN RATING'LERİ SET ET
-            if (ratings && typeof ratings === 'object') {
-                Object.keys(ratings).forEach(category => {
-                    const slider = document.getElementById(`rating_${category}`);
-                    if (slider) {
-                        const value = parseInt(ratings[category]) || 0;
-                        console.log(`🎚️ ${category} slider'ına ${value} değeri yükleniyor (önceki: ${slider.value})`);
-                        slider.value = value;
-                        updateRatingDisplay(category, value);
-                        
-                        // Doğrulama
-                        setTimeout(() => {
-                            const currentValue = slider.value;
-                            console.log(`✅ ${category} slider doğrulama: beklenen=${value}, gerçek=${currentValue}`);
-                        }, 10);
-                    } else {
-                        console.warn(`⚠️ ${category} slider'ı bulunamadı!`);
-                    }
-                });
-            } else {
-                console.log('⚠️ Ratings boş veya geçersiz:', ratings);
+            if (tarihi) {
+                console.log('- Tarihi değeri:', tarihi.value);
+                tarihi.value = 90;
+                // ZORLA GÖRSELİ GÜNCELLE
+                tarihi.dispatchEvent(new Event('input'));
+                tarihi.dispatchEvent(new Event('change'));
+                console.log('- Tarihi yeni değer:', tarihi.value);
             }
             
-            updateTotalRating();
-            console.log('✅ setRatingValues tamamlandı');
+            if (doga) {
+                console.log('- Doğa değeri:', doga.value);
+                doga.value = 85;
+                // ZORLA GÖRSELİ GÜNCELLE
+                doga.dispatchEvent(new Event('input'));
+                doga.dispatchEvent(new Event('change'));
+                console.log('- Doğa yeni değer:', doga.value);
+            }
+            
+            if (yemek) {
+                yemek.value = 95;
+                yemek.dispatchEvent(new Event('input'));
+                yemek.dispatchEvent(new Event('change'));
+            }
+            
+            // Display'leri güncelle
+            const tarihiDisplay = document.getElementById('rating_tarihi_display');
+            const dogaDisplay = document.getElementById('rating_doga_display');
+            const yemekDisplay = document.getElementById('rating_yemek_display');
+            
+            if (tarihiDisplay) {
+                tarihiDisplay.textContent = '90';
+                tarihiDisplay.className = 'badge bg-success';
+            }
+            if (dogaDisplay) {
+                dogaDisplay.textContent = '85';
+                dogaDisplay.className = 'badge bg-success';
+            }
+            if (yemekDisplay) {
+                yemekDisplay.textContent = '95';
+                yemekDisplay.className = 'badge bg-success';
+            }
+            
+            console.log('✅ Test tamamlandı - Slider\'lar görsel olarak güncellendi');
+        }
+        
+        // Mevcut POI'nin rating'lerini yükle
+        function loadCurrentPOIRatings() {
+            const poiId = document.getElementById('poiId').value;
+            console.log('🔄 Manuel rating yükleme, POI ID:', poiId);
+            if (poiId) {
+                loadRatingsSimple(poiId);
+            } else {
+                console.log('❌ POI ID bulunamadı');
+                clearAllRatings();
+            }
+        }
+        
+        // SÜPER BASİT RATING YÜKLEME
+        function loadRatingsSimple(poiId) {
+            console.log('🚀 SÜPER BASİT rating yükleme, POI:', poiId);
+            
+            if (!poiId) {
+                clearAllRatings();
+                return;
+            }
+            
+            fetch(`${apiBase}/poi/${poiId}/ratings`)
+                .then(r => r.json())
+                .then(data => {
+                    console.log('📦 Rating data:', data);
+                    
+                    // Önce tüm slider'ları temizle
+                    clearAllRatings();
+                    
+                    if (data.ratings) {
+                        // Direkt slider'ları güncelle
+                        for (let category in data.ratings) {
+                            const value = parseInt(data.ratings[category]) || 0;
+                            const slider = document.getElementById(`rating_${category}`);
+                            const display = document.getElementById(`rating_${category}_display`);
+                            
+                            if (slider && value > 0) {
+                                slider.value = value;
+                                // ZORLA GÖRSELİ GÜNCELLE
+                                slider.dispatchEvent(new Event('input'));
+                                slider.dispatchEvent(new Event('change'));
+                                console.log(`✅ ${category} = ${value}`);
+                            }
+                            if (display && value > 0) {
+                                display.textContent = value;
+                                // Badge rengini güncelle
+                                if (value >= 80) display.className = 'badge bg-success';
+                                else if (value >= 60) display.className = 'badge bg-info';
+                                else if (value >= 40) display.className = 'badge bg-warning';
+                                else if (value >= 20) display.className = 'badge bg-secondary';
+                                else display.className = 'badge bg-danger';
+                            }
+                        }
+                        console.log('✅ Rating\'ler başarıyla yüklendi ve görsel olarak güncellendi');
+                    } else {
+                        console.log('⚠️ Rating data boş');
+                    }
+                })
+                .catch(e => {
+                    console.error('❌ Rating hatası:', e);
+                    clearAllRatings();
+                });
         }
 
         function getRatingValues() {

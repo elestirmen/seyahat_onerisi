@@ -176,7 +176,14 @@ class PostgreSQLPOIDatabase(POIDatabase):
             
             # Ratingleri yeni tablodan oku
             ratings = self.get_poi_ratings(poi_id)
-            result['ratings'] = ratings if ratings else self.get_default_ratings()
+            # Default ratings ile merge et ama sadece mevcut rating'leri göster
+            default_ratings = self.get_default_ratings()
+            if ratings:
+                # Sadece 0'dan büyük rating'leri göster, diğerleri için default 0 kullan
+                for category, value in ratings.items():
+                    if value > 0:
+                        default_ratings[category] = value
+            result['ratings'] = default_ratings
         
         return dict(result) if result else None
 
@@ -263,6 +270,17 @@ class PostgreSQLPOIDatabase(POIDatabase):
             ))
             poi_id = cur.fetchone()[0]
             self.conn.commit()
+        
+        # Rating'leri kaydet (eğer varsa)
+        if 'ratings' in poi_data and poi_data['ratings']:
+            try:
+                # Yeni POI için tüm rating'leri kaydet (0 olanlar dahil)
+                validated_ratings = self.validate_all_ratings(poi_data['ratings'])
+                if validated_ratings:
+                    self.update_poi_ratings(poi_id, validated_ratings)
+                    print(f"✅ Yeni POI {poi_id} için rating'ler kaydedildi: {validated_ratings}")
+            except Exception as e:
+                print(f"⚠️ POI {poi_id} rating kaydetme hatası: {e}")
         
         return poi_id
     
@@ -353,24 +371,42 @@ class PostgreSQLPOIDatabase(POIDatabase):
             return cur.rowcount > 0
 
     def validate_ratings(self, ratings: Dict[str, Any]) -> Dict[str, int]:
-        """Rating verilerini validate et ve temizle. Tüm gönderilen kategorileri sakla, valid olmayanlar için uyarı ver."""
+        """Rating verilerini validate et ve temizle. Sadece 0'dan büyük değerleri kaydet."""
         valid_categories = {
             'tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 
             'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'
         }
         validated = {}
         for category, value in ratings.items():
-            try:
-                value_int = int(value)
-                validated[category] = max(0, min(100, value_int))
-                if category not in valid_categories:
-                    print(f"[WARN] Bilinmeyen rating kategorisi: {category}")
-            except (ValueError, TypeError):
-                validated[category] = 0
-        # Eksik valid kategoriler için sıfır ekle
-        for category in valid_categories:
-            if category not in validated:
-                validated[category] = 0
+            if category in valid_categories:
+                try:
+                    value_int = int(value)
+                    # Sadece 0'dan büyük değerleri kaydet
+                    if value_int > 0:
+                        validated[category] = max(0, min(100, value_int))
+                except (ValueError, TypeError):
+                    pass  # Geçersiz değerleri atla
+            else:
+                print(f"[WARN] Bilinmeyen rating kategorisi: {category}")
+        return validated
+    
+    def validate_all_ratings(self, ratings: Dict[str, Any]) -> Dict[str, int]:
+        """Tüm rating verilerini validate et (0 olanlar dahil). Yeni POI için kullanılır."""
+        valid_categories = {
+            'tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 
+            'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'
+        }
+        validated = {}
+        for category, value in ratings.items():
+            if category in valid_categories:
+                try:
+                    value_int = int(value)
+                    # Tüm değerleri kaydet (0 dahil)
+                    validated[category] = max(0, min(100, value_int))
+                except (ValueError, TypeError):
+                    validated[category] = 0  # Geçersiz değerler için 0
+            else:
+                print(f"[WARN] Bilinmeyen rating kategorisi: {category}")
         return validated
 
     def list_pois(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -385,12 +421,7 @@ class PostgreSQLPOIDatabase(POIDatabase):
                 category,
                 ST_Y(location::geometry) as latitude,
                 ST_X(location::geometry) as longitude,
-                description,
-                (
-                    SELECT json_object_agg(category, rating)
-                    FROM poi_ratings pr
-                    WHERE pr.poi_id = pois.id
-                ) AS ratings
+                description
             FROM pois
             WHERE is_active = true
         """
@@ -417,11 +448,16 @@ class PostgreSQLPOIDatabase(POIDatabase):
                 "description": row["description"],
             }
             
-            # Rating sistemini ekle
-            if row.get('ratings') and isinstance(row['ratings'], dict):
-                poi_data['ratings'] = row['ratings']
-            else:
-                poi_data['ratings'] = self.get_default_ratings()
+            # Rating sistemini ayrı sorgu ile al
+            poi_ratings = self.get_poi_ratings(row["id"])
+            # Default ratings ile merge et ama sadece mevcut rating'leri göster
+            default_ratings = self.get_default_ratings()
+            if poi_ratings:
+                # Sadece 0'dan büyük rating'leri göster, diğerleri için default 0 kullan
+                for category, value in poi_ratings.items():
+                    if value > 0:
+                        default_ratings[category] = value
+            poi_data['ratings'] = default_ratings
             
             formatted.append(poi_data)
             
