@@ -1,0 +1,29 @@
+PostgreSQL bağlantı hatası: connection to server at "localhost" (::1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+🚀 POI Yönetim Sistemi başlatılıyor...
+📊 Web arayüzü: http://localhost:5505/poi_manager_ui.html
+🔌 API endpoint'leri: http://localhost:5505/api/
+⚠️  Veritabanına bağlanılamadı, JSON verileri kullanılacak: connection to server at "localhost" (::1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+⚠️  JSON fallback modu - tüm işlemler JSON dosyasında yapılacak
+ * Serving Flask app 'poi_api'
+ * Debug mode: on
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5505
+ * Running on http://172.30.0.2:5505
+[33mPress CTRL+C to quit[0m
+ * Restarting with stat
+PostgreSQL bağlantı hatası: connection to server at "localhost" (::1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+ * Debugger is active!
+ * Debugger PIN: 522-628-156
