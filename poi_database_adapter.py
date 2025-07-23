@@ -308,7 +308,7 @@ class PostgreSQLPOIDatabase(POIDatabase):
                 # Valid database column - update directly
                 set_clauses.append(f"{db_column} = %s")
                 values.append(value)
-            else:
+            elif key != "ratings":  # ratings'i attributes'a ekleme!
                 # Store in attributes JSONB column
                 attributes_to_update[key] = value
         
