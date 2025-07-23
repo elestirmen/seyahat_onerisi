@@ -2,6 +2,7 @@
 
 Kapadokya bölgesindeki ilgi noktaları (POI) arasında optimize edilmiş rotalar oluşturan gelişmiş Python uygulaması. Ürgüp merkez odaklı bu sistem, turistik yerleri kategorize ederek interaktif haritalar ve detaylı rota planları sunar.
 
+Detaylı mimari açıklaması için [PROJE_MIMARISI.md](PROJE_MIMARISI.md) dosyasını inceleyebilirsiniz.
 ![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![OpenStreetMap](https://img.shields.io/badge/Maps-OpenStreetMap-orange.svg)
@@ -459,8 +460,7 @@ python category_route_planner_with_db.py --db-type mongodb --db-connection "mong
 
 ### Veritabanı Şeması
 
-Detaylı veritabanı tasarımı için `poi_database_design.md` dosyasını inceleyin. Şema şunları içerir:
-
+Detaylı mimari için `PROJE_MIMARISI.md`, tablo açıklamaları için `poi_database_design.md` dosyalarına bakabilirsiniz.
 - **POI Tablosu**: Ana ilgi noktaları bilgileri
 - **Kategoriler**: POI sınıflandırması
 - **Görseller**: POI fotoğrafları ve thumbnails
@@ -638,39 +638,8 @@ Bu projeye katkıda bulunmak için:
 4. Branch'inizi push edin (`git push origin feature/yeni-ozellik`)
 5. Pull Request oluşturun
 
-### Katkı Alanları
-- Yeni POI verilerinin eklenmesi
-- Harita stil iyileştirmeleri
-- Performans optimizasyonları
-- Dokümantasyon güncellemeleri
-- Çoklu dil desteği
-- Test case yazımı
 
 ## 📄 Lisans
 
 Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosyasını inceleyin.
-
-## 👥 Geliştiriciler
-
-- **Proje Sahibi**: [İsim]
-- **Katkıda Bulunanlar**: [GitHub Contributors]
-
-## 📞 İletişim
-
-- **GitHub**: [Repository URL]
-- **E-posta**: [İletişim e-postası]
-- **Dokümantasyon**: [Dokümantasyon linki]
-
-## 🙏 Teşekkürler
-
-Bu proje aşağıdaki açık kaynak projeleri kullanmaktadır:
-
-- [OpenStreetMap](https://www.openstreetmap.org/) - Açık harita verileri
-- [Folium](https://python-visualization.github.io/folium/) - Python harita kütüphanesi
-- [OSMnx](https://osmnx.readthedocs.io/) - Ağ analiz kütüphanesi
-- [Open-Meteo](https://open-meteo.com/) - Ücretsiz hava durumu API'si
-
----
-
-⭐ **Bu projeyi beğendiyseniz yıldız vermeyi unutmayın!**
 
