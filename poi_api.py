@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from poi_database_adapter import POIDatabaseFactory
 from poi_media_manager import POIMediaManager
+from psycopg2.extras import RealDictCursor
 import os
 import json
 import uuid
@@ -820,7 +821,7 @@ def perform_database_search(db, search_query, category_filter=None):
     
     base_query += " ORDER BY name"
     
-    with db.conn.cursor(cursor_factory=db.conn.cursor_factory.__class__) as cur:
+    with db.conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(base_query, params)
         results = cur.fetchall()
     
@@ -996,7 +997,7 @@ def perform_advanced_database_search(db, search_query, category_filter=None, lim
         base_query += " LIMIT %s"
         params.append(limit)
     
-    with db.conn.cursor(cursor_factory=db.conn.cursor_factory.__class__) as cur:
+    with db.conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(base_query, params)
         results = cur.fetchall()
     
@@ -1307,7 +1308,7 @@ def search_pois_by_rating():
             LIMIT %s
         """
 
-        with db.conn.cursor(cursor_factory=db.conn.cursor_factory.__class__) as cur:
+        with db.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(query, (category, min_score, limit))
             results = cur.fetchall()
         
