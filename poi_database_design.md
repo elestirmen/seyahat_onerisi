@@ -56,6 +56,16 @@ CREATE TABLE poi_3d_models (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- POI puanları tablosu (her kategori için ayrı satır)
+CREATE TABLE poi_ratings (
+    poi_id INTEGER REFERENCES pois(id) ON DELETE CASCADE,
+    category TEXT,
+    rating INTEGER CHECK (rating BETWEEN 0 AND 100),
+    PRIMARY KEY (poi_id, category)
+);
+-- Her bir kategori için puanlar bu tabloda tutulur. Attributes JSONB alanındaki
+-- eski rating verileri buraya taşınabilir.
+
 -- Kategoriler tablosu (genişletilebilir)
 CREATE TABLE categories (
     id SERIAL PRIMARY KEY,
@@ -71,6 +81,8 @@ CREATE INDEX idx_poi_location ON pois USING GIST(location);
 CREATE INDEX idx_poi_category ON pois(category);
 CREATE INDEX idx_poi_active ON pois(is_active);
 CREATE INDEX idx_poi_attributes ON pois USING GIN(attributes);
+CREATE INDEX idx_poi_ratings_poi_id ON poi_ratings(poi_id);
+CREATE INDEX idx_poi_ratings_category ON poi_ratings(category);
 ```
 
 ### Örnek Veri Ekleme
