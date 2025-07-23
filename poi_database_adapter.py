@@ -87,6 +87,25 @@ class PostgreSQLPOIDatabase(POIDatabase):
         """PostgreSQL'e bağlan"""
         try:
             self.conn = psycopg2.connect(self.connection_string)
+            # Ratings tablosu mevcut mu kontrol et, yoksa oluştur
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS poi_ratings (
+                        poi_id INTEGER REFERENCES pois(id) ON DELETE CASCADE,
+                        category TEXT,
+                        rating INTEGER CHECK (rating BETWEEN 0 AND 100),
+                        PRIMARY KEY (poi_id, category)
+                    );
+                    """
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_poi_ratings_poi_id ON poi_ratings(poi_id);"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_poi_ratings_category ON poi_ratings(category);"
+                )
+                self.conn.commit()
             logger.info("PostgreSQL veritabanına bağlandı")
         except Exception as e:
             logger.error(f"PostgreSQL bağlantı hatası: {e}")
