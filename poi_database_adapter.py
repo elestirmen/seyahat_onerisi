@@ -353,24 +353,24 @@ class PostgreSQLPOIDatabase(POIDatabase):
             return cur.rowcount > 0
 
     def validate_ratings(self, ratings: Dict[str, Any]) -> Dict[str, int]:
-        """Rating verilerini validate et ve temizle"""
+        """Rating verilerini validate et ve temizle. Tüm gönderilen kategorileri sakla, valid olmayanlar için uyarı ver."""
         valid_categories = {
             'tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 
             'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'
         }
-        
         validated = {}
-        for category in valid_categories:
-            if category in ratings:
-                try:
-                    # 0-100 arası olup olmadığını kontrol et
-                    value = int(ratings[category])
-                    validated[category] = max(0, min(100, value))  # 0-100 arası sınırla
-                except (ValueError, TypeError):
-                    validated[category] = 0
-            else:
+        for category, value in ratings.items():
+            try:
+                value_int = int(value)
+                validated[category] = max(0, min(100, value_int))
+                if category not in valid_categories:
+                    print(f"[WARN] Bilinmeyen rating kategorisi: {category}")
+            except (ValueError, TypeError):
                 validated[category] = 0
-        
+        # Eksik valid kategoriler için sıfır ekle
+        for category in valid_categories:
+            if category not in validated:
+                validated[category] = 0
         return validated
 
     def list_pois(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
