@@ -176,12 +176,23 @@ def setup_postgresql_database(connection_string):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS poi_ratings (
+                poi_id INTEGER REFERENCES pois(id) ON DELETE CASCADE,
+                category TEXT,
+                rating INTEGER CHECK (rating BETWEEN 0 AND 100),
+                PRIMARY KEY (poi_id, category)
+            );
+        """)
         
         # İndeksleri oluştur
         cur.execute("CREATE INDEX IF NOT EXISTS idx_poi_location ON pois USING GIST(location);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_poi_category ON pois(category);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_poi_active ON pois(is_active);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_poi_attributes ON pois USING GIN(attributes);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_poi_ratings_poi_id ON poi_ratings(poi_id);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_poi_ratings_category ON poi_ratings(category);")
         
         print("✅ Tablolar ve indeksler oluşturuldu")
         
