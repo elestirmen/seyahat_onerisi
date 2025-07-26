@@ -226,7 +226,21 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <div class="container-fluid py-4">
-        <h2 class="mb-4">🗺️ POI Yönetim Paneli</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">🗺️ POI Yönetim Paneli</h2>
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <small class="text-muted">Oturum: </small>
+                    <span class="badge bg-success" id="sessionStatus">Aktif</span>
+                </div>
+                <button type="button" class="btn btn-outline-warning btn-sm me-2" onclick="showPasswordChangeModal()" id="changePasswordBtn">
+                    <i class="fas fa-key me-1"></i> Şifre Değiştir
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="logout()" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt me-1"></i> Çıkış
+                </button>
+            </div>
+        </div>
 
         <!-- Harita Bölümü -->
         <div class="row mb-4">
@@ -606,6 +620,150 @@
     <script>
         const apiBase = '/api';
         let map;
+        let csrfToken = null;
+
+        // Authentication functions
+        async function checkAuthStatus() {
+            console.log('🔐 Checking auth status...');
+            try {
+                const response = await fetch('/auth/status');
+                console.log('🔐 Auth status response:', response.status, response.ok);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('🔐 Auth status data:', data);
+                    
+                    if (data.authenticated) {
+                        csrfToken = data.csrf_token;
+                        console.log('🔐 Authentication successful, CSRF token:', csrfToken);
+                        updateSessionStatus(data.session_info);
+                        return true;
+                    } else {
+                        console.log('🔐 Not authenticated');
+                    }
+                } else {
+                    console.log('🔐 Auth status request failed');
+                }
+                // If not authenticated, redirect to login
+                console.log('🔐 Redirecting to login...');
+                window.location.href = '/auth/login';
+                return false;
+            } catch (error) {
+                console.error('🔐 Auth status check failed:', error);
+                window.location.href = '/auth/login';
+                return false;
+            }
+        }
+
+        function updateSessionStatus(sessionInfo) {
+            const statusElement = document.getElementById('sessionStatus');
+            if (sessionInfo) {
+                statusElement.textContent = 'Aktif';
+                statusElement.className = 'badge bg-success';
+                
+                // Update session timeout warning if needed
+                if (sessionInfo.expires_at) {
+                    const expiresAt = new Date(sessionInfo.expires_at);
+                    const now = new Date();
+                    const timeLeft = expiresAt - now;
+                    
+                    // Show different status based on time left
+                    if (timeLeft <= 0) {
+                        statusElement.textContent = 'Süresi Doldu';
+                        statusElement.className = 'badge bg-danger';
+                        // Redirect to login
+                        setTimeout(() => {
+                            window.location.href = '/auth/login';
+                        }, 1000);
+                    } else if (timeLeft < 5 * 60 * 1000) { // Less than 5 minutes
+                        const minutesLeft = Math.floor(timeLeft / (60 * 1000));
+                        const secondsLeft = Math.floor((timeLeft % (60 * 1000)) / 1000);
+                        statusElement.textContent = `${minutesLeft}:${secondsLeft.toString().padStart(2, '0')}`;
+                        statusElement.className = 'badge bg-danger';
+                    } else if (timeLeft < 10 * 60 * 1000) { // Less than 10 minutes
+                        const minutesLeft = Math.floor(timeLeft / (60 * 1000));
+                        statusElement.textContent = `${minutesLeft}dk kaldı`;
+                        statusElement.className = 'badge bg-warning';
+                    }
+                }
+            } else {
+                statusElement.textContent = 'Bilinmiyor';
+                statusElement.className = 'badge bg-secondary';
+            }
+        }
+
+        async function logout() {
+            if (!confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        csrf_token: csrfToken
+                    })
+                });
+
+                if (response.ok) {
+                    showToast('Başarıyla çıkış yapıldı', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/auth/login';
+                    }, 1000);
+                } else {
+                    const error = await response.json();
+                    showToast('Çıkış yapılırken hata oluştu: ' + error.error, 'error');
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                showToast('Çıkış yapılırken hata oluştu', 'error');
+                // Force redirect even if logout request failed
+                setTimeout(() => {
+                    window.location.href = '/auth/login';
+                }, 2000);
+            }
+        }
+
+        // Enhanced fetch function with authentication
+        async function authenticatedFetch(url, options = {}) {
+            // Add CSRF token to requests that modify data
+            if (options.method && ['POST', 'PUT', 'DELETE'].includes(options.method.toUpperCase())) {
+                if (!options.headers) {
+                    options.headers = {};
+                }
+                
+                if (options.body && typeof options.body === 'string') {
+                    try {
+                        const bodyData = JSON.parse(options.body);
+                        bodyData.csrf_token = csrfToken;
+                        options.body = JSON.stringify(bodyData);
+                    } catch (e) {
+                        // If body is not JSON, add CSRF token as form data
+                        if (options.body instanceof FormData) {
+                            options.body.append('csrf_token', csrfToken);
+                        }
+                    }
+                } else if (options.body instanceof FormData) {
+                    options.body.append('csrf_token', csrfToken);
+                }
+            }
+
+            const response = await fetch(url, options);
+            
+            // Handle authentication errors
+            if (response.status === 401) {
+                showToast('Oturum süresi doldu, yeniden giriş yapılıyor...', 'warning');
+                setTimeout(() => {
+                    window.location.href = '/auth/login';
+                }, 2000);
+                throw new Error('Authentication required');
+            }
+            
+            return response;
+        }
         let poiMarkers = [];
         let allPOIs = [];
         let currentSort = { field: 'name', direction: 'asc' };
@@ -769,21 +927,30 @@
 
         // POI'leri getir
         async function fetchPOIs(category = '') {
+            console.log('🔍 fetchPOIs called with category:', category);
+            console.log('🔍 apiBase:', apiBase);
+            console.log('🔍 csrfToken:', csrfToken);
+            
             showLoading();
             try {
                 const url = `${apiBase}/pois${category ? `?category=${encodeURIComponent(category)}` : ''}`;
+                console.log('🔍 Fetching URL:', url);
 
                 // Timeout ile fetch
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 10000); // 10 saniye timeout
 
-                const response = await fetch(url, {
+                console.log('🔍 Making authenticated fetch request...');
+                const response = await authenticatedFetch(url, {
                     signal: controller.signal,
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 });
                 clearTimeout(timeout);
+                
+                console.log('🔍 Response status:', response.status);
+                console.log('🔍 Response ok:', response.ok);
 
                 if (!response.ok) {
                     throw new Error(`API call failed with status ${response.status}`);
@@ -993,7 +1160,7 @@
             showLoading();
             try {
                 console.log('📡 POI detayı API\'den alınıyor...');
-                const response = await fetch(`${apiBase}/poi/${poiId}`);
+                const response = await authenticatedFetch(`${apiBase}/poi/${poiId}`);
                 if (!response.ok) throw new Error('POI not found');
                 const poi = await response.json();
                 console.log('✅ POI detayı alındı:', poi.name);
@@ -1052,7 +1219,7 @@
 
                 // Görselleri yükle ve göster
                 try {
-                    const imagesResponse = await fetch(`${apiBase}/poi/${poiId}/images`);
+                    const imagesResponse = await authenticatedFetch(`${apiBase}/poi/${poiId}/images`);
                     if (imagesResponse.ok) {
                         const imagesData = await imagesResponse.json();
                         const images = imagesData.images || [];
@@ -1258,14 +1425,14 @@
                 let response;
                 if (idVal) {
                     // Güncelle
-                    response = await fetch(`${apiBase}/poi/${idVal}`, {
+                    response = await authenticatedFetch(`${apiBase}/poi/${idVal}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(poiData)
                     });
                 } else {
                     // Ekle
-                    response = await fetch(`${apiBase}/poi`, {
+                    response = await authenticatedFetch(`${apiBase}/poi`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(poiData)
@@ -1308,7 +1475,7 @@
 
             showLoading();
             try {
-                const response = await fetch(`${apiBase}/poi/${poiId}`, {
+                const response = await authenticatedFetch(`${apiBase}/poi/${poiId}`, {
                     method: 'DELETE'
                 });
 
@@ -1974,7 +2141,7 @@
                 const requestData = { ratings: ratings };
                 console.log('📤 API\'ye gönderilen data:', requestData);
                 
-                const response = await fetch(`${apiBase}/poi/${poiId}/ratings`, {
+                const response = await authenticatedFetch(`${apiBase}/poi/${poiId}/ratings`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2051,7 +2218,7 @@
             
             try {
                 showLoading();
-                const response = await fetch(`${apiBase}/poi/${poiId}/media`, {
+                const response = await authenticatedFetch(`${apiBase}/poi/${poiId}/media`, {
                     method: 'POST',
                     body: formData
                 });
@@ -2097,7 +2264,7 @@
             if (!poiId) return;
             
             try {
-                const response = await fetch(`${apiBase}/poi/${poiId}/media`);
+                const response = await authenticatedFetch(`${apiBase}/poi/${poiId}/media`);
                 if (!response.ok) return;
                 
                 const data = await response.json();
@@ -2185,7 +2352,7 @@
             
             // Eski format için de görselleri currentImages container'ına yükle
             try {
-                const response = await fetch(`${apiBase}/poi/${poiId}/images`);
+                const response = await authenticatedFetch(`${apiBase}/poi/${poiId}/images`);
                 if (!response.ok) return;
                 
                 const data = await response.json();
@@ -2302,7 +2469,7 @@
             
             try {
                 showLoading();
-                const response = await fetch(`${apiBase}/poi/${poiId}/media/${filename}`, {
+                const response = await authenticatedFetch(`${apiBase}/poi/${poiId}/media/${filename}`, {
                     method: 'DELETE'
                 });
                 
@@ -2324,10 +2491,424 @@
             }
         }
 
+        // Session timeout monitoring for POI manager
+        let sessionTimeoutWarning = null;
+        let sessionWarningShown = false;
+        
+        function startSessionTimeoutMonitoring() {
+            // Check session status every 30 seconds for better responsiveness
+            setInterval(async () => {
+                try {
+                    const response = await fetch('/auth/status');
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.authenticated && data.session_info) {
+                            updateSessionStatus(data.session_info);
+                            checkSessionTimeoutWarning(data.session_info);
+                        } else {
+                            window.location.href = '/auth/login';
+                        }
+                    } else {
+                        window.location.href = '/auth/login';
+                    }
+                } catch (error) {
+                    console.error('Session check failed:', error);
+                }
+            }, 30 * 1000); // 30 seconds
+        }
+        
+        function checkSessionTimeoutWarning(sessionInfo) {
+            if (!sessionInfo.expires_at) return;
+            
+            const expiresAt = new Date(sessionInfo.expires_at);
+            const now = new Date();
+            const timeLeft = expiresAt - now;
+            
+            // Show warning if less than 10 minutes left
+            if (timeLeft < 10 * 60 * 1000 && timeLeft > 0) {
+                showSessionTimeoutWarning(timeLeft);
+            } else if (timeLeft <= 0) {
+                handleSessionExpired();
+            } else {
+                clearSessionTimeoutWarning();
+            }
+        }
+        
+        function showSessionTimeoutWarning(timeLeft) {
+            if (sessionWarningShown) {
+                updateSessionTimeoutWarning(timeLeft);
+                return;
+            }
+            
+            const minutes = Math.ceil(timeLeft / (60 * 1000));
+            const warningId = 'poi-session-timeout-warning';
+            
+            const warningHtml = `
+                <div class="alert alert-warning alert-dismissible fade show position-fixed" 
+                     id="${warningId}" 
+                     style="top: 80px; right: 20px; z-index: 9999; min-width: 350px;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-clock me-2"></i>
+                        <div class="flex-grow-1">
+                            <strong>Oturum Uyarısı</strong><br>
+                            <span class="session-time-left">Oturumunuz ${minutes} dakika içinde sona erecek.</span>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-warning me-2" onclick="extendSession()">
+                            <i class="fas fa-refresh me-1"></i>Oturumu Uzat
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="dismissSessionTimeoutWarning()">
+                            Kapat
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', warningHtml);
+            sessionWarningShown = true;
+            sessionTimeoutWarning = document.getElementById(warningId);
+        }
+        
+        function updateSessionTimeoutWarning(timeLeft) {
+            if (!sessionTimeoutWarning) return;
+            
+            const minutes = Math.ceil(timeLeft / (60 * 1000));
+            const timeLeftElement = sessionTimeoutWarning.querySelector('.session-time-left');
+            
+            if (timeLeftElement) {
+                if (minutes <= 1) {
+                    const seconds = Math.max(0, Math.ceil(timeLeft / 1000));
+                    timeLeftElement.innerHTML = `Oturumunuz <strong class="text-danger">${seconds} saniye</strong> içinde sona erecek.`;
+                    sessionTimeoutWarning.classList.remove('alert-warning');
+                    sessionTimeoutWarning.classList.add('alert-danger');
+                } else {
+                    timeLeftElement.textContent = `Oturumunuz ${minutes} dakika içinde sona erecek.`;
+                }
+            }
+        }
+        
+        async function extendSession() {
+            try {
+                // Make a simple authenticated request to extend session
+                const response = await fetch('/auth/status', {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                });
+                
+                if (response.ok) {
+                    dismissSessionTimeoutWarning();
+                    showToast('Oturum başarıyla uzatıldı.', 'success');
+                } else {
+                    showToast('Oturum uzatılamadı. Lütfen yeniden giriş yapın.', 'error');
+                    handleSessionExpired();
+                }
+            } catch (error) {
+                console.error('Session extend failed:', error);
+                showToast('Oturum uzatılırken hata oluştu.', 'error');
+            }
+        }
+        
+        function dismissSessionTimeoutWarning() {
+            clearSessionTimeoutWarning();
+        }
+        
+        function clearSessionTimeoutWarning() {
+            if (sessionTimeoutWarning) {
+                sessionTimeoutWarning.remove();
+                sessionTimeoutWarning = null;
+            }
+            sessionWarningShown = false;
+        }
+        
+        function handleSessionExpired() {
+            clearSessionTimeoutWarning();
+            showToast('Oturum süresi doldu. Yeniden giriş yapılıyor...', 'warning');
+            setTimeout(() => {
+                window.location.href = '/auth/login';
+            }, 2000);
+        }
+
+        // Password Change Functionality
+        function showPasswordChangeModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.id = 'passwordChangeModal';
+            modal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning text-dark">
+                            <h5 class="modal-title fw-bold">
+                                <i class="fas fa-key me-2"></i>Şifre Değiştir
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="passwordChangeForm">
+                                <div class="mb-3">
+                                    <label for="currentPassword" class="form-label">
+                                        <i class="fas fa-lock me-1"></i>Mevcut Şifre
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="currentPassword" 
+                                               name="current_password" required>
+                                        <button class="btn btn-outline-secondary" type="button" 
+                                                onclick="togglePasswordVisibility('currentPassword', this)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="newPassword" class="form-label">
+                                        <i class="fas fa-key me-1"></i>Yeni Şifre
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="newPassword" 
+                                               name="new_password" required>
+                                        <button class="btn btn-outline-secondary" type="button" 
+                                                onclick="togglePasswordVisibility('newPassword', this)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Şifre en az 8 karakter olmalı ve büyük harf, küçük harf, rakam ve özel karakter içermelidir.
+                                        </small>
+                                    </div>
+                                    <div id="passwordStrength" class="mt-2"></div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="confirmPassword" class="form-label">
+                                        <i class="fas fa-check me-1"></i>Yeni Şifre Tekrar
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="confirmPassword" 
+                                               name="confirm_password" required>
+                                        <button class="btn btn-outline-secondary" type="button" 
+                                                onclick="togglePasswordVisibility('confirmPassword', this)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div id="passwordMatch" class="mt-1"></div>
+                                </div>
+                                
+                                <div class="alert alert-info">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Önemli:</strong> Şifre değiştirildikten sonra tüm aktif oturumlar sonlandırılacak 
+                                    ve yeniden giriş yapmanız gerekecek.
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i>İptal
+                            </button>
+                            <button type="button" class="btn btn-warning" onclick="changePassword()" id="changePasswordSubmitBtn">
+                                <i class="fas fa-key me-1"></i>Şifreyi Değiştir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            // Add event listeners for password validation
+            const newPasswordInput = modal.querySelector('#newPassword');
+            const confirmPasswordInput = modal.querySelector('#confirmPassword');
+            
+            newPasswordInput.addEventListener('input', function() {
+                validatePasswordStrength(this.value);
+                checkPasswordMatch();
+            });
+            
+            confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+            
+            modal.addEventListener('hidden.bs.modal', () => {
+                modal.remove();
+            });
+        }
+        
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            const icon = button.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+        
+        function validatePasswordStrength(password) {
+            const strengthDiv = document.getElementById('passwordStrength');
+            if (!strengthDiv) return;
+            
+            let score = 0;
+            let feedback = [];
+            
+            // Length check
+            if (password.length >= 8) {
+                score += 1;
+            } else {
+                feedback.push('En az 8 karakter');
+            }
+            
+            // Uppercase check
+            if (/[A-Z]/.test(password)) {
+                score += 1;
+            } else {
+                feedback.push('Büyük harf');
+            }
+            
+            // Lowercase check
+            if (/[a-z]/.test(password)) {
+                score += 1;
+            } else {
+                feedback.push('Küçük harf');
+            }
+            
+            // Number check
+            if (/\d/.test(password)) {
+                score += 1;
+            } else {
+                feedback.push('Rakam');
+            }
+            
+            // Special character check
+            if (/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) {
+                score += 1;
+            } else {
+                feedback.push('Özel karakter');
+            }
+            
+            let strengthText = '';
+            let strengthClass = '';
+            
+            if (score === 5) {
+                strengthText = '<i class="fas fa-check-circle text-success me-1"></i>Güçlü şifre';
+                strengthClass = 'text-success';
+            } else if (score >= 3) {
+                strengthText = '<i class="fas fa-exclamation-circle text-warning me-1"></i>Orta güçlükte';
+                strengthClass = 'text-warning';
+            } else {
+                strengthText = '<i class="fas fa-times-circle text-danger me-1"></i>Zayıf şifre';
+                strengthClass = 'text-danger';
+            }
+            
+            if (feedback.length > 0) {
+                strengthText += ` (Eksik: ${feedback.join(', ')})`;
+            }
+            
+            strengthDiv.innerHTML = `<small class="${strengthClass}">${strengthText}</small>`;
+        }
+        
+        function checkPasswordMatch() {
+            const newPassword = document.getElementById('newPassword')?.value;
+            const confirmPassword = document.getElementById('confirmPassword')?.value;
+            const matchDiv = document.getElementById('passwordMatch');
+            
+            if (!matchDiv || !confirmPassword) return;
+            
+            if (newPassword === confirmPassword) {
+                matchDiv.innerHTML = '<small class="text-success"><i class="fas fa-check me-1"></i>Şifreler eşleşiyor</small>';
+            } else {
+                matchDiv.innerHTML = '<small class="text-danger"><i class="fas fa-times me-1"></i>Şifreler eşleşmiyor</small>';
+            }
+        }
+        
+        async function changePassword() {
+            const form = document.getElementById('passwordChangeForm');
+            const submitBtn = document.getElementById('changePasswordSubmitBtn');
+            
+            if (!form) return;
+            
+            const formData = new FormData(form);
+            const currentPassword = formData.get('current_password');
+            const newPassword = formData.get('new_password');
+            const confirmPassword = formData.get('confirm_password');
+            
+            // Basic validation
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showToast('Lütfen tüm alanları doldurun', 'error');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showToast('Yeni şifre ve tekrarı eşleşmiyor', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 8) {
+                showToast('Yeni şifre en az 8 karakter olmalıdır', 'error');
+                return;
+            }
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Değiştiriliyor...';
+            
+            try {
+                const response = await fetch('/auth/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword,
+                        confirm_password: confirmPassword,
+                        csrf_token: csrfToken
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showToast('Şifre başarıyla değiştirildi. Yeniden giriş yapılıyor...', 'success');
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('passwordChangeModal'));
+                    if (modal) modal.hide();
+                    
+                    // Redirect to login after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/auth/login';
+                    }, 2000);
+                    
+                } else {
+                    showToast(data.error || 'Şifre değiştirilemedi', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Password change error:', error);
+                showToast('Şifre değiştirirken hata oluştu', 'error');
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-key me-1"></i>Şifreyi Değiştir';
+            }
+        }
+
         // Sayfa yüklendiğinde
-        document.addEventListener('DOMContentLoaded', function () {
-            initMap();
-            fetchPOIs();
+        document.addEventListener('DOMContentLoaded', async function () {
+            // First check authentication
+            const isAuthenticated = await checkAuthStatus();
+            if (isAuthenticated) {
+                initMap();
+                fetchPOIs();
+                
+                // Start enhanced session monitoring
+                startSessionTimeoutMonitoring();
+            }
         });
     </script>
 </body>

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for, Blueprint
 from flask_cors import CORS
 from poi_database_adapter import POIDatabaseFactory
 from poi_media_manager import POIMediaManager
@@ -8,11 +8,597 @@ import json
 import uuid
 import unicodedata
 import re
+import secrets
 from datetime import datetime
 from werkzeug.utils import secure_filename
+from auth_middleware import auth_middleware
+from auth_config import auth_config
+from session_config import configure_session
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["*"], supports_credentials=True)
+
+# Configure session management
+configure_session(app)
+
+# Initialize authentication middleware
+auth_middleware.init_app(app)
+
+# Create authentication blueprint
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+@auth_bp.route('/login', methods=['GET'])
+def login_page():
+    """Serve the login page."""
+    if auth_middleware.is_authenticated():
+        return redirect('/')
+    
+    # Serve embedded login page
+    login_html = '''<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POI Yönetim Paneli - Giriş</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .login-header p {
+            color: #666;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>🗺️ POI Yönetim Paneli</h1>
+            <p>Devam etmek için giriş yapın</p>
+        </div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="password">Şifre</label>
+                <input type="password" id="password" name="password" required placeholder="Şifrenizi girin">
+            </div>
+            
+            <button type="submit" class="login-btn" id="loginBtn">
+                <span id="btnText">Giriş Yap</span>
+                <span id="btnLoading" style="display: none;"><span class="loading"></span> Giriş yapılıyor...</span>
+            </button>
+        </form>
+        
+        <div id="message"></div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const btnText = document.getElementById('btnText');
+        const btnLoading = document.getElementById('btnLoading');
+        const messageDiv = document.getElementById('message');
+        
+        function showMessage(text, type = 'info') {
+            messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+        }
+        
+        function setLoading(loading) {
+            if (loading) {
+                btnText.style.display = 'none';
+                btnLoading.style.display = 'inline';
+                loginBtn.disabled = true;
+            } else {
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+                loginBtn.disabled = false;
+            }
+        }
+        
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const password = passwordInput.value.trim();
+            
+            if (!password) {
+                showMessage('Lütfen şifrenizi girin.', 'error');
+                return;
+            }
+            
+            setLoading(true);
+            showMessage('Giriş yapılıyor...', 'info');
+            
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        password: password,
+                        remember_me: false,
+                        csrf_token: null
+                    }),
+                    credentials: 'same-origin'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showMessage('✅ Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                } else {
+                    let errorMessage = data.error || data.message || 'Giriş başarısız';
+                    
+                    if (response.status === 401) {
+                        errorMessage = 'Hatalı şifre. Lütfen tekrar deneyin.';
+                    } else if (response.status === 429) {
+                        errorMessage = 'Çok fazla deneme. Lütfen bekleyin.';
+                    } else if (response.status === 403) {
+                        errorMessage = 'Güvenlik hatası. Sayfa yenilenecek.';
+                        setTimeout(() => window.location.reload(), 2000);
+                    }
+                    
+                    showMessage(`❌ ${errorMessage}`, 'error');
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                }
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                showMessage('❌ Bağlantı hatası. Lütfen tekrar deneyin.', 'error');
+            } finally {
+                setLoading(false);
+            }
+        });
+        
+        // Auto-focus password field
+        passwordInput.focus();
+    </script>
+</body>
+</html>'''
+    
+    return login_html
+
+@auth_bp.route('/debug', methods=['GET'])
+def debug_page():
+    """Serve the debug page."""
+    try:
+        with open('static/debug.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return jsonify({'error': 'Debug page not found'}), 404
+
+@auth_bp.route('/login', methods=['POST', 'OPTIONS'])
+def login():
+    """Handle user login."""
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response
+    
+    try:
+        # Get client IP for rate limiting
+        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+        
+        # Check rate limiting
+        is_allowed, remaining_attempts, lockout_time, delay_seconds = auth_middleware.check_rate_limit(client_ip)
+        
+        if not is_allowed:
+            if lockout_time:
+                return jsonify({
+                    'error': 'Too many failed attempts. Account temporarily locked.',
+                    'lockout_time': lockout_time,
+                    'remaining_attempts': 0
+                }), 429
+            elif delay_seconds > 0:
+                return jsonify({
+                    'error': f'Please wait {int(delay_seconds)} seconds before trying again.',
+                    'delay_seconds': int(delay_seconds),
+                    'remaining_attempts': remaining_attempts
+                }), 429
+        
+        # Get form data
+        data = request.get_json() if request.is_json else request.form
+        password = data.get('password', '').strip()
+        remember_me = data.get('remember_me', False)
+        csrf_token = data.get('csrf_token', '')
+        
+        # Basic validation
+        if not password:
+            return jsonify({'error': 'Password is required'}), 400
+        
+        # Validate CSRF token if session exists (for subsequent login attempts)
+        # Skip CSRF validation for initial login attempt when no session exists
+        if session.get('csrf_token') and csrf_token and not auth_middleware.validate_csrf_token(csrf_token):
+            return jsonify({'error': 'Invalid CSRF token'}), 403
+        
+        # Validate password
+        if not auth_middleware.validate_password(password):
+            # Record failed attempt with user agent for security tracking
+            user_agent = request.headers.get('User-Agent', 'Unknown')
+            auth_middleware.record_failed_attempt(client_ip, user_agent)
+            
+            # Get updated rate limit info
+            _, remaining_attempts, _, _ = auth_middleware.check_rate_limit(client_ip)
+            
+            return jsonify({
+                'error': 'Invalid password',
+                'remaining_attempts': remaining_attempts
+            }), 401
+        
+        # Clear failed attempts on successful login
+        auth_middleware.clear_failed_attempts(client_ip)
+        
+        # Create session
+        if auth_middleware.create_session(remember_me):
+            response_data = {
+                'success': True,
+                'message': 'Login successful',
+                'csrf_token': auth_middleware.get_csrf_token(),
+                'session_info': auth_middleware.get_session_info()
+            }
+            
+            response = jsonify(response_data)
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response
+        else:
+            error_response = jsonify({'error': 'Failed to create session'})
+            error_response.headers.add('Access-Control-Allow-Origin', '*')
+            return error_response, 500
+            
+    except Exception as e:
+        print(f"Login error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@auth_bp.route('/logout', methods=['POST'])
+def logout():
+    """Handle user logout."""
+    try:
+        # Validate CSRF token
+        data = request.get_json() if request.is_json else request.form
+        csrf_token = data.get('csrf_token', '')
+        
+        if not auth_middleware.validate_csrf_token(csrf_token):
+            return jsonify({'error': 'Invalid CSRF token'}), 403
+        
+        # Destroy session
+        if auth_middleware.destroy_session():
+            return jsonify({
+                'success': True,
+                'message': 'Logout successful'
+            })
+        else:
+            return jsonify({'error': 'Failed to logout'}), 500
+            
+    except Exception as e:
+        print(f"Logout error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@auth_bp.route('/status', methods=['GET'])
+def auth_status():
+    """Check authentication status."""
+    try:
+        if auth_middleware.is_authenticated():
+            session_info = auth_middleware.get_session_info()
+            response_data = {
+                'authenticated': True,
+                'session_info': session_info,
+                'csrf_token': auth_middleware.get_csrf_token()
+            }
+        else:
+            response_data = {
+                'authenticated': False,
+                'csrf_token': None
+            }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"Auth status error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@auth_bp.route('/csrf-token', methods=['GET'])
+def csrf_token():
+    """Get CSRF token for forms."""
+    try:
+        # Generate a CSRF token even for non-authenticated users (for login form)
+        if not session.get('csrf_token'):
+            session['csrf_token'] = secrets.token_hex(16)
+        
+        return jsonify({
+            'csrf_token': session.get('csrf_token')
+        })
+        
+    except Exception as e:
+        print(f"CSRF token error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@auth_bp.route('/change-password', methods=['POST'])
+@auth_middleware.require_auth
+def change_password():
+    """Handle password change for authenticated users."""
+    try:
+        # Get form data
+        data = request.get_json() if request.is_json else request.form
+        current_password = data.get('current_password', '').strip()
+        new_password = data.get('new_password', '').strip()
+        confirm_password = data.get('confirm_password', '').strip()
+        csrf_token = data.get('csrf_token', '')
+        
+        # Validate CSRF token
+        if not auth_middleware.validate_csrf_token(csrf_token):
+            return jsonify({'error': 'Invalid CSRF token'}), 403
+        
+        # Basic validation
+        if not current_password:
+            return jsonify({'error': 'Current password is required'}), 400
+        
+        if not new_password:
+            return jsonify({'error': 'New password is required'}), 400
+        
+        if not confirm_password:
+            return jsonify({'error': 'Password confirmation is required'}), 400
+        
+        # Check if new password matches confirmation
+        if new_password != confirm_password:
+            return jsonify({'error': 'New password and confirmation do not match'}), 400
+        
+        # Validate current password
+        if not auth_middleware.validate_password(current_password):
+            return jsonify({'error': 'Current password is incorrect'}), 401
+        
+        # Password strength validation
+        password_validation = validate_password_strength(new_password)
+        if not password_validation['valid']:
+            return jsonify({'error': password_validation['message']}), 400
+        
+        # Check if new password is different from current
+        if current_password == new_password:
+            return jsonify({'error': 'New password must be different from current password'}), 400
+        
+        # Hash the new password
+        new_password_hash = auth_config.hash_password(new_password)
+        
+        # Update password hash in configuration
+        # Note: In a production system, this would update a database
+        # For this implementation, we'll update the environment variable approach
+        if not update_password_hash(new_password_hash):
+            return jsonify({'error': 'Failed to update password'}), 500
+        
+        # Terminate all active sessions (force re-login)
+        terminate_all_sessions()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Password changed successfully. Please log in again.'
+        })
+        
+    except Exception as e:
+        print(f"Change password error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+def validate_password_strength(password):
+    """
+    Validate password strength according to security requirements.
+    
+    Args:
+        password: Password to validate
+        
+    Returns:
+        dict: {'valid': bool, 'message': str}
+    """
+    if len(password) < 8:
+        return {'valid': False, 'message': 'Password must be at least 8 characters long'}
+    
+    if len(password) > 128:
+        return {'valid': False, 'message': 'Password must be less than 128 characters long'}
+    
+    # Check for at least one uppercase letter
+    if not any(c.isupper() for c in password):
+        return {'valid': False, 'message': 'Password must contain at least one uppercase letter'}
+    
+    # Check for at least one lowercase letter
+    if not any(c.islower() for c in password):
+        return {'valid': False, 'message': 'Password must contain at least one lowercase letter'}
+    
+    # Check for at least one digit
+    if not any(c.isdigit() for c in password):
+        return {'valid': False, 'message': 'Password must contain at least one number'}
+    
+    # Check for at least one special character
+    special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+    if not any(c in special_chars for c in password):
+        return {'valid': False, 'message': 'Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)'}
+    
+    # Check for common weak passwords
+    weak_passwords = [
+        'password', '12345678', 'qwerty123', 'admin123', 'password123',
+        'letmein123', 'welcome123', 'changeme123'
+    ]
+    if password.lower() in weak_passwords:
+        return {'valid': False, 'message': 'Password is too common. Please choose a stronger password'}
+    
+    return {'valid': True, 'message': 'Password is strong'}
+
+def update_password_hash(new_password_hash):
+    """
+    Update the password hash in the system.
+    
+    Args:
+        new_password_hash: New bcrypt password hash
+        
+    Returns:
+        bool: True if update successful, False otherwise
+    """
+    try:
+        # Update the auth_config instance
+        auth_config.PASSWORD_HASH = new_password_hash
+        
+        # In a production system, you would update a database here
+        # For this implementation, we'll write to a config file
+        config_file_path = '.env.local'
+        
+        # Read existing config
+        existing_config = {}
+        if os.path.exists(config_file_path):
+            with open(config_file_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and '=' in line and not line.startswith('#'):
+                        key, value = line.split('=', 1)
+                        existing_config[key] = value
+        
+        # Update password hash
+        existing_config['POI_ADMIN_PASSWORD_HASH'] = new_password_hash
+        
+        # Write updated config
+        with open(config_file_path, 'w') as f:
+            f.write("# POI Authentication Configuration\n")
+            f.write("# This file is automatically updated when password is changed\n\n")
+            for key, value in existing_config.items():
+                f.write(f"{key}={value}\n")
+        
+        print(f"Password hash updated in {config_file_path}")
+        return True
+        
+    except Exception as e:
+        print(f"Error updating password hash: {e}")
+        return False
+
+def terminate_all_sessions():
+    """
+    Terminate all active sessions to force re-authentication.
+    This is called after password change for security.
+    """
+    try:
+        # Clear current session
+        session.clear()
+        
+        # In a production system with multiple servers, you would:
+        # 1. Update a session blacklist in database
+        # 2. Increment a global session version number
+        # 3. Use Redis to invalidate all sessions
+        
+        # For this file-based session system, we'll clean up session files
+        import tempfile
+        import glob
+        
+        session_dir = os.path.join(tempfile.gettempdir(), 'poi_sessions')
+        if os.path.exists(session_dir):
+            session_files = glob.glob(os.path.join(session_dir, 'session:*'))
+            for session_file in session_files:
+                try:
+                    os.remove(session_file)
+                except Exception as e:
+                    print(f"Error removing session file {session_file}: {e}")
+        
+        print("All sessions terminated after password change")
+        
+    except Exception as e:
+        print(f"Error terminating sessions: {e}")
+
+# Register authentication blueprint
+app.register_blueprint(auth_bp)
 
 # JSON verileri için fallback
 JSON_FALLBACK = False
@@ -136,6 +722,7 @@ def get_db():
         return None
 
 @app.route('/')
+@auth_middleware.require_auth
 def index():
     return '''
     <!DOCTYPE html>
@@ -244,6 +831,7 @@ def index():
     '''
 
 @app.route('/poi_manager_ui.html')
+@auth_middleware.require_auth
 def serve_ui():
     try:
         # HTML dosyasını oku ve görsel desteği ekle
@@ -719,6 +1307,7 @@ def serve_ui():
         return '<h1>❌ Hata</h1><p>poi_manager_ui.html dosyası bulunamadı!</p><p>Dosyanın API ile aynı klasörde olduğundan emin olun.</p>', 404
 
 @app.route('/api/pois', methods=['GET'])
+@auth_middleware.require_auth
 def list_pois():
     # Arama parametrelerini al
     search_query = request.args.get('search', '').strip()
@@ -836,6 +1425,7 @@ def perform_database_search(db, search_query, category_filter=None):
     return search_results
 
 @app.route('/api/search', methods=['GET'])
+@auth_middleware.require_auth
 def search_pois():
     """
     Gelişmiş POI arama endpoint'i - Türkçe karakter desteği ile
@@ -1004,6 +1594,7 @@ def perform_advanced_database_search(db, search_query, category_filter=None, lim
     return [dict(row) for row in results]
 
 @app.route('/api/poi/<poi_id>', methods=['GET'])
+@auth_middleware.require_auth
 def get_poi(poi_id):
     if JSON_FALLBACK:
         test_data = load_test_data()
@@ -1031,6 +1622,7 @@ def get_poi(poi_id):
     return jsonify({'error': 'POI not found'}), 404
 
 @app.route('/api/poi', methods=['POST'])
+@auth_middleware.require_auth
 def add_poi():
     if JSON_FALLBACK:
         try:
@@ -1081,6 +1673,7 @@ def add_poi():
     return jsonify({'id': poi_id}), 201
 
 @app.route('/api/poi/<poi_id>', methods=['PUT'])
+@auth_middleware.require_auth
 def update_poi(poi_id):
     if JSON_FALLBACK:
         try:
@@ -1140,6 +1733,7 @@ def update_poi(poi_id):
     return jsonify({'error': 'Update failed'}), 400
 
 @app.route('/api/poi/<poi_id>', methods=['DELETE'])
+@auth_middleware.require_auth
 def delete_poi(poi_id):
     if JSON_FALLBACK:
         try:
@@ -1182,6 +1776,7 @@ def delete_poi(poi_id):
 
 # Rating sistemi endpoint'leri
 @app.route('/api/poi/<poi_id>/ratings', methods=['GET'])
+@auth_middleware.require_auth
 def get_poi_ratings(poi_id):
     """POI'nin rating'lerini getir"""
     if JSON_FALLBACK:
@@ -1215,6 +1810,7 @@ def get_poi_ratings(poi_id):
         db.disconnect()
 
 @app.route('/api/poi/<poi_id>/ratings', methods=['PUT'])
+@auth_middleware.require_auth
 def update_poi_ratings(poi_id):
     """POI rating'lerini güncelle"""
     if JSON_FALLBACK:
@@ -1260,6 +1856,7 @@ def update_poi_ratings(poi_id):
         db.disconnect()
 
 @app.route('/api/ratings/categories', methods=['GET'])
+@auth_middleware.require_auth
 def get_rating_categories():
     """Rating kategorilerini getir"""
     return jsonify({
@@ -1268,6 +1865,7 @@ def get_rating_categories():
     })
 
 @app.route('/api/pois/by-rating', methods=['GET'])
+@auth_middleware.require_auth
 def search_pois_by_rating():
     """Rating'e göre POI arama"""
     if JSON_FALLBACK:
@@ -1336,6 +1934,7 @@ def search_pois_by_rating():
 
 # Medya yönetimi endpoint'leri (görsel, video, ses, 3D model)
 @app.route('/api/poi/<poi_id>/media', methods=['POST'])
+@auth_middleware.require_auth
 def upload_poi_media(poi_id):
     """POI'ye medya dosyası yükle (görsel, video, ses, 3D model)"""
     if 'media' not in request.files:
@@ -1434,6 +2033,7 @@ def upload_poi_media(poi_id):
         return jsonify({'error': f'Error uploading media: {str(e)}'}), 500
 
 @app.route('/api/poi/<poi_id>/media', methods=['GET'])
+@auth_middleware.require_auth
 def get_poi_media(poi_id):
     """POI'nin tüm medya dosyalarını listele"""
     try:
@@ -1481,6 +2081,7 @@ def get_poi_media(poi_id):
         return jsonify({'error': f'Error fetching media: {str(e)}'}), 500
 
 @app.route('/api/poi/<poi_id>/media/<filename>', methods=['DELETE'])
+@auth_middleware.require_auth
 def delete_poi_media(poi_id, filename):
     """POI'nin belirli bir medya dosyasını sil"""
     try:
@@ -1501,12 +2102,14 @@ def delete_poi_media(poi_id, filename):
 
 # Geriye uyumluluk için eski image endpoint'leri
 @app.route('/api/poi/<poi_id>/images', methods=['POST'])
+@auth_middleware.require_auth
 def upload_poi_image_legacy(poi_id):
     """Geriye uyumluluk için eski görsel yükleme endpoint'i"""
     # Sadece media endpoint'ine yönlendir
     return upload_poi_media(poi_id)
 
 @app.route('/api/poi/<poi_id>/images', methods=['GET'])
+@auth_middleware.require_auth
 def get_poi_images_legacy(poi_id):
     """Geriye uyumluluk için eski görsel listeleme endpoint'i"""
     try:
@@ -1536,6 +2139,7 @@ def get_poi_images_legacy(poi_id):
         return jsonify({'error': f'Error fetching images: {str(e)}'}), 500
 
 @app.route('/api/poi/<poi_id>/images/<filename>', methods=['DELETE'])
+@auth_middleware.require_auth
 def delete_poi_image_legacy(poi_id, filename):
     """Geriye uyumluluk için eski görsel silme endpoint'i"""
     return delete_poi_media(poi_id, filename)
@@ -1697,6 +2301,7 @@ def download_map(filename):
 
 # Sistem yönetimi endpoint'leri
 @app.route('/api/system/cleanup-media-folders', methods=['POST'])
+@auth_middleware.require_auth
 def cleanup_media_folders():
     """Kullanılmayan medya klasörlerini temizle"""
     try:
@@ -1712,6 +2317,7 @@ def cleanup_media_folders():
         return jsonify({'error': f'Temizleme hatası: {str(e)}'}), 500
 
 @app.route('/api/system/media-info', methods=['GET'])
+@auth_middleware.require_auth
 def get_media_system_info():
     """Medya sistemi hakkında bilgi ver"""
     try:
