@@ -722,8 +722,23 @@ def get_db():
         return None
 
 @app.route('/')
-@auth_middleware.require_auth
 def index():
+    """Ana sayfa - POI öneri sistemi."""
+    try:
+        with open('poi_recommendation_system.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return '<h1>❌ Hata</h1><p>poi_recommendation_system.html dosyası bulunamadı!</p>', 404
+
+@app.route('/admin')
+@auth_middleware.require_auth
+def admin_panel():
+    """Admin paneli - POI yönetim paneline yönlendir."""
+    return redirect('/poi_manager_ui.html')
+
+@app.route('/admin-dashboard')
+@auth_middleware.require_auth
+def admin_dashboard():
     return '''
     <!DOCTYPE html>
     <html lang="tr">
@@ -1307,7 +1322,6 @@ def serve_ui():
         return '<h1>❌ Hata</h1><p>poi_manager_ui.html dosyası bulunamadı!</p><p>Dosyanın API ile aynı klasörde olduğundan emin olun.</p>', 404
 
 @app.route('/api/pois', methods=['GET'])
-@auth_middleware.require_auth
 def list_pois():
     # Arama parametrelerini al
     search_query = request.args.get('search', '').strip()
@@ -1425,7 +1439,6 @@ def perform_database_search(db, search_query, category_filter=None):
     return search_results
 
 @app.route('/api/search', methods=['GET'])
-@auth_middleware.require_auth
 def search_pois():
     """
     Gelişmiş POI arama endpoint'i - Türkçe karakter desteği ile
@@ -1594,7 +1607,6 @@ def perform_advanced_database_search(db, search_query, category_filter=None, lim
     return [dict(row) for row in results]
 
 @app.route('/api/poi/<poi_id>', methods=['GET'])
-@auth_middleware.require_auth
 def get_poi(poi_id):
     if JSON_FALLBACK:
         test_data = load_test_data()
@@ -1856,7 +1868,6 @@ def update_poi_ratings(poi_id):
         db.disconnect()
 
 @app.route('/api/ratings/categories', methods=['GET'])
-@auth_middleware.require_auth
 def get_rating_categories():
     """Rating kategorilerini getir"""
     return jsonify({
@@ -1865,7 +1876,6 @@ def get_rating_categories():
     })
 
 @app.route('/api/pois/by-rating', methods=['GET'])
-@auth_middleware.require_auth
 def search_pois_by_rating():
     """Rating'e göre POI arama"""
     if JSON_FALLBACK:
@@ -2033,7 +2043,6 @@ def upload_poi_media(poi_id):
         return jsonify({'error': f'Error uploading media: {str(e)}'}), 500
 
 @app.route('/api/poi/<poi_id>/media', methods=['GET'])
-@auth_middleware.require_auth
 def get_poi_media(poi_id):
     """POI'nin tüm medya dosyalarını listele"""
     try:
@@ -2109,7 +2118,6 @@ def upload_poi_image_legacy(poi_id):
     return upload_poi_media(poi_id)
 
 @app.route('/api/poi/<poi_id>/images', methods=['GET'])
-@auth_middleware.require_auth
 def get_poi_images_legacy(poi_id):
     """Geriye uyumluluk için eski görsel listeleme endpoint'i"""
     try:
