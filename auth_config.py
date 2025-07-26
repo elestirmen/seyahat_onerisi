@@ -284,7 +284,7 @@ class AuthConfig:
                 "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; "
                 "img-src 'self' data: blob: https://*.openstreetmap.org https://*.tile.openstreetmap.org; "
                 "font-src 'self' https://cdnjs.cloudflare.com; "
-                "connect-src 'self' https://*.openstreetmap.org https://*.tile.openstreetmap.org; "
+                "connect-src 'self' https://*.openstreetmap.org https://*.tile.openstreetmap.org https://api.open-elevation.com https://router.project-osrm.org; "
                 "media-src 'self'; "
                 "object-src 'none'; "
                 "base-uri 'self'; "

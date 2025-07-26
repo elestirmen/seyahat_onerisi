@@ -2354,6 +2354,153 @@ def get_media_system_info():
     except Exception as e:
         return jsonify({'error': f'Bilgi alınamadı: {str(e)}'}), 500
 
+# Walking route endpoint
+@app.route('/api/route/walking', methods=['POST'])
+def create_walking_route():
+    """Create walking route between POIs using OSMnx"""
+    try:
+        data = request.get_json()
+        waypoints = data.get('waypoints', [])
+        
+        if len(waypoints) < 2:
+            return jsonify({'error': 'At least 2 waypoints required'}), 400
+        
+        # Import required libraries
+        try:
+            import osmnx as ox
+            import networkx as nx
+        except ImportError:
+            return jsonify({'error': 'OSMnx not available, using direct routes'}), 503
+        
+        # Load pre-downloaded walking network for Urgup
+        try:
+            import os
+            graphml_file = 'urgup_merkez_walking.graphml'
+            
+            if not os.path.exists(graphml_file):
+                raise FileNotFoundError(f"GraphML file not found: {graphml_file}")
+            
+            print(f"📁 Loading walking network from: {graphml_file}")
+            
+            # Load the pre-downloaded GraphML file
+            G = ox.load_graphml(graphml_file)
+            print(f"✅ Network loaded successfully: {len(G.nodes)} nodes, {len(G.edges)} edges")
+            
+            route_segments = []
+            total_distance = 0
+            
+            # Create route segments between consecutive waypoints
+            for i in range(len(waypoints) - 1):
+                start = waypoints[i]
+                end = waypoints[i + 1]
+                
+                try:
+                    # Find nearest nodes
+                    start_node = ox.nearest_nodes(G, start['lng'], start['lat'])
+                    end_node = ox.nearest_nodes(G, end['lng'], end['lat'])
+                    
+                    # Calculate shortest path
+                    route_nodes = nx.shortest_path(G, start_node, end_node, weight='length')
+                    segment_length = nx.shortest_path_length(G, start_node, end_node, weight='length')
+                    
+                    # Convert nodes to coordinates
+                    segment_coords = []
+                    for node in route_nodes:
+                        segment_coords.append({
+                            'lat': G.nodes[node]['y'],
+                            'lng': G.nodes[node]['x']
+                        })
+                    
+                    route_segments.append({
+                        'coordinates': segment_coords,
+                        'distance': segment_length / 1000.0,  # Convert to km
+                        'from': start.get('name', f'Point {i+1}'),
+                        'to': end.get('name', f'Point {i+2}')
+                    })
+                    
+                    total_distance += segment_length / 1000.0
+                    
+                except Exception as e:
+                    print(f"Route segment error: {e}")
+                    # Fallback to direct line
+                    route_segments.append({
+                        'coordinates': [
+                            {'lat': start['lat'], 'lng': start['lng']},
+                            {'lat': end['lat'], 'lng': end['lng']}
+                        ],
+                        'distance': haversine_distance(start['lat'], start['lng'], end['lat'], end['lng']),
+                        'from': start.get('name', f'Point {i+1}'),
+                        'to': end.get('name', f'Point {i+2}'),
+                        'fallback': True
+                    })
+                    total_distance += haversine_distance(start['lat'], start['lng'], end['lat'], end['lng'])
+            
+            return jsonify({
+                'success': True,
+                'route': {
+                    'segments': route_segments,
+                    'total_distance': round(total_distance, 2),
+                    'estimated_time': round(total_distance * 12, 0),  # 12 minutes per km walking
+                    'waypoint_count': len(waypoints),
+                    'network_type': 'walking'
+                }
+            })
+            
+        except Exception as e:
+            print(f"OSMnx network error: {e}")
+            # Fallback to direct routes
+            route_segments = []
+            total_distance = 0
+            
+            for i in range(len(waypoints) - 1):
+                start = waypoints[i]
+                end = waypoints[i + 1]
+                distance = haversine_distance(start['lat'], start['lng'], end['lat'], end['lng'])
+                
+                route_segments.append({
+                    'coordinates': [
+                        {'lat': start['lat'], 'lng': start['lng']},
+                        {'lat': end['lat'], 'lng': end['lng']}
+                    ],
+                    'distance': distance,
+                    'from': start.get('name', f'Point {i+1}'),
+                    'to': end.get('name', f'Point {i+2}'),
+                    'fallback': True
+                })
+                total_distance += distance
+            
+            return jsonify({
+                'success': True,
+                'route': {
+                    'segments': route_segments,
+                    'total_distance': round(total_distance, 2),
+                    'estimated_time': round(total_distance * 12, 0),
+                    'waypoint_count': len(waypoints),
+                    'network_type': 'direct',
+                    'warning': 'Walking network not available, using direct routes'
+                }
+            })
+            
+    except Exception as e:
+        print(f"Walking route error: {e}")
+        return jsonify({'error': f'Route calculation failed: {str(e)}'}), 500
+
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """Calculate haversine distance between two points"""
+    from math import radians, cos, sin, asin, sqrt
+    
+    # Convert to radians
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a))
+    r = 6371  # Earth radius in km
+    
+    return c * r
+
 if __name__ == '__main__':
     print("🚀 POI Yönetim Sistemi başlatılıyor...")
     print("📊 Web arayüzü: http://localhost:5505/poi_manager_ui.html")
