@@ -46,6 +46,8 @@ ENV/
 urgup_rotalar.html
 *.html
 !poi_manager_ui.html
+!poi_recommendation_system.html
+
 
 # Cache files
 cache/
