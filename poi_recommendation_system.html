@@ -1712,7 +1712,7 @@
                                 <i class="fas fa-tree"></i>
                                 <span>Doğa</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="doga" oninput="updateSliderValue(this)">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="doga">
                             <div class="slider-value" id="doga-value">0</div>
                         </div>
 
@@ -1721,7 +1721,7 @@
                                 <i class="fas fa-utensils"></i>
                                 <span>Yemek</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="yemek" oninput="updateSliderValue(this)">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="yemek">
                             <div class="slider-value" id="yemek-value">0</div>
                         </div>
 
@@ -1730,7 +1730,7 @@
                                 <i class="fas fa-landmark"></i>
                                 <span>Tarih</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="tarihi" oninput="updateSliderValue(this)">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="tarihi">
                             <div class="slider-value" id="tarihi-value">0</div>
                         </div>
 
@@ -1739,7 +1739,7 @@
                                 <i class="fas fa-gamepad"></i>
                                 <span>Eğlence</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="eglence" oninput="updateSliderValue(this)">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="eglence">
                             <div class="slider-value" id="eglence-value">0</div>
                         </div>
 
@@ -1748,7 +1748,7 @@
                                 <i class="fas fa-palette"></i>
                                 <span>Sanat & Kültür</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="sanat_kultur" oninput="updateSliderValue(this)">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="sanat_kultur">
                             <div class="slider-value" id="sanat_kultur-value">0</div>
                         </div>
 
@@ -1757,7 +1757,7 @@
                                 <i class="fas fa-mountain"></i>
                                 <span>Macera</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="macera" oninput="updateSliderValue(this)">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="macera">
                             <div class="slider-value" id="macera-value">0</div>
                         </div>
 
@@ -1766,7 +1766,7 @@
                                 <i class="fas fa-spa"></i>
                                 <span>Rahatlatıcı</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="rahatlatici" oninput="updateSliderValue(this)">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="rahatlatici">
                             <div class="slider-value" id="rahatlatici-value">0</div>
                         </div>
 
@@ -1775,7 +1775,7 @@
                                 <i class="fas fa-running"></i>
                                 <span>Spor</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="spor" oninput="updateSliderValue(this)">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="spor">
                             <div class="slider-value" id="spor-value">0</div>
                         </div>
 
@@ -1784,7 +1784,7 @@
                                 <i class="fas fa-shopping-bag"></i>
                                 <span>Alışveriş</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="alisveris" oninput="updateSliderValue(this)">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="alisveris">
                             <div class="slider-value" id="alisveris-value">0</div>
                         </div>
 
@@ -1793,19 +1793,14 @@
                                 <i class="fas fa-moon"></i>
                                 <span>Gece Hayatı</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="gece_hayati" oninput="updateSliderValue(this)">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="gece_hayati">
                             <div class="slider-value" id="gece_hayati-value">0</div>
                         </div>
                     </div>
                 </div>
 
-                            <button class="recommend-btn" id="recommendBtn" onclick="handleRecommendClickReliable(event)">
+                            <button class="recommend-btn" id="recommendBtn">
                 <i class="fas fa-magic"></i> Önerilerimi Getir
-            </button>
-            
-            <!-- Debug button for testing -->
-            <button onclick="testSliderChanges()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 8px; margin: 10px auto; display: block; cursor: pointer;">
-                🧪 Test Sliders
             </button>
             </div>
 
@@ -1943,9 +1938,6 @@
     <script>
         document.addEventListener("DOMContentLoaded", () => {
 
-
-            const sliders = document.querySelectorAll("input[type="range"]");
-       main
             sliders.forEach(slider => {
                 const valueDisplay = document.getElementById(slider.id + "-value");
                 const update = () => {
