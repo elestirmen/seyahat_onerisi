@@ -2061,9 +2061,9 @@
                 const stops = routeData.waypoints ? routeData.waypoints.length : selectedPOIs.length;
                 const routeType = routeData.route_type || 'yürüyüş';
 
-                document.getElementById('routeDistance').textContent = ${distance} km;
-                document.getElementById('routeDuration').textContent = ${Math.round(duration / 60)} saat;
-                document.getElementById('routeStops').textContent = ${stops} durak;
+                document.getElementById('routeDistance').textContent = `${distance} km`;
+                document.getElementById('routeDuration').textContent = `${Math.round(duration / 60)} saat`;
+                document.getElementById('routeStops').textContent = `${stops} durak`;
                 document.getElementById('routeType').textContent = routeType;
             }
 
@@ -2073,7 +2073,7 @@
 
                 // Add start location if exists
                 if (startLocation) {
-                    stopsHTML += 
+                    stopsHTML += `
                         <div class="stop-item" onclick="RouteDetailsPanel.highlightStop(${startLocation.latitude}, ${startLocation.longitude})">
                             <div class="stop-icon" style="background: #28a745;">
                                 📍
@@ -2083,13 +2083,13 @@
                                 <div class="stop-category">Başlangıç</div>
                             </div>
                         </div>
-                    ;
+                    `;
                 }
 
                 // Add POI stops
                 selectedPOIs.forEach((poi, index) => {
                     const categoryStyle = categoryStyles[poi.category] || { color: '#667eea', icon: '📍' };
-                    stopsHTML += 
+                    stopsHTML += `
                         <div class="stop-item" onclick="RouteDetailsPanel.highlightStop(${poi.latitude}, ${poi.longitude})">
                             <div class="stop-icon" style="background: ${categoryStyle.color};">
                                 ${categoryStyle.icon}
@@ -2099,7 +2099,7 @@
                                 <div class="stop-category">${categoryNames[poi.category] || poi.category}</div>
                             </div>
                         </div>
-                    ;
+                    `;
                 });
 
                 stopsList.innerHTML = stopsHTML;
@@ -2250,7 +2250,7 @@
             }
 
             async getElevationWithCache(lat, lng) {
-                const cacheKey = elevation_${lat.toFixed(4)}_${lng.toFixed(4)};
+                const cacheKey = `elevation_${lat.toFixed(4)}_${lng.toFixed(4)}`;
                 
                 // Check localStorage cache first
                 try {
@@ -2260,7 +2260,7 @@
                         const now = Date.now();
                         // Cache for 24 hours
                         if (now - cacheData.timestamp < 24 * 60 * 60 * 1000) {
-                            console.log(📦 Using cached elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${cacheData.elevation}m);
+                            console.log(`📦 Using cached elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${cacheData.elevation}m`);
                             return cacheData.elevation;
                         }
                     }
@@ -2338,10 +2338,10 @@
             }
 
             updateElevationStats(stats) {
-                document.getElementById('minElevation').textContent = Min: ${stats.minElevation}m;
-                document.getElementById('maxElevation').textContent = Max: ${stats.maxElevation}m;
-                document.getElementById('totalAscent').textContent = ↗ ${stats.totalAscent}m;
-                document.getElementById('totalDescent').textContent = ↘ ${stats.totalDescent}m;
+                document.getElementById('minElevation').textContent = `Min: ${stats.minElevation}m`;
+                document.getElementById('maxElevation').textContent = `Max: ${stats.maxElevation}m`;
+                document.getElementById('totalAscent').textContent = `↗ ${stats.totalAscent}m`;
+                document.getElementById('totalDescent').textContent = `↘ ${stats.totalDescent}m`;
             }
 
             createElevationChart(elevationData) {
@@ -2354,7 +2354,7 @@
                 // Prepare chart data
                 const labels = elevationData.map(d => {
                     if (d.distance === 0) return 'Başlangıç';
-                    return ${(d.distance / 1000).toFixed(1)}km;
+                    return `${(d.distance / 1000).toFixed(1)}km`;
                 });
 
                 const elevations = elevationData.map(d => d.elevation);
@@ -2393,14 +2393,14 @@
                                 callbacks: {
                                     title: function(context) {
                                         const index = context[0].dataIndex;
-                                        return names[index] || Nokta ${index + 1};
+                                        return names[index] || `Nokta ${index + 1}`;
                                     },
                                     label: function(context) {
                                         const elevation = context.parsed.y;
                                         const distance = elevationData[context.dataIndex].distance;
                                         return [
-                                            Yükseklik: ${elevation}m,
-                                            Mesafe: ${(distance / 1000).toFixed(1)}km
+                                            `Yükseklik: ${elevation}m`,
+                                            `Mesafe: ${(distance / 1000).toFixed(1)}km`
                                         ];
                                     }
                                 },
@@ -2447,7 +2447,7 @@
                             if (activeElements.length > 0) {
                                 const index = activeElements[0].index;
                                 const point = elevationData[index];
-                                console.log(Clicked on elevation point: ${point.name} at ${point.elevation}m);
+                                console.log(`Clicked on elevation point: ${point.name} at ${point.elevation}m`);
                                 
                                 // Optional: Highlight corresponding stop in the stops list
                                 const stopItems = document.querySelectorAll('.stop-item');
@@ -2476,12 +2476,12 @@
 
                 // Add start location
                 if (startLocation) {
-                    waypoints.push(${startLocation.latitude},${startLocation.longitude});
+                    waypoints.push(startLocation.latitude, startLocation.longitude);
                 }
 
                 // Add all POIs
                 selectedPOIs.forEach(poi => {
-                    waypoints.push(${poi.latitude},${poi.longitude});
+                    waypoints.push(poi.latitude, poi.longitude);
                 });
 
                 if (waypoints.length < 2) {
@@ -2494,15 +2494,15 @@
                 const destination = waypoints[waypoints.length - 1];
                 const intermediateWaypoints = waypoints.slice(1, -1);
 
-                let url = https://www.google.com/maps/dir/${origin};
+                let url = `https://www.google.com/maps/dir/${origin}`;
                 
                 // Add intermediate waypoints
                 intermediateWaypoints.forEach(waypoint => {
-                    url += /${waypoint};
+                    url += `/${waypoint}`;
                 });
                 
                 // Add destination
-                url += /${destination};
+                url += `/${destination}`;
 
                 // Open in new tab
                 window.open(url, '_blank');
@@ -2526,7 +2526,7 @@
             const style = categoryStyles[category] || { color: '#667eea', icon: '📍' };
 
             return L.divIcon({
-                html: 
+                html: `
                     <div style="
                         background: ${style.color};
                         width: 40px;
@@ -2560,7 +2560,7 @@
                             transform: rotate(45deg);
                         ">${score}</div>
                     </div>
-                ,
+                `,
                 className: 'custom-poi-marker',
                 iconSize: [40, 40],
                 iconAnchor: [20, 40],
@@ -2575,7 +2575,7 @@
             }
 
             try {
-                const response = await fetch(${apiBase}/poi/${poiId}/media);
+                const response = await fetch(`${apiBase}/poi/${poiId}/media`);
                 if (response.ok) {
                     const apiData = await response.json();
 
@@ -2646,7 +2646,7 @@
 
             // Prepare all media items for navigation and cache them
             const allMediaItems = [];
-            const poiCacheKey = poi_${poi.id || poi.name || Date.now()};
+            const poiCacheKey = `poi_${poi.id || poi.name || Date.now()}`;
 
             // Add images to media items
             if (media.images && media.images.length > 0) {
@@ -2654,7 +2654,7 @@
                     allMediaItems.push({
                         type: 'image',
                         path: image.path || image.filename,
-                        title: image.description || Görsel ${index + 1},
+                        title: image.description || `Görsel ${index + 1}`,
                         originalIndex: index
                     });
                 });
@@ -2666,7 +2666,7 @@
                     allMediaItems.push({
                         type: 'video',
                         path: video.path || video.filename,
-                        title: video.description || Video ${index + 1},
+                        title: video.description || `Video ${index + 1}`,
                         originalIndex: index
                     });
                 });
@@ -2678,7 +2678,7 @@
                     allMediaItems.push({
                         type: 'audio',
                         path: audio.path || audio.filename,
-                        title: audio.description || Ses ${index + 1},
+                        title: audio.description || `Ses ${index + 1}`,
                         originalIndex: index
                     });
                 });
@@ -2697,27 +2697,27 @@
                 galleryHTML += '<div style="display: flex; gap: 4px; overflow-x: auto; padding: 2px;">';
 
                 media.images.slice(0, 3).forEach((image, index) => {
-                    const imagePath = image.preview_path || image.path || poi_media/${image.filename};
+                    const imagePath = image.preview_path || image.path || `poi_media/${image.filename}`;
                     const mediaItemIndex = allMediaItems.findIndex(item =>
                         item.type === 'image' && item.originalIndex === index
                     );
 
-                    galleryHTML += 
-                        <img src="/${imagePath}" 
+                    galleryHTML += `
+                        <img src="/${imagePath}"
                              style="width: 60px; height: 45px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
                              onclick="showPOIMediaFromCache('${poiCacheKey}', ${mediaItemIndex})"
                              title="${image.description || 'Görsel'}" />
-                    ;
+                    `;
                 });
 
                 if (media.images.length > 3) {
                     const firstImageIndex = allMediaItems.findIndex(item => item.type === 'image');
-                    galleryHTML += 
+                    galleryHTML += `
                         <div style="width: 60px; height: 45px; background: rgba(0,0,0,0.7); color: white; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;"
                              onclick="showPOIMediaFromCache('${poiCacheKey}', ${firstImageIndex})">
                         +${media.images.length - 3}
                         </div>
-                    ;
+                    `;
                 }
 
                 galleryHTML += '</div></div>';
@@ -2734,12 +2734,12 @@
                         item.type === 'video' && item.originalIndex === index
                     );
 
-                    galleryHTML += 
+                    galleryHTML += `
                         <div style="background: #f0f0f0; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; border: 1px solid #ddd;"
                              onclick="showPOIMediaFromCache('${poiCacheKey}', ${mediaItemIndex})">
-                            🎥 ${video.description || 'Video'}
+                             🎥 ${video.description || 'Video'}
                         </div>
-                    ;
+                    `;
                 });
 
                 galleryHTML += '</div></div>';
@@ -2756,12 +2756,12 @@
                         item.type === 'audio' && item.originalIndex === index
                     );
 
-                    galleryHTML += 
+                    galleryHTML += `
                         <div style="background: #f0f0f0; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; border: 1px solid #ddd;"
                              onclick="showPOIMediaFromCache('${poiCacheKey}', ${mediaItemIndex})">
-                            🎵 ${audio.description || 'Ses'}
+                             🎵 ${audio.description || 'Ses'}
                         </div>
-                    ;
+                    `;
                 });
 
                 galleryHTML += '</div></div>';
@@ -2827,7 +2827,7 @@
             }, 100);
 
             // Accessibility: Announce to screen readers
-            announceToScreenReader(Medya görüntüleyici açıldı. ${currentMediaItems.length} medya öğesi mevcut.);
+            announceToScreenReader(`Medya görüntüleyici açıldı. ${currentMediaItems.length} medya öğesi mevcut.`);
         }
 
         function loadCurrentMedia() {
@@ -2840,28 +2840,28 @@
             const modalBody = document.getElementById('mediaModalBody');
 
             // Set title
-            modalTitle.textContent = mediaItem.title || Medya ${currentMediaIndex + 1};
+            modalTitle.textContent = mediaItem.title || `Medya ${currentMediaIndex + 1}`;
 
             // Show loading state
-            modalBody.innerHTML = 
+            modalBody.innerHTML = `
                 <div class="media-loading">
                     <i class="fas fa-spinner"></i>
                     <p>Medya yükleniyor...</p>
                 </div>
-            ;
+            `;
 
             // Load media content
             setTimeout(() => {
-                const mediaPath = mediaItem.path.startsWith('/') ? mediaItem.path : /${mediaItem.path};
+                const mediaPath = mediaItem.path.startsWith('/') ? mediaItem.path : `/${mediaItem.path}`;
                 let content = '';
 
                 if (mediaItem.type === 'image') {
-                    content = 
+                    content = `
                         <div class="media-display">
                             <div class="media-image-container">
-                                <img id="currentMediaImage" 
+                                <img id="currentMediaImage"
                                      class="media-image-zoomable"
-                                     src="${mediaPath}" 
+                                     src="${mediaPath}"
                                      alt="${mediaItem.title || 'Görsel'}"
                                      onload="onImageLoad(this)"
                                      onerror="handleMediaError(this, 'Görsel')"
@@ -2879,12 +2879,12 @@
                                 </div>
                             </div>
                         </div>
-                    ;
+                    `;
                 } else if (mediaItem.type === 'video') {
-                    content = 
+                    content = `
                         <div class="media-display">
                             <div class="media-video-container">
-                                <video id="currentMediaVideo" 
+                                <video id="currentMediaVideo"
                                        controls preload="metadata"
                                        onloadeddata="onVideoLoad(this)"
                                        onerror="handleMediaError(this, 'Video')"
@@ -2900,9 +2900,9 @@
                                 </div>
                             </div>
                         </div>
-                    ;
+                    `;
                 } else if (mediaItem.type === 'audio') {
-                    content = 
+                    content = `
                         <div class="media-display">
                             <div class="media-audio-container">
                                 <div class="audio-info">
@@ -2912,8 +2912,8 @@
                                         <span id="audioFormat">Yükleniyor...</span>
                                     </div>
                                 </div>
-                                <audio id="currentMediaAudio" 
-                                       controls preload="metadata" 
+                                <audio id="currentMediaAudio"
+                                       controls preload="metadata"
                                        style="width: 100%; max-width: 500px; opacity: 0; transition: opacity 0.3s ease;"
                                        onloadeddata="onAudioLoad(this)"
                                        onerror="handleMediaError(this, 'Ses')"
@@ -2928,7 +2928,7 @@
                                 </div>
                             </div>
                         </div>
-                    ;
+                    `;
                 }
 
                 modalBody.innerHTML = content;
@@ -2951,7 +2951,7 @@
                 prevBtn.style.display = 'flex';
                 nextBtn.style.display = 'flex';
                 counter.style.display = 'block';
-                counter.textContent = ${currentMediaIndex + 1} / ${currentMediaItems.length};
+                counter.textContent = `${currentMediaIndex + 1} / ${currentMediaItems.length}`;
 
                 // Update thumbnails if there are images
                 updateThumbnails();
@@ -2980,8 +2980,8 @@
                 if (item.type === 'image') {
                     const thumb = document.createElement('img');
                     thumb.className = 'media-thumbnail';
-                    thumb.src = item.path.startsWith('/') ? item.path : /${item.path};
-                    thumb.alt = item.title || Görsel ${index + 1};
+                    thumb.src = item.path.startsWith('/') ? item.path : `/${item.path}`;
+                    thumb.alt = item.title || `Görsel ${index + 1}`;
 
                     if (index === currentMediaIndex) {
                         thumb.classList.add('active');
@@ -3106,31 +3106,31 @@
                 console.warn('⚠️ Page not served over HTTPS - geolocation may not work');
 
                 // Show a subtle warning
-                const warning = document.createElement('div');
-                warning.style.cssText = 
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-                    color: white;
-                    padding: 12px 16px;
-                    border-radius: 10px;
-                    font-size: 0.9rem;
-                    z-index: 9999;
-                    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
-                    max-width: 300px;
-                    font-family: 'Segoe UI', sans-serif;
-                ;
+            const warning = document.createElement('div');
+            warning.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+                color: white;
+                padding: 12px 16px;
+                border-radius: 10px;
+                font-size: 0.9rem;
+                z-index: 9999;
+                box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+                max-width: 300px;
+                font-family: 'Segoe UI', sans-serif;
+            `;
 
-                warning.innerHTML = 
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 1.2rem; margin-right: 8px;">🔒</span>
-                        <strong>Güvenlik Uyarısı</strong>
-                    </div>
-                    <p style="margin: 0; font-size: 0.85rem; line-height: 1.4;">
-                        Konum servisleri için HTTPS gerekli. Manuel konum seçimini kullanabilirsiniz.
-                    </p>
-                ;
+            warning.innerHTML = `
+                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 1.2rem; margin-right: 8px;">🔒</span>
+                    <strong>Güvenlik Uyarısı</strong>
+                </div>
+                <p style="margin: 0; font-size: 0.85rem; line-height: 1.4;">
+                    Konum servisleri için HTTPS gerekli. Manuel konum seçimini kullanabilirsiniz.
+                </p>
+            `;
 
                 document.body.appendChild(warning);
 
@@ -3149,7 +3149,7 @@
         function showLocationPermissionDialog() {
             return new Promise((resolve) => {
                 const dialog = document.createElement('div');
-                dialog.style.cssText = 
+                dialog.style.cssText = `
                     position: fixed;
                     top: 0;
                     left: 0;
@@ -3161,9 +3161,9 @@
                     justify-content: center;
                     z-index: 10001;
                     font-family: 'Segoe UI', sans-serif;
-                ;
+                `;
 
-                dialog.innerHTML = 
+                dialog.innerHTML = `
                     <div style="
                         background: white;
                         border-radius: 20px;
@@ -3198,23 +3198,23 @@
                                 <strong style="color: #1976d2;">Sonraki Adım</strong>
                             </div>
                             <p style="margin: 0; color: #1565c0; font-size: 0.9rem; line-height: 1.5;">
-                                "İzin Ver" butonuna tıkladıktan sonra tarayıcınız konum izni isteyecek. 
-                                Lütfen <strong>"İzin Ver"</strong> veya <strong>"Allow"</strong> seçeneğini seçin.
+                                \"İzin Ver\" butonuna tıkladıktan sonra tarayıcınız konum izni isteyecek.
+                                Lütfen <strong>\"İzin Ver\"</strong> veya <strong>\"Allow\"</strong> seçeneğini seçin.
                             </p>
                         </div>
-                        
+
                         <div style="display: flex; gap: 15px; justify-content: center;">
-                            <button onclick="resolveLocationDialog(false)" 
+                            <button onclick="resolveLocationDialog(false)"
                                     style="background: #6c757d; color: white; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-size: 1rem; transition: all 0.3s ease;">
                                 İptal
                             </button>
-                            <button onclick="resolveLocationDialog(true)" 
+                            <button onclick="resolveLocationDialog(true)"
                                     style="background: linear-gradient(135deg, var(--primary-color) 0%, #5a6fd8 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
                                 📍 İzin Ver
                             </button>
                         </div>
-                    </div>
-                ;
+                        </div>
+                    `;
 
                 // Add resolve function to global scope temporarily
                 window.resolveLocationDialog = (accepted) => {
@@ -3263,9 +3263,9 @@
 
         function showMediaError(message, canRetry = true) {
             const modalBody = document.getElementById('mediaModalBody');
-            const retryButton = canRetry ? <button onclick="retryLoadMedia()" style="margin-right: 10px;">Tekrar Dene</button> : '';
+            const retryButton = canRetry ? `<button onclick="retryLoadMedia()" style="margin-right: 10px;">Tekrar Dene</button>` : '';
 
-            modalBody.innerHTML = 
+            modalBody.innerHTML = `
                 <div class="media-error">
                     <i class="fas fa-exclamation-triangle"></i>
                     <h3>Medya Yüklenemedi</h3>
@@ -3275,7 +3275,7 @@
                         <button onclick="closeMediaModal()">Kapat</button>
                     </div>
                 </div>
-            ;
+            `;
         }
 
         function retryLoadMedia() {
@@ -3285,7 +3285,7 @@
 
         // Enhanced error handling for different media types
         function handleMediaError(mediaElement, mediaType) {
-            console.error(${mediaType} load error:, mediaElement.error);
+            console.error(`${mediaType} load error:`, mediaElement.error);
 
             let errorMessage = 'Medya dosyası yüklenemedi';
             if (mediaElement.error) {
@@ -3331,7 +3331,7 @@
         function preloadMediaItem(mediaItem) {
             if (!mediaItem) return;
 
-            const mediaPath = mediaItem.path.startsWith('/') ? mediaItem.path : /${mediaItem.path};
+            const mediaPath = mediaItem.path.startsWith("/") ? mediaItem.path : `/${mediaItem.path}`;
 
             if (mediaItem.type === 'image') {
                 const img = new Image();
@@ -3376,7 +3376,7 @@
             currentZoom *= factor;
             currentZoom = Math.max(0.5, Math.min(currentZoom, 3)); // Limit zoom between 0.5x and 3x
 
-            img.style.transform = scale(${currentZoom}) translate(${imagePosition.x}px, ${imagePosition.y}px);
+            img.style.transform = `scale(${currentZoom}) translate(${imagePosition.x}px, ${imagePosition.y}px)`;
 
             // Update zoom button states
             document.getElementById('zoomInBtn').disabled = currentZoom >= 3;
@@ -3417,7 +3417,7 @@
                 if (!isDragging || currentZoom <= 1) return;
                 imagePosition.x = e.clientX - dragStart.x;
                 imagePosition.y = e.clientY - dragStart.y;
-                img.style.transform = scale(${currentZoom}) translate(${imagePosition.x}px, ${imagePosition.y}px);
+                img.style.transform = `scale(${currentZoom}) translate(${imagePosition.x}px, ${imagePosition.y}px)`;
             });
 
             document.addEventListener('mouseup', () => {
@@ -3439,7 +3439,7 @@
                 const touch = e.touches[0];
                 imagePosition.x = touch.clientX - dragStart.x;
                 imagePosition.y = touch.clientY - dragStart.y;
-                img.style.transform = scale(${currentZoom}) translate(${imagePosition.x}px, ${imagePosition.y}px);
+                img.style.transform = `scale(${currentZoom}) translate(${imagePosition.x}px, ${imagePosition.y}px)`;
                 e.preventDefault();
             });
 
@@ -3473,7 +3473,7 @@
                 if (duration && !isNaN(duration)) {
                     const minutes = Math.floor(duration / 60);
                     const seconds = Math.floor(duration % 60);
-                    formatSpan.textContent = Süre: ${minutes}:${seconds.toString().padStart(2, '0')};
+                    formatSpan.textContent = `Süre: ${minutes}:${seconds.toString().padStart(2, '0')}`;
                 } else {
                     formatSpan.textContent = 'Ses dosyası hazır';
                 }
@@ -3504,7 +3504,7 @@
         async function getElevation(lat, lng) {
             try {
                 // Try Open-Elevation API first
-                const response = await fetch(https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}, {
+                const response = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}`, {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json'
@@ -3514,10 +3514,10 @@
                 if (response.ok) {
                     const data = await response.json();
                     const elevation = data.results[0]?.elevation || 0;
-                    console.log(🏔️ Real elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${elevation}m);
+                    console.log(`🏔️ Real elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${elevation}m`);
                     return Math.round(elevation);
                 }
-                throw new Error(API response not ok: ${response.status});
+                throw new Error(`API response not ok: ${response.status}`);
 
             } catch (error) {
                 console.warn('Elevation API failed, using estimated elevation:', error.message);
@@ -3528,14 +3528,14 @@
                 const variation = Math.random() * 200 - 100; // ±100m variation
                 const estimatedElevation = Math.round(baseElevation + variation);
 
-                console.log(📏 Estimated elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${estimatedElevation}m);
+                console.log(`📏 Estimated elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${estimatedElevation}m`);
                 return estimatedElevation;
             }
         }
 
         // Open in Google Maps
         function openInGoogleMaps(lat, lng, name) {
-            const url = https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query_place_id=${encodeURIComponent(name)};
+            const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query_place_id=${encodeURIComponent(name)}`;
             window.open(url, '_blank');
         }
 
@@ -3584,17 +3584,17 @@
             let routeHTML = '';
 
             // Start location section
-            routeHTML += 
+            routeHTML += `
                 <div style="margin-bottom: 15px; padding: 12px; background: rgba(231, 76, 60, 0.1); border-radius: 12px; border-left: 4px solid #e74c3c;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <h6 style="margin: 0; color: #e74c3c; font-size: 14px;">📍 Başlangıç Noktası</h6>
-                        ${!startLocation ? <button onclick="setStartLocation()" style="background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 8px; font-size: 11px; cursor: pointer;">📍 Konumu Al</button> : ''}
+                        ${!startLocation ? `<button onclick="setStartLocation()" style="background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 8px; font-size: 11px; cursor: pointer;">📍 Konumu Al</button>` : ''}
                     </div>
                     <div style="font-size: 12px; color: #666;">
-                        ${startLocation ? ✅ ${startLocation.name} : '❌ Başlangıç noktası belirlenmedi'}
+                        ${startLocation ? '✅ ' + startLocation.name : '❌ Başlangıç noktası belirlenmedi'}
                     </div>
                 </div>
-            ;
+            `;
 
             if (selectedPOIs.length === 0) {
                 routeHTML += '<p style="text-align: center; color: #666; font-style: italic;">Rota oluşturmak için POI\'leri seçin</p>';
@@ -3606,7 +3606,7 @@
 
             // Show start location in route if available
             if (startLocation) {
-                routeHTML += 
+                routeHTML += `
                     <div style="display: flex; align-items: center; padding: 8px; background: rgba(231, 76, 60, 0.1); border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #e74c3c;">
                         <div style="background: #e74c3c; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 10px;">
                             🏁
@@ -3616,13 +3616,13 @@
                             <div style="color: #666; font-size: 11px;">Başlangıç</div>
                         </div>
                     </div>
-                ;
+                `;
             }
 
             selectedPOIs.forEach((poi, index) => {
                 const categoryStyle = categoryStyles[poi.category] || { color: '#667eea', icon: '📍' };
                 const stepNumber = startLocation ? index + 2 : index + 1;
-                routeHTML += 
+                routeHTML += `
                     <div style="display: flex; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 8px; margin-bottom: 6px;">
                         <div style="background: ${categoryStyle.color}; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 10px;">
                             ${stepNumber}
@@ -3633,13 +3633,13 @@
                         </div>
                         <button onclick="removeFromRoute('${poi.id || poi._id}')" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
                     </div>
-                ;
+                `;
             });
 
             // Route statistics
             const stats = getRouteStatistics();
             if (stats && selectedPOIs.length > 1) {
-                routeHTML += 
+                routeHTML += `
                     <div style="margin: 15px 0; padding: 12px; background: rgba(102, 126, 234, 0.1); border-radius: 12px; border-left: 4px solid var(--primary-color);">
                         <h6 style="margin: 0 0 8px 0; color: var(--primary-color); font-size: 13px;">📊 Rota İstatistikleri</h6>
                         <div style="font-size: 11px; color: #666; line-height: 1.4;">
@@ -3649,17 +3649,17 @@
                             🏷️ <strong>Kategoriler:</strong> ${stats.categories.length} farklı kategori
                         </div>
                     </div>
-                ;
+                `;
             }
 
             if (selectedPOIs.length > 1) {
-                routeHTML += 
+                routeHTML += `
                     <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee; display: flex; gap: 8px; flex-wrap: wrap;">
                         <button onclick="clearRoute()" style="background: #95a5a6; color: white; border: none; padding: 8px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;">🗑️ Rotayı Temizle</button>
                         <button onclick="optimizeRoute()" style="background: var(--accent-color); color: white; border: none; padding: 8px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;">⚡ Optimize Et</button>
-                        ${startLocation ? <button onclick="startLocation = null; updateRouteDisplay();" style="background: #f39c12; color: white; border: none; padding: 8px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;">📍 Başlangıcı Sıfırla</button> : ''}
+                        ${startLocation ? `<button onclick="startLocation = null; updateRouteDisplay();" style="background: #f39c12; color: white; border: none; padding: 8px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;">📍 Başlangıcı Sıfırla</button>` : ''}
                     </div>
-                ;
+                `;
             }
 
             routeContainer.innerHTML = routeHTML;
@@ -3705,7 +3705,7 @@
                     lng: poi.longitude,
                     name: poi.name
                 });
-                console.log(📍 Added POI ${index + 1}: ${poi.name});
+                console.log(`📍 Added POI ${index + 1}: ${poi.name}`);
             });
 
             console.log('🗺️ Total waypoints:', waypoints.length);
@@ -3719,7 +3719,7 @@
                 console.log('🚶 Requesting walking route from API...');
 
                 // Call walking route API
-                const response = await fetch(${apiBase}/route/walking, {
+                const response = await fetch(`${apiBase}/route/walking`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -3730,7 +3730,7 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(Route API error: ${response.status});
+                    throw new Error(`Route API error: ${response.status}`);
                 }
 
                 const routeData = await response.json();
@@ -3778,6 +3778,7 @@
 
             // Add popup to explain this is a simple route
             window.simpleRouteLayer.bindPopup(
+                `
                 <div style="text-align: center; font-family: 'Segoe UI', sans-serif;">
                     <h6 style="margin: 0 0 8px 0; color: #667eea;">📏 Basit Rota</h6>
                     <p style="margin: 0; font-size: 12px; color: #666;">
@@ -3785,6 +3786,7 @@
                         <small>(Gerçek yol rotası değil)</small>
                     </p>
                 </div>
+                `
             );
 
             // Add route details panel click event
@@ -3814,16 +3816,16 @@
                 totalDistance += getDistance(latlngs[i][0], latlngs[i][1], latlngs[i + 1][0], latlngs[i + 1][1]);
             }
 
-            console.log(📏 Basit rota oluşturuldu: ${totalDistance.toFixed(2)} km (düz çizgi mesafesi));
+            console.log(`📏 Basit rota oluşturuldu: ${totalDistance.toFixed(2)} km (düz çizgi mesafesi)`);
 
             // Show notification
-            showNotification(📏 Basit rota oluşturuldu (${totalDistance.toFixed(2)} km düz çizgi mesafesi), 'info');
+            showNotification(`📏 Basit rota oluşturuldu (${totalDistance.toFixed(2)} km düz çizgi mesafesi)`, 'info');
         }
 
         // Show notification
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
-            notification.style.cssText = 
+            notification.style.cssText = `
                 position: fixed;
                 top: 20px;
                 right: 20px;
@@ -3835,7 +3837,7 @@
                 z-index: 10000;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.3);
                 max-width: 300px;
-            ;
+            `;
             notification.textContent = message;
 
             document.body.appendChild(notification);
@@ -3953,6 +3955,7 @@
                     })
                         .setLatLng(midpoint)
                         .setContent(
+                        `
                         <div style="text-align: center; font-size: 12px; font-family: 'Segoe UI', sans-serif;">
                             <strong>${segment.from} → ${segment.to}</strong><br>
                             📏 ${segment.distance.toFixed(2)} km<br>
@@ -3960,6 +3963,7 @@
                             ${segment.fallback ? '<br><span style="color: #e74c3c;">⚠️ Düz çizgi</span>' : '<br><span style="color: #27ae60;">✅ Yürüyüş yolu</span>'}
                             <br><small style="color: #888;">Detaylar için tıklayın</small>
                         </div>
+                        `
                     );
 
                     polyline.on('mouseover', function () {
@@ -3986,7 +3990,7 @@
             const routeTypeName = isWalkingRoute ? 'Yürüyüş Rotası' : 'Düz Çizgi';
             const routeTypeColor = isWalkingRoute ? '#27ae60' : '#e74c3c';
 
-            return 
+            return `
                 <div style="font-family: 'Segoe UI', sans-serif; min-width: 280px;">
                     <div style="
                         background: linear-gradient(135deg, ${routeTypeColor} 0%, ${routeTypeColor}dd 100%);
@@ -4052,7 +4056,7 @@
                         </div>
                     </div>
                 </div>
-            ;
+            `;
         }
 
         // Open route segment in Google Maps
@@ -4073,17 +4077,17 @@
                 }
 
                 if (selectedWaypoints.length > 0) {
-                    waypoints = '&waypoints=' + selectedWaypoints.map(coord => ${coord.lat},${coord.lng}).join('|');
+                waypoints = '&waypoints=' + selectedWaypoints.map(coord => `${coord.lat},${coord.lng}`).join('|');
                 }
             }
 
-            const url = https://www.google.com/maps/dir/?api=1&origin=${startCoord.lat},${startCoord.lng}&destination=${endCoord.lat},${endCoord.lng}${waypoints}&travelmode=walking;
+            const url = `https://www.google.com/maps/dir/?api=1&origin=${startCoord.lat},${startCoord.lng}&destination=${endCoord.lat},${endCoord.lng}${waypoints}&travelmode=walking`;
             window.open(url, '_blank');
         }
 
         // Copy route coordinates to clipboard
         function copyRouteCoordinates(coordinates) {
-            const coordText = coordinates.map(coord => ${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}).join('\n');
+            const coordText = coordinates.map(coord => `${coord.lat.toFixed(6)},${coord.lng.toFixed(6)}`).join('\n');
 
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(coordText).then(() => {
@@ -4127,11 +4131,11 @@
             let waypoints = [];
 
             if (startLocation) {
-                waypoints.push(${startLocation.latitude},${startLocation.longitude});
+                waypoints.push(startLocation.latitude, startLocation.longitude);
             }
 
             selectedPOIs.forEach(poi => {
-                waypoints.push(${poi.latitude},${poi.longitude});
+                waypoints.push(poi.latitude, poi.longitude);
             });
 
             if (waypoints.length < 2) {
@@ -4151,7 +4155,7 @@
                 waypointParam = '&waypoints=' + selectedWaypoints.join('|');
             }
 
-            const url = https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypointParam}&travelmode=walking;
+            const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypointParam}&travelmode=walking`;
             window.open(url, '_blank');
 
             showNotification('🗺️ Google Maps\'te rota açıldı!', 'success');
@@ -4160,7 +4164,7 @@
         // Show notification to user
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
-            notification.style.cssText = 
+            notification.style.cssText = `
                 position: fixed;
                 top: 20px;
                 right: 20px;
@@ -4173,7 +4177,7 @@
                 box-shadow: 0 4px 12px rgba(0,0,0,0.3);
                 transition: all 0.3s ease;
                 font-family: 'Segoe UI', sans-serif;
-            ;
+            `;
 
             switch (type) {
                 case 'success':
@@ -4244,13 +4248,13 @@
                 if (routeSection) {
                     const infoDiv = document.createElement('div');
                     infoDiv.id = 'routeInfo';
-                    infoDiv.style.cssText = 
+                    infoDiv.style.cssText = `
                         margin-top: 15px;
                         padding: 15px;
                         background: rgba(39, 174, 96, 0.1);
                         border-radius: 12px;
                         border-left: 4px solid #27ae60;
-                    ;
+                    `;
                     routeSection.appendChild(infoDiv);
                 }
                 routeInfoDiv = document.getElementById('routeInfo');
@@ -4260,7 +4264,7 @@
                 const networkIcon = routeInfo.network_type === 'walking' ? '🚶' : '🚗';
                 const networkName = routeInfo.network_type === 'walking' ? 'Yürüyüş Rotası' : 'Araba Rotası';
 
-                routeInfoDiv.innerHTML = 
+                routeInfoDiv.innerHTML = `
                     <h6 style="margin: 0 0 10px 0; color: #27ae60; font-size: 14px;">
                         ${networkIcon} ${networkName} Bilgileri
                     </h6>
@@ -4269,9 +4273,9 @@
                         ⏱️ <strong>Tahmini Süre:</strong> ${routeInfo.estimated_time} dakika<br>
                         🎯 <strong>Durak Sayısı:</strong> ${routeInfo.waypoint_count} nokta<br>
                         🛤️ <strong>Segment Sayısı:</strong> ${routeInfo.segments.length} bölüm
-                        ${routeInfo.warning ? <br><span style="color: #f39c12;">⚠️ ${routeInfo.warning}</span> : ''}
+                        ${routeInfo.warning ? `<br><span style="color: #f39c12;">⚠️ ${routeInfo.warning}</span>` : ''}
                     </div>
-                ;
+                `;
             }
         }
 
@@ -4334,40 +4338,41 @@
 
             switch (browserName) {
                 case 'Chrome':
-                    instructions = 
+                    instructions = `
                         <strong>Chrome'da konum iznini açmak için:</strong><br>
                         1. Adres çubuğunun solundaki <strong>🔒 kilit simgesine</strong> tıklayın<br>
                         2. "Konum" seçeneğini <strong>"İzin ver"</strong> yapın<br>
                         3. Sayfayı yenileyin (F5)
-                    ;
+                    `;
                     break;
                 case 'Firefox':
-                    instructions = 
+                    instructions = `
                         <strong>Firefox'ta konum iznini açmak için:</strong><br>
                         1. Adres çubuğunun solundaki <strong>🛡️ kalkan simgesine</strong> tıklayın<br>
                         2. "Konum" iznini <strong>"İzin ver"</strong> yapın<br>
                         3. Sayfayı yenileyin (F5)
-                    ;
+                    `;
                     break;
                 case 'Safari':
-                    instructions = 
+                    instructions = `
                         <strong>Safari'de konum iznini açmak için:</strong><br>
                         1. Safari menüsünden <strong>"Tercihler"</strong> açın<br>
                         2. <strong>"Web Siteleri"</strong> sekmesine gidin<br>
                         3. Sol taraftan <strong>"Konum"</strong> seçin<br>
                         4. Bu siteyi <strong>"İzin ver"</strong> yapın
-                    ;
+                    `;
                     break;
                 default:
-                    instructions = 
+                    instructions = `
                         <strong>Konum iznini açmak için:</strong><br>
                         1. Adres çubuğundaki <strong>kilit/bilgi simgesine</strong> tıklayın<br>
                         2. Konum iznini <strong>"İzin ver"</strong> yapın<br>
                         3. Sayfayı yenileyin (F5)
-                    ;
+                    `;
             }
 
             showNotification(
+                `
                 <div style="text-align: left; line-height: 1.6;">
                     <h4 style="color: #d93025; margin-bottom: 12px;">⚠️ Konum İzni Gerekli</h4>
                     <p style="margin-bottom: 16px;">Tarayıcınızda konum izni reddedilmiş durumda.</p>
@@ -4376,7 +4381,8 @@
                         <strong>💡 İpucu:</strong> İzni açtıktan sonra sayfayı yenilemeyi unutmayın!
                     </div>
                 </div>
-            , 'error', 10000);
+                `,
+            'error', 10000);
 
             if (window.locationPermissionReject) {
                 window.locationPermissionReject(new Error('Tarayıcı konum izni reddedilmiş'));
@@ -4550,12 +4556,12 @@
                         switch (error.code) {
                             case error.PERMISSION_DENIED:
                                 errorMessage = 'Konum izni reddedildi';
-                                helpText = Konum iznini açmak için:
+                                helpText = `Konum iznini açmak için:
 1. Chrome'da adres çubuğundaki kilit simgesine tıklayın
-2. "Konum" seçeneğini "İzin ver" yapın  
+2. "Konum" seçeneğini "İzin ver" yapın
 3. Sayfayı yenileyin (F5)
 
-Alternatif: chrome://settings/content/location adresinden site izinlerini kontrol edin;
+Alternatif: chrome://settings/content/location adresinden site izinlerini kontrol edin`;
                                 break;
                             case error.POSITION_UNAVAILABLE:
                                 errorMessage = 'Konum bilgisi mevcut değil';
@@ -4612,7 +4618,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                     });
 
                     const startIcon = L.divIcon({
-                        html: 
+                        html: `
                             <div style="
                                 background: #e74c3c;
                                 width: 30px;
@@ -4628,7 +4634,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                             ">
                                 📍
                             </div>
-                        ,
+                        `,
                         className: 'start-location-marker',
                         iconSize: [30, 30],
                         iconAnchor: [15, 15]
@@ -4637,6 +4643,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                     const startMarker = L.marker([location.latitude, location.longitude], { icon: startIcon })
                         .addTo(map)
                         .bindPopup(
+                            `
                             <div style="text-align: center; font-family: 'Segoe UI', sans-serif;">
                                 <h6 style="margin: 0 0 8px 0; color: #e74c3c;">📍 Başlangıç Noktası</h6>
                                 <p style="margin: 0; font-size: 12px; color: #666;">Mevcut Konumunuz</p>
@@ -4647,6 +4654,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                                     Doğruluk: ±${Math.round(location.accuracy)}m
                                 </div>
                             </div>
+                            `
                         );
 
                     // Center map on user location
@@ -4661,14 +4669,14 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                     createRoute();
                 }
 
-                alert(✅ Başlangıç noktası belirlendi!\nKonum: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}\nDoğruluk: ±${Math.round(location.accuracy)}m);
+                alert(`✅ Başlangıç noktası belirlendi!\nKonum: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}\nDoğruluk: ±${Math.round(location.accuracy)}m`);
 
             } catch (error) {
                 console.error('❌ Location error:', error);
 
                 // Create a better error dialog
                 const errorDialog = document.createElement('div');
-                errorDialog.style.cssText = 
+                errorDialog.style.cssText = `
                     position: fixed;
                     top: 0;
                     left: 0;
@@ -4680,9 +4688,9 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                     justify-content: center;
                     z-index: 10000;
                     font-family: 'Segoe UI', sans-serif;
-                ;
+                `;
 
-                errorDialog.innerHTML = 
+                errorDialog.innerHTML = `
                     <div style="
                         background: white;
                         border-radius: 20px;
@@ -4698,7 +4706,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                         <p style="color: #666; margin: 0 0 20px 0; line-height: 1.6; font-size: 1rem;">
                             ${error.message}
                         </p>
-                        ${error.helpText ? 
+                        ${error.helpText ? `
                             <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 18px; border-radius: 12px; margin-bottom: 25px; text-align: left;">
                                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                                     <span style="font-size: 1.4rem; margin-right: 10px;">🔧</span>
@@ -4708,7 +4716,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                                     ${error.helpText}
                                 </div>
                             </div>
-                         : ''}
+                        ` : ''}
                         
                         <div style="background: #e8f5e8; border: 1px solid #c3e6c3; padding: 18px; border-radius: 12px; margin-bottom: 25px; text-align: left;">
                             <div style="display: flex; align-items: center; margin-bottom: 12px;">
@@ -4736,7 +4744,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                             </button>
                         </div>
                     </div>
-                ;
+                `;
 
                 document.body.appendChild(errorDialog);
             }
@@ -4745,7 +4753,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
         // Show manual location selection help
         function showManualLocationHelp() {
             const helpDialog = document.createElement('div');
-            helpDialog.style.cssText = 
+            helpDialog.style.cssText = `
                 position: fixed;
                 top: 0;
                 left: 0;
@@ -4757,9 +4765,9 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                 justify-content: center;
                 z-index: 10002;
                 font-family: 'Segoe UI', sans-serif;
-            ;
+            `;
 
-            helpDialog.innerHTML = 
+            helpDialog.innerHTML = `
                 <div style="
                     background: white;
                     border-radius: 20px;
@@ -4775,34 +4783,34 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                     <p style="color: #666; margin: 0 0 25px 0; line-height: 1.6; font-size: 1rem;">
                         Haritadan başlangıç noktanızı manuel olarak seçebilirsiniz.
                     </p>
-                    
+
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 25px; text-align: left;">
                         <h4 style="color: #333; margin: 0 0 15px 0; font-size: 1.1rem;">📋 Adımlar:</h4>
                         <ol style="margin: 0; padding-left: 20px; color: #555; line-height: 1.8;">
-                            <li>Önce "Önerilerimi Getir" butonuna tıklayın</li>
+                            <li>Önce \"Önerilerimi Getir\" butonuna tıklayın</li>
                             <li>Harita açıldığında istediğiniz noktaya tıklayın</li>
                             <li>O nokta başlangıç noktanız olarak ayarlanacak</li>
                             <li>Rota planlaması bu noktadan başlayacak</li>
                         </ol>
                     </div>
-                    
+
                     <div style="background: #e3f2fd; padding: 18px; border-radius: 12px; margin-bottom: 25px; text-align: left;">
                         <div style="display: flex; align-items: center; margin-bottom: 10px;">
                             <span style="font-size: 1.3rem; margin-right: 10px;">💡</span>
                             <strong style="color: #1976d2;">İpucu</strong>
                         </div>
                         <p style="margin: 0; color: #1565c0; font-size: 0.9rem; line-height: 1.5;">
-                            Otel, ev veya herhangi bir merkezi nokta seçebilirsiniz. 
+                            Otel, ev veya herhangi bir merkezi nokta seçebilirsiniz.
                             Öneriler bu noktaya yakınlığa göre sıralanacak.
                         </p>
                     </div>
-                    
-                    <button onclick="this.parentElement.parentElement.remove()" 
+
+                    <button onclick="this.parentElement.parentElement.remove()"
                             style="background: var(--primary-color); color: white; border: none; padding: 12px 30px; border-radius: 10px; cursor: pointer; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
                         ✅ Anladım
                     </button>
                 </div>
-            ;
+            `;
 
             document.body.appendChild(helpDialog);
         }
@@ -4848,7 +4856,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                             bestRoute = newRoute;
                             bestDistance = newDistance;
                             improved = true;
-                            console.log(📈 İyileştirme bulundu! Yeni mesafe: ${bestDistance.toFixed(2)} km);
+                            console.log(`📈 İyileştirme bulundu! Yeni mesafe: ${bestDistance.toFixed(2)} km`);
                         }
                     }
                 }
@@ -4870,7 +4878,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             }, 1500); // 1.5 second delay for optimization
 
             const improvement = ((calculateTotalDistance(allPoints) - bestDistance) / calculateTotalDistance(allPoints) * 100);
-            showNotification(✅ Rota optimize edildi! ${iterations} iterasyon, ${bestDistance.toFixed(2)} km, %${improvement.toFixed(1)} iyileştirme, 'success');
+            showNotification(`✅ Rota optimize edildi! ${iterations} iterasyon, ${bestDistance.toFixed(2)} km, %${improvement.toFixed(1)} iyileştirme`, 'success');
         }
 
         // Calculate total distance of a route
@@ -4956,7 +4964,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             Object.keys(ratingCategories).forEach(category => {
                 const slider = document.getElementById(category);
                 const valueDisplay = document.getElementById(category + '-value');
-                console.log(Slider ${category}:, {
+                console.log(`Slider ${category}:`, {
                     slider: !!slider,
                     valueDisplay: !!valueDisplay,
                     sliderValue: slider ? slider.value : 'N/A',
@@ -4981,27 +4989,27 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                 const valueDisplay = document.getElementById(category + '-value');
 
                 if (!slider) {
-                    console.error(❌ Slider not found: ${category});
+                    console.error(`❌ Slider not found: ${category}`);
                     return;
                 }
 
                 if (!valueDisplay) {
-                    console.error(❌ Value display not found: ${category}-value);
+                    console.error(`❌ Value display not found: ${category}-value`);
                     return;
                 }
 
                 const sliderItem = slider.closest('.slider-item');
                 if (!sliderItem) {
-                    console.error(❌ Slider item not found for: ${category});
+                    console.error(`❌ Slider item not found for: ${category}`);
                     return;
                 }
 
-                console.log(✅ Setting up slider: ${category});
+                console.log(`✅ Setting up slider: ${category}`);
 
                 // Add both input and change events for better compatibility
                 const handleSliderChange = function () {
                     const value = parseInt(this.value);
-                    console.log(🎚️ Slider ${category} changed to: ${value});
+                    console.log(`🎚️ Slider ${category} changed to: ${value}`);
                     valueDisplay.textContent = value;
                     updateSliderBackground(this);
                     updateSliderItemState(sliderItem, valueDisplay, value);
@@ -5012,7 +5020,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
 
                 // Initialize background and state
                 const initialValue = parseInt(slider.value);
-                console.log(� Initial ivalue for ${category}: ${initialValue});
+                console.log(`ℹ️ Initial value for ${category}: ${initialValue}`);
                 valueDisplay.textContent = initialValue;
                 updateSliderBackground(slider);
                 updateSliderItemState(sliderItem, valueDisplay, initialValue);
@@ -5023,11 +5031,11 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
 
         function updateSliderBackground(slider) {
             const value = (slider.value - slider.min) / (slider.max - slider.min) * 100;
-            const gradient = linear-gradient(to right, 
-                var(--primary-color) 0%, 
-                var(--primary-color) ${value}%, 
-                rgba(255, 255, 255, 0.8) ${value}%, 
-                rgba(255, 255, 255, 0.8) 100%);
+            const gradient = `linear-gradient(to right,
+                var(--primary-color) 0%,
+                var(--primary-color) ${value}%,
+                rgba(255, 255, 255, 0.8) ${value}%,
+                rgba(255, 255, 255, 0.8) 100%)`;
             slider.style.background = gradient;
         }
 
@@ -5063,7 +5071,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                 const allButtons = document.querySelectorAll('button');
                 console.log('🔍 All buttons found:', allButtons.length);
                 allButtons.forEach((btn, index) => {
-                    console.log(Button ${index}:, btn.id, btn.className, btn.textContent.substring(0, 20));
+                    console.log(`Button ${index}:`, btn.id, btn.className, btn.textContent.substring(0, 20));
                 });
             }
 
@@ -5102,7 +5110,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                 console.log('User preferences:', preferences);
 
                 // Fetch POIs
-                const response = await fetch(${apiBase}/pois);
+                const response = await fetch(`${apiBase}/pois`);
                 if (!response.ok) {
                     throw new Error('POI verisi alınamadı');
                 }
@@ -5131,13 +5139,13 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
 
             } catch (error) {
                 console.error('Recommendation error:', error);
-                resultsContainer.innerHTML = 
+                resultsContainer.innerHTML = `
                     <div class="no-results">
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Bir hata oluştu</h3>
                         <p>Öneriler alınırken bir sorun yaşandı. Lütfen tekrar deneyin.</p>
                     </div>
-                ;
+                `;
             } finally {
                 // Reset button state
                 button.disabled = false;
@@ -5240,13 +5248,13 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             const routeSection = document.getElementById('routeSection');
 
             if (recommendations.length === 0) {
-                container.innerHTML = 
+                container.innerHTML = `
                     <div class="no-results">
                         <i class="fas fa-search"></i>
                         <h3>Öneri bulunamadı</h3>
                         <p>Tercihlerinize uygun POI bulunamadı. Slider değerlerini değiştirerek tekrar deneyin.</p>
                     </div>
-                ;
+                `;
                 routeSection.style.display = 'none';
                 return;
             }
@@ -5254,7 +5262,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             // Show route section
             routeSection.style.display = 'block';
 
-            const html = recommendations.map((poi, index) => 
+            const html = recommendations.map((poi, index) => `
                 <div class="poi-card">
                     <div class="poi-header">
                         <div>
@@ -5264,16 +5272,16 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                         <div class="poi-score">${poi.recommendationScore}% Uygun</div>
                     </div>
                     
-                    ${poi.description ? <p class="text-muted">${poi.description}</p> : ''}
+                    ${poi.description ? `<p class="text-muted">${poi.description}</p>` : ''}
                     
                     <div class="poi-ratings">
                         ${Object.keys(ratingCategories).map(category => {
                 const rating = poi.ratings[category] || 0;
                 if (rating > 30) {
-                    return <span class="rating-badge high">
+                    return `<span class="rating-badge high">
                                     <i class="${ratingCategories[category].icon}"></i>
                                     ${ratingCategories[category].name}: ${rating}%
-                                </span>;
+                                </span>`;
                 }
                 return '';
             }).join('')}
@@ -5294,7 +5302,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                         </button>
                     </div>
                 </div>
-            ).join('');
+            `).join('');
 
             container.innerHTML = html;
         }
@@ -5328,17 +5336,17 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             }
 
             // Clear existing markers
-            markers.forEach(marker => marker.remove());
-            markers = [];
+                markers.forEach(marker => marker.remove());
+                markers = [];
 
-            // Add markers for recommendations
-            for (const [index, poi] of recommendations.entries()) {
-                const customIcon = createCustomIcon(poi.category, poi.recommendationScore);
-                const categoryStyle = categoryStyles[poi.category] || { color: '#667eea', icon: '📍' };
+                // Add markers for recommendations
+                for (const [index, poi] of recommendations.entries()) {
+                    const customIcon = createCustomIcon(poi.category, poi.recommendationScore);
+                    const categoryStyle = categoryStyles[poi.category] || { color: '#667eea', icon: '📍' };
 
-                // Load media and elevation data (with error handling)
-                let media = { images: [], videos: [], audio: [], models: [] };
-                let elevation = 0;
+                    // Load media and elevation data (with error handling)
+                    let media = { images: [], videos: [], audio: [], models: [] };
+                    let elevation = 0;
 
                 try {
                     media = await loadPOIMedia(poi.id || poi._id);
@@ -5357,6 +5365,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                 })
                     .addTo(map)
                     .bindPopup(
+                        `
                         <div style="min-width: 280px; max-width: 350px; font-family: 'Segoe UI', sans-serif;">
                             <div style="
                                 background: linear-gradient(135deg, ${categoryStyle.color} 0%, ${categoryStyle.color}dd 100%);
@@ -5386,7 +5395,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                                     ">
                                         ⭐ ${poi.recommendationScore}% Uygun
                                     </span>
-                                    ${elevation > 0 ? 
+                                    ${elevation > 0 ? `
                                         <span style="
                                             background: #3498db;
                                             color: white;
@@ -5397,17 +5406,17 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                                         ">
                                             🏔️ ${elevation}m
                                         </span>
-                                     : ''}
+                                    ` : ''}
                                 </div>
                                 
-                                ${poi.description ? 
+                                ${poi.description ? `
                                     <p style="
                                         margin: 8px 0 10px 0;
                                         font-size: 13px;
                                         line-height: 1.4;
                                         color: #555;
                                     ">${poi.description}</p>
-                                 : ''}
+                                ` : ''}
 
                                 ${createMediaGallery(media, poi)}
                                 
@@ -5437,12 +5446,12 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                                 ">
                                     📍 ${poi.latitude.toFixed(4)}, ${poi.longitude.toFixed(4)}
                                 </div>
+                                </div>
                             </div>
-                        </div>
-                    , {
-                        maxWidth: 400,
-                        className: 'custom-popup'
-                    });
+                        `, {
+                            maxWidth: 400,
+                            className: 'custom-popup'
+                        });
 
                 markers.push(marker);
             }
