@@ -2260,7 +2260,7 @@
                         const now = Date.now();
                         // Cache for 24 hours
                         if (now - cacheData.timestamp < 24 * 60 * 60 * 1000) {
-                            console.log(📦 Using cached elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${cacheData.elevation}m);
+                            console.log(`📦 Using cached elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${cacheData.elevation}m`);
                             return cacheData.elevation;
                         }
                     }
@@ -2447,7 +2447,7 @@
                             if (activeElements.length > 0) {
                                 const index = activeElements[0].index;
                                 const point = elevationData[index];
-                                console.log(Clicked on elevation point: ${point.name} at ${point.elevation}m);
+                                console.log(`Clicked on elevation point: ${point.name} at ${point.elevation}m`);
                                 
                                 // Optional: Highlight corresponding stop in the stops list
                                 const stopItems = document.querySelectorAll('.stop-item');
@@ -2575,7 +2575,7 @@
             }
 
             try {
-                const response = await fetch(${apiBase}/poi/${poiId}/media);
+                const response = await fetch(`${apiBase}/poi/${poiId}/media`);
                 if (response.ok) {
                     const apiData = await response.json();
 
@@ -3514,10 +3514,10 @@
                 if (response.ok) {
                     const data = await response.json();
                     const elevation = data.results[0]?.elevation || 0;
-                    console.log(🏔️ Real elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${elevation}m);
+                    console.log(`🏔️ Real elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${elevation}m`);
                     return Math.round(elevation);
                 }
-                throw new Error(API response not ok: ${response.status});
+                throw new Error(`API response not ok: ${response.status}`);
 
             } catch (error) {
                 console.warn('Elevation API failed, using estimated elevation:', error.message);
@@ -3528,7 +3528,7 @@
                 const variation = Math.random() * 200 - 100; // ±100m variation
                 const estimatedElevation = Math.round(baseElevation + variation);
 
-                console.log(📏 Estimated elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${estimatedElevation}m);
+                console.log(`📏 Estimated elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${estimatedElevation}m`);
                 return estimatedElevation;
             }
         }
@@ -3705,7 +3705,7 @@
                     lng: poi.longitude,
                     name: poi.name
                 });
-                console.log(📍 Added POI ${index + 1}: ${poi.name});
+                console.log(`📍 Added POI ${index + 1}: ${poi.name}`);
             });
 
             console.log('🗺️ Total waypoints:', waypoints.length);
@@ -3719,7 +3719,7 @@
                 console.log('🚶 Requesting walking route from API...');
 
                 // Call walking route API
-                const response = await fetch(${apiBase}/route/walking, {
+                const response = await fetch(`${apiBase}/route/walking`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -3730,7 +3730,7 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(Route API error: ${response.status});
+                    throw new Error(`Route API error: ${response.status}`);
                 }
 
                 const routeData = await response.json();
@@ -3814,10 +3814,10 @@
                 totalDistance += getDistance(latlngs[i][0], latlngs[i][1], latlngs[i + 1][0], latlngs[i + 1][1]);
             }
 
-            console.log(📏 Basit rota oluşturuldu: ${totalDistance.toFixed(2)} km (düz çizgi mesafesi));
+            console.log(`📏 Basit rota oluşturuldu: ${totalDistance.toFixed(2)} km (düz çizgi mesafesi)`);
 
             // Show notification
-            showNotification(📏 Basit rota oluşturuldu (${totalDistance.toFixed(2)} km düz çizgi mesafesi), 'info');
+            showNotification(`📏 Basit rota oluşturuldu (${totalDistance.toFixed(2)} km düz çizgi mesafesi)`, 'info');
         }
 
         // Show notification
@@ -4848,7 +4848,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                             bestRoute = newRoute;
                             bestDistance = newDistance;
                             improved = true;
-                            console.log(📈 İyileştirme bulundu! Yeni mesafe: ${bestDistance.toFixed(2)} km);
+                            console.log(`📈 İyileştirme bulundu! Yeni mesafe: ${bestDistance.toFixed(2)} km`);
                         }
                     }
                 }
@@ -4870,7 +4870,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             }, 1500); // 1.5 second delay for optimization
 
             const improvement = ((calculateTotalDistance(allPoints) - bestDistance) / calculateTotalDistance(allPoints) * 100);
-            showNotification(✅ Rota optimize edildi! ${iterations} iterasyon, ${bestDistance.toFixed(2)} km, %${improvement.toFixed(1)} iyileştirme, 'success');
+            showNotification(`✅ Rota optimize edildi! ${iterations} iterasyon, ${bestDistance.toFixed(2)} km, %${improvement.toFixed(1)} iyileştirme`, 'success');
         }
 
         // Calculate total distance of a route
@@ -4956,7 +4956,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             Object.keys(ratingCategories).forEach(category => {
                 const slider = document.getElementById(category);
                 const valueDisplay = document.getElementById(category + '-value');
-                console.log(Slider ${category}:, {
+                console.log(`Slider ${category}:`, {
                     slider: !!slider,
                     valueDisplay: !!valueDisplay,
                     sliderValue: slider ? slider.value : 'N/A',
@@ -4981,41 +4981,52 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                 const valueDisplay = document.getElementById(category + '-value');
 
                 if (!slider) {
-                    console.error(❌ Slider not found: ${category});
+                    console.error(`❌ Slider not found: ${category}`);
                     return;
                 }
 
                 if (!valueDisplay) {
-                    console.error(❌ Value display not found: ${category}-value);
+                    console.error(`❌ Value display not found: ${category}-value`);
                     return;
                 }
 
                 const sliderItem = slider.closest('.slider-item');
                 if (!sliderItem) {
-                    console.error(❌ Slider item not found for: ${category});
+                    console.error(`❌ Slider item not found for: ${category}`);
                     return;
                 }
 
-                console.log(✅ Setting up slider: ${category});
+                console.log(`✅ Setting up slider: ${category}`);
 
                 // Add both input and change events for better compatibility
                 const handleSliderChange = function () {
                     const value = parseInt(this.value);
-                    console.log(🎚️ Slider ${category} changed to: ${value});
+                    console.log(`🎚️ Slider ${category} changed to: ${value}`);
                     valueDisplay.textContent = value;
                     updateSliderBackground(this);
                     updateSliderItemState(sliderItem, valueDisplay, value);
                 };
 
+                // Remove any existing event listeners to prevent duplicates
+                slider.removeEventListener('input', handleSliderChange);
+                slider.removeEventListener('change', handleSliderChange);
+                
+                // Add new event listeners
                 slider.addEventListener('input', handleSliderChange);
                 slider.addEventListener('change', handleSliderChange);
 
                 // Initialize background and state
                 const initialValue = parseInt(slider.value);
-                console.log(� Initial ivalue for ${category}: ${initialValue});
+                console.log(`🎚️ Initial value for ${category}: ${initialValue}`);
                 valueDisplay.textContent = initialValue;
                 updateSliderBackground(slider);
                 updateSliderItemState(sliderItem, valueDisplay, initialValue);
+                
+                // Test the slider by triggering a change event
+                setTimeout(() => {
+                    const testEvent = new Event('input', { bubbles: true });
+                    slider.dispatchEvent(testEvent);
+                }, 100);
             });
 
             console.log('✅ All sliders initialized');
@@ -5023,11 +5034,11 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
 
         function updateSliderBackground(slider) {
             const value = (slider.value - slider.min) / (slider.max - slider.min) * 100;
-            const gradient = linear-gradient(to right, 
+            const gradient = `linear-gradient(to right, 
                 var(--primary-color) 0%, 
                 var(--primary-color) ${value}%, 
                 rgba(255, 255, 255, 0.8) ${value}%, 
-                rgba(255, 255, 255, 0.8) 100%);
+                rgba(255, 255, 255, 0.8) 100%)`;
             slider.style.background = gradient;
         }
 
@@ -5052,10 +5063,20 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             const recommendBtn = document.getElementById('recommendBtn');
             if (recommendBtn) {
                 console.log('✅ Recommend button found, adding event listener');
-                recommendBtn.addEventListener('click', function (e) {
-                    console.log('🔥 Recommend button clicked!');
-                    e.preventDefault();
-                    getRecommendations();
+                
+                // Remove any existing event listeners to prevent duplicates
+                recommendBtn.removeEventListener('click', handleRecommendClick);
+                
+                // Add new event listener
+                recommendBtn.addEventListener('click', handleRecommendClick);
+                
+                // Test the button by checking if it's clickable
+                console.log('🔍 Recommend button details:', {
+                    id: recommendBtn.id,
+                    className: recommendBtn.className,
+                    disabled: recommendBtn.disabled,
+                    textContent: recommendBtn.textContent.trim(),
+                    hasEventListener: true
                 });
             } else {
                 console.error('❌ Recommend button not found!');
@@ -5063,11 +5084,27 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                 const allButtons = document.querySelectorAll('button');
                 console.log('🔍 All buttons found:', allButtons.length);
                 allButtons.forEach((btn, index) => {
-                    console.log(Button ${index}:, btn.id, btn.className, btn.textContent.substring(0, 20));
+                    console.log(`Button ${index}:`, btn.id, btn.className, btn.textContent.substring(0, 20));
                 });
             }
 
             console.log('✅ Event listeners setup complete');
+        }
+
+        // Separate function for handling recommend button click
+        function handleRecommendClick(e) {
+            console.log('🔥 Recommend button clicked!');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Add visual feedback
+            const button = e.target;
+            button.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                button.style.transform = '';
+            }, 150);
+            
+            getRecommendations();
         }
 
         async function getRecommendations() {
@@ -5096,15 +5133,31 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                 // Get user preferences
                 const preferences = {};
                 Object.keys(ratingCategories).forEach(category => {
-                    preferences[category] = parseInt(document.getElementById(category).value);
+                    const slider = document.getElementById(category);
+                    if (slider) {
+                        preferences[category] = parseInt(slider.value);
+                        console.log(`🎚️ ${category}: ${preferences[category]}`);
+                    } else {
+                        console.error(`❌ Slider not found for ${category}`);
+                        preferences[category] = 0;
+                    }
                 });
 
                 console.log('User preferences:', preferences);
 
+                // Check if any preferences are set
+                const totalPreference = Object.values(preferences).reduce((sum, val) => sum + val, 0);
+                if (totalPreference === 0) {
+                    console.warn('⚠️ No preferences set, all sliders are at 0');
+                    showNotification('⚠️ Lütfen en az bir kategori için tercih belirtin', 'error');
+                    return;
+                }
+
                 // Fetch POIs
-                const response = await fetch(${apiBase}/pois);
+                console.log('🌐 Fetching POIs from API...');
+                const response = await fetch(`${apiBase}/pois`);
                 if (!response.ok) {
-                    throw new Error('POI verisi alınamadı');
+                    throw new Error(`POI verisi alınamadı: ${response.status} ${response.statusText}`);
                 }
 
                 const poisData = await response.json();
@@ -5132,12 +5185,14 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             } catch (error) {
                 console.error('Recommendation error:', error);
                 resultsContainer.innerHTML = 
-                    <div class="no-results">
+                    `<div class="no-results">
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Bir hata oluştu</h3>
-                        <p>Öneriler alınırken bir sorun yaşandı. Lütfen tekrar deneyin.</p>
-                    </div>
-                ;
+                        <p>Öneriler alınırken bir sorun yaşandı: ${error.message}</p>
+                        <button onclick="getRecommendations()" style="background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; margin-top: 15px; cursor: pointer;">
+                            🔄 Tekrar Dene
+                        </button>
+                    </div>`;
             } finally {
                 // Reset button state
                 button.disabled = false;
