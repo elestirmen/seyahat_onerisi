@@ -2174,6 +2174,15 @@ def serve_poi_image(filename):
     except FileNotFoundError:
         return jsonify({'error': 'Image not found'}), 404
 
+# Test verilerini doğrudan sunmak için endpoint
+@app.route('/test_data.json')
+def serve_test_data():
+    """Return sample POI data used in fallback mode"""
+    try:
+        return send_from_directory('.', JSON_FILE_PATH)
+    except FileNotFoundError:
+        return jsonify({'error': 'File not found'}), 404
+
 # Statik HTML dosyalarını serve et
 @app.route('/<filename>')
 def serve_static_html(filename):
