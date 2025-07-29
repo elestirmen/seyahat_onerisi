@@ -1936,22 +1936,47 @@
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-
+        document.addEventListener('DOMContentLoaded', () => {
+            const sliders = document.querySelectorAll('input[type="range"]');
             sliders.forEach(slider => {
-                const valueDisplay = document.getElementById(slider.id + "-value");
+                const valueDisplay = document.getElementById(`${slider.id}-value`);
+
                 const update = () => {
                     if (valueDisplay) {
                         valueDisplay.textContent = slider.value;
                     }
                 };
-                slider.addEventListener("input", update);
+                slider.addEventListener('input', update);
                 update();
             });
-            const btn = document.getElementById("recommendBtn");
-            if (btn) {
-                btn.addEventListener("click", () => {
-                    alert("Buton çalışıyor! Öneriler hazırlanıyor...");
+
+            const button = document.getElementById('recommendBtn');
+            const loading = document.getElementById('loadingIndicator');
+            const results = document.getElementById('recommendationResults');
+
+            if (button) {
+                button.addEventListener('click', async () => {
+                    if (loading) loading.style.display = 'block';
+                    if (results) results.innerHTML = '';
+
+                    try {
+                        const res = await fetch('test_data.json');
+                        const data = await res.json();
+                        const pois = [];
+                        Object.values(data).forEach(arr => {
+                            if (Array.isArray(arr)) pois.push(...arr);
+                        });
+                        const items = pois.slice(0, 5).map(p =>
+                            `<div class="poi-card"><h4 class="poi-name">${p.name}</h4>` +
+                            `<div class="poi-score">${p.category}</div></div>`
+                        ).join('');
+                        if (results) results.innerHTML = items || '<p>Öneri bulunamadı.</p>';
+                    } catch (err) {
+                        if (results) results.textContent = 'Öneriler alınamadı.';
+                    } finally {
+                        if (loading) loading.style.display = 'none';
+                    }
+
                 });
             }
         });
