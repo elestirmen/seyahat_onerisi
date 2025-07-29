@@ -855,8 +855,9 @@
         }
 
         .elevation-section canvas {
-            width: 100%;
-            height: 150px;
+            width: 100% !important;
+            height: 120px !important;
+            max-height: 120px !important;
             margin: 10px 0;
             border-radius: 8px;
             background: #f8f9fa;
@@ -909,11 +910,43 @@
             font-size: 1rem;
             font-weight: 600;
             color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stops-count {
+            background: var(--primary-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
         }
 
         .stops-list {
-            max-height: 300px;
+            max-height: 280px;
             overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #ccc transparent;
+        }
+
+        .stops-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .stops-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .stops-list::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        .stops-list::-webkit-scrollbar-thumb:hover {
+            background: #999;
         }
 
         .stop-item {
@@ -922,13 +955,16 @@
             padding: 12px;
             border-bottom: 1px solid #f0f0f0;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.3s ease;
             border-radius: 8px;
             margin-bottom: 4px;
+            position: relative;
         }
 
         .stop-item:hover {
             background: #f8f9fa;
+            transform: translateX(2px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .stop-item:last-child {
@@ -938,21 +974,23 @@
         .stop-item.highlighted {
             background: rgba(66, 133, 244, 0.1);
             border-left: 3px solid #4285f4;
-            transform: translateX(2px);
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.2);
         }
 
         .stop-icon {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background: var(--primary-color);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.9rem;
+            font-size: 1rem;
             margin-right: 12px;
             flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .stop-info {
@@ -962,13 +1000,37 @@
         .stop-name {
             font-weight: 600;
             color: var(--text-color);
-            font-size: 0.9rem;
-            margin-bottom: 2px;
+            font-size: 0.95rem;
+            margin-bottom: 3px;
+            line-height: 1.2;
         }
 
         .stop-category {
             font-size: 0.8rem;
             color: #666;
+            margin-bottom: 2px;
+        }
+
+        .stop-coordinates {
+            font-size: 0.7rem;
+            color: #999;
+            font-family: monospace;
+        }
+
+        .stop-number {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.1);
+            color: #666;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
         }
 
         .export-section {
@@ -1003,6 +1065,7 @@
                 opacity: 0;
                 transform: translateX(100%);
             }
+
             to {
                 opacity: 1;
                 transform: translateX(0);
@@ -1887,7 +1950,7 @@
             <h3>Rota Detayları</h3>
             <button class="close-btn" onclick="RouteDetailsPanel.hide()">×</button>
         </div>
-        
+
         <div class="route-summary">
             <div class="summary-item">
                 <i class="fas fa-route"></i>
@@ -1906,10 +1969,12 @@
                 <span id="routeType">--</span>
             </div>
         </div>
-        
+
         <div class="elevation-section" id="elevationSection">
             <h4>Yükseklik Profili</h4>
-            <canvas id="elevationChart" width="300" height="150"></canvas>
+            <div style="height: 120px; position: relative; background: #f8f9fa; border-radius: 8px; overflow: hidden;">
+                <canvas id="elevationChart" width="300" height="120"></canvas>
+            </div>
             <div class="elevation-stats">
                 <span id="minElevation">Min: --m</span>
                 <span id="maxElevation">Max: --m</span>
@@ -1917,14 +1982,17 @@
                 <span id="totalDescent">↘ --m</span>
             </div>
         </div>
-        
+
         <div class="stops-section">
-            <h4>Duraklar</h4>
+            <h4>
+                Duraklar
+                <span class="stops-count" id="stopsCount">0</span>
+            </h4>
             <div class="stops-list" id="stopsList">
                 <!-- Durak listesi buraya dinamik olarak eklenecek -->
             </div>
         </div>
-        
+
         <div class="export-section">
             <button class="export-btn google-maps" onclick="RouteDetailsPanel.exportToGoogleMaps()">
                 <i class="fab fa-google"></i>
@@ -1996,33 +2064,33 @@
 
             show(routeData) {
                 console.log('🎯 Showing route details panel with data:', routeData);
-                
+
                 this.currentRoute = routeData;
                 this.updateSummary(routeData);
                 this.updateStopsList(routeData);
                 this.loadElevationProfile(routeData);
-                
+
                 this.panel.classList.add('show');
                 this.isVisible = true;
-                
+
                 // Store bound functions for proper removal
                 this.boundKeydownHandler = this.handleKeydown.bind(this);
                 this.boundClickOutsideHandler = this.handleClickOutside.bind(this);
-                
+
                 // Add keyboard event listener for Escape key
                 document.addEventListener('keydown', this.boundKeydownHandler);
-                
+
                 // Add click outside to close
                 document.addEventListener('click', this.boundClickOutsideHandler);
             }
 
             hide() {
                 console.log('🎯 Hiding route details panel');
-                
+
                 this.panel.classList.remove('show');
                 this.isVisible = false;
                 this.currentRoute = null;
-                
+
                 // Remove event listeners
                 if (this.boundKeydownHandler) {
                     document.removeEventListener('keydown', this.boundKeydownHandler);
@@ -2032,7 +2100,7 @@
                     document.removeEventListener('click', this.boundClickOutsideHandler);
                     this.boundClickOutsideHandler = null;
                 }
-                
+
                 // Destroy chart if exists
                 if (this.elevationChart) {
                     this.elevationChart.destroy();
@@ -2070,44 +2138,72 @@
             updateStopsList(routeData) {
                 const stopsList = document.getElementById('stopsList');
                 let stopsHTML = '';
+                let stopIndex = 1;
 
                 // Add start location if exists
                 if (startLocation) {
                     stopsHTML += `
                         <div class="stop-item" onclick="RouteDetailsPanel.highlightStop(${startLocation.latitude}, ${startLocation.longitude})">
                             <div class="stop-icon" style="background: #28a745;">
-                                📍
+                                🏁
                             </div>
                             <div class="stop-info">
                                 <div class="stop-name">${startLocation.name || 'Başlangıç Noktası'}</div>
-                                <div class="stop-category">Başlangıç</div>
+                                <div class="stop-category">Başlangıç Noktası</div>
+                                <div class="stop-coordinates">${startLocation.latitude.toFixed(4)}, ${startLocation.longitude.toFixed(4)}</div>
                             </div>
+                            <div class="stop-number">${stopIndex}</div>
                         </div>
                     `;
+                    stopIndex++;
                 }
 
-                // Add POI stops
-                selectedPOIs.forEach((poi, index) => {
+                // Add all POI stops from routeData waypoints or selectedPOIs
+                const waypoints = routeData.waypoints || selectedPOIs;
+                waypoints.forEach((poi, index) => {
                     const categoryStyle = categoryStyles[poi.category] || { color: '#667eea', icon: '📍' };
+                    const lat = poi.lat || poi.latitude;
+                    const lng = poi.lng || poi.longitude;
+
                     stopsHTML += `
-                        <div class="stop-item" onclick="RouteDetailsPanel.highlightStop(${poi.latitude}, ${poi.longitude})">
+                        <div class="stop-item" onclick="RouteDetailsPanel.highlightStop(${lat}, ${lng})">
                             <div class="stop-icon" style="background: ${categoryStyle.color};">
                                 ${categoryStyle.icon}
                             </div>
                             <div class="stop-info">
                                 <div class="stop-name">${poi.name}</div>
                                 <div class="stop-category">${categoryNames[poi.category] || poi.category}</div>
+                                <div class="stop-coordinates">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
                             </div>
+                            <div class="stop-number">${stopIndex}</div>
                         </div>
                     `;
+                    stopIndex++;
                 });
 
+                // If no waypoints in routeData, show message
+                if (waypoints.length === 0 && !startLocation) {
+                    stopsHTML = `
+                        <div style="text-align: center; padding: 20px; color: #666; font-style: italic;">
+                            <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                            <p>Henüz durak eklenmemiş</p>
+                        </div>
+                    `;
+                }
+
                 stopsList.innerHTML = stopsHTML;
+
+                // Update stops counter
+                const totalStops = (startLocation ? 1 : 0) + waypoints.length;
+                const stopsCounter = document.getElementById('stopsCount');
+                if (stopsCounter) {
+                    stopsCounter.textContent = totalStops;
+                }
             }
 
             static highlightStop(lat, lng) {
                 console.log('🎯 Highlighting stop at:', lat, lng);
-                
+
                 // Find and highlight the marker
                 markers.forEach(marker => {
                     const markerLatLng = marker.getLatLng();
@@ -2115,13 +2211,13 @@
                         // Center map on marker and open popup
                         map.setView([lat, lng], 16);
                         marker.openPopup();
-                        
+
                         // Add temporary highlight effect
                         const markerElement = marker.getElement();
                         if (markerElement) {
                             markerElement.style.transform += ' scale(1.2)';
                             markerElement.style.transition = 'transform 0.3s ease';
-                            
+
                             setTimeout(() => {
                                 markerElement.style.transform = markerElement.style.transform.replace(' scale(1.2)', '');
                             }, 1000);
@@ -2134,19 +2230,19 @@
                 try {
                     // Show loading state
                     this.showElevationLoading();
-                    
+
                     // Collect elevation data for all waypoints
                     const elevationData = await this.collectElevationData(routeData);
-                    
+
                     // Calculate statistics
                     const stats = this.calculateElevationStats(elevationData);
-                    
+
                     // Update statistics display
                     this.updateElevationStats(stats);
-                    
+
                     // Create interactive chart
                     this.createElevationChart(elevationData);
-                    
+
                 } catch (error) {
                     console.error('Error loading elevation profile:', error);
                     this.showElevationError();
@@ -2165,13 +2261,13 @@
                 document.getElementById('maxElevation').textContent = 'Max: Hata';
                 document.getElementById('totalAscent').textContent = '↗ Hata';
                 document.getElementById('totalDescent').textContent = '↘ Hata';
-                
+
                 // Show error chart
                 const ctx = document.getElementById('elevationChart').getContext('2d');
                 if (this.elevationChart) {
                     this.elevationChart.destroy();
                 }
-                
+
                 this.elevationChart = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -2213,7 +2309,7 @@
                     for (let i = 0; i < routeData.waypoints.length; i++) {
                         const poi = routeData.waypoints[i];
                         const prevPoint = i === 0 ? routeData.start : routeData.waypoints[i - 1];
-                        
+
                         if (prevPoint) {
                             const segmentDistance = this.calculateDistance(
                                 prevPoint.lat || prevPoint.latitude,
@@ -2251,7 +2347,7 @@
 
             async getElevationWithCache(lat, lng) {
                 const cacheKey = `elevation_${lat.toFixed(4)}_${lng.toFixed(4)}`;
-                
+
                 // Check localStorage cache first
                 try {
                     const cached = localStorage.getItem(cacheKey);
@@ -2270,7 +2366,7 @@
 
                 // Get fresh elevation data
                 const elevation = await getElevation(lat, lng);
-                
+
                 // Cache the result
                 try {
                     localStorage.setItem(cacheKey, JSON.stringify({
@@ -2346,10 +2442,17 @@
 
             createElevationChart(elevationData) {
                 const ctx = document.getElementById('elevationChart').getContext('2d');
-                
+
                 if (this.elevationChart) {
                     this.elevationChart.destroy();
                 }
+
+                // Set fixed canvas dimensions
+                const canvas = document.getElementById('elevationChart');
+                canvas.width = 300;
+                canvas.height = 120;
+                canvas.style.width = '100%';
+                canvas.style.height = '120px';
 
                 // Prepare chart data
                 const labels = elevationData.map(d => {
@@ -2374,28 +2477,36 @@
                             pointBackgroundColor: '#4285f4',
                             pointBorderColor: '#ffffff',
                             pointBorderWidth: 2,
-                            pointRadius: 5,
-                            pointHoverRadius: 8
+                            pointRadius: 4,
+                            pointHoverRadius: 6
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        layout: {
+                            padding: {
+                                top: 10,
+                                bottom: 10,
+                                left: 10,
+                                right: 10
+                            }
+                        },
                         interaction: {
                             intersect: false,
                             mode: 'index'
                         },
                         plugins: {
-                            legend: { 
-                                display: false 
+                            legend: {
+                                display: false
                             },
                             tooltip: {
                                 callbacks: {
-                                    title: function(context) {
+                                    title: function (context) {
                                         const index = context[0].dataIndex;
                                         return names[index] || `Nokta ${index + 1}`;
                                     },
-                                    label: function(context) {
+                                    label: function (context) {
                                         const elevation = context.parsed.y;
                                         const distance = elevationData[context.dataIndex].distance;
                                         return [
@@ -2408,7 +2519,9 @@
                                 titleColor: '#ffffff',
                                 bodyColor: '#ffffff',
                                 borderColor: '#4285f4',
-                                borderWidth: 1
+                                borderWidth: 1,
+                                titleFont: { size: 11 },
+                                bodyFont: { size: 10 }
                             }
                         },
                         scales: {
@@ -2416,27 +2529,33 @@
                                 title: {
                                     display: true,
                                     text: 'Yükseklik (m)',
-                                    color: '#666'
-                                },
-                                grid: {
-                                    color: 'rgba(0, 0, 0, 0.1)'
-                                },
-                                ticks: {
-                                    color: '#666'
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Mesafe',
-                                    color: '#666'
+                                    color: '#666',
+                                    font: { size: 10 }
                                 },
                                 grid: {
                                     color: 'rgba(0, 0, 0, 0.1)'
                                 },
                                 ticks: {
                                     color: '#666',
-                                    maxRotation: 45
+                                    font: { size: 9 },
+                                    maxTicksLimit: 5
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Mesafe',
+                                    color: '#666',
+                                    font: { size: 10 }
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#666',
+                                    font: { size: 9 },
+                                    maxRotation: 45,
+                                    maxTicksLimit: 6
                                 }
                             }
                         },
@@ -2448,12 +2567,21 @@
                                 const index = activeElements[0].index;
                                 const point = elevationData[index];
                                 console.log(`Clicked on elevation point: ${point.name} at ${point.elevation}m`);
-                                
-                                // Optional: Highlight corresponding stop in the stops list
+
+                                // Highlight corresponding stop in the stops list
                                 const stopItems = document.querySelectorAll('.stop-item');
                                 stopItems.forEach((item, i) => {
                                     item.classList.toggle('highlighted', i === index);
                                 });
+
+                                // Scroll to highlighted stop
+                                const highlightedStop = document.querySelector('.stop-item.highlighted');
+                                if (highlightedStop) {
+                                    highlightedStop.scrollIntoView({
+                                        behavior: 'smooth',
+                                        block: 'center'
+                                    });
+                                }
                             }
                         }
                     }
@@ -2495,18 +2623,18 @@
                 const intermediateWaypoints = waypoints.slice(1, -1);
 
                 let url = `https://www.google.com/maps/dir/${origin}`;
-                
+
                 // Add intermediate waypoints
                 intermediateWaypoints.forEach(waypoint => {
                     url += `/${waypoint}`;
                 });
-                
+
                 // Add destination
                 url += `/${destination}`;
 
                 // Open in new tab
                 window.open(url, '_blank');
-                
+
                 showNotification('✅ Google Maps\'te açılıyor...', 'success');
             }
 
@@ -3106,8 +3234,8 @@
                 console.warn('⚠️ Page not served over HTTPS - geolocation may not work');
 
                 // Show a subtle warning
-            const warning = document.createElement('div');
-            warning.style.cssText = `
+                const warning = document.createElement('div');
+                warning.style.cssText = `
                 position: fixed;
                 top: 20px;
                 right: 20px;
@@ -3122,7 +3250,7 @@
                 font-family: 'Segoe UI', sans-serif;
             `;
 
-            warning.innerHTML = `
+                warning.innerHTML = `
                 <div style="display: flex; align-items: center; margin-bottom: 8px;">
                     <span style="font-size: 1.2rem; margin-right: 8px;">🔒</span>
                     <strong>Güvenlik Uyarısı</strong>
@@ -3790,16 +3918,16 @@
             );
 
             // Add route details panel click event
-            window.simpleRouteLayer.on('click', function(e) {
+            window.simpleRouteLayer.on('click', function (e) {
                 // Prevent popup from opening
                 e.originalEvent.stopPropagation();
-                
+
                 // Calculate total distance
                 let totalDistance = 0;
                 for (let i = 0; i < latlngs.length - 1; i++) {
                     totalDistance += getDistance(latlngs[i][0], latlngs[i][1], latlngs[i + 1][0], latlngs[i + 1][1]);
                 }
-                
+
                 // Show route details panel
                 RouteDetailsPanel.show({
                     total_distance: totalDistance.toFixed(2),
@@ -3932,10 +4060,10 @@
                 polyline.bindPopup(routePopup);
 
                 // Add route details panel click event
-                polyline.on('click', function(e) {
+                polyline.on('click', function (e) {
                     // Prevent popup from opening
                     e.originalEvent.stopPropagation();
-                    
+
                     // Show route details panel
                     RouteDetailsPanel.show({
                         total_distance: routeInfo.total_distance,
@@ -3955,7 +4083,7 @@
                     })
                         .setLatLng(midpoint)
                         .setContent(
-                        `
+                            `
                         <div style="text-align: center; font-size: 12px; font-family: 'Segoe UI', sans-serif;">
                             <strong>${segment.from} → ${segment.to}</strong><br>
                             📏 ${segment.distance.toFixed(2)} km<br>
@@ -3964,7 +4092,7 @@
                             <br><small style="color: #888;">Detaylar için tıklayın</small>
                         </div>
                         `
-                    );
+                        );
 
                     polyline.on('mouseover', function () {
                         if (!map.hasLayer(routePopup)) {
@@ -4077,7 +4205,7 @@
                 }
 
                 if (selectedWaypoints.length > 0) {
-                waypoints = '&waypoints=' + selectedWaypoints.map(coord => `${coord.lat},${coord.lng}`).join('|');
+                    waypoints = '&waypoints=' + selectedWaypoints.map(coord => `${coord.lat},${coord.lng}`).join('|');
                 }
             }
 
@@ -4382,7 +4510,7 @@
                     </div>
                 </div>
                 `,
-            'error', 10000);
+                'error', 10000);
 
             if (window.locationPermissionReject) {
                 window.locationPermissionReject(new Error('Tarayıcı konum izni reddedilmiş'));
@@ -5336,17 +5464,17 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             }
 
             // Clear existing markers
-                markers.forEach(marker => marker.remove());
-                markers = [];
+            markers.forEach(marker => marker.remove());
+            markers = [];
 
-                // Add markers for recommendations
-                for (const [index, poi] of recommendations.entries()) {
-                    const customIcon = createCustomIcon(poi.category, poi.recommendationScore);
-                    const categoryStyle = categoryStyles[poi.category] || { color: '#667eea', icon: '📍' };
+            // Add markers for recommendations
+            for (const [index, poi] of recommendations.entries()) {
+                const customIcon = createCustomIcon(poi.category, poi.recommendationScore);
+                const categoryStyle = categoryStyles[poi.category] || { color: '#667eea', icon: '📍' };
 
-                    // Load media and elevation data (with error handling)
-                    let media = { images: [], videos: [], audio: [], models: [] };
-                    let elevation = 0;
+                // Load media and elevation data (with error handling)
+                let media = { images: [], videos: [], audio: [], models: [] };
+                let elevation = 0;
 
                 try {
                     media = await loadPOIMedia(poi.id || poi._id);
@@ -5449,9 +5577,9 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                                 </div>
                             </div>
                         `, {
-                            maxWidth: 400,
-                            className: 'custom-popup'
-                        });
+                        maxWidth: 400,
+                        className: 'custom-popup'
+                    });
 
                 markers.push(marker);
             }
