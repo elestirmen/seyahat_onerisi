@@ -1940,6 +1940,7 @@
             const sliders = document.querySelectorAll('input[type="range"]');
             sliders.forEach(slider => {
                 const valueDisplay = document.getElementById(`${slider.id}-value`);
+
                 const update = () => {
                     if (valueDisplay) {
                         valueDisplay.textContent = slider.value;
@@ -1975,6 +1976,7 @@
                     } finally {
                         if (loading) loading.style.display = 'none';
                     }
+
                 });
             }
         });
