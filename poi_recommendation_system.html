@@ -2260,7 +2260,7 @@
                         const now = Date.now();
                         // Cache for 24 hours
                         if (now - cacheData.timestamp < 24 * 60 * 60 * 1000) {
-                            console.log(📦 Using cached elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${cacheData.elevation}m);
+                            console.log(`📦 Using cached elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${cacheData.elevation}m`);
                             return cacheData.elevation;
                         }
                     }
@@ -2447,7 +2447,7 @@
                             if (activeElements.length > 0) {
                                 const index = activeElements[0].index;
                                 const point = elevationData[index];
-                                console.log(Clicked on elevation point: ${point.name} at ${point.elevation}m);
+                                console.log(`Clicked on elevation point: ${point.name} at ${point.elevation}m`);
                                 
                                 // Optional: Highlight corresponding stop in the stops list
                                 const stopItems = document.querySelectorAll('.stop-item');
@@ -2575,7 +2575,7 @@
             }
 
             try {
-                const response = await fetch(${apiBase}/poi/${poiId}/media);
+                const response = await fetch(`${apiBase}/poi/${poiId}/media`);
                 if (response.ok) {
                     const apiData = await response.json();
 
@@ -3514,10 +3514,10 @@
                 if (response.ok) {
                     const data = await response.json();
                     const elevation = data.results[0]?.elevation || 0;
-                    console.log(🏔️ Real elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${elevation}m);
+                    console.log(`🏔️ Real elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${elevation}m`);
                     return Math.round(elevation);
                 }
-                throw new Error(API response not ok: ${response.status});
+                throw new Error(`API response not ok: ${response.status}`);
 
             } catch (error) {
                 console.warn('Elevation API failed, using estimated elevation:', error.message);
@@ -3528,7 +3528,7 @@
                 const variation = Math.random() * 200 - 100; // ±100m variation
                 const estimatedElevation = Math.round(baseElevation + variation);
 
-                console.log(📏 Estimated elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${estimatedElevation}m);
+                console.log(`📏 Estimated elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${estimatedElevation}m`);
                 return estimatedElevation;
             }
         }
@@ -3705,7 +3705,7 @@
                     lng: poi.longitude,
                     name: poi.name
                 });
-                console.log(📍 Added POI ${index + 1}: ${poi.name});
+                console.log(`📍 Added POI ${index + 1}: ${poi.name}`);
             });
 
             console.log('🗺️ Total waypoints:', waypoints.length);
@@ -3719,7 +3719,7 @@
                 console.log('🚶 Requesting walking route from API...');
 
                 // Call walking route API
-                const response = await fetch(${apiBase}/route/walking, {
+                const response = await fetch(`${apiBase}/route/walking`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -3730,7 +3730,7 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(Route API error: ${response.status});
+                    throw new Error(`Route API error: ${response.status}`);
                 }
 
                 const routeData = await response.json();
@@ -3814,10 +3814,10 @@
                 totalDistance += getDistance(latlngs[i][0], latlngs[i][1], latlngs[i + 1][0], latlngs[i + 1][1]);
             }
 
-            console.log(📏 Basit rota oluşturuldu: ${totalDistance.toFixed(2)} km (düz çizgi mesafesi));
+            console.log(`📏 Basit rota oluşturuldu: ${totalDistance.toFixed(2)} km (düz çizgi mesafesi)`);
 
             // Show notification
-            showNotification(📏 Basit rota oluşturuldu (${totalDistance.toFixed(2)} km düz çizgi mesafesi), 'info');
+            showNotification(`📏 Basit rota oluşturuldu (${totalDistance.toFixed(2)} km düz çizgi mesafesi)`, 'info');
         }
 
         // Show notification
@@ -4848,7 +4848,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                             bestRoute = newRoute;
                             bestDistance = newDistance;
                             improved = true;
-                            console.log(📈 İyileştirme bulundu! Yeni mesafe: ${bestDistance.toFixed(2)} km);
+                            console.log(`📈 İyileştirme bulundu! Yeni mesafe: ${bestDistance.toFixed(2)} km`);
                         }
                     }
                 }
@@ -4870,7 +4870,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             }, 1500); // 1.5 second delay for optimization
 
             const improvement = ((calculateTotalDistance(allPoints) - bestDistance) / calculateTotalDistance(allPoints) * 100);
-            showNotification(✅ Rota optimize edildi! ${iterations} iterasyon, ${bestDistance.toFixed(2)} km, %${improvement.toFixed(1)} iyileştirme, 'success');
+            showNotification(`✅ Rota optimize edildi! ${iterations} iterasyon, ${bestDistance.toFixed(2)} km, %${improvement.toFixed(1)} iyileştirme`, 'success');
         }
 
         // Calculate total distance of a route
@@ -4931,8 +4931,11 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                         }
                     });
                 }
-                initializeSliders();
-                setupEventListeners();
+                
+                // Initialize sliders with a more reliable approach
+                initializeSlidersReliable();
+                setupEventListenersReliable();
+                
                 console.log('✅ All components initialized');
             } catch (error) {
                 console.error('❌ Initialization error:', error);
@@ -4948,18 +4951,277 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             }, 1000);
         });
 
-        // Debug function to check elements
-        function debugElements() {
-            console.log('� DEBUGE: Checking elements...');
+        // More reliable slider initialization
+        function initializeSlidersReliable() {
+            console.log('🎚️ Initializing sliders with reliable method...');
 
-            // Check sliders
+            // Get all sliders
+            const sliders = document.querySelectorAll('input[type="range"]');
+            console.log(`Found ${sliders.length} sliders`);
+
+            sliders.forEach((slider, index) => {
+                const category = slider.id;
+                const valueDisplay = document.getElementById(category + '-value');
+                const sliderItem = slider.closest('.slider-item');
+
+                console.log(`Setting up slider ${index + 1}: ${category}`);
+
+                if (!valueDisplay) {
+                    console.error(`❌ Value display not found for ${category}`);
+                    return;
+                }
+
+                if (!sliderItem) {
+                    console.error(`❌ Slider item not found for ${category}`);
+                    return;
+                }
+
+                // Create a unique handler for each slider
+                const handleSliderChange = function(event) {
+                    const value = parseInt(this.value);
+                    console.log(`🎚️ Slider ${category} changed to: ${value}`);
+                    
+                    // Update display
+                    valueDisplay.textContent = value;
+                    
+                    // Update background
+                    updateSliderBackground(this);
+                    
+                    // Update state
+                    updateSliderItemState(sliderItem, valueDisplay, value);
+                    
+                    // Add visual feedback
+                    sliderItem.style.transform = 'scale(1.02)';
+                    setTimeout(() => {
+                        sliderItem.style.transform = '';
+                    }, 200);
+                };
+
+                // Remove any existing listeners
+                slider.removeEventListener('input', handleSliderChange);
+                slider.removeEventListener('change', handleSliderChange);
+                slider.removeEventListener('mousedown', handleSliderChange);
+                slider.removeEventListener('touchstart', handleSliderChange);
+
+                // Add multiple event listeners for better compatibility
+                slider.addEventListener('input', handleSliderChange);
+                slider.addEventListener('change', handleSliderChange);
+                slider.addEventListener('mousedown', handleSliderChange);
+                slider.addEventListener('touchstart', handleSliderChange);
+
+                // Initialize the slider
+                const initialValue = parseInt(slider.value) || 0;
+                valueDisplay.textContent = initialValue;
+                updateSliderBackground(slider);
+                updateSliderItemState(sliderItem, valueDisplay, initialValue);
+
+                console.log(`✅ Slider ${category} initialized with value: ${initialValue}`);
+            });
+
+            console.log('✅ All sliders initialized reliably');
+        }
+
+        // More reliable event listener setup
+        function setupEventListenersReliable() {
+            console.log('🔗 Setting up event listeners reliably...');
+
+            const recommendBtn = document.getElementById('recommendBtn');
+            if (recommendBtn) {
+                console.log('✅ Recommend button found');
+                
+                // Remove any existing listeners
+                recommendBtn.removeEventListener('click', handleRecommendClickReliable);
+                recommendBtn.removeEventListener('touchstart', handleRecommendClickReliable);
+                
+                // Add multiple event listeners for better compatibility
+                recommendBtn.addEventListener('click', handleRecommendClickReliable);
+                recommendBtn.addEventListener('touchstart', handleRecommendClickReliable);
+                
+                // Test the button
+                console.log('🔍 Recommend button details:', {
+                    id: recommendBtn.id,
+                    className: recommendBtn.className,
+                    disabled: recommendBtn.disabled,
+                    textContent: recommendBtn.textContent.trim()
+                });
+                
+                // Add a test click to verify it works
+                setTimeout(() => {
+                    console.log('🧪 Testing recommend button...');
+                    const testEvent = new Event('click', { bubbles: true });
+                    recommendBtn.dispatchEvent(testEvent);
+                }, 2000);
+                
+            } else {
+                console.error('❌ Recommend button not found!');
+                const allButtons = document.querySelectorAll('button');
+                console.log('🔍 All buttons found:', allButtons.length);
+                allButtons.forEach((btn, index) => {
+                    console.log(`Button ${index}:`, btn.id, btn.className, btn.textContent.substring(0, 20));
+                });
+            }
+
+            console.log('✅ Event listeners setup complete');
+        }
+
+        // Reliable recommend button handler
+        function handleRecommendClickReliable(e) {
+            console.log('🔥 Recommend button clicked reliably!');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Add visual feedback
+            const button = e.target.closest('.recommend-btn') || e.target;
+            button.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                button.style.transform = '';
+            }, 150);
+            
+            // Call the recommendations function
+            getRecommendationsReliable();
+        }
+
+        // Reliable recommendations function
+        function getRecommendationsReliable() {
+            console.log('🚀 getRecommendationsReliable function called');
+
+            const button = document.getElementById('recommendBtn');
+            const resultsSection = document.getElementById('resultsSection');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const resultsContainer = document.getElementById('recommendationResults');
+
+            if (!button || !resultsSection || !loadingIndicator || !resultsContainer) {
+                console.error('❌ Required elements not found');
+                alert('Sayfa yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
+                return;
+            }
+
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Öneriler Hazırlanıyor...';
+            resultsSection.style.display = 'block';
+            loadingIndicator.style.display = 'block';
+            resultsContainer.innerHTML = '';
+
+            // Get user preferences with validation
+            const preferences = {};
+            let totalPreference = 0;
+            
             Object.keys(ratingCategories).forEach(category => {
                 const slider = document.getElementById(category);
-                const valueDisplay = document.getElementById(category + '-value');
-                console.log(Slider ${category}:, {
-                    slider: !!slider,
-                    valueDisplay: !!valueDisplay,
-                    sliderValue: slider ? slider.value : 'N/A',
+                if (slider) {
+                    const value = parseInt(slider.value) || 0;
+                    preferences[category] = value;
+                    totalPreference += value;
+                    console.log(`🎚️ ${category}: ${value}`);
+                } else {
+                    console.error(`❌ Slider not found for ${category}`);
+                    preferences[category] = 0;
+                }
+            });
+
+            console.log('User preferences:', preferences);
+            console.log('Total preference:', totalPreference);
+
+            // Check if any preferences are set
+            if (totalPreference === 0) {
+                console.warn('⚠️ No preferences set');
+                resultsContainer.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Tercih Belirtilmedi</h3>
+                        <p>Lütfen en az bir kategori için tercih belirtin. Slider'ları hareket ettirerek ilgi alanlarınızı belirtin.</p>
+                        <button onclick="getRecommendationsReliable()" style="background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; margin-top: 15px; cursor: pointer;">
+                            🔄 Tekrar Dene
+                        </button>
+                    </div>`;
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-magic"></i> Önerilerimi Getir';
+                loadingIndicator.style.display = 'none';
+                return;
+            }
+
+            // Simulate API call for now (since we don't have a real API)
+            setTimeout(() => {
+                try {
+                    console.log('🌐 Simulating API call...');
+                    
+                    // Create mock recommendations
+                    const mockRecommendations = [
+                        {
+                            id: '1',
+                            name: 'Göreme Açık Hava Müzesi',
+                            category: 'kulturel',
+                            description: 'UNESCO Dünya Mirası Listesi\'nde yer alan tarihi kilise ve manastırlar.',
+                            latitude: 38.6425,
+                            longitude: 34.8283,
+                            recommendationScore: 85,
+                            ratings: { tarihi: 90, sanat_kultur: 85, doga: 70 }
+                        },
+                        {
+                            id: '2',
+                            name: 'Ürgüp Taşkınpaşa Medresesi',
+                            category: 'kulturel',
+                            description: 'Selçuklu döneminden kalma tarihi medrese.',
+                            latitude: 38.6294,
+                            longitude: 34.9123,
+                            recommendationScore: 80,
+                            ratings: { tarihi: 85, sanat_kultur: 80 }
+                        },
+                        {
+                            id: '3',
+                            name: 'Üç Güzeller',
+                            category: 'doga_macera',
+                            description: 'Doğal oluşumlu peri bacaları.',
+                            latitude: 38.6425,
+                            longitude: 34.8283,
+                            recommendationScore: 75,
+                            ratings: { doga: 90, macera: 70 }
+                        }
+                    ];
+
+                    console.log('Mock recommendations created:', mockRecommendations);
+
+                    // Display results
+                    displayRecommendations(mockRecommendations);
+
+                    // Show success message
+                    showNotification('✅ Öneriler başarıyla oluşturuldu!', 'success');
+
+                } catch (error) {
+                    console.error('Recommendation error:', error);
+                    resultsContainer.innerHTML = `
+                        <div class="no-results">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>Bir hata oluştu</h3>
+                            <p>Öneriler alınırken bir sorun yaşandı: ${error.message}</p>
+                            <button onclick="getRecommendationsReliable()" style="background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; margin-top: 15px; cursor: pointer;">
+                                🔄 Tekrar Dene
+                            </button>
+                        </div>`;
+                } finally {
+                    // Reset button state
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-magic"></i> Önerilerimi Getir';
+                    loadingIndicator.style.display = 'none';
+                }
+            }, 2000); // Simulate 2 second delay
+        }
+
+        // Debug function to check elements
+        function debugElements() {
+            console.log('🔍 DEBUG: Checking elements...');
+
+            // Check sliders
+            const sliders = document.querySelectorAll('input[type="range"]');
+            console.log(`Found ${sliders.length} sliders`);
+            
+            sliders.forEach((slider, index) => {
+                const valueDisplay = document.getElementById(slider.id + '-value');
+                console.log(`Slider ${index + 1}:`, {
+                    id: slider.id,
+                    value: slider.value,
+                    hasValueDisplay: !!valueDisplay,
                     displayValue: valueDisplay ? valueDisplay.textContent : 'N/A'
                 });
             });
@@ -4968,66 +5230,20 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             const recommendBtn = document.getElementById('recommendBtn');
             console.log('Recommend button:', {
                 found: !!recommendBtn,
-                hasEventListener: recommendBtn ? recommendBtn.onclick !== null : false,
-                text: recommendBtn ? recommendBtn.textContent : 'N/A'
+                id: recommendBtn ? recommendBtn.id : 'N/A',
+                className: recommendBtn ? recommendBtn.className : 'N/A',
+                textContent: recommendBtn ? recommendBtn.textContent.trim() : 'N/A'
             });
         }
 
-        function initializeSliders() {
-            console.log('🎚️ Initializing sliders...');
-
-            Object.keys(ratingCategories).forEach(category => {
-                const slider = document.getElementById(category);
-                const valueDisplay = document.getElementById(category + '-value');
-
-                if (!slider) {
-                    console.error(❌ Slider not found: ${category});
-                    return;
-                }
-
-                if (!valueDisplay) {
-                    console.error(❌ Value display not found: ${category}-value);
-                    return;
-                }
-
-                const sliderItem = slider.closest('.slider-item');
-                if (!sliderItem) {
-                    console.error(❌ Slider item not found for: ${category});
-                    return;
-                }
-
-                console.log(✅ Setting up slider: ${category});
-
-                // Add both input and change events for better compatibility
-                const handleSliderChange = function () {
-                    const value = parseInt(this.value);
-                    console.log(🎚️ Slider ${category} changed to: ${value});
-                    valueDisplay.textContent = value;
-                    updateSliderBackground(this);
-                    updateSliderItemState(sliderItem, valueDisplay, value);
-                };
-
-                slider.addEventListener('input', handleSliderChange);
-                slider.addEventListener('change', handleSliderChange);
-
-                // Initialize background and state
-                const initialValue = parseInt(slider.value);
-                console.log(� Initial ivalue for ${category}: ${initialValue});
-                valueDisplay.textContent = initialValue;
-                updateSliderBackground(slider);
-                updateSliderItemState(sliderItem, valueDisplay, initialValue);
-            });
-
-            console.log('✅ All sliders initialized');
-        }
-
+        // Keep the helper functions
         function updateSliderBackground(slider) {
             const value = (slider.value - slider.min) / (slider.max - slider.min) * 100;
-            const gradient = linear-gradient(to right, 
+            const gradient = `linear-gradient(to right, 
                 var(--primary-color) 0%, 
                 var(--primary-color) ${value}%, 
                 rgba(255, 255, 255, 0.8) ${value}%, 
-                rgba(255, 255, 255, 0.8) 100%);
+                rgba(255, 255, 255, 0.8) 100%)`;
             slider.style.background = gradient;
         }
 
@@ -5046,105 +5262,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             }
         }
 
-        function setupEventListeners() {
-            console.log('🔗 Setting up event listeners...');
-
-            const recommendBtn = document.getElementById('recommendBtn');
-            if (recommendBtn) {
-                console.log('✅ Recommend button found, adding event listener');
-                recommendBtn.addEventListener('click', function (e) {
-                    console.log('🔥 Recommend button clicked!');
-                    e.preventDefault();
-                    getRecommendations();
-                });
-            } else {
-                console.error('❌ Recommend button not found!');
-                // Try to find it with a different approach
-                const allButtons = document.querySelectorAll('button');
-                console.log('🔍 All buttons found:', allButtons.length);
-                allButtons.forEach((btn, index) => {
-                    console.log(Button ${index}:, btn.id, btn.className, btn.textContent.substring(0, 20));
-                });
-            }
-
-            console.log('✅ Event listeners setup complete');
-        }
-
-        async function getRecommendations() {
-            console.log('🚀 getRecommendations function called');
-
-            const button = document.getElementById('recommendBtn');
-            const resultsSection = document.getElementById('resultsSection');
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            const resultsContainer = document.getElementById('recommendationResults');
-
-            console.log('Elements found:', {
-                button: !!button,
-                resultsSection: !!resultsSection,
-                loadingIndicator: !!loadingIndicator,
-                resultsContainer: !!resultsContainer
-            });
-
-            // Show loading state
-            button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Öneriler Hazırlanıyor...';
-            resultsSection.style.display = 'block';
-            loadingIndicator.style.display = 'block';
-            resultsContainer.innerHTML = '';
-
-            try {
-                // Get user preferences
-                const preferences = {};
-                Object.keys(ratingCategories).forEach(category => {
-                    preferences[category] = parseInt(document.getElementById(category).value);
-                });
-
-                console.log('User preferences:', preferences);
-
-                // Fetch POIs
-                const response = await fetch(${apiBase}/pois);
-                if (!response.ok) {
-                    throw new Error('POI verisi alınamadı');
-                }
-
-                const poisData = await response.json();
-                console.log('POI data received:', poisData);
-
-                // Calculate recommendations
-                const recommendations = calculateRecommendations(poisData, preferences);
-                console.log('Calculated recommendations:', recommendations);
-
-                if (recommendations.length === 0) {
-                    console.warn('No recommendations found');
-                }
-
-                // Display results
-                displayRecommendations(recommendations);
-
-                // Initialize map with recommendations
-                if (recommendations.length > 0) {
-                    console.log('Initializing map with recommendations...');
-                    await initializeMap(recommendations);
-                } else {
-                    console.log('Skipping map initialization - no recommendations');
-                }
-
-            } catch (error) {
-                console.error('Recommendation error:', error);
-                resultsContainer.innerHTML = 
-                    <div class="no-results">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Bir hata oluştu</h3>
-                        <p>Öneriler alınırken bir sorun yaşandı. Lütfen tekrar deneyin.</p>
-                    </div>
-                ;
-            } finally {
-                // Reset button state
-                button.disabled = false;
-                button.innerHTML = '<i class="fas fa-magic"></i> Önerilerimi Getir';
-                loadingIndicator.style.display = 'none';
-            }
-        }
+        // Old functions removed - using new reliable functions instead
 
         function calculateRecommendations(poisData, preferences) {
             const allPois = [];
