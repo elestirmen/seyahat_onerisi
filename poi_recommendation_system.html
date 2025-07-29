@@ -1712,7 +1712,7 @@
                                 <i class="fas fa-tree"></i>
                                 <span>Doğa</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="doga">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="doga" oninput="updateSliderValue(this)">
                             <div class="slider-value" id="doga-value">0</div>
                         </div>
 
@@ -1721,7 +1721,7 @@
                                 <i class="fas fa-utensils"></i>
                                 <span>Yemek</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="yemek">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="yemek" oninput="updateSliderValue(this)">
                             <div class="slider-value" id="yemek-value">0</div>
                         </div>
 
@@ -1730,7 +1730,7 @@
                                 <i class="fas fa-landmark"></i>
                                 <span>Tarih</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="tarihi">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="tarihi" oninput="updateSliderValue(this)">
                             <div class="slider-value" id="tarihi-value">0</div>
                         </div>
 
@@ -1739,7 +1739,7 @@
                                 <i class="fas fa-gamepad"></i>
                                 <span>Eğlence</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="eglence">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="eglence" oninput="updateSliderValue(this)">
                             <div class="slider-value" id="eglence-value">0</div>
                         </div>
 
@@ -1748,7 +1748,7 @@
                                 <i class="fas fa-palette"></i>
                                 <span>Sanat & Kültür</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="sanat_kultur">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="sanat_kultur" oninput="updateSliderValue(this)">
                             <div class="slider-value" id="sanat_kultur-value">0</div>
                         </div>
 
@@ -1757,7 +1757,7 @@
                                 <i class="fas fa-mountain"></i>
                                 <span>Macera</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="macera">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="macera" oninput="updateSliderValue(this)">
                             <div class="slider-value" id="macera-value">0</div>
                         </div>
 
@@ -1766,7 +1766,7 @@
                                 <i class="fas fa-spa"></i>
                                 <span>Rahatlatıcı</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="rahatlatici">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="rahatlatici" oninput="updateSliderValue(this)">
                             <div class="slider-value" id="rahatlatici-value">0</div>
                         </div>
 
@@ -1775,7 +1775,7 @@
                                 <i class="fas fa-running"></i>
                                 <span>Spor</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="spor">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="spor" oninput="updateSliderValue(this)">
                             <div class="slider-value" id="spor-value">0</div>
                         </div>
 
@@ -1784,7 +1784,7 @@
                                 <i class="fas fa-shopping-bag"></i>
                                 <span>Alışveriş</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="alisveris">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="alisveris" oninput="updateSliderValue(this)">
                             <div class="slider-value" id="alisveris-value">0</div>
                         </div>
 
@@ -1793,15 +1793,20 @@
                                 <i class="fas fa-moon"></i>
                                 <span>Gece Hayatı</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="gece_hayati">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="gece_hayati" oninput="updateSliderValue(this)">
                             <div class="slider-value" id="gece_hayati-value">0</div>
                         </div>
                     </div>
                 </div>
 
-                <button class="recommend-btn" id="recommendBtn">
-                    <i class="fas fa-magic"></i> Önerilerimi Getir
-                </button>
+                            <button class="recommend-btn" id="recommendBtn" onclick="handleRecommendClickReliable(event)">
+                <i class="fas fa-magic"></i> Önerilerimi Getir
+            </button>
+            
+            <!-- Debug button for testing -->
+            <button onclick="testSliderChanges()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 8px; margin: 10px auto; display: block; cursor: pointer;">
+                🧪 Test Sliders
+            </button>
             </div>
 
             <div class="results-section" id="resultsSection">
@@ -4945,10 +4950,12 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             setTimeout(function () {
                 try {
                     debugElements();
+                    // Test slider functionality
+                    testSliderChanges();
                 } catch (error) {
                     console.error('❌ Debug error:', error);
                 }
-            }, 1000);
+            }, 2000);
         });
 
         // More reliable slider initialization
@@ -4982,40 +4989,62 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                     console.log(`🎚️ Slider ${category} changed to: ${value}`);
                     
                     // Update display
-                    valueDisplay.textContent = value;
+                    if (valueDisplay) {
+                        valueDisplay.textContent = value;
+                    }
                     
                     // Update background
                     updateSliderBackground(this);
                     
                     // Update state
-                    updateSliderItemState(sliderItem, valueDisplay, value);
+                    if (sliderItem && valueDisplay) {
+                        updateSliderItemState(sliderItem, valueDisplay, value);
+                    }
                     
                     // Add visual feedback
-                    sliderItem.style.transform = 'scale(1.02)';
-                    setTimeout(() => {
-                        sliderItem.style.transform = '';
-                    }, 200);
+                    if (sliderItem) {
+                        sliderItem.style.transform = 'scale(1.02)';
+                        setTimeout(() => {
+                            sliderItem.style.transform = '';
+                        }, 200);
+                    }
                 };
 
+                // Store the handler on the slider element for proper removal
+                slider._handleSliderChange = handleSliderChange;
+
                 // Remove any existing listeners
-                slider.removeEventListener('input', handleSliderChange);
-                slider.removeEventListener('change', handleSliderChange);
-                slider.removeEventListener('mousedown', handleSliderChange);
-                slider.removeEventListener('touchstart', handleSliderChange);
+                slider.removeEventListener('input', slider._handleSliderChange);
+                slider.removeEventListener('change', slider._handleSliderChange);
+                slider.removeEventListener('mousedown', slider._handleSliderChange);
+                slider.removeEventListener('touchstart', slider._handleSliderChange);
 
                 // Add multiple event listeners for better compatibility
-                slider.addEventListener('input', handleSliderChange);
-                slider.addEventListener('change', handleSliderChange);
-                slider.addEventListener('mousedown', handleSliderChange);
-                slider.addEventListener('touchstart', handleSliderChange);
+                slider.addEventListener('input', slider._handleSliderChange);
+                slider.addEventListener('change', slider._handleSliderChange);
+                slider.addEventListener('mousedown', slider._handleSliderChange);
+                slider.addEventListener('touchstart', slider._handleSliderChange);
 
                 // Initialize the slider
                 const initialValue = parseInt(slider.value) || 0;
-                valueDisplay.textContent = initialValue;
+                if (valueDisplay) {
+                    valueDisplay.textContent = initialValue;
+                }
                 updateSliderBackground(slider);
-                updateSliderItemState(sliderItem, valueDisplay, initialValue);
+                if (sliderItem && valueDisplay) {
+                    updateSliderItemState(sliderItem, valueDisplay, initialValue);
+                }
 
                 console.log(`✅ Slider ${category} initialized with value: ${initialValue}`);
+                
+                // Test the slider to make sure it's working
+                setTimeout(() => {
+                    console.log(`🧪 Testing slider ${category}:`, {
+                        sliderValue: slider.value,
+                        displayValue: valueDisplay ? valueDisplay.textContent : 'N/A',
+                        hasEventListeners: slider._handleSliderChange ? 'Yes' : 'No'
+                    });
+                }, 1000);
             });
 
             console.log('✅ All sliders initialized reliably');
@@ -5045,13 +5074,6 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                     textContent: recommendBtn.textContent.trim()
                 });
                 
-                // Add a test click to verify it works
-                setTimeout(() => {
-                    console.log('🧪 Testing recommend button...');
-                    const testEvent = new Event('click', { bubbles: true });
-                    recommendBtn.dispatchEvent(testEvent);
-                }, 2000);
-                
             } else {
                 console.error('❌ Recommend button not found!');
                 const allButtons = document.querySelectorAll('button');
@@ -5072,10 +5094,15 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             
             // Add visual feedback
             const button = e.target.closest('.recommend-btn') || e.target;
-            button.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                button.style.transform = '';
-            }, 150);
+            if (button) {
+                button.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    button.style.transform = '';
+                }, 150);
+            }
+            
+            // Simple test alert
+            alert('Buton çalışıyor! Öneriler hazırlanıyor...');
             
             // Call the recommendations function
             getRecommendationsReliable();
@@ -5222,7 +5249,8 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                     id: slider.id,
                     value: slider.value,
                     hasValueDisplay: !!valueDisplay,
-                    displayValue: valueDisplay ? valueDisplay.textContent : 'N/A'
+                    displayValue: valueDisplay ? valueDisplay.textContent : 'N/A',
+                    hasEventListeners: slider._handleSliderChange ? 'Yes' : 'No'
                 });
             });
 
@@ -5234,6 +5262,54 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                 className: recommendBtn ? recommendBtn.className : 'N/A',
                 textContent: recommendBtn ? recommendBtn.textContent.trim() : 'N/A'
             });
+        }
+
+        // Test function to manually trigger slider changes
+        function testSliderChanges() {
+            console.log('🧪 Testing slider changes...');
+            const sliders = document.querySelectorAll('input[type="range"]');
+            
+            sliders.forEach((slider, index) => {
+                setTimeout(() => {
+                    const testValue = Math.floor(Math.random() * 100);
+                    slider.value = testValue;
+                    
+                    // Trigger the change event manually
+                    const event = new Event('input', { bubbles: true });
+                    slider.dispatchEvent(event);
+                    
+                    console.log(`🧪 Set slider ${slider.id} to ${testValue}`);
+                }, index * 500);
+            });
+        }
+
+        // Simple function to update slider value display
+        function updateSliderValue(slider) {
+            const value = parseInt(slider.value);
+            const valueDisplay = document.getElementById(slider.id + '-value');
+            const sliderItem = slider.closest('.slider-item');
+            
+            console.log(`🎚️ Slider ${slider.id} changed to: ${value}`);
+            
+            if (valueDisplay) {
+                valueDisplay.textContent = value;
+            }
+            
+            // Update background
+            updateSliderBackground(slider);
+            
+            // Update state
+            if (sliderItem && valueDisplay) {
+                updateSliderItemState(sliderItem, valueDisplay, value);
+            }
+            
+            // Add visual feedback
+            if (sliderItem) {
+                sliderItem.style.transform = 'scale(1.02)';
+                setTimeout(() => {
+                    sliderItem.style.transform = '';
+                }, 200);
+            }
         }
 
         // Keep the helper functions
@@ -5358,13 +5434,13 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             const routeSection = document.getElementById('routeSection');
 
             if (recommendations.length === 0) {
-                container.innerHTML = 
+                container.innerHTML = `
                     <div class="no-results">
                         <i class="fas fa-search"></i>
                         <h3>Öneri bulunamadı</h3>
                         <p>Tercihlerinize uygun POI bulunamadı. Slider değerlerini değiştirerek tekrar deneyin.</p>
                     </div>
-                ;
+                `;
                 routeSection.style.display = 'none';
                 return;
             }
@@ -5372,29 +5448,29 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             // Show route section
             routeSection.style.display = 'block';
 
-            const html = recommendations.map((poi, index) => 
+            const html = recommendations.map((poi, index) => `
                 <div class="poi-card">
                     <div class="poi-header">
                         <div>
                             <h3 class="poi-name">${poi.name}</h3>
-                            <span class="poi-category">${categoryNames[poi.category] || poi.category}</span>
+                            <span class="poi-category">${poi.category}</span>
                         </div>
                         <div class="poi-score">${poi.recommendationScore}% Uygun</div>
                     </div>
                     
-                    ${poi.description ? <p class="text-muted">${poi.description}</p> : ''}
+                    ${poi.description ? `<p class="text-muted">${poi.description}</p>` : ''}
                     
                     <div class="poi-ratings">
                         ${Object.keys(ratingCategories).map(category => {
-                const rating = poi.ratings[category] || 0;
-                if (rating > 30) {
-                    return <span class="rating-badge high">
+                            const rating = poi.ratings[category] || 0;
+                            if (rating > 30) {
+                                return `<span class="rating-badge high">
                                     <i class="${ratingCategories[category].icon}"></i>
                                     ${ratingCategories[category].name}: ${rating}%
-                                </span>;
-                }
-                return '';
-            }).join('')}
+                                </span>`;
+                            }
+                            return '';
+                        }).join('')}
                     </div>
                     
                     <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
@@ -5412,7 +5488,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                         </button>
                     </div>
                 </div>
-            ).join('');
+            `).join('');
 
             container.innerHTML = html;
         }
