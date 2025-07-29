@@ -27,6 +27,28 @@
             --gradient-secondary: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             --card-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
             --card-shadow-hover: 0 12px 35px rgba(0, 0, 0, 0.15);
+
+            /* Category specific colors */
+            --doga-color: #27ae60;
+            --doga-light: rgba(39, 174, 96, 0.1);
+            --yemek-color: #e74c3c;
+            --yemek-light: rgba(231, 76, 60, 0.1);
+            --tarihi-color: #8e44ad;
+            --tarihi-light: rgba(142, 68, 173, 0.1);
+            --eglence-color: #f39c12;
+            --eglence-light: rgba(243, 156, 18, 0.1);
+            --sanat-kultur-color: #3498db;
+            --sanat-kultur-light: rgba(52, 152, 219, 0.1);
+            --macera-color: #e67e22;
+            --macera-light: rgba(230, 126, 34, 0.1);
+            --rahatlatici-color: #1abc9c;
+            --rahatlatici-light: rgba(26, 188, 156, 0.1);
+            --spor-color: #9b59b6;
+            --spor-light: rgba(155, 89, 182, 0.1);
+            --alisveris-color: #34495e;
+            --alisveris-light: rgba(52, 73, 94, 0.1);
+            --gece-hayati-color: #2c3e50;
+            --gece-hayati-light: rgba(44, 62, 80, 0.1);
         }
 
         * {
@@ -110,12 +132,12 @@
 
         .slider-container {
             background: var(--gradient-secondary);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-            backdrop-filter: blur(15px);
+            border-radius: 24px;
+            padding: 35px;
+            margin-bottom: 30px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(20px);
             position: relative;
             overflow: hidden;
         }
@@ -126,9 +148,32 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: var(--gradient-primary);
-            opacity: 0.6;
+            height: 6px;
+            background: linear-gradient(90deg,
+                    var(--doga-color) 0%,
+                    var(--yemek-color) 10%,
+                    var(--tarihi-color) 20%,
+                    var(--eglence-color) 30%,
+                    var(--sanat-kultur-color) 40%,
+                    var(--macera-color) 50%,
+                    var(--rahatlatici-color) 60%,
+                    var(--spor-color) 70%,
+                    var(--alisveris-color) 80%,
+                    var(--gece-hayati-color) 90%,
+                    var(--doga-color) 100%);
+            opacity: 0.8;
+            border-radius: 24px 24px 0 0;
+        }
+
+        .slider-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
         }
 
         .slider-row {
@@ -142,10 +187,10 @@
             flex-direction: column;
             gap: 14px;
             padding: 20px;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             min-height: var(--touch-target-min);
             position: relative;
             overflow: hidden;
@@ -156,105 +201,384 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 4px;
+            width: 5px;
             height: 100%;
             background: var(--primary-color);
             transform: scaleY(0);
-            transition: transform 0.3s ease;
+            transition: transform 0.4s ease;
+            border-radius: 0 3px 3px 0;
+        }
+
+        .slider-item::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.3) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
         }
 
         .slider-item:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 1);
         }
 
         .slider-item:hover::before {
             transform: scaleY(1);
         }
 
-        .slider-item.active {
-            background: rgba(102, 126, 234, 0.1);
-            border-color: var(--primary-color);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
+        .slider-item:hover::after {
+            opacity: 1;
         }
 
-        .slider-item.active::before {
-            transform: scaleY(1);
+        /* Category-specific styling */
+        .slider-item[data-category="doga"] {
+            border-left: 4px solid var(--doga-color);
+        }
+
+        .slider-item[data-category="doga"].active {
+            background: var(--doga-light);
+            border-color: var(--doga-color);
+            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
+        }
+
+        .slider-item[data-category="doga"]::before {
+            background: var(--doga-color);
+        }
+
+        .slider-item[data-category="yemek"] {
+            border-left: 4px solid var(--yemek-color);
+        }
+
+        .slider-item[data-category="yemek"].active {
+            background: var(--yemek-light);
+            border-color: var(--yemek-color);
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
+        }
+
+        .slider-item[data-category="yemek"]::before {
+            background: var(--yemek-color);
+        }
+
+        .slider-item[data-category="tarihi"] {
+            border-left: 4px solid var(--tarihi-color);
+        }
+
+        .slider-item[data-category="tarihi"].active {
+            background: var(--tarihi-light);
+            border-color: var(--tarihi-color);
+            box-shadow: 0 8px 25px rgba(142, 68, 173, 0.2);
+        }
+
+        .slider-item[data-category="tarihi"]::before {
+            background: var(--tarihi-color);
+        }
+
+        .slider-item[data-category="eglence"] {
+            border-left: 4px solid var(--eglence-color);
+        }
+
+        .slider-item[data-category="eglence"].active {
+            background: var(--eglence-light);
+            border-color: var(--eglence-color);
+            box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
+        }
+
+        .slider-item[data-category="eglence"]::before {
+            background: var(--eglence-color);
+        }
+
+        .slider-item[data-category="sanat_kultur"] {
+            border-left: 4px solid var(--sanat-kultur-color);
+        }
+
+        .slider-item[data-category="sanat_kultur"].active {
+            background: var(--sanat-kultur-light);
+            border-color: var(--sanat-kultur-color);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
+        }
+
+        .slider-item[data-category="sanat_kultur"]::before {
+            background: var(--sanat-kultur-color);
+        }
+
+        .slider-item[data-category="macera"] {
+            border-left: 4px solid var(--macera-color);
+        }
+
+        .slider-item[data-category="macera"].active {
+            background: var(--macera-light);
+            border-color: var(--macera-color);
+            box-shadow: 0 8px 25px rgba(230, 126, 34, 0.2);
+        }
+
+        .slider-item[data-category="macera"]::before {
+            background: var(--macera-color);
+        }
+
+        .slider-item[data-category="rahatlatici"] {
+            border-left: 4px solid var(--rahatlatici-color);
+        }
+
+        .slider-item[data-category="rahatlatici"].active {
+            background: var(--rahatlatici-light);
+            border-color: var(--rahatlatici-color);
+            box-shadow: 0 8px 25px rgba(26, 188, 156, 0.2);
+        }
+
+        .slider-item[data-category="rahatlatici"]::before {
+            background: var(--rahatlatici-color);
+        }
+
+        .slider-item[data-category="spor"] {
+            border-left: 4px solid var(--spor-color);
+        }
+
+        .slider-item[data-category="spor"].active {
+            background: var(--spor-light);
+            border-color: var(--spor-color);
+            box-shadow: 0 8px 25px rgba(155, 89, 182, 0.2);
+        }
+
+        .slider-item[data-category="spor"]::before {
+            background: var(--spor-color);
+        }
+
+        .slider-item[data-category="alisveris"] {
+            border-left: 4px solid var(--alisveris-color);
+        }
+
+        .slider-item[data-category="alisveris"].active {
+            background: var(--alisveris-light);
+            border-color: var(--alisveris-color);
+            box-shadow: 0 8px 25px rgba(52, 73, 94, 0.2);
+        }
+
+        .slider-item[data-category="alisveris"]::before {
+            background: var(--alisveris-color);
+        }
+
+        .slider-item[data-category="gece_hayati"] {
+            border-left: 4px solid var(--gece-hayati-color);
+        }
+
+        .slider-item[data-category="gece_hayati"].active {
+            background: var(--gece-hayati-light);
+            border-color: var(--gece-hayati-color);
+            box-shadow: 0 8px 25px rgba(44, 62, 80, 0.2);
+        }
+
+        .slider-item[data-category="gece_hayati"]::before {
+            background: var(--gece-hayati-color);
         }
 
         .slider-label {
             display: flex;
             align-items: center;
             gap: 12px;
-            font-weight: 600;
+            font-weight: 700;
             color: var(--text-color);
-            font-size: 14px;
+            font-size: 15px;
+            position: relative;
         }
 
         .slider-label i {
-            width: 20px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
-            color: var(--primary-color);
             font-size: 16px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        /* Category-specific icon colors */
+        .slider-item[data-category="doga"] .slider-label i {
+            color: var(--doga-color);
+            background: var(--doga-light);
+            border: 2px solid rgba(39, 174, 96, 0.2);
+        }
+
+        .slider-item[data-category="yemek"] .slider-label i {
+            color: var(--yemek-color);
+            background: var(--yemek-light);
+            border: 2px solid rgba(231, 76, 60, 0.2);
+        }
+
+        .slider-item[data-category="tarihi"] .slider-label i {
+            color: var(--tarihi-color);
+            background: var(--tarihi-light);
+            border: 2px solid rgba(142, 68, 173, 0.2);
+        }
+
+        .slider-item[data-category="eglence"] .slider-label i {
+            color: var(--eglence-color);
+            background: var(--eglence-light);
+            border: 2px solid rgba(243, 156, 18, 0.2);
+        }
+
+        .slider-item[data-category="sanat_kultur"] .slider-label i {
+            color: var(--sanat-kultur-color);
+            background: var(--sanat-kultur-light);
+            border: 2px solid rgba(52, 152, 219, 0.2);
+        }
+
+        .slider-item[data-category="macera"] .slider-label i {
+            color: var(--macera-color);
+            background: var(--macera-light);
+            border: 2px solid rgba(230, 126, 34, 0.2);
+        }
+
+        .slider-item[data-category="rahatlatici"] .slider-label i {
+            color: var(--rahatlatici-color);
+            background: var(--rahatlatici-light);
+            border: 2px solid rgba(26, 188, 156, 0.2);
+        }
+
+        .slider-item[data-category="spor"] .slider-label i {
+            color: var(--spor-color);
+            background: var(--spor-light);
+            border: 2px solid rgba(155, 89, 182, 0.2);
+        }
+
+        .slider-item[data-category="alisveris"] .slider-label i {
+            color: var(--alisveris-color);
+            background: var(--alisveris-light);
+            border: 2px solid rgba(52, 73, 94, 0.2);
+        }
+
+        .slider-item[data-category="gece_hayati"] .slider-label i {
+            color: var(--gece-hayati-color);
+            background: var(--gece-hayati-light);
+            border: 2px solid rgba(44, 62, 80, 0.2);
+        }
+
+        .slider-item:hover .slider-label i {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .slider-item.active .slider-label i {
+            transform: scale(1.05);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
         }
 
         .slider {
             -webkit-appearance: none;
             width: 100%;
-            height: 10px;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.8);
+            height: 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
             outline: none;
             transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
 
         .slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
-            background: var(--gradient-primary);
             cursor: pointer;
-            transition: all 0.3s ease;
-            border: 3px solid white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 4px solid white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
         }
 
         .slider::-webkit-slider-thumb:hover {
-            transform: scale(1.15);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            transform: scale(1.2);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
         }
 
         .slider::-webkit-slider-thumb:active {
-            transform: scale(1.05);
+            transform: scale(1.1);
         }
 
         .slider::-moz-range-thumb {
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
-            background: var(--gradient-primary);
             cursor: pointer;
-            border: 3px solid white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            border: 4px solid white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Category-specific slider thumb colors */
+        .slider-item[data-category="doga"] .slider::-webkit-slider-thumb {
+            background: linear-gradient(135deg, var(--doga-color) 0%, #2ecc71 100%);
+        }
+
+        .slider-item[data-category="yemek"] .slider::-webkit-slider-thumb {
+            background: linear-gradient(135deg, var(--yemek-color) 0%, #c0392b 100%);
+        }
+
+        .slider-item[data-category="tarihi"] .slider::-webkit-slider-thumb {
+            background: linear-gradient(135deg, var(--tarihi-color) 0%, #9b59b6 100%);
+        }
+
+        .slider-item[data-category="eglence"] .slider::-webkit-slider-thumb {
+            background: linear-gradient(135deg, var(--eglence-color) 0%, #e67e22 100%);
+        }
+
+        .slider-item[data-category="sanat_kultur"] .slider::-webkit-slider-thumb {
+            background: linear-gradient(135deg, var(--sanat-kultur-color) 0%, #2980b9 100%);
+        }
+
+        .slider-item[data-category="macera"] .slider::-webkit-slider-thumb {
+            background: linear-gradient(135deg, var(--macera-color) 0%, #d35400 100%);
+        }
+
+        .slider-item[data-category="rahatlatici"] .slider::-webkit-slider-thumb {
+            background: linear-gradient(135deg, var(--rahatlatici-color) 0%, #16a085 100%);
+        }
+
+        .slider-item[data-category="spor"] .slider::-webkit-slider-thumb {
+            background: linear-gradient(135deg, var(--spor-color) 0%, #8e44ad 100%);
+        }
+
+        .slider-item[data-category="alisveris"] .slider::-webkit-slider-thumb {
+            background: linear-gradient(135deg, var(--alisveris-color) 0%, #2c3e50 100%);
+        }
+
+        .slider-item[data-category="gece_hayati"] .slider::-webkit-slider-thumb {
+            background: linear-gradient(135deg, var(--gece-hayati-color) 0%, #34495e 100%);
         }
 
         .slider-value {
             text-align: center;
-            font-weight: 700;
-            color: var(--primary-color);
-            font-size: 1.1rem;
-            background: rgba(102, 126, 234, 0.15);
-            padding: 8px 16px;
-            border-radius: 25px;
-            border: 2px solid rgba(102, 126, 234, 0.3);
-            transition: all 0.3s ease;
-            min-width: 50px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            padding: 10px 18px;
+            border-radius: 30px;
+            border: 2px solid;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slider-value::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.6s;
         }
 
         .slider-value.zero {
@@ -263,11 +587,74 @@
             border-color: rgba(153, 153, 153, 0.2);
         }
 
+        .slider-value.high::before {
+            left: 100%;
+        }
+
+        /* Category-specific value colors */
+        .slider-item[data-category="doga"] .slider-value:not(.zero) {
+            color: var(--doga-color);
+            background: var(--doga-light);
+            border-color: var(--doga-color);
+        }
+
+        .slider-item[data-category="yemek"] .slider-value:not(.zero) {
+            color: var(--yemek-color);
+            background: var(--yemek-light);
+            border-color: var(--yemek-color);
+        }
+
+        .slider-item[data-category="tarihi"] .slider-value:not(.zero) {
+            color: var(--tarihi-color);
+            background: var(--tarihi-light);
+            border-color: var(--tarihi-color);
+        }
+
+        .slider-item[data-category="eglence"] .slider-value:not(.zero) {
+            color: var(--eglence-color);
+            background: var(--eglence-light);
+            border-color: var(--eglence-color);
+        }
+
+        .slider-item[data-category="sanat_kultur"] .slider-value:not(.zero) {
+            color: var(--sanat-kultur-color);
+            background: var(--sanat-kultur-light);
+            border-color: var(--sanat-kultur-color);
+        }
+
+        .slider-item[data-category="macera"] .slider-value:not(.zero) {
+            color: var(--macera-color);
+            background: var(--macera-light);
+            border-color: var(--macera-color);
+        }
+
+        .slider-item[data-category="rahatlatici"] .slider-value:not(.zero) {
+            color: var(--rahatlatici-color);
+            background: var(--rahatlatici-light);
+            border-color: var(--rahatlatici-color);
+        }
+
+        .slider-item[data-category="spor"] .slider-value:not(.zero) {
+            color: var(--spor-color);
+            background: var(--spor-light);
+            border-color: var(--spor-color);
+        }
+
+        .slider-item[data-category="alisveris"] .slider-value:not(.zero) {
+            color: var(--alisveris-color);
+            background: var(--alisveris-light);
+            border-color: var(--alisveris-color);
+        }
+
+        .slider-item[data-category="gece_hayati"] .slider-value:not(.zero) {
+            color: var(--gece-hayati-color);
+            background: var(--gece-hayati-light);
+            border-color: var(--gece-hayati-color);
+        }
+
         .slider-value.high {
-            background: rgba(40, 167, 69, 0.15);
-            color: var(--accent-color);
-            border-color: rgba(40, 167, 69, 0.3);
-            transform: scale(1.05);
+            transform: scale(1.08);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         }
 
         .recommend-btn {
@@ -333,17 +720,18 @@
         .poi-card {
             background: rgba(255, 255, 255, 0.98);
             border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 20px;
-            padding: 28px;
-            margin-bottom: 24px;
+            border-radius: 24px;
+            margin-bottom: 28px;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             backdrop-filter: blur(15px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
             position: relative;
             overflow: hidden;
             min-height: var(--touch-target-min);
             touch-action: manipulation;
+            display: flex;
+            flex-direction: column;
         }
 
         .poi-card::after {
@@ -391,6 +779,57 @@
             transform: translateY(-3px) scale(1.01);
         }
 
+        .poi-image-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            border-radius: 20px 20px 0 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .poi-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        .poi-card:hover .poi-image {
+            transform: scale(1.05);
+        }
+
+        .poi-image-placeholder {
+            color: #999;
+            font-size: 3rem;
+            opacity: 0.5;
+        }
+
+        .poi-image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .poi-card:hover .poi-image-overlay {
+            opacity: 1;
+        }
+
+        .poi-content {
+            padding: 24px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
         .poi-header {
             display: flex;
             justify-content: space-between;
@@ -400,11 +839,12 @@
         }
 
         .poi-name {
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             font-weight: 700;
             color: var(--text-color);
             margin: 0;
             line-height: 1.3;
+            flex: 1;
         }
 
         .poi-score {
@@ -443,18 +883,22 @@
         }
 
         .poi-category {
+            position: absolute;
+            top: 16px;
+            left: 16px;
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: var(--gradient-primary);
+            background: rgba(0, 0, 0, 0.7);
             color: white;
-            padding: 8px 16px;
-            border-radius: 25px;
-            font-size: 0.9rem;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
             font-weight: 600;
-            margin-bottom: 16px;
-            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
+            z-index: 2;
         }
 
         .poi-category::before {
@@ -463,15 +907,136 @@
         }
 
         .poi-card:hover .poi-category {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.5);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .poi-description {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .poi-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .poi-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .poi-meta-item i {
+            width: 16px;
+            text-align: center;
+            color: var(--primary-color);
         }
 
         .poi-ratings {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin-top: 16px;
+            margin-bottom: 20px;
+        }
+
+        .poi-actions {
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .poi-action-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .poi-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .poi-action-btn.google-maps {
+            background: #4285f4;
+        }
+
+        .poi-action-btn.add-route {
+            background: var(--accent-color);
+        }
+
+        .poi-action-btn.view-media {
+            background: #9b59b6;
+        }
+
+        .poi-media-preview {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            overflow-x: auto;
+            padding: 4px 0;
+        }
+
+        .poi-media-thumb {
+            width: 60px;
+            height: 45px;
+            border-radius: 8px;
+            object-fit: cover;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .poi-media-thumb:hover {
+            transform: scale(1.1);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .poi-media-count {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 60px;
+            height: 45px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .poi-media-count:hover {
+            background: var(--primary-color);
+            transform: scale(1.05);
         }
 
         .rating-badge {
@@ -949,6 +1514,110 @@
             background: #999;
         }
 
+        .segments-section {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .segments-section h4 {
+            margin: 0 0 12px 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .segments-list {
+            max-height: 200px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #ccc transparent;
+        }
+
+        .segments-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .segments-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .segments-list::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        .segments-list::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        .segment-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 6px;
+            margin-bottom: 3px;
+        }
+
+        .segment-item:hover {
+            background: #f8f9fa;
+            transform: translateX(2px);
+        }
+
+        .segment-item:last-child {
+            border-bottom: none;
+        }
+
+        .segment-item.highlighted {
+            background: rgba(66, 133, 244, 0.1);
+            border-left: 3px solid #4285f4;
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(66, 133, 244, 0.2);
+        }
+
+        .segment-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .segment-icon.walking {
+            background: #27ae60;
+            color: white;
+        }
+
+        .segment-icon.fallback {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .segment-info {
+            flex: 1;
+        }
+
+        .segment-route {
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+        }
+
+        .segment-details {
+            font-size: 0.75rem;
+            color: #666;
+            display: flex;
+            gap: 12px;
+        }
+
         .stop-item {
             display: flex;
             align-items: center;
@@ -1129,8 +1798,15 @@
             }
 
             .poi-card {
+                margin-bottom: 20px;
+            }
+
+            .poi-content {
                 padding: 20px;
-                margin-bottom: 16px;
+            }
+
+            .poi-image-container {
+                height: 180px;
             }
 
             .poi-header {
@@ -1141,6 +1817,26 @@
 
             .poi-score {
                 align-self: flex-end;
+            }
+
+            .poi-actions {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .poi-action-btn {
+                justify-content: center;
+                width: 100%;
+            }
+
+            .poi-media-preview {
+                justify-content: center;
+            }
+
+            .poi-meta {
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-start;
             }
 
             .map-container {
@@ -1770,7 +2466,7 @@
 
                 <div class="slider-container">
                     <div class="slider-row">
-                        <div class="slider-item">
+                        <div class="slider-item" data-category="doga">
                             <div class="slider-label">
                                 <i class="fas fa-tree"></i>
                                 <span>Doğa</span>
@@ -1779,7 +2475,7 @@
                             <div class="slider-value" id="doga-value">0</div>
                         </div>
 
-                        <div class="slider-item">
+                        <div class="slider-item" data-category="yemek">
                             <div class="slider-label">
                                 <i class="fas fa-utensils"></i>
                                 <span>Yemek</span>
@@ -1788,7 +2484,7 @@
                             <div class="slider-value" id="yemek-value">0</div>
                         </div>
 
-                        <div class="slider-item">
+                        <div class="slider-item" data-category="tarihi">
                             <div class="slider-label">
                                 <i class="fas fa-landmark"></i>
                                 <span>Tarih</span>
@@ -1797,7 +2493,7 @@
                             <div class="slider-value" id="tarihi-value">0</div>
                         </div>
 
-                        <div class="slider-item">
+                        <div class="slider-item" data-category="eglence">
                             <div class="slider-label">
                                 <i class="fas fa-gamepad"></i>
                                 <span>Eğlence</span>
@@ -1806,7 +2502,7 @@
                             <div class="slider-value" id="eglence-value">0</div>
                         </div>
 
-                        <div class="slider-item">
+                        <div class="slider-item" data-category="sanat_kultur">
                             <div class="slider-label">
                                 <i class="fas fa-palette"></i>
                                 <span>Sanat & Kültür</span>
@@ -1815,7 +2511,7 @@
                             <div class="slider-value" id="sanat_kultur-value">0</div>
                         </div>
 
-                        <div class="slider-item">
+                        <div class="slider-item" data-category="macera">
                             <div class="slider-label">
                                 <i class="fas fa-mountain"></i>
                                 <span>Macera</span>
@@ -1824,7 +2520,7 @@
                             <div class="slider-value" id="macera-value">0</div>
                         </div>
 
-                        <div class="slider-item">
+                        <div class="slider-item" data-category="rahatlatici">
                             <div class="slider-label">
                                 <i class="fas fa-spa"></i>
                                 <span>Rahatlatıcı</span>
@@ -1833,7 +2529,7 @@
                             <div class="slider-value" id="rahatlatici-value">0</div>
                         </div>
 
-                        <div class="slider-item">
+                        <div class="slider-item" data-category="spor">
                             <div class="slider-label">
                                 <i class="fas fa-running"></i>
                                 <span>Spor</span>
@@ -1842,7 +2538,7 @@
                             <div class="slider-value" id="spor-value">0</div>
                         </div>
 
-                        <div class="slider-item">
+                        <div class="slider-item" data-category="alisveris">
                             <div class="slider-label">
                                 <i class="fas fa-shopping-bag"></i>
                                 <span>Alışveriş</span>
@@ -1851,7 +2547,7 @@
                             <div class="slider-value" id="alisveris-value">0</div>
                         </div>
 
-                        <div class="slider-item">
+                        <div class="slider-item" data-category="gece_hayati">
                             <div class="slider-label">
                                 <i class="fas fa-moon"></i>
                                 <span>Gece Hayatı</span>
@@ -1993,6 +2689,13 @@
             </div>
         </div>
 
+        <div class="segments-section" id="segmentsSection" style="display: none;">
+            <h4>Rota Segmentleri</h4>
+            <div class="segments-list" id="segmentsList">
+                <!-- Segment listesi buraya dinamik olarak eklenecek -->
+            </div>
+        </div>
+
         <div class="export-section">
             <button class="export-btn google-maps" onclick="RouteDetailsPanel.exportToGoogleMaps()">
                 <i class="fab fa-google"></i>
@@ -2068,6 +2771,7 @@
                 this.currentRoute = routeData;
                 this.updateSummary(routeData);
                 this.updateStopsList(routeData);
+                this.updateSegmentsList(routeData);
                 this.loadElevationProfile(routeData);
 
                 this.panel.classList.add('show');
@@ -2199,6 +2903,44 @@
                 if (stopsCounter) {
                     stopsCounter.textContent = totalStops;
                 }
+            }
+
+            updateSegmentsList(routeData) {
+                const segmentsSection = document.getElementById('segmentsSection');
+                const segmentsList = document.getElementById('segmentsList');
+
+                if (!routeData.segments || routeData.segments.length === 0) {
+                    segmentsSection.style.display = 'none';
+                    return;
+                }
+
+                segmentsSection.style.display = 'block';
+                let segmentsHTML = '';
+
+                routeData.segments.forEach((segment, index) => {
+                    const isWalking = !segment.fallback;
+                    const iconClass = isWalking ? 'walking' : 'fallback';
+                    const icon = isWalking ? '🚶' : '📏';
+                    const routeType = isWalking ? 'Yürüyüş' : 'Düz çizgi';
+
+                    segmentsHTML += `
+                        <div class="segment-item" onclick="RouteDetailsPanel.focusOnSegment(${index})">
+                            <div class="segment-icon ${iconClass}">
+                                ${icon}
+                            </div>
+                            <div class="segment-info">
+                                <div class="segment-route">${segment.from} → ${segment.to}</div>
+                                <div class="segment-details">
+                                    <span>📏 ${segment.distance.toFixed(2)} km</span>
+                                    <span>⏱️ ${Math.round(segment.distance * 12)} dk</span>
+                                    <span>${routeType}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                segmentsList.innerHTML = segmentsHTML;
             }
 
             static highlightStop(lat, lng) {
@@ -2601,15 +3343,18 @@
                 }
 
                 let waypoints = [];
+                let waypointNames = [];
 
-                // Add start location
+                // Add start location with name
                 if (startLocation) {
-                    waypoints.push(startLocation.latitude, startLocation.longitude);
+                    waypoints.push(`${startLocation.latitude},${startLocation.longitude}`);
+                    waypointNames.push(encodeURIComponent(startLocation.name || 'Başlangıç Noktası'));
                 }
 
-                // Add all POIs
+                // Add all POIs with names
                 selectedPOIs.forEach(poi => {
-                    waypoints.push(poi.latitude, poi.longitude);
+                    waypoints.push(`${poi.latitude},${poi.longitude}`);
+                    waypointNames.push(encodeURIComponent(poi.name));
                 });
 
                 if (waypoints.length < 2) {
@@ -2617,25 +3362,57 @@
                     return;
                 }
 
-                // Create Google Maps URL with all waypoints
-                const origin = waypoints[0];
-                const destination = waypoints[waypoints.length - 1];
-                const intermediateWaypoints = waypoints.slice(1, -1);
+                // Use place names with coordinates for better Google Maps integration
+                let originParam, destinationParam, waypointParam = '';
 
-                let url = `https://www.google.com/maps/dir/${origin}`;
+                // Format origin with name and coordinates
+                if (startLocation) {
+                    const originName = startLocation.name || 'Başlangıç Noktası';
+                    const originCoords = `${startLocation.latitude},${startLocation.longitude}`;
+                    // Use format: "Place Name" + coordinates for better recognition
+                    originParam = encodeURIComponent(`${originName}, Ürgüp`) + '+' + originCoords;
+                } else {
+                    originParam = waypoints[0];
+                }
 
-                // Add intermediate waypoints
-                intermediateWaypoints.forEach(waypoint => {
-                    url += `/${waypoint}`;
-                });
+                // Format destination with name and coordinates
+                const lastPOI = selectedPOIs[selectedPOIs.length - 1];
+                if (lastPOI) {
+                    const destName = lastPOI.name;
+                    const destCoords = `${lastPOI.latitude},${lastPOI.longitude}`;
+                    destinationParam = encodeURIComponent(`${destName}, Ürgüp`) + '+' + destCoords;
+                } else {
+                    destinationParam = waypoints[waypoints.length - 1];
+                }
 
-                // Add destination
-                url += `/${destination}`;
+                // Format intermediate waypoints with names
+                if (selectedPOIs.length > 1) {
+                    const middlePOIs = startLocation ? selectedPOIs.slice(0, -1) : selectedPOIs.slice(1, -1);
+                    const maxWaypoints = Math.min(middlePOIs.length, 23);
+                    const selectedWaypoints = middlePOIs.slice(0, maxWaypoints);
+                    
+                    const waypointStrings = selectedWaypoints.map(poi => {
+                        const name = poi.name;
+                        const coords = `${poi.latitude},${poi.longitude}`;
+                        return encodeURIComponent(`${name}, Ürgüp`) + '+' + coords;
+                    });
+                    
+                    if (waypointStrings.length > 0) {
+                        waypointParam = '&waypoints=' + waypointStrings.join('|');
+                    }
+                }
 
-                // Open in new tab
+                const url = `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destinationParam}${waypointParam}&travelmode=walking`;
+
+                console.log('🗺️ Exporting route to Google Maps with place names:');
+                console.log('Origin:', decodeURIComponent(originParam));
+                console.log('Destination:', decodeURIComponent(destinationParam));
+                console.log('Waypoints:', waypointParam ? decodeURIComponent(waypointParam) : 'None');
+                console.log('URL:', url);
+                
                 window.open(url, '_blank');
 
-                showNotification('✅ Google Maps\'te açılıyor...', 'success');
+                showNotification('✅ Google Maps\'te rota açıldı (isimlerle)!', 'success');
             }
 
             static show(routeData) {
@@ -2646,6 +3423,41 @@
             static hide() {
                 const instance = RouteDetailsPanel.getInstance();
                 instance.hide();
+            }
+
+            static focusOnSegment(segmentIndex) {
+                const instance = RouteDetailsPanel.getInstance();
+                if (!instance.currentRoute || !instance.currentRoute.segments) {
+                    return;
+                }
+
+                const segment = instance.currentRoute.segments[segmentIndex];
+                if (!segment || !segment.coordinates || segment.coordinates.length === 0) {
+                    return;
+                }
+
+                // Focus map on segment
+                const coordinates = segment.coordinates;
+                const bounds = L.latLngBounds(coordinates.map(coord => [coord.lat, coord.lng]));
+
+                if (map) {
+                    map.fitBounds(bounds, { padding: [20, 20] });
+
+                    // Highlight segment temporarily
+                    const segmentItems = document.querySelectorAll('.segment-item');
+                    segmentItems.forEach((item, i) => {
+                        item.classList.toggle('highlighted', i === segmentIndex);
+                    });
+
+                    // Remove highlight after 2 seconds
+                    setTimeout(() => {
+                        segmentItems.forEach(item => {
+                            item.classList.remove('highlighted');
+                        });
+                    }, 2000);
+                }
+
+                console.log(`🎯 Focused on segment ${segmentIndex + 1}: ${segment.from} → ${segment.to}`);
             }
         }
 
@@ -3899,7 +4711,7 @@
 
             window.simpleRouteLayer = L.polyline(latlngs, {
                 color: '#667eea',
-                weight: 4,
+                weight: window.innerWidth <= 768 ? 7 : 5, // Thicker on mobile
                 opacity: 0.7,
                 dashArray: '10, 5' // Dashed line to indicate it's not a real route
             }).addTo(map);
@@ -3918,6 +4730,7 @@
             );
 
             // Add route details panel click event
+            // Enhanced click/touch event for simple route
             window.simpleRouteLayer.on('click', function (e) {
                 // Prevent popup from opening
                 e.originalEvent.stopPropagation();
@@ -3929,6 +4742,32 @@
                 }
 
                 // Show route details panel
+                RouteDetailsPanel.show({
+                    total_distance: totalDistance.toFixed(2),
+                    estimated_time: Math.round(totalDistance * 12 * 60), // 12 minutes per km in seconds
+                    route_type: 'düz çizgi',
+                    waypoints: selectedPOIs,
+                    segments: []
+                });
+            });
+
+            // Add touch support for mobile devices
+            window.simpleRouteLayer.on('touchstart', function (e) {
+                e.originalEvent.preventDefault();
+                e.originalEvent.stopPropagation();
+            });
+
+            window.simpleRouteLayer.on('touchend', function (e) {
+                e.originalEvent.preventDefault();
+                e.originalEvent.stopPropagation();
+
+                // Calculate total distance
+                let totalDistance = 0;
+                for (let i = 0; i < latlngs.length - 1; i++) {
+                    totalDistance += getDistance(latlngs[i][0], latlngs[i][1], latlngs[i + 1][0], latlngs[i + 1][1]);
+                }
+
+                // Show route details panel on touch
                 RouteDetailsPanel.show({
                     total_distance: totalDistance.toFixed(2),
                     estimated_time: Math.round(totalDistance * 12 * 60), // 12 minutes per km in seconds
@@ -4035,7 +4874,7 @@
 
             const routeColor = '#27ae60'; // Green for walking
             const fallbackColor = '#e74c3c'; // Red for fallback
-            const routeWeight = 5;
+            const routeWeight = window.innerWidth <= 768 ? 8 : 6; // Thicker on mobile
             const routeOpacity = 0.8;
 
             // Draw each segment
@@ -4050,16 +4889,10 @@
                     className: 'walking-route'
                 }).addTo(map);
 
-                // Add detailed route popup on click
-                const routePopup = L.popup({
-                    maxWidth: 350,
-                    className: 'route-detail-popup'
-                })
-                    .setContent(createRoutePopupContent(segment, index + 1, routeInfo));
-
-                polyline.bindPopup(routePopup);
+                // Remove individual segment popups - use unified route details panel instead
 
                 // Add route details panel click event
+                // Enhanced click/touch event for route details
                 polyline.on('click', function (e) {
                     // Prevent popup from opening
                     e.originalEvent.stopPropagation();
@@ -4074,36 +4907,33 @@
                     });
                 });
 
-                // Add hover popup for quick info
-                if (coordinates.length > 1) {
-                    const midpoint = coordinates[Math.floor(coordinates.length / 2)];
-                    const hoverPopup = L.popup({
-                        closeButton: false,
-                        className: 'segment-hover-popup'
-                    })
-                        .setLatLng(midpoint)
-                        .setContent(
-                            `
-                        <div style="text-align: center; font-size: 12px; font-family: 'Segoe UI', sans-serif;">
-                            <strong>${segment.from} → ${segment.to}</strong><br>
-                            📏 ${segment.distance.toFixed(2)} km<br>
-                            🚶 ~${Math.round(segment.distance * 12)} dakika
-                            ${segment.fallback ? '<br><span style="color: #e74c3c;">⚠️ Düz çizgi</span>' : '<br><span style="color: #27ae60;">✅ Yürüyüş yolu</span>'}
-                            <br><small style="color: #888;">Detaylar için tıklayın</small>
-                        </div>
-                        `
-                        );
+                // Add touch support for mobile devices
+                polyline.on('touchstart', function (e) {
+                    e.originalEvent.preventDefault();
+                    e.originalEvent.stopPropagation();
+                });
 
-                    polyline.on('mouseover', function () {
-                        if (!map.hasLayer(routePopup)) {
-                            hoverPopup.openOn(map);
-                        }
+                polyline.on('touchend', function (e) {
+                    e.originalEvent.preventDefault();
+                    e.originalEvent.stopPropagation();
+
+                    // Show route details panel on touch
+                    RouteDetailsPanel.show({
+                        total_distance: routeInfo.total_distance,
+                        estimated_time: routeInfo.estimated_time,
+                        route_type: 'yürüyüş',
+                        waypoints: selectedPOIs,
+                        segments: routeInfo.segments
                     });
+                });
 
-                    polyline.on('mouseout', function () {
-                        if (map.hasLayer(hoverPopup)) {
-                            map.closePopup(hoverPopup);
-                        }
+                // Add simple hover tooltip
+                if (coordinates.length > 1) {
+                    const tooltipContent = `${segment.from} → ${segment.to} (${segment.distance.toFixed(2)} km)`;
+                    polyline.bindTooltip(tooltipContent, {
+                        permanent: false,
+                        direction: 'center',
+                        className: 'route-tooltip'
                     });
                 }
             });
@@ -4111,86 +4941,16 @@
             console.log('✅ Walking route drawn successfully');
         }
 
-        // Create detailed route popup content
-        function createRoutePopupContent(segment, segmentNumber, routeInfo) {
-            const isWalkingRoute = !segment.fallback;
-            const routeTypeIcon = isWalkingRoute ? '🚶' : '📏';
-            const routeTypeName = isWalkingRoute ? 'Yürüyüş Rotası' : 'Düz Çizgi';
-            const routeTypeColor = isWalkingRoute ? '#27ae60' : '#e74c3c';
-
-            return `
-                <div style="font-family: 'Segoe UI', sans-serif; min-width: 280px;">
-                    <div style="
-                        background: linear-gradient(135deg, ${routeTypeColor} 0%, ${routeTypeColor}dd 100%);
-                        color: white;
-                        padding: 12px;
-                        margin: -10px -10px 15px -10px;
-                        border-radius: 8px 8px 0 0;
-                    ">
-                        <h6 style="margin: 0; font-size: 16px; font-weight: 600;">
-                            ${routeTypeIcon} Segment ${segmentNumber}
-                        </h6>
-                        <small style="opacity: 0.9; font-size: 12px;">
-                            ${routeTypeName}
-                        </small>
-                    </div>
-                    
-                    <div style="padding: 0 5px;">
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-weight: 600; color: #2c3e50; margin-bottom: 4px;">
-                                📍 ${segment.from} → ${segment.to}
-                            </div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                            <div style="background: #f8f9fa; padding: 8px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 18px; font-weight: 700; color: ${routeTypeColor};">
-                                    ${segment.distance.toFixed(2)}
-                                </div>
-                                <div style="font-size: 11px; color: #666;">km</div>
-                            </div>
-                            <div style="background: #f8f9fa; padding: 8px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 18px; font-weight: 700; color: ${routeTypeColor};">
-                                    ${Math.round(segment.distance * 12)}
-                                </div>
-                                <div style="font-size: 11px; color: #666;">dakika</div>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-bottom: 12px; padding: 8px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; border-left: 3px solid var(--primary-color);">
-                            <div style="font-size: 12px; color: #666; line-height: 1.4;">
-                                <strong>Toplam Rota:</strong> ${routeInfo.total_distance} km<br>
-                                <strong>Tahmini Süre:</strong> ${routeInfo.estimated_time} dakika<br>
-                                <strong>Koordinat Sayısı:</strong> ${segment.coordinates.length} nokta
-                            </div>
-                        </div>
-                        
-                        <div style="display: flex; gap: 8px; margin-top: 12px;">
-                            <button onclick="openRouteInGoogleMaps(${JSON.stringify(segment).replace(/"/g, '&quot;')})" 
-                                    style="flex: 1; background: #4285f4; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                🗺️ Google Maps
-                            </button>
-                            <button onclick="copyRouteCoordinates(${JSON.stringify(segment.coordinates).replace(/"/g, '&quot;')})" 
-                                    style="flex: 1; background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                📋 Koordinatları Kopyala
-                            </button>
-                        </div>
-                        
-                        <div style="margin-top: 8px; text-align: center;">
-                            <button onclick="exportFullRoute()" 
-                                    style="background: var(--accent-color); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                                📤 Tüm Rotayı Dışa Aktar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
+        // Removed createRoutePopupContent - now using unified route details panel
 
         // Open route segment in Google Maps
         function openRouteInGoogleMaps(segment) {
             const startCoord = segment.coordinates[0];
             const endCoord = segment.coordinates[segment.coordinates.length - 1];
+
+            // Try to use segment names if available
+            const originName = segment.from ? encodeURIComponent(segment.from) : `${startCoord.lat},${startCoord.lng}`;
+            const destinationName = segment.to ? encodeURIComponent(segment.to) : `${endCoord.lat},${endCoord.lng}`;
 
             // Create waypoints for Google Maps (max 25 waypoints)
             let waypoints = '';
@@ -4209,8 +4969,18 @@
                 }
             }
 
-            const url = `https://www.google.com/maps/dir/?api=1&origin=${startCoord.lat},${startCoord.lng}&destination=${endCoord.lat},${endCoord.lng}${waypoints}&travelmode=walking`;
+            // Try with names first, fallback to coordinates
+            let url;
+            if (segment.from && segment.to) {
+                url = `https://www.google.com/maps/dir/?api=1&origin=${originName}&destination=${destinationName}${waypoints}&travelmode=walking`;
+                console.log('🗺️ Opening segment with names:', segment.from, '→', segment.to);
+            } else {
+                url = `https://www.google.com/maps/dir/?api=1&origin=${startCoord.lat},${startCoord.lng}&destination=${endCoord.lat},${endCoord.lng}${waypoints}&travelmode=walking`;
+                console.log('🗺️ Opening segment with coordinates');
+            }
+
             window.open(url, '_blank');
+            showNotification('🗺️ Segment Google Maps\'te açıldı!', 'success');
         }
 
         // Copy route coordinates to clipboard
@@ -4249,7 +5019,7 @@
             document.body.removeChild(textArea);
         }
 
-        // Export full route to Google Maps
+        // Export full route to Google Maps with names
         function exportFullRoute() {
             if (selectedPOIs.length === 0) {
                 showNotification('❌ Önce POI seçin', 'error');
@@ -4257,13 +5027,18 @@
             }
 
             let waypoints = [];
+            let waypointNames = [];
 
+            // Add start location
             if (startLocation) {
-                waypoints.push(startLocation.latitude, startLocation.longitude);
+                waypoints.push(`${startLocation.latitude},${startLocation.longitude}`);
+                waypointNames.push(encodeURIComponent(startLocation.name || 'Başlangıç Noktası'));
             }
 
+            // Add all POIs with names
             selectedPOIs.forEach(poi => {
-                waypoints.push(poi.latitude, poi.longitude);
+                waypoints.push(`${poi.latitude},${poi.longitude}`);
+                waypointNames.push(encodeURIComponent(poi.name));
             });
 
             if (waypoints.length < 2) {
@@ -4271,22 +5046,62 @@
                 return;
             }
 
-            const origin = waypoints[0];
-            const destination = waypoints[waypoints.length - 1];
-            const middleWaypoints = waypoints.slice(1, -1);
+            // Use place names with coordinates for better Google Maps integration
+            let originParam, destinationParam, waypointParam = '';
 
-            let waypointParam = '';
-            if (middleWaypoints.length > 0) {
-                // Google Maps allows max 25 waypoints
-                const maxWaypoints = Math.min(middleWaypoints.length, 23);
-                const selectedWaypoints = middleWaypoints.slice(0, maxWaypoints);
-                waypointParam = '&waypoints=' + selectedWaypoints.join('|');
+            // Format origin with name and coordinates
+            if (startLocation) {
+                const originName = startLocation.name || 'Başlangıç Noktası';
+                const originCoords = `${startLocation.latitude},${startLocation.longitude}`;
+                originParam = encodeURIComponent(`${originName}, Ürgüp`) + '+' + originCoords;
+            } else if (selectedPOIs.length > 0) {
+                const firstPOI = selectedPOIs[0];
+                const originName = firstPOI.name;
+                const originCoords = `${firstPOI.latitude},${firstPOI.longitude}`;
+                originParam = encodeURIComponent(`${originName}, Ürgüp`) + '+' + originCoords;
             }
 
-            const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypointParam}&travelmode=walking`;
-            window.open(url, '_blank');
+            // Format destination
+            const lastPOI = selectedPOIs[selectedPOIs.length - 1];
+            const destName = lastPOI.name;
+            const destCoords = `${lastPOI.latitude},${lastPOI.longitude}`;
+            destinationParam = encodeURIComponent(`${destName}, Ürgüp`) + '+' + destCoords;
 
-            showNotification('🗺️ Google Maps\'te rota açıldı!', 'success');
+            // Format intermediate waypoints
+            let middlePOIs = [];
+            if (startLocation && selectedPOIs.length > 1) {
+                middlePOIs = selectedPOIs.slice(0, -1); // All except last
+            } else if (!startLocation && selectedPOIs.length > 2) {
+                middlePOIs = selectedPOIs.slice(1, -1); // All except first and last
+            }
+
+            if (middlePOIs.length > 0) {
+                const maxWaypoints = Math.min(middlePOIs.length, 23);
+                const selectedWaypoints = middlePOIs.slice(0, maxWaypoints);
+                
+                const waypointStrings = selectedWaypoints.map(poi => {
+                    const name = poi.name;
+                    const coords = `${poi.latitude},${poi.longitude}`;
+                    return encodeURIComponent(`${name}, Ürgüp`) + '+' + coords;
+                });
+                
+                waypointParam = '&waypoints=' + waypointStrings.join('|');
+            }
+
+            if (!originParam || !destinationParam) {
+                showNotification('❌ En az 2 nokta gerekli', 'error');
+                return;
+            }
+
+            const url = `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destinationParam}${waypointParam}&travelmode=walking`;
+            
+            console.log('🗺️ Exporting full route with place names:');
+            console.log('Origin:', decodeURIComponent(originParam));
+            console.log('Destination:', decodeURIComponent(destinationParam));
+            console.log('Waypoints:', waypointParam ? decodeURIComponent(waypointParam) : 'None');
+            
+            window.open(url, '_blank');
+            showNotification('🗺️ Google Maps\'te rota açıldı (POI isimleriyle)!', 'success');
         }
 
         // Show notification to user
@@ -5159,11 +5974,20 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
 
         function updateSliderBackground(slider) {
             const value = (slider.value - slider.min) / (slider.max - slider.min) * 100;
+            const sliderItem = slider.closest('.slider-item');
+            const category = sliderItem ? sliderItem.getAttribute('data-category') : null;
+
+            // Get category-specific color
+            let categoryColor = 'var(--primary-color)';
+            if (category) {
+                categoryColor = `var(--${category.replace('_', '-')}-color)`;
+            }
+
             const gradient = `linear-gradient(to right,
-                var(--primary-color) 0%,
-                var(--primary-color) ${value}%,
-                rgba(255, 255, 255, 0.8) ${value}%,
-                rgba(255, 255, 255, 0.8) 100%)`;
+                ${categoryColor} 0%,
+                ${categoryColor} ${value}%,
+                rgba(255, 255, 255, 0.9) ${value}%,
+                rgba(255, 255, 255, 0.9) 100%)`;
             slider.style.background = gradient;
         }
 
@@ -5255,7 +6079,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                 }
 
                 // Display results
-                displayRecommendations(recommendations);
+                await displayRecommendations(recommendations);
 
                 // Initialize map with recommendations
                 if (recommendations.length > 0) {
@@ -5371,7 +6195,7 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             return Math.min(15, bonus); // Max 15 point category bonus
         }
 
-        function displayRecommendations(recommendations) {
+        async function displayRecommendations(recommendations) {
             const container = document.getElementById('recommendationResults');
             const routeSection = document.getElementById('routeSection');
 
@@ -5390,47 +6214,182 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             // Show route section
             routeSection.style.display = 'block';
 
-            const html = recommendations.map((poi, index) => `
-                <div class="poi-card">
-                    <div class="poi-header">
-                        <div>
-                            <h3 class="poi-name">${poi.name}</h3>
+            // Create HTML for recommendations with enhanced design
+            const html = await Promise.all(recommendations.map(async (poi, index) => {
+                // Load media for this POI
+                let media = { images: [], videos: [], audio: [], models: [] };
+                try {
+                    media = await loadPOIMedia(poi.id || poi._id);
+                } catch (error) {
+                    console.warn('Could not load media for POI:', poi.name, error);
+                }
+
+                // Get first image for main display
+                const mainImage = media.images && media.images.length > 0 ? media.images[0] : null;
+                const totalMediaCount = (media.images?.length || 0) + (media.videos?.length || 0) + (media.audio?.length || 0);
+
+                // Create media preview thumbnails
+                let mediaPreviewHTML = '';
+                if (totalMediaCount > 0) {
+                    const allMediaItems = [];
+
+                    // Add images
+                    if (media.images) {
+                        media.images.forEach((image, idx) => {
+                            allMediaItems.push({
+                                type: 'image',
+                                path: image.preview_path || image.path || `poi_media/${image.filename}`,
+                                title: image.description || `Görsel ${idx + 1}`,
+                                originalIndex: idx
+                            });
+                        });
+                    }
+
+                    // Add videos
+                    if (media.videos) {
+                        media.videos.forEach((video, idx) => {
+                            allMediaItems.push({
+                                type: 'video',
+                                path: video.path || `poi_media/${video.filename}`,
+                                title: video.description || `Video ${idx + 1}`,
+                                originalIndex: idx
+                            });
+                        });
+                    }
+
+                    // Add audio
+                    if (media.audio) {
+                        media.audio.forEach((audio, idx) => {
+                            allMediaItems.push({
+                                type: 'audio',
+                                path: audio.path || `poi_media/${audio.filename}`,
+                                title: audio.description || `Ses ${idx + 1}`,
+                                originalIndex: idx
+                            });
+                        });
+                    }
+
+                    // Cache media items for modal
+                    const cacheKey = `poi_card_${poi.id || poi._id}`;
+                    poiMediaCache[cacheKey] = {
+                        items: allMediaItems,
+                        poiName: poi.name
+                    };
+
+                    // Create preview thumbnails (max 3)
+                    mediaPreviewHTML = '<div class="poi-media-preview">';
+                    const previewItems = allMediaItems.slice(0, 3);
+
+                    previewItems.forEach((item, idx) => {
+                        if (item.type === 'image') {
+                            const imagePath = item.path.startsWith('/') ? item.path : `/${item.path}`;
+                            mediaPreviewHTML += `
+                                <img src="${imagePath}" 
+                                     class="poi-media-thumb" 
+                                     onclick="showPOIMediaFromCache('${cacheKey}', ${idx})"
+                                     title="${item.title}" 
+                                     alt="${item.title}" />
+                            `;
+                        } else {
+                            const icon = item.type === 'video' ? '🎥' : '🎵';
+                            mediaPreviewHTML += `
+                                <div class="poi-media-count" onclick="showPOIMediaFromCache('${cacheKey}', ${idx})" title="${item.title}">
+                                    ${icon}
+                                </div>
+                            `;
+                        }
+                    });
+
+                    // Show remaining count if more than 3 items
+                    if (allMediaItems.length > 3) {
+                        mediaPreviewHTML += `
+                            <div class="poi-media-count" onclick="showPOIMediaFromCache('${cacheKey}', 0)">
+                                +${allMediaItems.length - 3}
+                            </div>
+                        `;
+                    }
+
+                    mediaPreviewHTML += '</div>';
+                }
+
+                return `
+                    <div class="poi-card" data-poi-id="${poi.id || poi._id}">
+                        <div class="poi-image-container">
+                            ${mainImage ? `
+                                <img src="/${mainImage.preview_path || mainImage.path || `poi_media/${mainImage.filename}`}" 
+                                     class="poi-image" 
+                                     alt="${poi.name}"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                <div class="poi-image-placeholder" style="display: none;">
+                                    <i class="fas fa-image"></i>
+                                </div>
+                            ` : `
+                                <div class="poi-image-placeholder">
+                                    <i class="fas fa-image"></i>
+                                </div>
+                            `}
+                            <div class="poi-image-overlay"></div>
                             <span class="poi-category">${categoryNames[poi.category] || poi.category}</span>
                         </div>
-                        <div class="poi-score">${poi.recommendationScore}% Uygun</div>
+                        
+                        <div class="poi-content">
+                            <div class="poi-header">
+                                <h3 class="poi-name">${poi.name}</h3>
+                                <div class="poi-score">${poi.recommendationScore}% Uygun</div>
+                            </div>
+                            
+                            ${poi.description ? `<p class="poi-description">${poi.description}</p>` : ''}
+                            
+                            <div class="poi-meta">
+                                <div class="poi-meta-item">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>${poi.latitude.toFixed(4)}, ${poi.longitude.toFixed(4)}</span>
+                                </div>
+                                ${totalMediaCount > 0 ? `
+                                    <div class="poi-meta-item">
+                                        <i class="fas fa-images"></i>
+                                        <span>${totalMediaCount} medya</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            
+                            <div class="poi-ratings">
+                                ${Object.keys(ratingCategories).map(category => {
+                    const rating = poi.ratings[category] || 0;
+                    if (rating > 30) {
+                        return `<span class="rating-badge high">
+                                                <i class="${ratingCategories[category].icon}"></i>
+                                                ${ratingCategories[category].name}: ${rating}%
+                                            </span>`;
+                    }
+                    return '';
+                }).join('')}
+                            </div>
+                            
+                            ${mediaPreviewHTML}
+                            
+                            <div class="poi-actions">
+                                <button class="poi-action-btn" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
+                                    <i class="fas fa-map-marker-alt"></i> Haritada Göster
+                                </button>
+                                <button class="poi-action-btn google-maps" onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')">
+                                    <i class="fab fa-google"></i> Google Maps
+                                </button>
+                                <button class="poi-action-btn add-route" onclick="addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})">
+                                    <i class="fas fa-plus"></i> Rotaya Ekle
+                                </button>
+                                ${totalMediaCount > 0 ? `
+                                    <button class="poi-action-btn view-media" onclick="showPOIMediaFromCache('poi_card_${poi.id || poi._id}', 0)">
+                                        <i class="fas fa-play"></i> Medyayı Görüntüle
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
                     </div>
-                    
-                    ${poi.description ? `<p class="text-muted">${poi.description}</p>` : ''}
-                    
-                    <div class="poi-ratings">
-                        ${Object.keys(ratingCategories).map(category => {
-                const rating = poi.ratings[category] || 0;
-                if (rating > 30) {
-                    return `<span class="rating-badge high">
-                                    <i class="${ratingCategories[category].icon}"></i>
-                                    ${ratingCategories[category].name}: ${rating}%
-                                </span>`;
-                }
-                return '';
-            }).join('')}
-                    </div>
-                    
-                    <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button onclick="focusOnMap(${poi.latitude}, ${poi.longitude})" 
-                                style="background: var(--primary-color); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                            <i class="fas fa-map-marker-alt"></i> Haritada Göster
-                        </button>
-                        <button onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" 
-                                style="background: #4285f4; color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                            <i class="fab fa-google"></i> Google Maps
-                        </button>
-                        <button onclick="addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})" 
-                                style="background: var(--accent-color); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                            <i class="fas fa-plus"></i> Rotaya Ekle
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }));
+
+            container.innerHTML = (await Promise.all(html)).join('');
 
             container.innerHTML = html;
         }
