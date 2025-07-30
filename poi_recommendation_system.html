@@ -1899,17 +1899,21 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        /* Route popup styles */
-        .route-detail-popup .leaflet-popup-content-wrapper {
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            max-width: 350px !important;
+        /* Route tooltip styles */
+        .route-tooltip {
+            background: rgba(0, 0, 0, 0.8) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+            backdrop-filter: blur(10px) !important;
         }
 
-        .route-detail-popup .leaflet-popup-content {
-            margin: 10px;
-            line-height: 1.4;
+        .route-tooltip::before {
+            border-top-color: rgba(0, 0, 0, 0.8) !important;
         }
 
         .segment-hover-popup .leaflet-popup-content-wrapper {
@@ -3362,54 +3366,27 @@
                     return;
                 }
 
-                // Use place names with coordinates for better Google Maps integration
-                let originParam, destinationParam, waypointParam = '';
+                // Use simple coordinate-based approach for reliability
+                const origin = waypoints[0];
+                const destination = waypoints[waypoints.length - 1];
 
-                // Format origin with name and coordinates
-                if (startLocation) {
-                    const originName = startLocation.name || 'Başlangıç Noktası';
-                    const originCoords = `${startLocation.latitude},${startLocation.longitude}`;
-                    // Use format: "Place Name" + coordinates for better recognition
-                    originParam = encodeURIComponent(`${originName}, Ürgüp`) + '+' + originCoords;
-                } else {
-                    originParam = waypoints[0];
+                let waypointParam = '';
+                if (waypoints.length > 2) {
+                    const middleWaypoints = waypoints.slice(1, -1);
+                    const maxWaypoints = Math.min(middleWaypoints.length, 23);
+                    const selectedWaypoints = middleWaypoints.slice(0, maxWaypoints);
+                    waypointParam = '&waypoints=' + selectedWaypoints.join('|');
                 }
 
-                // Format destination with name and coordinates
-                const lastPOI = selectedPOIs[selectedPOIs.length - 1];
-                if (lastPOI) {
-                    const destName = lastPOI.name;
-                    const destCoords = `${lastPOI.latitude},${lastPOI.longitude}`;
-                    destinationParam = encodeURIComponent(`${destName}, Ürgüp`) + '+' + destCoords;
-                } else {
-                    destinationParam = waypoints[waypoints.length - 1];
-                }
+                // Create URL with coordinates (most reliable)
+                const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypointParam}&travelmode=walking`;
 
-                // Format intermediate waypoints with names
-                if (selectedPOIs.length > 1) {
-                    const middlePOIs = startLocation ? selectedPOIs.slice(0, -1) : selectedPOIs.slice(1, -1);
-                    const maxWaypoints = Math.min(middlePOIs.length, 23);
-                    const selectedWaypoints = middlePOIs.slice(0, maxWaypoints);
-                    
-                    const waypointStrings = selectedWaypoints.map(poi => {
-                        const name = poi.name;
-                        const coords = `${poi.latitude},${poi.longitude}`;
-                        return encodeURIComponent(`${name}, Ürgüp`) + '+' + coords;
-                    });
-                    
-                    if (waypointStrings.length > 0) {
-                        waypointParam = '&waypoints=' + waypointStrings.join('|');
-                    }
-                }
-
-                const url = `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destinationParam}${waypointParam}&travelmode=walking`;
-
-                console.log('🗺️ Exporting route to Google Maps with place names:');
-                console.log('Origin:', decodeURIComponent(originParam));
-                console.log('Destination:', decodeURIComponent(destinationParam));
-                console.log('Waypoints:', waypointParam ? decodeURIComponent(waypointParam) : 'None');
+                console.log('🗺️ Exporting route to Google Maps:');
+                console.log('Origin:', origin, startLocation ? `(${startLocation.name})` : '');
+                console.log('Destination:', destination, selectedPOIs.length > 0 ? `(${selectedPOIs[selectedPOIs.length - 1].name})` : '');
+                console.log('Waypoints:', waypoints.slice(1, -1));
                 console.log('URL:', url);
-                
+
                 window.open(url, '_blank');
 
                 showNotification('✅ Google Maps\'te rota açıldı (isimlerle)!', 'success');
@@ -4473,9 +4450,13 @@
             }
         }
 
-        // Open in Google Maps
+        // Open in Google Maps with place name
         function openInGoogleMaps(lat, lng, name) {
-            const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query_place_id=${encodeURIComponent(name)}`;
+            // Use coordinates for reliable location finding
+            const coords = `${lat},${lng}`;
+            const url = `https://www.google.com/maps/search/?api=1&query=${coords}`;
+
+            console.log('🗺️ Opening POI in Google Maps:', name, 'at', coords);
             window.open(url, '_blank');
         }
 
@@ -4969,16 +4950,33 @@
                 }
             }
 
-            // Try with names first, fallback to coordinates
-            let url;
+            // Format with place names and coordinates for better recognition
+            let originParam, destinationParam;
+
             if (segment.from && segment.to) {
-                url = `https://www.google.com/maps/dir/?api=1&origin=${originName}&destination=${destinationName}${waypoints}&travelmode=walking`;
-                console.log('🗺️ Opening segment with names:', segment.from, '→', segment.to);
+                // Use place names with coordinates for better recognition
+                const originCoords = `${startCoord.lat},${startCoord.lng}`;
+                const destCoords = `${endCoord.lat},${endCoord.lng}`;
+
+                originParam = encodeURIComponent(`${segment.from}, Ürgüp`) + '+' + originCoords;
+                destinationParam = encodeURIComponent(`${segment.to}, Ürgüp`) + '+' + destCoords;
+
+                console.log('�️ Openming segment with place names:', segment.from, '→', segment.to);
             } else {
-                url = `https://www.google.com/maps/dir/?api=1&origin=${startCoord.lat},${startCoord.lng}&destination=${endCoord.lat},${endCoord.lng}${waypoints}&travelmode=walking`;
-                console.log('🗺️ Opening segment with coordinates');
+                // Fallback to coordinates only
+                originParam = `${startCoord.lat},${startCoord.lng}`;
+                destinationParam = `${endCoord.lat},${endCoord.lng}`;
+                console.log('🗺️ Opening segment with coordinates only');
             }
 
+            // Use coordinates for reliable routing
+            const originCoords = `${startCoord.lat},${startCoord.lng}`;
+            const destCoords = `${endCoord.lat},${endCoord.lng}`;
+
+            const url = `https://www.google.com/maps/dir/?api=1&origin=${originCoords}&destination=${destCoords}${waypoints}&travelmode=walking`;
+
+            console.log('🗺️ Opening segment:', segment.from || 'Start', '→', segment.to || 'End');
+            console.log('🗺️ Segment URL:', url);
             window.open(url, '_blank');
             showNotification('🗺️ Segment Google Maps\'te açıldı!', 'success');
         }
@@ -5046,62 +5044,28 @@
                 return;
             }
 
-            // Use place names with coordinates for better Google Maps integration
-            let originParam, destinationParam, waypointParam = '';
+            // Use simple coordinate-based approach for reliability
+            const origin = waypoints[0];
+            const destination = waypoints[waypoints.length - 1];
 
-            // Format origin with name and coordinates
-            if (startLocation) {
-                const originName = startLocation.name || 'Başlangıç Noktası';
-                const originCoords = `${startLocation.latitude},${startLocation.longitude}`;
-                originParam = encodeURIComponent(`${originName}, Ürgüp`) + '+' + originCoords;
-            } else if (selectedPOIs.length > 0) {
-                const firstPOI = selectedPOIs[0];
-                const originName = firstPOI.name;
-                const originCoords = `${firstPOI.latitude},${firstPOI.longitude}`;
-                originParam = encodeURIComponent(`${originName}, Ürgüp`) + '+' + originCoords;
+            let waypointParam = '';
+            if (waypoints.length > 2) {
+                const middleWaypoints = waypoints.slice(1, -1);
+                const maxWaypoints = Math.min(middleWaypoints.length, 23);
+                const selectedWaypoints = middleWaypoints.slice(0, maxWaypoints);
+                waypointParam = '&waypoints=' + selectedWaypoints.join('|');
             }
 
-            // Format destination
-            const lastPOI = selectedPOIs[selectedPOIs.length - 1];
-            const destName = lastPOI.name;
-            const destCoords = `${lastPOI.latitude},${lastPOI.longitude}`;
-            destinationParam = encodeURIComponent(`${destName}, Ürgüp`) + '+' + destCoords;
+            const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypointParam}&travelmode=walking`;
 
-            // Format intermediate waypoints
-            let middlePOIs = [];
-            if (startLocation && selectedPOIs.length > 1) {
-                middlePOIs = selectedPOIs.slice(0, -1); // All except last
-            } else if (!startLocation && selectedPOIs.length > 2) {
-                middlePOIs = selectedPOIs.slice(1, -1); // All except first and last
-            }
+            console.log('🗺️ Exporting full route:');
+            console.log('Origin:', origin, startLocation ? `(${startLocation.name})` : selectedPOIs[0] ? `(${selectedPOIs[0].name})` : '');
+            console.log('Destination:', destination, selectedPOIs.length > 0 ? `(${selectedPOIs[selectedPOIs.length - 1].name})` : '');
+            console.log('Waypoints:', waypoints.slice(1, -1));
+            console.log('URL:', url);
 
-            if (middlePOIs.length > 0) {
-                const maxWaypoints = Math.min(middlePOIs.length, 23);
-                const selectedWaypoints = middlePOIs.slice(0, maxWaypoints);
-                
-                const waypointStrings = selectedWaypoints.map(poi => {
-                    const name = poi.name;
-                    const coords = `${poi.latitude},${poi.longitude}`;
-                    return encodeURIComponent(`${name}, Ürgüp`) + '+' + coords;
-                });
-                
-                waypointParam = '&waypoints=' + waypointStrings.join('|');
-            }
-
-            if (!originParam || !destinationParam) {
-                showNotification('❌ En az 2 nokta gerekli', 'error');
-                return;
-            }
-
-            const url = `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destinationParam}${waypointParam}&travelmode=walking`;
-            
-            console.log('🗺️ Exporting full route with place names:');
-            console.log('Origin:', decodeURIComponent(originParam));
-            console.log('Destination:', decodeURIComponent(destinationParam));
-            console.log('Waypoints:', waypointParam ? decodeURIComponent(waypointParam) : 'None');
-            
             window.open(url, '_blank');
-            showNotification('🗺️ Google Maps\'te rota açıldı (POI isimleriyle)!', 'success');
+            showNotification('🗺️ Google Maps\'te rota açıldı!', 'success');
         }
 
         // Show notification to user
