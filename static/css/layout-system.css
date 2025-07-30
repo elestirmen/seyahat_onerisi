@@ -443,3 +443,127 @@ body {
 .touch-pan-x { touch-action: pan-x; }
 .touch-pan-y { touch-action: pan-y; }
 .touch-manipulation { touch-action: manipulation; }
+
+/* ===== MOBILE LAYOUT OPTIMIZATIONS ===== */
+
+/* Enhanced mobile container spacing */
+@media (max-width: 768px) {
+  .container {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+  
+  /* Improved grid spacing for mobile */
+  .grid {
+    gap: var(--space-3);
+  }
+  
+  .grid-auto-fit {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Better mobile margins */
+  .my-8 { margin-top: var(--space-6); margin-bottom: var(--space-6); }
+  .my-12 { margin-top: var(--space-8); margin-bottom: var(--space-8); }
+  
+  .p-8 { padding: var(--space-6); }
+  .p-12 { padding: var(--space-8); }
+  
+  .px-8 { padding-left: var(--space-6); padding-right: var(--space-6); }
+  .py-8 { padding-top: var(--space-6); padding-bottom: var(--space-6); }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
+  }
+  
+  /* Tighter spacing for small screens */
+  .grid {
+    gap: var(--space-2);
+  }
+  
+  /* Reduced margins for small screens */
+  .my-6 { margin-top: var(--space-4); margin-bottom: var(--space-4); }
+  .my-8 { margin-top: var(--space-5); margin-bottom: var(--space-5); }
+  .my-12 { margin-top: var(--space-6); margin-bottom: var(--space-6); }
+  
+  .p-6 { padding: var(--space-4); }
+  .p-8 { padding: var(--space-5); }
+  .p-12 { padding: var(--space-6); }
+  
+  .px-6 { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .px-8 { padding-left: var(--space-5); padding-right: var(--space-5); }
+  .py-6 { padding-top: var(--space-4); padding-bottom: var(--space-4); }
+  .py-8 { padding-top: var(--space-5); padding-bottom: var(--space-5); }
+}
+
+/* ===== TOUCH-FRIENDLY UTILITIES ===== */
+
+.touch-target-min {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+}
+
+.touch-target-comfortable {
+  min-height: var(--touch-target-comfortable);
+  min-width: var(--touch-target-comfortable);
+}
+
+.touch-target-large {
+  min-height: var(--touch-target-large);
+  min-width: var(--touch-target-large);
+}
+
+/* Prevent text selection on touch elements */
+.touch-element {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Enhanced focus for touch devices */
+.touch-device .focus\:ring:focus-visible {
+  box-shadow: var(--focus-ring-offset);
+}
+
+/* Improved scrolling for touch devices */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* ===== RESPONSIVE GRID ENHANCEMENTS ===== */
+
+/* Better responsive grid for sliders */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .grid-auto-fit {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-auto-fit {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+}
+
+/* Responsive gap adjustments */
+@media (max-width: 640px) {
+  .gap-6 { gap: var(--space-4); }
+  .gap-8 { gap: var(--space-5); }
+  .gap-10 { gap: var(--space-6); }
+  .gap-12 { gap: var(--space-8); }
+}
+
+@media (max-width: 480px) {
+  .gap-4 { gap: var(--space-3); }
+  .gap-6 { gap: var(--space-3); }
+  .gap-8 { gap: var(--space-4); }
+  .gap-10 { gap: var(--space-5); }
+  .gap-12 { gap: var(--space-6); }
+}
