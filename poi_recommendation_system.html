@@ -485,6 +485,30 @@
             position: relative;
         }
 
+        .discrete-slider {
+            background: linear-gradient(to right,
+                    #e0e0e0 0%, #e0e0e0 20%,
+                    #e0e0e0 20%, #e0e0e0 40%,
+                    #e0e0e0 40%, #e0e0e0 60%,
+                    #e0e0e0 60%, #e0e0e0 80%,
+                    #e0e0e0 80%, #e0e0e0 100%);
+            position: relative;
+        }
+
+        .discrete-slider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: repeating-linear-gradient(to right,
+                    transparent 0%, transparent calc(25% - 1px),
+                    rgba(0, 0, 0, 0.3) calc(25% - 1px), rgba(0, 0, 0, 0.3) calc(25% + 1px));
+            pointer-events: none;
+            transform: translateY(-50%);
+        }
+
         .slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
@@ -577,14 +601,15 @@
         .slider-value {
             text-align: center;
             font-weight: 800;
-            font-size: 1.2rem;
+            font-size: 1rem;
             padding: 10px 18px;
             border-radius: 30px;
             border: 2px solid;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            min-width: 60px;
+            min-width: 120px;
             position: relative;
             overflow: hidden;
+            white-space: nowrap;
         }
 
         .slider-value::before {
@@ -1923,9 +1948,9 @@
             }
 
             .slider-value {
-                font-size: 1rem;
-                padding: 8px 14px;
-                min-width: 50px;
+                font-size: 0.9rem;
+                padding: 8px 12px;
+                min-width: 110px;
             }
 
             .recommend-btn {
@@ -2120,9 +2145,9 @@
             }
 
             .slider-value {
-                font-size: 0.9rem;
-                padding: 6px 12px;
-                min-width: 45px;
+                font-size: 0.8rem;
+                padding: 6px 10px;
+                min-width: 100px;
             }
 
             .recommend-btn {
@@ -2888,8 +2913,9 @@
                 </h2>
                 <p style="color: #666; font-size: 1rem; margin-bottom: 25px; text-align: center; line-height: 1.6;"
                     class="preferences-description">
-                    Aşağıdaki kategorilerde ne kadar ilginiz olduğunu belirtin.
-                    <strong>0</strong> hiç ilgim yok, <strong>100</strong> çok ilgiliyim anlamına gelir.
+                    Aşağıdaki kategorilerde ilgi seviyenizi belirtin.
+                    <strong>İlgilenmiyorum</strong>'dan <strong>Kesinlikle İhtiyacım Var</strong>'a kadar seçenekler
+                    arasından seçim yapın.
                 </p>
 
                 <div class="slider-container">
@@ -2899,8 +2925,9 @@
                                 <i class="fas fa-tree"></i>
                                 <span>Doğa</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="doga">
-                            <div class="slider-value" id="doga-value">0</div>
+                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
+                                id="doga">
+                            <div class="slider-value" id="doga-value">İlgilenmiyorum</div>
                         </div>
 
                         <div class="slider-item" data-category="yemek">
@@ -2908,8 +2935,9 @@
                                 <i class="fas fa-utensils"></i>
                                 <span>Yemek</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="yemek">
-                            <div class="slider-value" id="yemek-value">0</div>
+                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
+                                id="yemek">
+                            <div class="slider-value" id="yemek-value">İlgilenmiyorum</div>
                         </div>
 
                         <div class="slider-item" data-category="tarihi">
@@ -2917,8 +2945,9 @@
                                 <i class="fas fa-landmark"></i>
                                 <span>Tarih</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="tarihi">
-                            <div class="slider-value" id="tarihi-value">0</div>
+                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
+                                id="tarihi">
+                            <div class="slider-value" id="tarihi-value">İlgilenmiyorum</div>
                         </div>
 
                         <div class="slider-item" data-category="eglence">
@@ -2926,8 +2955,9 @@
                                 <i class="fas fa-gamepad"></i>
                                 <span>Eğlence</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="eglence">
-                            <div class="slider-value" id="eglence-value">0</div>
+                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
+                                id="eglence">
+                            <div class="slider-value" id="eglence-value">İlgilenmiyorum</div>
                         </div>
 
                         <div class="slider-item" data-category="sanat_kultur">
@@ -2935,8 +2965,9 @@
                                 <i class="fas fa-palette"></i>
                                 <span>Sanat & Kültür</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="sanat_kultur">
-                            <div class="slider-value" id="sanat_kultur-value">0</div>
+                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
+                                id="sanat_kultur">
+                            <div class="slider-value" id="sanat_kultur-value">İlgilenmiyorum</div>
                         </div>
 
                         <div class="slider-item" data-category="macera">
@@ -2944,8 +2975,9 @@
                                 <i class="fas fa-mountain"></i>
                                 <span>Macera</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="macera">
-                            <div class="slider-value" id="macera-value">0</div>
+                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
+                                id="macera">
+                            <div class="slider-value" id="macera-value">İlgilenmiyorum</div>
                         </div>
 
                         <div class="slider-item" data-category="rahatlatici">
@@ -2953,8 +2985,9 @@
                                 <i class="fas fa-spa"></i>
                                 <span>Rahatlatıcı</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="rahatlatici">
-                            <div class="slider-value" id="rahatlatici-value">0</div>
+                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
+                                id="rahatlatici">
+                            <div class="slider-value" id="rahatlatici-value">İlgilenmiyorum</div>
                         </div>
 
                         <div class="slider-item" data-category="spor">
@@ -2962,8 +2995,9 @@
                                 <i class="fas fa-running"></i>
                                 <span>Spor</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="spor">
-                            <div class="slider-value" id="spor-value">0</div>
+                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
+                                id="spor">
+                            <div class="slider-value" id="spor-value">İlgilenmiyorum</div>
                         </div>
 
                         <div class="slider-item" data-category="alisveris">
@@ -2971,8 +3005,9 @@
                                 <i class="fas fa-shopping-bag"></i>
                                 <span>Alışveriş</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="alisveris">
-                            <div class="slider-value" id="alisveris-value">0</div>
+                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
+                                id="alisveris">
+                            <div class="slider-value" id="alisveris-value">İlgilenmiyorum</div>
                         </div>
 
                         <div class="slider-item" data-category="gece_hayati">
@@ -2980,8 +3015,9 @@
                                 <i class="fas fa-moon"></i>
                                 <span>Gece Hayatı</span>
                             </div>
-                            <input type="range" min="0" max="100" value="0" class="slider" id="gece_hayati">
-                            <div class="slider-value" id="gece_hayati-value">0</div>
+                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
+                                id="gece_hayati">
+                            <div class="slider-value" id="gece_hayati-value">İlgilenmiyorum</div>
                         </div>
                     </div>
                 </div>
@@ -6361,7 +6397,6 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
         }
 
         function updateSliderBackground(slider) {
-            const value = (slider.value - slider.min) / (slider.max - slider.min) * 100;
             const sliderItem = slider.closest('.slider-item');
             const category = sliderItem ? sliderItem.getAttribute('data-category') : null;
 
@@ -6371,26 +6406,68 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                 categoryColor = `var(--${category.replace('_', '-')}-color)`;
             }
 
-            const gradient = `linear-gradient(to right,
-                ${categoryColor} 0%,
-                ${categoryColor} ${value}%,
-                rgba(255, 255, 255, 0.9) ${value}%,
-                rgba(255, 255, 255, 0.9) 100%)`;
-            slider.style.background = gradient;
+            if (slider.classList.contains('discrete-slider')) {
+                // For discrete sliders, create step-based background
+                const value = parseInt(slider.value);
+                const percentage = (value / 4) * 100;
+
+                const gradient = `linear-gradient(to right,
+                    ${categoryColor} 0%,
+                    ${categoryColor} ${percentage}%,
+                    rgba(255, 255, 255, 0.9) ${percentage}%,
+                    rgba(255, 255, 255, 0.9) 100%)`;
+                slider.style.background = gradient;
+            } else {
+                // Original logic for continuous sliders
+                const value = (slider.value - slider.min) / (slider.max - slider.min) * 100;
+                const gradient = `linear-gradient(to right,
+                    ${categoryColor} 0%,
+                    ${categoryColor} ${value}%,
+                    rgba(255, 255, 255, 0.9) ${value}%,
+                    rgba(255, 255, 255, 0.9) 100%)`;
+                slider.style.background = gradient;
+            }
         }
+
+        // Discrete slider value mapping
+        const discreteValues = {
+            0: { text: 'İlgilenmiyorum', value: 0 },
+            1: { text: 'Az Meraklıyım', value: 25 },
+            2: { text: 'Nötrüm', value: 50 },
+            3: { text: 'İlgileniyorum', value: 75 },
+            4: { text: 'Kesinlikle İhtiyacım Var', value: 100 }
+        };
 
         function updateSliderItemState(sliderItem, valueDisplay, value) {
             // Remove existing classes
             sliderItem.classList.remove('active');
             valueDisplay.classList.remove('zero', 'high');
 
-            if (value === 0) {
-                valueDisplay.classList.add('zero');
-            } else if (value >= 70) {
-                sliderItem.classList.add('active');
-                valueDisplay.classList.add('high');
-            } else if (value > 0) {
-                sliderItem.classList.add('active');
+            // For discrete sliders, use the mapping
+            if (sliderItem.querySelector('.discrete-slider')) {
+                const discreteValue = discreteValues[value];
+                if (discreteValue) {
+                    valueDisplay.textContent = discreteValue.text;
+
+                    if (value === 0) {
+                        valueDisplay.classList.add('zero');
+                    } else if (value >= 3) {
+                        sliderItem.classList.add('active');
+                        valueDisplay.classList.add('high');
+                    } else if (value > 0) {
+                        sliderItem.classList.add('active');
+                    }
+                }
+            } else {
+                // Original logic for non-discrete sliders
+                if (value === 0) {
+                    valueDisplay.classList.add('zero');
+                } else if (value >= 70) {
+                    sliderItem.classList.add('active');
+                    valueDisplay.classList.add('high');
+                } else if (value > 0) {
+                    sliderItem.classList.add('active');
+                }
             }
         }
 
@@ -6444,7 +6521,15 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                 // Get user preferences
                 const preferences = {};
                 Object.keys(ratingCategories).forEach(category => {
-                    preferences[category] = parseInt(document.getElementById(category).value);
+                    const sliderValue = parseInt(document.getElementById(category).value);
+                    const slider = document.getElementById(category);
+
+                    if (slider.classList.contains('discrete-slider')) {
+                        // Convert discrete slider value to actual preference value
+                        preferences[category] = discreteValues[sliderValue].value;
+                    } else {
+                        preferences[category] = sliderValue;
+                    }
                 });
 
                 console.log('User preferences:', preferences);
