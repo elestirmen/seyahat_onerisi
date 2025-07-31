@@ -3130,38 +3130,26 @@
 
 /* Pulse animation for active markers */
 @keyframes markerPulse {
-    0% { 
+    0% {
         box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
-        transform: scale(1.08);
     }
     50% {
-        transform: scale(1.12);
-    }
-    70% { 
         box-shadow: 0 0 0 8px rgba(102, 126, 234, 0);
-        transform: scale(1.08);
     }
-    100% { 
+    100% {
         box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
-        transform: scale(1.08);
     }
 }
 
 @keyframes lowScoreMarkerPulse {
-    0% { 
+    0% {
         box-shadow: 0 0 0 0 rgba(156, 163, 175, 0.3);
-        transform: scale(1.05);
     }
     50% {
-        transform: scale(1.08);
-    }
-    70% { 
         box-shadow: 0 0 0 6px rgba(156, 163, 175, 0);
-        transform: scale(1.05);
     }
-    100% { 
+    100% {
         box-shadow: 0 0 0 0 rgba(156, 163, 175, 0);
-        transform: scale(1.05);
     }
 }
 
