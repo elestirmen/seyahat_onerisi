@@ -268,6 +268,11 @@ sudo apt-get install libspatialindex-dev  # Ubuntu/Debian
 brew install spatialindex  # macOS
 ```
 
+**Ek: scikit-learn Eksik Uyarısı**
+```bash
+pip install scikit-learn
+```
+
 **2. GEOS/GDAL Hataları:**
 ```bash
 # Ubuntu/Debian

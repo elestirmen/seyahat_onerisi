@@ -604,6 +604,29 @@ app.register_blueprint(auth_bp)
 JSON_FALLBACK = False
 JSON_FILE_PATH = 'test_data.json'
 
+# Pre-loaded walking network graph
+WALKING_GRAPH = None
+WALKING_GRAPH_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'urgup_merkez_walking.graphml')
+
+def load_walking_graph():
+    """Load walking GraphML data once and cache it."""
+    global WALKING_GRAPH
+    if WALKING_GRAPH is None:
+        try:
+            import osmnx as ox
+        except Exception as e:
+            raise ImportError(f"OSMnx required for walking routes: {e}")
+
+        if not os.path.exists(WALKING_GRAPH_PATH):
+            raise FileNotFoundError(f"GraphML file not found: {WALKING_GRAPH_PATH}")
+
+        print(f"\U0001F4C1 Loading walking network from: {WALKING_GRAPH_PATH}")
+        WALKING_GRAPH = ox.load_graphml(WALKING_GRAPH_PATH)
+        print(f"\u2705 Network loaded: {len(WALKING_GRAPH.nodes)} nodes, {len(WALKING_GRAPH.edges)} edges")
+
+    return WALKING_GRAPH
+
 # Rating kategorileri (yeni POI puanlama sistemi)
 RATING_CATEGORIES = {
     'tarihi': {'name': 'Tarihi', 'description': 'Tarihi önem ve değer', 'icon': 'fa-landmark', 'color': '#8B4513'},
@@ -2365,44 +2388,35 @@ def create_walking_route():
         if len(waypoints) < 2:
             return jsonify({'error': 'At least 2 waypoints required'}), 400
         
-        # Import required libraries
+        # Import required libraries and load walking graph
         try:
-            import osmnx as ox
             import networkx as nx
-        except ImportError:
-            return jsonify({'error': 'OSMnx not available, using direct routes'}), 503
-        
-        # Load pre-downloaded walking network for Urgup
-        try:
-            import os
-            graphml_file = 'urgup_merkez_walking.graphml'
-            
-            if not os.path.exists(graphml_file):
-                raise FileNotFoundError(f"GraphML file not found: {graphml_file}")
-            
-            print(f"📁 Loading walking network from: {graphml_file}")
-            
-            # Load the pre-downloaded GraphML file
-            G = ox.load_graphml(graphml_file)
-            print(f"✅ Network loaded successfully: {len(G.nodes)} nodes, {len(G.edges)} edges")
-            
+            import osmnx as ox  # Needed for nearest node lookup
+            G = load_walking_graph()
+            error_msg = None
+        except Exception as e:
+            error_msg = str(e)
+            print(f"OSMnx network error: {error_msg}")
+            G = None
+
+        if G:
             route_segments = []
             total_distance = 0
-            
+
             # Create route segments between consecutive waypoints
             for i in range(len(waypoints) - 1):
                 start = waypoints[i]
                 end = waypoints[i + 1]
-                
+
                 try:
                     # Find nearest nodes
                     start_node = ox.nearest_nodes(G, start['lng'], start['lat'])
                     end_node = ox.nearest_nodes(G, end['lng'], end['lat'])
-                    
+
                     # Calculate shortest path
                     route_nodes = nx.shortest_path(G, start_node, end_node, weight='length')
                     segment_length = nx.shortest_path_length(G, start_node, end_node, weight='length')
-                    
+
                     # Convert nodes to coordinates
                     segment_coords = []
                     for node in route_nodes:
@@ -2410,16 +2424,16 @@ def create_walking_route():
                             'lat': G.nodes[node]['y'],
                             'lng': G.nodes[node]['x']
                         })
-                    
+
                     route_segments.append({
                         'coordinates': segment_coords,
                         'distance': segment_length / 1000.0,  # Convert to km
                         'from': start.get('name', f'Point {i+1}'),
                         'to': end.get('name', f'Point {i+2}')
                     })
-                    
+
                     total_distance += segment_length / 1000.0
-                    
+
                 except Exception as e:
                     print(f"Route segment error: {e}")
                     # Fallback to direct line
@@ -2434,7 +2448,7 @@ def create_walking_route():
                         'fallback': True
                     })
                     total_distance += haversine_distance(start['lat'], start['lng'], end['lat'], end['lng'])
-            
+
             return jsonify({
                 'success': True,
                 'route': {
@@ -2445,9 +2459,9 @@ def create_walking_route():
                     'network_type': 'walking'
                 }
             })
-            
-        except Exception as e:
-            print(f"OSMnx network error: {e}")
+
+        else:
+            print(f"OSMnx network error or load failure: {error_msg}")
             # Fallback to direct routes
             route_segments = []
             total_distance = 0
