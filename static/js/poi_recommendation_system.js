@@ -727,46 +727,57 @@ class RouteDetailsPanel {
 }
 
 // Create custom marker icons
-function createCustomIcon(category, score) {
+function createCustomIcon(category, score, isLowScore = false) {
     const style = categoryStyles[category] || { color: '#667eea', icon: '📍' };
+    
+    // Düşük puanlı POI'ler için gri ve silik stil
+    const markerColor = isLowScore ? '#9ca3af' : style.color;
+    const opacity = isLowScore ? '0.85' : '1';
+    const boxShadow = isLowScore ? '0 3px 8px rgba(0,0,0,0.25)' : '0 4px 12px rgba(0,0,0,0.3)';
+    const borderColor = isLowScore ? '#d1d5db' : 'white';
+    const scoreBackgroundColor = isLowScore ? '#f3f4f6' : 'white';
+    const scoreTextColor = isLowScore ? '#6b7280' : style.color;
 
     return L.divIcon({
         html: `
-                    <div style="
-                        background: ${style.color};
-                        width: 40px;
-                        height: 40px;
-                        border-radius: 50% 50% 50% 0;
-                        border: 3px solid white;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 18px;
-                        transform: rotate(-45deg);
-                        position: relative;
-                    ">
-                        <span style="transform: rotate(45deg);">${style.icon}</span>
-                        <div style="
-                            position: absolute;
-                            top: -8px;
-                            right: -8px;
-                            background: white;
-                            color: ${style.color};
-                            border-radius: 50%;
-                            width: 20px;
-                            height: 20px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            font-size: 10px;
-                            font-weight: bold;
-                            border: 2px solid ${style.color};
-                            transform: rotate(45deg);
-                        ">${score}</div>
-                    </div>
-                `,
-        className: 'custom-poi-marker',
+            <div style="
+                background: ${markerColor};
+                width: 40px;
+                height: 40px;
+                border-radius: 50% 50% 50% 0;
+                border: 3px solid ${borderColor};
+                box-shadow: ${boxShadow};
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                transform: rotate(-45deg);
+                position: relative;
+                opacity: ${opacity};
+                ${isLowScore ? 'filter: grayscale(0.3);' : ''}
+            ">
+                <span style="transform: rotate(45deg); opacity: ${isLowScore ? '0.8' : '1'};">${style.icon}</span>
+                <div style="
+                    position: absolute;
+                    top: -8px;
+                    right: -8px;
+                    background: ${scoreBackgroundColor};
+                    color: ${scoreTextColor};
+                    border-radius: 50%;
+                    width: 20px;
+                    height: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 10px;
+                    font-weight: bold;
+                    border: 2px solid ${markerColor};
+                    transform: rotate(45deg);
+                    opacity: ${isLowScore ? '0.9' : '1'};
+                ">${score}</div>
+            </div>
+        `,
+        className: `custom-poi-marker ${isLowScore ? 'low-score-marker' : 'high-score-marker'}`,
         iconSize: [40, 40],
         iconAnchor: [20, 40],
         popupAnchor: [0, -40]
@@ -3496,11 +3507,10 @@ async function getRecommendations() {
             }
         }
 
-        // Initialize map with high score recommendations first
-        const mapRecommendations = recommendationData.highScore.length > 0 ? recommendationData.highScore : recommendationData.all;
-        if (mapRecommendations.length > 0) {
-            console.log('Initializing map with recommendations...');
-            await initializeMap(mapRecommendations);
+        // Initialize map with all recommendations (high and low score)
+        if (recommendationData.highScore.length > 0 || recommendationData.lowScore.length > 0) {
+            console.log('Initializing map with all recommendations...');
+            await initializeMap(recommendationData);
         } else {
             console.log('Skipping map initialization - no recommendations');
         }
@@ -3830,11 +3840,12 @@ async function displayRecommendations(recommendationData) {
     });
 }
 
-async function initializeMap(recommendations) {
+async function initializeMap(recommendationData) {
     const mapContainer = document.getElementById('mapContainer');
     const mapSection = document.getElementById('mapSection');
 
-    if (recommendations.length === 0) {
+    // Check if we have any recommendations
+    if (recommendationData.highScore.length === 0 && recommendationData.lowScore.length === 0) {
         if (mapSection) mapSection.style.display = 'none';
         return;
     }
@@ -3877,9 +3888,12 @@ async function initializeMap(recommendations) {
     markers.forEach(marker => marker.remove());
     markers = [];
 
-    // Add markers for recommendations
-    for (const [index, poi] of recommendations.entries()) {
-        const customIcon = createCustomIcon(poi.category, poi.recommendationScore);
+    // Add markers for all recommendations (high and low score)
+    const allPOIs = [...recommendationData.highScore, ...recommendationData.lowScore];
+    
+    for (const [index, poi] of allPOIs.entries()) {
+        const isLowScore = poi.recommendationScore < 45;
+        const customIcon = createCustomIcon(poi.category, poi.recommendationScore, isLowScore);
         const categoryStyle = categoryStyles[poi.category] || { color: '#667eea', icon: '📍' };
 
         // Load media and elevation data (with error handling)
@@ -3898,22 +3912,33 @@ async function initializeMap(recommendations) {
             console.warn('Could not get elevation for POI:', poi.name, error);
         }
 
+        // Düşük puanlı POI'ler için farklı popup renkleri
+        const popupHeaderColor = isLowScore ? '#9ca3af' : categoryStyle.color;
+        const popupScoreBackground = isLowScore ? 
+            'linear-gradient(135deg, #6b7280 0%, #9ca3af 100%)' : 
+            'linear-gradient(135deg, var(--accent-color) 0%, #20c997 100%)';
+        const popupOpacity = isLowScore ? '0.8' : '1';
+
         const marker = L.marker([poi.latitude, poi.longitude], {
-            icon: customIcon
+            icon: customIcon,
+            interactive: true,
+            bubblingMouseEvents: true
         })
             .addTo(map)
             .bindPopup(
                 `
-                        <div style="min-width: 280px; max-width: 350px; font-family: 'Segoe UI', sans-serif;">
+                        <div style="min-width: 280px; max-width: 350px; font-family: 'Segoe UI', sans-serif; opacity: ${popupOpacity};">
                             <div style="
-                                background: linear-gradient(135deg, ${categoryStyle.color} 0%, ${categoryStyle.color}dd 100%);
+                                background: linear-gradient(135deg, ${popupHeaderColor} 0%, ${popupHeaderColor}dd 100%);
                                 color: white;
                                 padding: 12px;
                                 margin: -10px -10px 10px -10px;
                                 border-radius: 8px 8px 0 0;
+                                ${isLowScore ? 'opacity: 0.9;' : ''}
                             ">
                                 <h6 style="margin: 0; font-size: 16px; font-weight: 600;">
                                     ${categoryStyle.icon} ${poi.name}
+                                    ${isLowScore ? ' <small style="opacity: 0.7;">(Düşük Uygunluk)</small>' : ''}
                                 </h6>
                                 <small style="opacity: 0.9; font-size: 12px;">
                                     ${categoryNames[poi.category] || poi.category}
@@ -3923,15 +3948,16 @@ async function initializeMap(recommendations) {
                             <div style="padding: 0 5px;">
                                 <div style="margin-bottom: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
                                     <span style="
-                                        background: linear-gradient(135deg, var(--accent-color) 0%, #20c997 100%);
+                                        background: ${popupScoreBackground};
                                         color: white;
                                         padding: 4px 10px;
                                         border-radius: 15px;
                                         font-size: 12px;
                                         font-weight: 600;
                                         box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+                                        ${isLowScore ? 'opacity: 0.8;' : ''}
                                     ">
-                                        ⭐ ${poi.recommendationScore}% Uygun
+                                        ${isLowScore ? '⚪' : '⭐'} ${poi.recommendationScore}% Uygun
                                     </span>
                                     ${elevation > 0 ? `
                                         <span style="
@@ -3991,11 +4017,21 @@ async function initializeMap(recommendations) {
                 className: 'custom-popup'
             });
 
+        // Marker'ı listeye ekle ve düşük puanlı ise başlangıçta gizle
+        marker.isLowScore = isLowScore;
+        marker.poiData = poi;
+        
+        if (isLowScore) {
+            marker.setOpacity(0); // Başlangıçta gizli
+            marker._icon.style.display = 'none';
+        }
+        
         markers.push(marker);
     }
 
     // Fit map to show all markers
-    if (recommendations.length > 1) {
+    const totalPOIs = recommendationData.highScore.length + recommendationData.lowScore.length;
+    if (totalPOIs > 1) {
         const group = new L.featureGroup(markers);
         map.fitBounds(group.getBounds().pad(0.1));
     }
@@ -4095,6 +4131,23 @@ function toggleLowScorePOIs() {
             lowScorePOIs.style.transform = 'translateY(0)';
         }, 50);
 
+        // Show low score markers on map with animation
+        if (markers && markers.length > 0) {
+            markers.forEach(marker => {
+                if (marker.isLowScore) {
+                    marker._icon.style.display = 'block';
+                    marker.setOpacity(0);
+                    
+                    // Animate marker appearance
+                    setTimeout(() => {
+                        marker._icon.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+                        marker.setOpacity(0.85); // Daha belirgin görünüm
+                        marker._icon.style.transform += ' scale(1)';
+                    }, 100);
+                }
+            });
+        }
+
         toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Diğer Seçenekleri Gizle';
         toggleBtn.classList.remove('btn--secondary');
         toggleBtn.classList.add('btn--warning');
@@ -4114,11 +4167,28 @@ function toggleLowScorePOIs() {
             });
         }, 300);
 
+        console.log('🗺️ Low score POIs shown on map');
+
     } else {
         // Hide low score POIs
         lowScorePOIs.style.transition = 'all 0.3s ease-in';
         lowScorePOIs.style.opacity = '0';
         lowScorePOIs.style.transform = 'translateY(-20px)';
+
+        // Hide low score markers on map with animation
+        if (markers && markers.length > 0) {
+            markers.forEach(marker => {
+                if (marker.isLowScore) {
+                    marker._icon.style.transition = 'opacity 0.3s ease-in, transform 0.3s ease-in';
+                    marker.setOpacity(0);
+                    marker._icon.style.transform += ' scale(0.8)';
+                    
+                    setTimeout(() => {
+                        marker._icon.style.display = 'none';
+                    }, 300);
+                }
+            });
+        }
 
         setTimeout(() => {
             lowScorePOIs.style.display = 'none';
@@ -4127,5 +4197,7 @@ function toggleLowScorePOIs() {
         toggleBtn.innerHTML = '<i class="fas fa-eye"></i> Diğer Seçenekleri Göster';
         toggleBtn.classList.remove('btn--warning');
         toggleBtn.classList.add('btn--secondary');
+
+        console.log('🗺️ Low score POIs hidden on map');
     }
 }

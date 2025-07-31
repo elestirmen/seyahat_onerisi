@@ -2980,4 +2980,253 @@
         min-width: 180px;
         font-size: 0.9rem;
     }
+}/* Low
+ Score Marker Styles */
+.low-score-marker {
+    filter: grayscale(0.3) !important;
+    opacity: 0.85 !important;
+    transition: all 0.2s ease !important;
+}
+
+.low-score-marker:hover {
+    filter: grayscale(0.1) brightness(1.15) !important;
+    opacity: 1 !important;
+    z-index: 1000 !important;
+    cursor: pointer !important;
+}
+
+.high-score-marker {
+    transition: all 0.2s ease !important;
+}
+
+.high-score-marker:hover {
+    filter: brightness(1.15) saturate(1.2) !important;
+    z-index: 1000 !important;
+    cursor: pointer !important;
+}
+
+/* Map marker animations - safe properties with scale */
+.custom-poi-marker {
+    transition: filter 0.2s ease, opacity 0.2s ease !important;
+}
+
+/* Prevent markers from jumping out of bounds */
+.leaflet-marker-icon {
+    transition: filter 0.2s ease !important;
+}
+
+/* Smooth hover effects for all markers */
+.leaflet-marker-icon:hover {
+    z-index: 1000 !important;
+    cursor: pointer !important;
+}
+
+/* Popup styling for low score POIs */
+.leaflet-popup-content-wrapper.low-score {
+    opacity: 0.9 !important;
+    filter: grayscale(0.2) !important;
+}
+
+/* Map legend for marker types */
+.map-legend {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-size: 0.9rem;
+    z-index: 1000;
+}
+
+.map-legend h4 {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+    color: #333;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.legend-marker {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.legend-marker.high-score {
+    background: var(--accent-color);
+    color: white;
+}
+
+.legend-marker.low-score {
+    background: #9ca3af;
+    color: white;
+    opacity: 0.6;
+    filter: grayscale(0.7);
+}
+
+@media (max-width: 768px) {
+    .map-legend {
+        bottom: 10px;
+        right: 10px;
+        padding: 10px;
+        font-size: 0.8rem;
+    }
+    
+    .legend-marker {
+        width: 16px;
+        height: 16px;
+        font-size: 10px;
+    }
+}/*
+ Fix marker clickability issues */
+.leaflet-marker-icon {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    user-select: none !important;
+}
+
+.custom-poi-marker {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    user-select: none !important;
+}
+
+.custom-poi-marker > * {
+    pointer-events: auto !important;
+}
+
+/* Ensure markers stay in place */
+.leaflet-marker-icon,
+.custom-poi-marker {
+    position: relative !important;
+}
+
+/* Remove problematic animations */
+.leaflet-marker-icon * {
+    pointer-events: auto !important;
+}
+
+/* Make sure the marker container is clickable */
+.leaflet-marker-pane .leaflet-marker-icon {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+/* Enhanced hover effects with smooth animations */
+.custom-poi-marker:hover {
+    transition: filter 0.2s ease !important;
+}
+
+/* Pulse animation for active markers */
+@keyframes markerPulse {
+    0% { 
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
+        transform: scale(1.08);
+    }
+    50% {
+        transform: scale(1.12);
+    }
+    70% { 
+        box-shadow: 0 0 0 8px rgba(102, 126, 234, 0);
+        transform: scale(1.08);
+    }
+    100% { 
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+        transform: scale(1.08);
+    }
+}
+
+@keyframes lowScoreMarkerPulse {
+    0% { 
+        box-shadow: 0 0 0 0 rgba(156, 163, 175, 0.3);
+        transform: scale(1.05);
+    }
+    50% {
+        transform: scale(1.08);
+    }
+    70% { 
+        box-shadow: 0 0 0 6px rgba(156, 163, 175, 0);
+        transform: scale(1.05);
+    }
+    100% { 
+        box-shadow: 0 0 0 0 rgba(156, 163, 175, 0);
+        transform: scale(1.05);
+    }
+}
+
+.high-score-marker:active {
+    animation: markerPulse 0.6s ease-out;
+}
+
+.low-score-marker:active {
+    animation: lowScoreMarkerPulse 0.6s ease-out;
+}/* For
+ce marker clickability */
+.leaflet-marker-icon,
+.custom-poi-marker {
+    z-index: 1000 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+.leaflet-marker-icon:hover,
+.custom-poi-marker:hover {
+    z-index: 1001 !important;
+}
+
+/* Ensure all marker children are clickable */
+.custom-poi-marker div,
+.custom-poi-marker span {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+/* Debug: make markers more visible for testing */
+.leaflet-marker-pane {
+    z-index: 600 !important;
+}/* Simple m
+arker styles */
+.simple-poi-marker {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+.simple-marker {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+.simple-poi-marker:hover .simple-marker {
+    transform: scale(1.1) !important;
+    transition: transform 0.2s ease !important;
+}/* Pop
+up positioning fixes */
+.leaflet-popup {
+    z-index: 1002 !important;
+}
+
+.leaflet-popup-pane {
+    z-index: 700 !important;
+}
+
+.custom-popup .leaflet-popup-content-wrapper {
+    border-radius: 12px !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+    max-width: 400px !important;
+}
+
+/* Prevent popup from causing marker displacement */
+.leaflet-popup-tip-container {
+    z-index: 1003 !important;
 }
