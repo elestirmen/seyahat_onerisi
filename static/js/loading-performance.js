@@ -427,47 +427,119 @@ class LoadingManager {
 }
 
 /**
- * Performance Monitor
+ * Enhanced Performance Monitor
+ * Integrated with UX Enhancement Manager for automatic optimization
  */
 class PerformanceMonitor {
-    constructor() {
+    constructor(options = {}) {
+        this.options = {
+            fpsThreshold: 50,
+            memoryThreshold: 100, // MB
+            renderTimeThreshold: 16, // ms (60fps)
+            interactionTimeThreshold: 100, // ms
+            enableAutoOptimization: true,
+            enableDetailedMetrics: true,
+            ...options
+        };
+
         this.metrics = {
             renderTimes: [],
             interactionTimes: [],
-            memoryUsage: []
+            memoryUsage: [],
+            fpsHistory: [],
+            performanceEvents: []
         };
+
+        this.currentFPS = 60;
         this.isMonitoring = false;
+        this.optimizationLevel = 0; // 0 = normal, 1 = optimized, 2 = high performance mode
+        this.uxManager = null;
+        
+        // Performance thresholds for automatic optimization
+        this.thresholds = {
+            fps: {
+                good: 55,
+                warning: 45,
+                critical: 30
+            },
+            memory: {
+                good: 50,
+                warning: 100,
+                critical: 150
+            },
+            renderTime: {
+                good: 8,
+                warning: 16,
+                critical: 32
+            }
+        };
+
+        this.setupUXManagerIntegration();
+    }
+
+    setupUXManagerIntegration() {
+        // Wait for UX Manager to be available
+        const checkUXManager = () => {
+            if (window.uxManager) {
+                this.uxManager = window.uxManager;
+                this.uxManager.addEventListener('uxManagerReady', () => {
+                    console.log('📊 Performance Monitor integrated with UX Manager');
+                });
+            } else {
+                setTimeout(checkUXManager, 100);
+            }
+        };
+        checkUXManager();
     }
 
     start() {
         this.isMonitoring = true;
         this.monitorFrameRate();
         this.monitorMemory();
+        this.monitorNetworkPerformance();
+        this.setupPerformanceObserver();
+        
+        console.log('📊 Enhanced Performance Monitor started');
     }
 
     stop() {
         this.isMonitoring = false;
+        console.log('📊 Performance Monitor stopped');
     }
 
     /**
-     * Monitor frame rate
+     * Enhanced frame rate monitoring with automatic optimization
      */
     monitorFrameRate() {
         if (!this.isMonitoring) return;
 
         let lastTime = performance.now();
         let frameCount = 0;
+        let fpsHistory = [];
         
         const measureFrame = (currentTime) => {
             frameCount++;
             
             if (currentTime - lastTime >= 1000) {
                 const fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+                this.currentFPS = fps;
                 
-                if (fps < 50) {
-                    console.warn(`Low FPS detected: ${fps}fps`);
-                    this.optimizePerformance();
+                // Store FPS history for trend analysis
+                fpsHistory.push({
+                    fps: fps,
+                    timestamp: currentTime,
+                    optimizationLevel: this.optimizationLevel
+                });
+                
+                // Keep only last 30 seconds of data
+                if (fpsHistory.length > 30) {
+                    fpsHistory.shift();
                 }
+                
+                this.metrics.fpsHistory = fpsHistory;
+                
+                // Analyze performance and trigger optimizations
+                this.analyzeFPSPerformance(fps);
                 
                 frameCount = 0;
                 lastTime = currentTime;
@@ -482,7 +554,37 @@ class PerformanceMonitor {
     }
 
     /**
-     * Monitor memory usage
+     * Analyze FPS performance and trigger optimizations
+     */
+    analyzeFPSPerformance(fps) {
+        const { good, warning, critical } = this.thresholds.fps;
+        
+        if (fps <= critical) {
+            this.logPerformanceEvent('fps', 'critical', fps);
+            if (this.options.enableAutoOptimization) {
+                this.triggerOptimization('critical');
+            }
+        } else if (fps <= warning) {
+            this.logPerformanceEvent('fps', 'warning', fps);
+            if (this.options.enableAutoOptimization) {
+                this.triggerOptimization('warning');
+            }
+        } else if (fps >= good && this.optimizationLevel > 0) {
+            // Performance improved, consider reducing optimization level
+            this.considerOptimizationReduction();
+        }
+
+        // Notify UX Manager of FPS changes
+        if (this.uxManager) {
+            this.uxManager.dispatchEvent('performanceFPSUpdate', { 
+                fps, 
+                level: this.getPerformanceLevel(fps, 'fps') 
+            });
+        }
+    }
+
+    /**
+     * Enhanced memory usage monitoring
      */
     monitorMemory() {
         if (!performance.memory || !this.isMonitoring) return;
@@ -490,12 +592,26 @@ class PerformanceMonitor {
         const checkMemory = () => {
             const memory = performance.memory;
             const usedMB = Math.round(memory.usedJSHeapSize / 1048576);
+            const totalMB = Math.round(memory.totalJSHeapSize / 1048576);
+            const limitMB = Math.round(memory.jsHeapSizeLimit / 1048576);
             
-            this.metrics.memoryUsage.push(usedMB);
+            const memoryData = {
+                used: usedMB,
+                total: totalMB,
+                limit: limitMB,
+                percentage: Math.round((usedMB / limitMB) * 100),
+                timestamp: performance.now()
+            };
             
-            if (usedMB > 100) {
-                console.warn(`High memory usage: ${usedMB}MB`);
+            this.metrics.memoryUsage.push(memoryData);
+            
+            // Keep only last 60 measurements (5 minutes at 5-second intervals)
+            if (this.metrics.memoryUsage.length > 60) {
+                this.metrics.memoryUsage.shift();
             }
+            
+            // Analyze memory performance
+            this.analyzeMemoryPerformance(memoryData);
             
             if (this.isMonitoring) {
                 setTimeout(checkMemory, 5000);
@@ -503,6 +619,122 @@ class PerformanceMonitor {
         };
         
         checkMemory();
+    }
+
+    /**
+     * Analyze memory performance and trigger optimizations
+     */
+    analyzeMemoryPerformance(memoryData) {
+        const { good, warning, critical } = this.thresholds.memory;
+        const usedMB = memoryData.used;
+        
+        if (usedMB >= critical) {
+            this.logPerformanceEvent('memory', 'critical', usedMB);
+            if (this.options.enableAutoOptimization) {
+                this.triggerOptimization('critical');
+                this.triggerMemoryCleanup();
+            }
+        } else if (usedMB >= warning) {
+            this.logPerformanceEvent('memory', 'warning', usedMB);
+            if (this.options.enableAutoOptimization) {
+                this.triggerOptimization('warning');
+            }
+        }
+
+        // Notify UX Manager of memory changes
+        if (this.uxManager) {
+            this.uxManager.dispatchEvent('performanceMemoryUpdate', { 
+                memory: memoryData, 
+                level: this.getPerformanceLevel(usedMB, 'memory') 
+            });
+        }
+    }
+
+    /**
+     * Monitor network performance
+     */
+    monitorNetworkPerformance() {
+        if (!navigator.connection) return;
+
+        const connection = navigator.connection;
+        const networkData = {
+            effectiveType: connection.effectiveType,
+            downlink: connection.downlink,
+            rtt: connection.rtt,
+            saveData: connection.saveData
+        };
+
+        // Adjust optimization based on network conditions
+        if (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g') {
+            this.triggerOptimization('network-slow');
+        }
+
+        // Listen for network changes
+        connection.addEventListener('change', () => {
+            const newNetworkData = {
+                effectiveType: connection.effectiveType,
+                downlink: connection.downlink,
+                rtt: connection.rtt,
+                saveData: connection.saveData
+            };
+
+            if (this.uxManager) {
+                this.uxManager.dispatchEvent('performanceNetworkUpdate', { 
+                    network: newNetworkData 
+                });
+            }
+        });
+    }
+
+    /**
+     * Setup Performance Observer for detailed metrics
+     */
+    setupPerformanceObserver() {
+        if (!window.PerformanceObserver) return;
+
+        try {
+            // Observe paint metrics
+            const paintObserver = new PerformanceObserver((list) => {
+                for (const entry of list.getEntries()) {
+                    this.logPerformanceEvent('paint', 'info', {
+                        name: entry.name,
+                        startTime: entry.startTime
+                    });
+                }
+            });
+            paintObserver.observe({ entryTypes: ['paint'] });
+
+            // Observe navigation metrics
+            const navigationObserver = new PerformanceObserver((list) => {
+                for (const entry of list.getEntries()) {
+                    this.logPerformanceEvent('navigation', 'info', {
+                        domContentLoaded: entry.domContentLoadedEventEnd - entry.domContentLoadedEventStart,
+                        loadComplete: entry.loadEventEnd - entry.loadEventStart
+                    });
+                }
+            });
+            navigationObserver.observe({ entryTypes: ['navigation'] });
+
+            // Observe long tasks
+            const longTaskObserver = new PerformanceObserver((list) => {
+                for (const entry of list.getEntries()) {
+                    if (entry.duration > 50) {
+                        this.logPerformanceEvent('longTask', 'warning', {
+                            duration: entry.duration,
+                            startTime: entry.startTime
+                        });
+                        
+                        if (this.options.enableAutoOptimization) {
+                            this.triggerOptimization('longTask');
+                        }
+                    }
+                }
+            });
+            longTaskObserver.observe({ entryTypes: ['longtask'] });
+
+        } catch (error) {
+            console.warn('Performance Observer setup failed:', error);
+        }
     }
 
     /**
@@ -556,32 +788,481 @@ class PerformanceMonitor {
     }
 
     /**
-     * Optimize performance when issues detected
+     * Trigger performance optimization based on severity
      */
-    optimizePerformance() {
-        // Reduce animation complexity
-        document.body.classList.add('performance-mode');
+    triggerOptimization(severity) {
+        const currentTime = performance.now();
         
-        // Disable non-essential animations
-        const animations = document.querySelectorAll('.loading__skeleton');
-        animations.forEach(el => {
-            el.style.animation = 'none';
+        // Prevent too frequent optimizations
+        if (this.lastOptimization && currentTime - this.lastOptimization < 5000) {
+            return;
+        }
+        
+        this.lastOptimization = currentTime;
+        
+        switch (severity) {
+            case 'critical':
+                this.applyHighPerformanceMode();
+                break;
+            case 'warning':
+                this.applyOptimizedMode();
+                break;
+            case 'network-slow':
+                this.applyNetworkOptimizations();
+                break;
+            case 'longTask':
+                this.applyTaskOptimizations();
+                break;
+        }
+        
+        this.logPerformanceEvent('optimization', 'info', { 
+            severity, 
+            level: this.optimizationLevel 
         });
-        
-        console.log('Performance mode enabled');
     }
 
     /**
-     * Get performance report
+     * Apply high performance mode (level 2)
+     */
+    applyHighPerformanceMode() {
+        if (this.optimizationLevel >= 2) return;
+        
+        this.optimizationLevel = 2;
+        document.body.classList.add('high-performance-mode');
+        
+        // Disable all animations
+        const style = document.createElement('style');
+        style.id = 'performance-optimizations';
+        style.textContent = `
+            .high-performance-mode * {
+                animation-duration: 0.01ms !important;
+                animation-delay: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+                transition-delay: 0.01ms !important;
+            }
+            
+            .high-performance-mode .loading__skeleton {
+                animation: none !important;
+            }
+            
+            .high-performance-mode .poi-card {
+                transform: none !important;
+                box-shadow: none !important;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Reduce image quality
+        this.reduceImageQuality();
+        
+        // Disable non-essential features
+        this.disableNonEssentialFeatures();
+        
+        console.log('🚀 High performance mode activated');
+    }
+
+    /**
+     * Apply optimized mode (level 1)
+     */
+    applyOptimizedMode() {
+        if (this.optimizationLevel >= 1) return;
+        
+        this.optimizationLevel = 1;
+        document.body.classList.add('performance-mode');
+        
+        // Reduce animation complexity
+        const animations = document.querySelectorAll('.loading__skeleton');
+        animations.forEach(el => {
+            el.style.animationDuration = '2s';
+        });
+        
+        // Reduce shadow complexity
+        const cards = document.querySelectorAll('.poi-card');
+        cards.forEach(card => {
+            card.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        });
+        
+        console.log('⚡ Optimized performance mode activated');
+    }
+
+    /**
+     * Apply network-specific optimizations
+     */
+    applyNetworkOptimizations() {
+        // Reduce image quality for slow networks
+        this.reduceImageQuality();
+        
+        // Disable auto-loading of media
+        const images = document.querySelectorAll('img[data-src]');
+        images.forEach(img => {
+            img.classList.add('manual-load');
+        });
+        
+        console.log('📶 Network optimizations applied');
+    }
+
+    /**
+     * Apply task-specific optimizations for long tasks
+     */
+    applyTaskOptimizations() {
+        // Break up long-running tasks
+        if (window.requestIdleCallback) {
+            // Use idle time for non-critical operations
+            this.scheduleIdleTasks();
+        }
+        
+        // Reduce batch sizes for data processing
+        if (window.lazyLoader) {
+            window.lazyLoader.options = {
+                ...window.lazyLoader.options,
+                batchSize: 5,
+                delay: 200
+            };
+        }
+    }
+
+    /**
+     * Consider reducing optimization level when performance improves
+     */
+    considerOptimizationReduction() {
+        const recentFPS = this.metrics.fpsHistory.slice(-5);
+        const avgFPS = recentFPS.reduce((sum, entry) => sum + entry.fps, 0) / recentFPS.length;
+        
+        if (avgFPS > 55 && this.optimizationLevel > 0) {
+            setTimeout(() => {
+                this.reduceOptimizationLevel();
+            }, 10000); // Wait 10 seconds before reducing optimization
+        }
+    }
+
+    /**
+     * Reduce optimization level
+     */
+    reduceOptimizationLevel() {
+        if (this.optimizationLevel <= 0) return;
+        
+        this.optimizationLevel--;
+        
+        if (this.optimizationLevel === 1) {
+            document.body.classList.remove('high-performance-mode');
+            const perfStyle = document.getElementById('performance-optimizations');
+            if (perfStyle) perfStyle.remove();
+        } else if (this.optimizationLevel === 0) {
+            document.body.classList.remove('performance-mode');
+            this.restoreNormalPerformance();
+        }
+        
+        console.log(`📈 Performance optimization reduced to level ${this.optimizationLevel}`);
+    }
+
+    /**
+     * Restore normal performance settings
+     */
+    restoreNormalPerformance() {
+        // Remove performance classes
+        document.body.classList.remove('performance-mode', 'high-performance-mode');
+        
+        // Remove performance styles
+        const perfStyle = document.getElementById('performance-optimizations');
+        if (perfStyle) perfStyle.remove();
+        
+        // Restore image quality
+        this.restoreImageQuality();
+        
+        // Re-enable features
+        this.enableNonEssentialFeatures();
+    }
+
+    /**
+     * Reduce image quality for performance
+     */
+    reduceImageQuality() {
+        const images = document.querySelectorAll('img');
+        images.forEach(img => {
+            if (img.src && !img.dataset.originalSrc) {
+                img.dataset.originalSrc = img.src;
+                // Replace with lower quality version if available
+                if (img.src.includes('/poi_media/')) {
+                    img.src = img.src.replace('/poi_media/', '/poi_media/previews/');
+                }
+            }
+        });
+    }
+
+    /**
+     * Restore image quality
+     */
+    restoreImageQuality() {
+        const images = document.querySelectorAll('img[data-original-src]');
+        images.forEach(img => {
+            if (img.dataset.originalSrc) {
+                img.src = img.dataset.originalSrc;
+                delete img.dataset.originalSrc;
+            }
+        });
+    }
+
+    /**
+     * Disable non-essential features
+     */
+    disableNonEssentialFeatures() {
+        // Disable auto-refresh of data
+        if (window.autoRefreshInterval) {
+            clearInterval(window.autoRefreshInterval);
+        }
+        
+        // Disable hover effects
+        document.body.classList.add('no-hover-effects');
+    }
+
+    /**
+     * Enable non-essential features
+     */
+    enableNonEssentialFeatures() {
+        document.body.classList.remove('no-hover-effects');
+    }
+
+    /**
+     * Trigger memory cleanup
+     */
+    triggerMemoryCleanup() {
+        // Clear old metrics
+        if (this.metrics.renderTimes.length > 100) {
+            this.metrics.renderTimes = this.metrics.renderTimes.slice(-50);
+        }
+        
+        if (this.metrics.interactionTimes.length > 100) {
+            this.metrics.interactionTimes = this.metrics.interactionTimes.slice(-50);
+        }
+        
+        // Clear image cache if available
+        if (window.mediaCache) {
+            const cacheKeys = Object.keys(window.mediaCache);
+            if (cacheKeys.length > 20) {
+                // Keep only the 10 most recent items
+                const recentKeys = cacheKeys.slice(-10);
+                const newCache = {};
+                recentKeys.forEach(key => {
+                    newCache[key] = window.mediaCache[key];
+                });
+                window.mediaCache = newCache;
+            }
+        }
+        
+        // Force garbage collection if available
+        if (window.gc) {
+            window.gc();
+        }
+        
+        console.log('🧹 Memory cleanup performed');
+    }
+
+    /**
+     * Schedule tasks during idle time
+     */
+    scheduleIdleTasks() {
+        const idleTasks = [];
+        
+        // Add tasks that can be deferred
+        idleTasks.push(() => {
+            // Preload next batch of images
+            this.preloadNextImages();
+        });
+        
+        idleTasks.push(() => {
+            // Clean up old performance data
+            this.cleanupOldMetrics();
+        });
+        
+        // Schedule tasks
+        idleTasks.forEach(task => {
+            if (window.requestIdleCallback) {
+                window.requestIdleCallback(task, { timeout: 5000 });
+            } else {
+                setTimeout(task, 100);
+            }
+        });
+    }
+
+    /**
+     * Preload next batch of images during idle time
+     */
+    preloadNextImages() {
+        const lazyImages = document.querySelectorAll('img[data-src]:not(.loading)');
+        const imagesToPreload = Array.from(lazyImages).slice(0, 3);
+        
+        imagesToPreload.forEach(img => {
+            if (window.loadingManager) {
+                window.loadingManager.loadImage(img);
+            }
+        });
+    }
+
+    /**
+     * Clean up old metrics during idle time
+     */
+    cleanupOldMetrics() {
+        const maxAge = 5 * 60 * 1000; // 5 minutes
+        const now = performance.now();
+        
+        // Clean up FPS history
+        this.metrics.fpsHistory = this.metrics.fpsHistory.filter(
+            entry => now - entry.timestamp < maxAge
+        );
+        
+        // Clean up performance events
+        this.metrics.performanceEvents = this.metrics.performanceEvents.filter(
+            event => now - event.timestamp < maxAge
+        );
+    }
+
+    /**
+     * Log performance events
+     */
+    logPerformanceEvent(type, level, data) {
+        const event = {
+            type,
+            level,
+            data,
+            timestamp: performance.now(),
+            optimizationLevel: this.optimizationLevel
+        };
+        
+        this.metrics.performanceEvents.push(event);
+        
+        // Keep only last 100 events
+        if (this.metrics.performanceEvents.length > 100) {
+            this.metrics.performanceEvents.shift();
+        }
+        
+        // Log to console based on level
+        const message = `Performance ${type}: ${JSON.stringify(data)}`;
+        switch (level) {
+            case 'critical':
+                console.error(`🔴 ${message}`);
+                break;
+            case 'warning':
+                console.warn(`🟡 ${message}`);
+                break;
+            case 'info':
+                if (this.options.enableDetailedMetrics) {
+                    console.log(`🔵 ${message}`);
+                }
+                break;
+        }
+    }
+
+    /**
+     * Get performance level for a metric
+     */
+    getPerformanceLevel(value, metricType) {
+        const thresholds = this.thresholds[metricType];
+        if (!thresholds) return 'unknown';
+        
+        if (metricType === 'fps') {
+            if (value >= thresholds.good) return 'good';
+            if (value >= thresholds.warning) return 'warning';
+            return 'critical';
+        } else {
+            if (value <= thresholds.good) return 'good';
+            if (value <= thresholds.warning) return 'warning';
+            return 'critical';
+        }
+    }
+
+    /**
+     * Get comprehensive performance report
      */
     getReport() {
+        const memoryData = this.metrics.memoryUsage.length > 0 ? 
+            this.metrics.memoryUsage[this.metrics.memoryUsage.length - 1] : null;
+        
+        const recentFPS = this.metrics.fpsHistory.slice(-10);
+        const avgFPS = recentFPS.length > 0 ? 
+            Math.round(recentFPS.reduce((sum, entry) => sum + entry.fps, 0) / recentFPS.length) : 0;
+
         return {
+            // Basic metrics
+            currentFPS: this.currentFPS,
+            averageFPS: avgFPS,
             averageRenderTime: this.getAverage(this.metrics.renderTimes.map(r => r.time)),
             averageInteractionTime: this.getAverage(this.metrics.interactionTimes.map(i => i.time)),
-            currentMemoryUsage: performance.memory ? 
-                Math.round(performance.memory.usedJSHeapSize / 1048576) : 'N/A',
+            
+            // Memory metrics
+            currentMemoryUsage: memoryData ? memoryData.used : 'N/A',
+            memoryPercentage: memoryData ? memoryData.percentage : 'N/A',
+            
+            // Performance levels
+            fpsLevel: this.getPerformanceLevel(this.currentFPS, 'fps'),
+            memoryLevel: memoryData ? this.getPerformanceLevel(memoryData.used, 'memory') : 'unknown',
+            
+            // Optimization status
+            optimizationLevel: this.optimizationLevel,
+            optimizationActive: this.optimizationLevel > 0,
+            
+            // Issues
             slowRenders: this.metrics.renderTimes.filter(r => r.time > 16),
-            slowInteractions: this.metrics.interactionTimes.filter(i => i.time > 100)
+            slowInteractions: this.metrics.interactionTimes.filter(i => i.time > 100),
+            recentEvents: this.metrics.performanceEvents.slice(-10),
+            
+            // Trends
+            fpsHistory: this.metrics.fpsHistory.slice(-20),
+            memoryHistory: this.metrics.memoryUsage.slice(-20),
+            
+            // Recommendations
+            recommendations: this.getPerformanceRecommendations()
+        };
+    }
+
+    /**
+     * Get performance recommendations
+     */
+    getPerformanceRecommendations() {
+        const recommendations = [];
+        
+        if (this.currentFPS < 45) {
+            recommendations.push({
+                type: 'fps',
+                severity: 'high',
+                message: 'Frame rate is low. Consider reducing visual effects.',
+                action: 'Enable performance mode'
+            });
+        }
+        
+        const memoryData = this.metrics.memoryUsage.length > 0 ? 
+            this.metrics.memoryUsage[this.metrics.memoryUsage.length - 1] : null;
+        
+        if (memoryData && memoryData.used > 100) {
+            recommendations.push({
+                type: 'memory',
+                severity: 'high',
+                message: 'Memory usage is high. Consider clearing cache.',
+                action: 'Trigger memory cleanup'
+            });
+        }
+        
+        const slowRenders = this.metrics.renderTimes.filter(r => r.time > 16).length;
+        if (slowRenders > 5) {
+            recommendations.push({
+                type: 'render',
+                severity: 'medium',
+                message: 'Multiple slow renders detected.',
+                action: 'Optimize rendering pipeline'
+            });
+        }
+        
+        return recommendations;
+    }
+
+    /**
+     * Get current performance status
+     */
+    getStatus() {
+        return {
+            isMonitoring: this.isMonitoring,
+            currentFPS: this.currentFPS,
+            optimizationLevel: this.optimizationLevel,
+            performanceMode: this.optimizationLevel > 0 ? 'optimized' : 'normal'
         };
     }
 

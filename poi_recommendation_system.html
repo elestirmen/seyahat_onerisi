@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="static/css/design-tokens.css">
     <link rel="stylesheet" href="static/css/layout-system.css">
     <link rel="stylesheet" href="static/css/components.css">
+    <link rel="stylesheet" href="static/css/ux-enhancements.css">
     <link rel="stylesheet" href="static/css/poi_recommendation_system.css">
     
     <!-- External Dependencies -->
@@ -19,6 +20,9 @@
     
     <!-- Touch Optimizations -->
     <script src="static/js/touch-optimizations.js"></script>
+    
+    <!-- UX Enhancement Manager -->
+    <script src="static/js/ux-enhancement-manager.js" defer></script>
     
     <!-- Loading and Performance -->
     <script src="static/js/loading-performance.js" defer></script>
@@ -166,6 +170,17 @@
 
                 <div id="recommendationResults"></div>
 
+                <div id="mapSection" style="display: none; margin-top: 30px;">
+                    <h3 class="section-title">
+                        <i class="fas fa-map-marked-alt"></i>
+                        Öneriler Haritası
+                    </h3>
+                    <p style="color: #666; font-size: 1rem; margin-bottom: 20px; text-align: center; line-height: 1.6;">
+                        Önerilen yerleri harita üzerinde görün ve detaylarına ulaşın. Marker'lara tıklayarak daha fazla bilgi alabilirsiniz.
+                    </p>
+                    <div id="mapContainer" class="map-container-enhanced"></div>
+                </div>
+
                 <div id="routeSection" style="display: none; margin-top: 30px;">
                     <h3 class="section-title">
                         <i class="fas fa-route"></i>
@@ -179,8 +194,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div id="mapContainer" class="map-container" style="display: none;"></div>
             </div>
         </div>
     </div>
