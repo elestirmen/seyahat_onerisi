@@ -2391,6 +2391,9 @@ def create_walking_route():
         # Import required libraries and load walking graph
         try:
             import networkx as nx
+
+            import osmnx as ox  # Needed for nearest node lookup
+
             G = load_walking_graph()
             error_msg = None
         except Exception as e:
