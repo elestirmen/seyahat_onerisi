@@ -3645,26 +3645,86 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
             // Show route section
             routeSection.style.display = 'block';
 
-            // Create HTML for recommendations with enhanced design
-            const html = await Promise.all(recommendations.map(async (poi, index) => {
-                // Load media for this POI
-                let media = { images: [], videos: [], audio: [], models: [] };
+            // Quick initial render without waiting for media
+            const html = recommendations.map(poi => `
+                <div class="poi-card poi-card--interactive" data-poi-id="${poi.id || poi._id}">
+                    <div class="poi-card__image-container">
+                        <div class="poi-card__image-placeholder loading__skeleton">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        <div class="poi-card__image-overlay"></div>
+                        <span class="poi-card__category">${categoryNames[poi.category] || poi.category}</span>
+                    </div>
+
+                    <div class="poi-card__content">
+                        <div class="poi-card__header">
+                            <h3 class="poi-card__title">${poi.name}</h3>
+                            <div class="poi-card__score">${poi.recommendationScore}% Uygun</div>
+                        </div>
+                        <div class="poi-media-preview"></div>
+                        <div class="poi-card__actions">
+                            <button class="btn btn--secondary btn--sm" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
+                                <i class="fas fa-map-marker-alt"></i> Haritada Göster
+                            </button>
+                            <button class="btn btn--primary btn--sm" onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')">
+                                <i class="fab fa-google"></i> Google Maps
+                            </button>
+                            <button class="btn btn--success btn--sm" onclick="addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})">
+                                <i class="fas fa-plus"></i> Rotaya Ekle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+            container.style.opacity = '0';
+            setTimeout(() => {
+                container.style.transition = 'opacity 0.3s ease';
+                container.style.opacity = '1';
+            }, 100);
+
+            if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
                 try {
-                    media = await loadPOIMedia(poi.id || poi._id);
+                    window.lazyLoader.setupImageLazyLoading();
                 } catch (error) {
-                    console.warn('Could not load media for POI:', poi.name, error);
+                    console.warn('Lazy loading setup error:', error);
                 }
+            }
 
-                // Get first image for main display
-                const mainImage = media.images && media.images.length > 0 ? media.images[0] : null;
-                const totalMediaCount = (media.images?.length || 0) + (media.videos?.length || 0) + (media.audio?.length || 0);
+            const newCards = container.querySelectorAll('.poi-card');
+            newCards.forEach(card => {
+                card.classList.add('gpu-accelerated');
+            });
 
-                // Create media preview thumbnails
-                let mediaPreviewHTML = '';
-                if (totalMediaCount > 0) {
+            // Asynchronously load media for each card to improve perceived performance
+            recommendations.forEach(async poi => {
+                try {
+                    const media = await loadPOIMedia(poi.id || poi._id);
+                    const card = container.querySelector(`.poi-card[data-poi-id='${poi.id || poi._id}']`);
+                    if (!card) return;
+
+                    const imageContainer = card.querySelector('.poi-card__image-container');
+                    const placeholder = imageContainer.querySelector('.poi-card__image-placeholder');
+
+                    if (media.images && media.images.length > 0) {
+                        const mainImage = media.images[0];
+                        const img = document.createElement('img');
+                        img.dataset.src = `/${mainImage.preview_path || mainImage.path || `poi_media/${mainImage.filename}`}`;
+                        img.className = 'poi-card__image lazy-image';
+                        img.alt = poi.name;
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+';
+                        imageContainer.insertBefore(img, placeholder);
+                        placeholder.style.display = 'none';
+                        if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
+                            window.lazyLoader.setupImageLazyLoading();
+                        }
+                    }
+
+                    const previewContainer = card.querySelector('.poi-media-preview');
+                    const cacheKey = `poi_card_${poi.id || poi._id}`;
                     const allMediaItems = [];
 
-                    // Add images
                     if (media.images) {
                         media.images.forEach((image, idx) => {
                             allMediaItems.push({
@@ -3676,7 +3736,6 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                         });
                     }
 
-                    // Add videos
                     if (media.videos) {
                         media.videos.forEach((video, idx) => {
                             allMediaItems.push({
@@ -3688,7 +3747,6 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                         });
                     }
 
-                    // Add audio
                     if (media.audio) {
                         media.audio.forEach((audio, idx) => {
                             allMediaItems.push({
@@ -3700,167 +3758,34 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                         });
                     }
 
-                    // Cache media items for modal
-                    const cacheKey = `poi_card_${poi.id || poi._id}`;
-                    poiMediaCache[cacheKey] = {
-                        items: allMediaItems,
-                        poiName: poi.name
-                    };
+                    poiMediaCache[cacheKey] = { items: allMediaItems, poiName: poi.name };
 
-                    // Create preview thumbnails (max 3)
-                    mediaPreviewHTML = '<div class="poi-media-preview">';
-                    const previewItems = allMediaItems.slice(0, 3);
+                    if (allMediaItems.length > 0) {
+                        const previewItems = allMediaItems.slice(0, 3);
+                        let mediaPreviewHTML = '';
 
-                    previewItems.forEach((item, idx) => {
-                        if (item.type === 'image') {
-                            const imagePath = item.path.startsWith('/') ? item.path : `/${item.path}`;
-                            mediaPreviewHTML += `
-                                <img data-src="${imagePath}" 
-                                     class="poi-media-thumb lazy-image" 
-                                     onclick="showPOIMediaFromCache('${cacheKey}', ${idx})"
-                                     title="${item.title}" 
-                                     alt="${item.title}"
-                                     src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj4uLi48L3RleHQ+PC9zdmc+" />
-                            `;
-                        } else {
-                            const icon = item.type === 'video' ? '🎥' : '🎵';
-                            mediaPreviewHTML += `
-                                <div class="poi-media-count" onclick="showPOIMediaFromCache('${cacheKey}', ${idx})" title="${item.title}">
-                                    ${icon}
-                                </div>
-                            `;
+                        previewItems.forEach((item, idx) => {
+                            if (item.type === 'image') {
+                                const imagePath = item.path.startsWith('/') ? item.path : `/${item.path}`;
+                                mediaPreviewHTML += `<img data-src="${imagePath}" class="poi-media-thumb lazy-image" onclick="showPOIMediaFromCache('${cacheKey}', ${idx})" title="${item.title}" alt="${item.title}" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj4uLi48L3RleHQ+PC9zdmc+" />`;
+                            } else {
+                                const icon = item.type === 'video' ? '🎥' : '🎵';
+                                mediaPreviewHTML += `<div class="poi-media-count" onclick="showPOIMediaFromCache('${cacheKey}', ${idx})" title="${item.title}">${icon}</div>`;
+                            }
+                        });
+
+                        if (allMediaItems.length > 3) {
+                            mediaPreviewHTML += `<div class="poi-media-count" onclick="showPOIMediaFromCache('${cacheKey}', 0)">+${allMediaItems.length - 3}</div>`;
                         }
-                    });
 
-                    // Show remaining count if more than 3 items
-                    if (allMediaItems.length > 3) {
-                        mediaPreviewHTML += `
-                            <div class="poi-media-count" onclick="showPOIMediaFromCache('${cacheKey}', 0)">
-                                +${allMediaItems.length - 3}
-                            </div>
-                        `;
+                        previewContainer.innerHTML = mediaPreviewHTML;
+                        if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
+                            window.lazyLoader.setupImageLazyLoading();
+                        }
                     }
-
-                    mediaPreviewHTML += '</div>';
+                } catch (err) {
+                    console.warn('Could not load media for POI:', poi.name, err);
                 }
-
-                return `
-                    <div class="poi-card poi-card--interactive" data-poi-id="${poi.id || poi._id}">
-                        <div class="poi-card__image-container">
-                            ${mainImage ? `
-                                <img data-src="/${mainImage.preview_path || mainImage.path || `poi_media/${mainImage.filename}`}" 
-                                     class="poi-card__image lazy-image" 
-                                     alt="${poi.name}"
-                                     src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+"
-                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-                                <div class="poi-card__image-placeholder" style="display: none;">
-                                    <i class="fas fa-image"></i>
-                                </div>
-                            ` : `
-                                <div class="poi-card__image-placeholder">
-                                    <i class="fas fa-image"></i>
-                                </div>
-                            `}
-                            <div class="poi-card__image-overlay"></div>
-                            <span class="poi-card__category">${categoryNames[poi.category] || poi.category}</span>
-                        </div>
-                        
-                        <div class="poi-card__content">
-                            <div class="poi-card__header">
-                                <h3 class="poi-card__title">${poi.name}</h3>
-                                <div class="poi-card__score">${poi.recommendationScore}% Uygun</div>
-                            </div>
-                            
-                            ${poi.description ? `<p class="poi-card__description">${poi.description}</p>` : ''}
-                            
-                            <div class="poi-card__meta">
-                                <div class="poi-meta-item">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                    <span>${poi.latitude.toFixed(4)}, ${poi.longitude.toFixed(4)}</span>
-                                </div>
-                                ${totalMediaCount > 0 ? `
-                                    <div class="poi-meta-item">
-                                        <i class="fas fa-images"></i>
-                                        <span>${totalMediaCount} medya</span>
-                                    </div>
-                                ` : ''}
-                            </div>
-                            
-                            <div class="poi-ratings">
-                                ${Object.keys(ratingCategories).map(category => {
-                    const rating = poi.ratings[category] || 0;
-                    if (rating > 30) {
-                        return `<span class="rating-badge high">
-                                                <i class="${ratingCategories[category].icon}"></i>
-                                                ${ratingCategories[category].name}: ${rating}%
-                                            </span>`;
-                    }
-                    return '';
-                }).join('')}
-                            </div>
-                            
-                            ${mediaPreviewHTML}
-                            
-                            <div class="poi-card__actions">
-                                <button class="btn btn--secondary btn--sm" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
-                                    <i class="fas fa-map-marker-alt"></i> Haritada Göster
-                                </button>
-                                <button class="btn btn--primary btn--sm" onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')">
-                                    <i class="fab fa-google"></i> Google Maps
-                                </button>
-                                <button class="btn btn--success btn--sm" onclick="addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})">
-                                    <i class="fas fa-plus"></i> Rotaya Ekle
-                                </button>
-                                ${totalMediaCount > 0 ? `
-                                    <button class="btn btn--warning btn--sm" onclick="showPOIMediaFromCache('poi_card_${poi.id || poi._id}', 0)">
-                                        <i class="fas fa-play"></i> Medyayı Görüntüle
-                                    </button>
-                                ` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }));
-
-            // Set content with smooth animation
-            const htmlContent = (await Promise.all(html)).join('');
-            container.innerHTML = htmlContent;
-            
-            // Apply staggered animation to POI cards (with fallback)
-            if (window.loadingManager && typeof window.loadingManager.animateList === 'function') {
-                try {
-                    window.loadingManager.animateList(container, 'fade-in');
-                } catch (error) {
-                    console.warn('Animation error:', error);
-                    // Fallback - simple fade in
-                    container.style.opacity = '0';
-                    setTimeout(() => {
-                        container.style.transition = 'opacity 0.3s ease';
-                        container.style.opacity = '1';
-                    }, 100);
-                }
-            } else {
-                // Fallback - simple fade in
-                container.style.opacity = '0';
-                setTimeout(() => {
-                    container.style.transition = 'opacity 0.3s ease';
-                    container.style.opacity = '1';
-                }, 100);
-            }
-            
-            // Setup lazy loading for images in the new content (with fallback)
-            if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
-                try {
-                    window.lazyLoader.setupImageLazyLoading();
-                } catch (error) {
-                    console.warn('Lazy loading setup error:', error);
-                }
-            }
-            
-            // Add GPU acceleration to new cards
-            const newCards = container.querySelectorAll('.poi-card');
-            newCards.forEach(card => {
-                card.classList.add('gpu-accelerated');
             });
         }
 
