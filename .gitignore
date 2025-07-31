@@ -23,12 +23,12 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Virtual environments
+# Virtual Environment
 venv/
 env/
 ENV/
-.venv/
-.env/
+env.bak/
+venv.bak/
 
 # IDE
 .vscode/
@@ -37,38 +37,7 @@ ENV/
 *.swo
 *~
 
-# Environment variables
-.env
-.env.local
-.env.production
-
-# Generated HTML files
-urgup_rotalar.html
-*.html
-!poi_manager_ui.html
-!poi_recommendation_system.html
-
-
-# Cache files
-cache/
-*.cache
-
-# Database files
-*.db
-*.sqlite
-*.sqlite3
-
-# Log files
-*.log
-logs/
-
-# Temporary files
-tmp/
-temp/
-.tmp/
-.temp/
-
-# OS generated files
+# OS
 .DS_Store
 .DS_Store?
 ._*
@@ -77,15 +46,73 @@ temp/
 ehthumbs.db
 Thumbs.db
 
+# Logs
+*.log
+logs/
+
+# Flask
+instance/
+.webassets-cache
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
 # Backup files
 *.bak
 *.backup
-*.orig
+*_backup.*
 
-# Test files
-test_*.html
-*_test.html
+# Temporary files
+*.tmp
+*.temp
+temp/
 
-# Large data files (keep GraphML but could be regenerated)
-# Uncomment if you want to ignore GraphML files too:
-# *.graphml
+# Media files (if too large)
+# poi_media/*.mp4
+# poi_media/*.mov
+# poi_media/*.avi
+
+# Cache
+.cache/
+*.cache
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json

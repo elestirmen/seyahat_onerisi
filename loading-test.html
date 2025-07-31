@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading States Test</title>
+    
+    <!-- Design System CSS -->
+    <link rel="stylesheet" href="static/css/design-tokens.css">
+    <link rel="stylesheet" href="static/css/layout-system.css">
+    <link rel="stylesheet" href="static/css/components.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: var(--font-primary);
+            background: var(--gray-50);
+            padding: var(--space-8);
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: var(--radius-2xl);
+            padding: var(--space-8);
+            margin-bottom: var(--space-8);
+            box-shadow: var(--shadow-base);
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: var(--space-4);
+            margin-bottom: var(--space-6);
+            flex-wrap: wrap;
+        }
+        
+        .test-area {
+            min-height: 300px;
+            border: 2px dashed var(--gray-300);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+        }
+    </style>
+</head>
+<body>
+    <h1>Loading States and Performance Test</h1>
+    
+    <!-- Spinner Loading Test -->
+    <div class="test-section">
+        <h2>Spinner Loading</h2>
+        <div class="test-controls">
+            <button class="btn btn--primary" onclick="testSpinnerLoading()">Show Spinner</button>
+            <button class="btn btn--secondary" onclick="hideTestLoading()">Hide Loading</button>
+        </div>
+        <div id="spinnerTest" class="test-area">
+            <p>Click "Show Spinner" to test spinner loading state.</p>
+        </div>
+    </div>
+    
+    <!-- Skeleton Loading Test -->
+    <div class="test-section">
+        <h2>Skeleton Loading</h2>
+        <div class="test-controls">
+            <button class="btn btn--primary" onclick="testSkeletonLoading()">Show POI Skeletons</button>
+            <button class="btn btn--secondary" onclick="testCardSkeleton()">Show Card Skeleton</button>
+            <button class="btn btn--secondary" onclick="hideTestLoading()">Hide Loading</button>
+        </div>
+        <div id="skeletonTest" class="test-area">
+            <p>Click buttons to test skeleton loading states.</p>
+        </div>
+    </div>
+    
+    <!-- Progress Loading Test -->
+    <div class="test-section">
+        <h2>Progress Loading</h2>
+        <div class="test-controls">
+            <button class="btn btn--primary" onclick="testProgressLoading()">Start Progress</button>
+            <button class="btn btn--secondary" onclick="hideTestLoading()">Hide Loading</button>
+        </div>
+        <div id="progressTest" class="test-area">
+            <p>Click "Start Progress" to test progress loading with animation.</p>
+        </div>
+    </div>
+    
+    <!-- Lazy Loading Test -->
+    <div class="test-section">
+        <h2>Lazy Loading Images</h2>
+        <div class="test-controls">
+            <button class="btn btn--primary" onclick="testLazyImages()">Load Lazy Images</button>
+        </div>
+        <div id="lazyTest" class="test-area">
+            <p>Scroll down to see lazy loading in action:</p>
+            <div style="height: 200px; overflow-y: scroll; border: 1px solid var(--gray-300); padding: var(--space-4);">
+                <img data-src="https://picsum.photos/300/200?random=1" class="lazy-image" alt="Test Image 1" style="width: 100%; margin-bottom: var(--space-4); border-radius: var(--radius-lg);">
+                <img data-src="https://picsum.photos/300/200?random=2" class="lazy-image" alt="Test Image 2" style="width: 100%; margin-bottom: var(--space-4); border-radius: var(--radius-lg);">
+                <img data-src="https://picsum.photos/300/200?random=3" class="lazy-image" alt="Test Image 3" style="width: 100%; margin-bottom: var(--space-4); border-radius: var(--radius-lg);">
+                <img data-src="https://picsum.photos/300/200?random=4" class="lazy-image" alt="Test Image 4" style="width: 100%; border-radius: var(--radius-lg);">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Animation Test -->
+    <div class="test-section">
+        <h2>Animation Test</h2>
+        <div class="test-controls">
+            <button class="btn btn--primary" onclick="testAnimations()">Test Animations</button>
+            <button class="btn btn--secondary" onclick="resetAnimations()">Reset</button>
+        </div>
+        <div id="animationTest" class="test-area">
+            <div class="animation-items" style="display: none;">
+                <div class="poi-card" style="margin-bottom: var(--space-4);">
+                    <div class="poi-card__content">
+                        <h3>Test POI Card 1</h3>
+                        <p>This card will animate in with stagger effect.</p>
+                    </div>
+                </div>
+                <div class="poi-card" style="margin-bottom: var(--space-4);">
+                    <div class="poi-card__content">
+                        <h3>Test POI Card 2</h3>
+                        <p>This card will animate in with stagger effect.</p>
+                    </div>
+                </div>
+                <div class="poi-card">
+                    <div class="poi-card__content">
+                        <h3>Test POI Card 3</h3>
+                        <p>This card will animate in with stagger effect.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Performance Monitor -->
+    <div class="test-section">
+        <h2>Performance Monitor</h2>
+        <div class="test-controls">
+            <button class="btn btn--primary" onclick="showPerformanceReport()">Show Performance Report</button>
+            <button class="btn btn--secondary" onclick="testPerformanceMode()">Test Performance Mode</button>
+        </div>
+        <div id="performanceTest" class="test-area">
+            <p>Performance monitoring is running in the background.</p>
+            <div id="performanceReport"></div>
+        </div>
+    </div>
+
+    <!-- Loading and Performance Scripts -->
+    <script src="static/js/loading-performance.js"></script>
+    
+    <script>
+        // Test functions
+        function testSpinnerLoading() {
+            window.loadingManager.showLoading('spinnerTest', {
+                type: 'spinner',
+                text: 'Loading data...',
+                size: 'lg'
+            });
+        }
+        
+        function testSkeletonLoading() {
+            window.loadingManager.showPOISkeletons('skeletonTest', 3);
+        }
+        
+        function testCardSkeleton() {
+            window.loadingManager.showLoading('skeletonTest', {
+                type: 'skeleton',
+                skeletonType: 'card'
+            });
+        }
+        
+        function testProgressLoading() {
+            window.loadingManager.showLoading('progressTest', {
+                type: 'progress',
+                text: 'Processing...',
+                progress: 0
+            });
+            
+            // Simulate progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                window.loadingManager.updateProgress('progressTest', progress);
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        window.loadingManager.hideLoading('progressTest');
+                    }, 1000);
+                }
+            }, 200);
+        }
+        
+        function hideTestLoading() {
+            window.loadingManager.hideLoading('spinnerTest');
+            window.loadingManager.hideLoading('skeletonTest');
+            window.loadingManager.hideLoading('progressTest');
+        }
+        
+        function testLazyImages() {
+            window.lazyLoader.setupImageLazyLoading();
+        }
+        
+        function testAnimations() {
+            const container = document.querySelector('#animationTest .animation-items');
+            container.style.display = 'block';
+            window.loadingManager.animateList(container, 'fade-in');
+        }
+        
+        function resetAnimations() {
+            const container = document.querySelector('#animationTest .animation-items');
+            container.style.display = 'none';
+            container.classList.remove('animate-stagger', 'active');
+        }
+        
+        function showPerformanceReport() {
+            const report = window.loadingManager.performanceMonitor.getReport();
+            const reportDiv = document.getElementById('performanceReport');
+            
+            reportDiv.innerHTML = `
+                <div style="background: var(--gray-100); padding: var(--space-4); border-radius: var(--radius-lg); margin-top: var(--space-4);">
+                    <h4>Performance Report</h4>
+                    <p><strong>Average Render Time:</strong> ${report.averageRenderTime}ms</p>
+                    <p><strong>Average Interaction Time:</strong> ${report.averageInteractionTime}ms</p>
+                    <p><strong>Current Memory Usage:</strong> ${report.currentMemoryUsage}MB</p>
+                    <p><strong>Slow Renders:</strong> ${report.slowRenders.length}</p>
+                    <p><strong>Slow Interactions:</strong> ${report.slowInteractions.length}</p>
+                </div>
+            `;
+        }
+        
+        function testPerformanceMode() {
+            document.body.classList.toggle('performance-mode');
+            const isEnabled = document.body.classList.contains('performance-mode');
+            alert(`Performance mode ${isEnabled ? 'enabled' : 'disabled'}`);
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Loading test page initialized');
+            
+            // Setup lazy loading
+            window.lazyLoader.setupImageLazyLoading();
+            
+            // Add some test performance measurements
+            window.loadingManager.performanceMonitor.measureRender('test-render', () => {
+                // Simulate some rendering work
+                for (let i = 0; i < 1000; i++) {
+                    Math.random();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

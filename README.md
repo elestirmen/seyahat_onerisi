@@ -1,650 +1,266 @@
-# 🏺 Kapadokya Rota Planlayıcısı
+# 🗺️ Ürgüp POI Öneri Sistemi
 
-Kapadokya bölgesindeki ilgi noktaları (POI) arasında optimize edilmiş rotalar oluşturan gelişmiş Python uygulaması. Ürgüp merkez odaklı bu sistem, turistik yerleri kategorize ederek interaktif haritalar ve detaylı rota planları sunar.
-
-Detaylı mimari açıklaması için [PROJE_MIMARISI.md](PROJE_MIMARISI.md) dosyasını inceleyebilirsiniz.
-![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
-![OpenStreetMap](https://img.shields.io/badge/Maps-OpenStreetMap-orange.svg)
+Kullanıcı tercihlerine dayalı akıllı POI (Point of Interest) öneri sistemi. Ürgüp bölgesindeki turistik yerleri, restoranları, otelleri ve aktiviteleri kişiselleştirilmiş öneriler halinde sunar.
 
 ## ✨ Özellikler
 
-### 🗺️ Harita ve Rota Özellikleri
-- **İnteraktif Haritalar**: Folium tabanlı dinamik haritalar
-- **Çoklu Harita Katmanları**: OpenStreetMap, Topografik, Uydu görüntüsü
-- **Rota Optimizasyonu**: TSP (Traveling Salesman Problem) algoritması ile optimize edilmiş rotalar
-- **Yükseklik Profilleri**: Detaylı yükseklik grafikleri ve zorluk hesaplaması
-- **Gerçek Yol Verileri**: OSMnx ile OpenStreetMap yol ağı kullanımı
+### 🎯 Akıllı Öneri Sistemi
+- **Kişiselleştirilmiş Öneriler**: 10 farklı kategori için tercih belirleme
+- **Puanlama Sistemi**: 0-100 arası uygunluk puanları
+- **İki Seviyeli Görüntüleme**: 
+  - Yüksek puanlı öneriler (≥45 puan) öncelikli gösterim
+  - Düşük puanlı alternatifler isteğe bağlı görüntüleme
 
-### 📍 POI Kategori Sistemi
-- 🍽️ **Gastronomik**: Restoranlar, kafeler ve lezzet noktaları
-- 🏛️ **Kültürel**: Müzeler, tarihi yerler ve kültürel mekanlar  
-- 🎨 **Sanatsal**: Sanat galerileri, atölyeler ve yaratıcı mekanlar
-- 🌿 **Doğa & Macera**: Doğal güzellikler ve macera aktiviteleri
-- 🏨 **Konaklama**: Oteller, pansiyonlar ve konaklama tesisleri
+### 🗺️ Gelişmiş Harita Entegrasyonu
+- **İnteraktif Harita**: Leaflet.js tabanlı modern harita
+- **Özel Marker'lar**: Kategori bazlı renkli ve ikonlu marker'lar
+- **Popup Detayları**: Her POI için zengin bilgi kartları
+- **Smooth Navigation**: "Haritada Göster" ile yumuşak geçişler
+- **Responsive Tasarım**: Mobil uyumlu harita boyutları
 
-### 💾 Veritabanı Desteği
-- **PostgreSQL + PostGIS**: Gelişmiş mekansal sorgular
-- **MongoDB**: Esnek NoSQL çözümü
-- **POI Detay Yönetimi**: Görseller, 3D modeller, detaylı özellikler
+### 🛣️ Rota Planlama
+- **Çoklu POI Seçimi**: İstediğiniz POI'leri rotaya ekleme
+- **Rota Detayları**: Mesafe, süre ve durak bilgileri
+- **Yükseklik Profili**: Chart.js ile interaktif yükseklik grafiği
+- **Google Maps Entegrasyonu**: Rotayı Google Maps'e aktarma
+- **Başlangıç Noktası**: Özel başlangıç konumu belirleme
 
-### 🛠️ Teknik Özellikler
-- **Performans Optimizasyonu**: Akıllı önbellekleme sistemi
-- **Çoklu Harita Formatı**: Farklı görünüm seçenekleri
-- **Responsive Tasarım**: Mobil uyumlu arayüz
-- **Ölçüm Araçları**: Mesafe ve alan ölçüm desteği
+### 🎨 Modern Kullanıcı Arayüzü
+- **Glassmorphism Tasarım**: Modern cam efekti tasarımı
+- **Responsive Layout**: Tüm cihazlarda uyumlu görünüm
+- **Smooth Animasyonlar**: CSS3 ve JavaScript animasyonları
+- **Loading States**: Kullanıcı dostu yükleme göstergeleri
+- **Touch Optimized**: Mobil dokunmatik optimizasyonları
+
+### 📱 Medya Galerisi
+- **Çoklu Medya Desteği**: Resim, video ve ses dosyaları
+- **Modal Görüntüleyici**: Tam ekran medya görüntüleme
+- **Lazy Loading**: Performans için gecikmeli yükleme
+- **Thumbnail Preview**: POI kartlarında medya önizlemeleri
 
 ## 🚀 Kurulum
 
-### Sistem Gereksinimleri
+### Gereksinimler
+- Python 3.8+
+- Flask
+- Modern web tarayıcısı (Chrome, Firefox, Safari, Edge)
 
-**Minimum Gereksinimler:**
-- **Python**: 3.7 veya üzeri
-- **İşletim Sistemi**: Windows 10, macOS 10.14, Ubuntu 18.04 veya üzeri
-- **RAM**: En az 4GB (8GB önerilir)
-- **Disk Alanı**: En az 2GB boş alan
-- **İnternet Bağlantısı**: OSM verilerini indirmek ve yükseklik API'si için gerekli
-
-**Gerekli Sistem Paketleri:**
-
-**Ubuntu/Debian:**
+### 1. Projeyi İndirin
 ```bash
-sudo apt-get update
-sudo apt-get install python3-pip python3-dev python3-venv
-sudo apt-get install libgeos-dev libproj-dev libgdal-dev
-sudo apt-get install build-essential libssl-dev libffi-dev
+git clone <repository-url>
+cd urgup-poi-recommendation
 ```
 
-**CentOS/RHEL/Fedora:**
+### 2. Python Sanal Ortamı Oluşturun
 ```bash
-sudo yum install python3-pip python3-devel
-sudo yum install geos-devel proj-devel gdal-devel
-sudo yum install gcc openssl-devel libffi-devel
-```
+python -m venv venv
 
-**macOS:**
-```bash
-# Homebrew ile
-brew install python3 geos proj gdal
-```
-
-**Windows:**
-- Python'u [python.org](https://python.org) adresinden indirin
-- Microsoft Visual C++ Build Tools'u yükleyin
-
-### Adım Adım Kurulum
-
-#### Otomatik Kurulum (Tercih Edilen)
-```bash
-./install.sh
-```
-
-#### 1. Projeyi İndirin
-```bash
-# Depoyu klonlayın
-git clone <repo-url>
-cd kapadokya-rota-planlayicisi
-
-# Veya ZIP olarak indirin ve açın
-```
-
-#### 2. Python Sanal Ortamı Oluşturun (Önerilir)
-```bash
-# Sanal ortam oluştur
-python3 -m venv venv
-
-# Sanal ortamı aktifleştir
-# Linux/macOS:
-source venv/bin/activate
-# Windows:
+# Windows
 venv\Scripts\activate
+
+# macOS/Linux
+source venv/bin/activate
 ```
 
-#### 3. Python Bağımlılıklarını Kurun
+### 3. Gerekli Paketleri Yükleyin
 ```bash
-# Bağımlılıkları kurun
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# Eksik paketler varsa manuel kurulum:
-pip install pymongo psycopg2-binary geoalchemy2 requests
+pip install flask
 ```
 
-#### 4. Veritabanı Kurulumu (İsteğe Bağlı)
+### 4. Proje Yapısını Kontrol Edin
+```
+urgup-poi-recommendation/
+├── poi_api.py                 # Flask API sunucusu
+├── poi_recommendation_system.html  # Ana HTML dosyası
+├── static/
+│   ├── css/
+│   │   ├── poi_recommendation_system.css
+│   │   ├── components.css
+│   │   ├── design-tokens.css
+│   │   ├── layout-system.css
+│   │   └── ux-enhancements.css
+│   └── js/
+│       └── poi_recommendation_system.js
+├── poi_data/
+│   └── urgup_pois.json       # POI veritabanı
+└── poi_media/                # Medya dosyaları (resim, video, ses)
+```
 
-**Sadece JSON Dosyası ile Çalışma (Hızlı Başlangıç):**
+### 5. Sunucuyu Başlatın
 ```bash
-# Hiçbir ek kurulum gerekmez
-# Sistem otomatik olarak test_data.json dosyasını kullanacak
+python poi_api.py
 ```
 
-**MongoDB Kurulumu:**
-```bash
-# Ubuntu/Debian
-sudo apt-get install mongodb
-sudo systemctl start mongodb
-sudo systemctl enable mongodb
-
-# macOS (Homebrew ile)
-brew install mongodb-community
-brew services start mongodb-community
-
-# Windows - MongoDB Community Server indirin ve kurun
+### 6. Uygulamayı Açın
+Tarayıcınızda şu adresi açın:
+```
+http://localhost:5000
 ```
 
-**PostgreSQL + PostGIS Kurulumu:**
-```bash
-# Ubuntu/Debian
-sudo apt-get install postgresql postgresql-contrib postgis
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-
-# macOS (Homebrew ile)
-brew install postgresql postgis
-brew services start postgresql
-
-# Windows - PostgreSQL'i resmi siteden indirin
-```
-
-#### 5. Çevre Değişkenlerini Ayarlayın
-
-**Linux/macOS (.bashrc veya .zshrc dosyasına ekleyin):**
-```bash
-# MongoDB için
-export POI_DB_TYPE=mongodb
-export POI_DB_CONNECTION=mongodb://localhost:27017/
-export POI_DB_NAME=poi_cappadocia
-
-# PostgreSQL için
-export POI_DB_TYPE=postgresql
-export POI_DB_CONNECTION=postgresql://kullanici:sifre@localhost/poi_db
-export POI_DB_NAME=poi_db
-
-# JSON dosyası için (varsayılan)
-# Hiçbir değişken ayarlamanıza gerek yok
-```
-
-**Windows (System Properties > Environment Variables):**
-```cmd
-# MongoDB için
-set POI_DB_TYPE=mongodb
-set POI_DB_CONNECTION=mongodb://localhost:27017/
-set POI_DB_NAME=poi_cappadocia
-
-# PostgreSQL için
-set POI_DB_TYPE=postgresql
-set POI_DB_CONNECTION=postgresql://kullanici:sifre@localhost/poi_db
-set POI_DB_NAME=poi_db
-```
-
-#### 6. Veritabanını Başlatın (Veritabanı Kullanıyorsanız)
-
-**MongoDB için:**
-```bash
-python setup_poi_database.py mongodb "mongodb://localhost:27017/" --db-name poi_cappadocia
-```
-
-**PostgreSQL için:**
-```bash
-# Önce veritabanı ve kullanıcı oluşturun
-sudo -u postgres psql
-CREATE DATABASE poi_db;
-CREATE USER poi_user WITH PASSWORD 'your_password';
-GRANT ALL PRIVILEGES ON DATABASE poi_db TO poi_user;
-CREATE EXTENSION postgis;
-\q
-
-# Sonra veritabanını hazırlayın
-python setup_poi_database.py postgresql "postgresql://poi_user:your_password@localhost/poi_db"
-```
-
-#### 7. Test ve Doğrulama
-
-**Kurulum testini çalıştırın:**
-```bash
-# Basit rota testi
-python category_route_planner.py gastronomik --no-elevation -o test_route.html
-
-# API testi (veritabanı varsa)
-python poi_api.py &
-curl http://localhost:5505/health
-```
-
-**Beklenen çıktılar:**
-- `test_route.html` dosyası oluşmalı
-- Cache klasöründe `.json` dosyaları oluşmalı
-- API health check'i başarılı olmalı
-
-### Hızlı Başlatma (5 Dakika)
-
-Eğer hızlıca test etmek istiyorsanız:
-
-```bash
-# 1. Temel paketleri kurun
-pip install folium osmnx networkx numpy requests
-
-# 2. Hemen çalıştırın (JSON verisi ile)
-python category_route_planner.py
-
-# 3. Sonucu açın
-# tum_kategoriler_rotasi.html dosyası oluşacak
-```
-
-### Docker ile Kurulum (Gelişmiş)
-
-```bash
-# Dockerfile oluşturun
-cat > Dockerfile << 'EOF'
-FROM python:3.9-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY . .
-EXPOSE 5505
-
-CMD ["python", "poi_api.py"]
-EOF
-
-# Docker imajını oluşturun
-docker build -t kapadokya-poi .
-
-# Çalıştırın
-docker run -p 5505:5505 kapadokya-poi
-```
-
-## 🔧 Kurulum Sorunları ve Çözümleri
-
-### Yaygın Kurulum Sorunları
-
-**1. OSMnx Kurulum Hatası:**
-```bash
-# Çözüm 1: Conda ile kurun
-conda install -c conda-forge osmnx
-
-# Çözüm 2: Sistem paketlerini kurun
-sudo apt-get install libspatialindex-dev  # Ubuntu/Debian
-brew install spatialindex  # macOS
-```
-
-**Ek: scikit-learn Eksik Uyarısı**
-```bash
-pip install scikit-learn
-```
-
-**2. GEOS/GDAL Hataları:**
-```bash
-# Ubuntu/Debian
-sudo apt-get install libgeos-dev libgdal-dev libproj-dev
-
-# macOS
-brew install geos gdal proj
-
-# Sonra tekrar kurun
-pip install --force-reinstall folium osmnx
-```
-
-**3. Psycopg2 Kurulum Hatası:**
-```bash
-# Ubuntu/Debian
-sudo apt-get install libpq-dev python3-dev
-
-# macOS
-brew install postgresql
-
-# Sonra tekrar kurun
-pip install psycopg2-binary
-```
-
-**4. MongoDB Bağlantı Hatası:**
-```bash
-# Servisi kontrol edin
-sudo systemctl status mongodb
-
-# Başlatın
-sudo systemctl start mongodb
-
-# Port kontrolü
-netstat -an | grep 27017
-```
-
-**5. Bellek Hatası (Büyük Veri Setleri):**
-```bash
-# Küçük bölge ile test edin
-python category_route_planner.py gastronomik --radius 2
-
-# Yükseklik verilerini devre dışı bırakın
-python category_route_planner.py --no-elevation
-```
-
-**6. İnternet Bağlantı Sorunları:**
-```bash
-# Mevcut cache verilerini kullanın
-ls cache/  # Cache dosyalarını kontrol edin
-
-# Offline mod için mevcut GraphML dosyalarını kullanın
-python category_route_planner.py -g urgup_merkez_walking.graphml
-```
-
-### Test Komutları
-
-**Kurulum doğrulama:**
-```bash
-# Python ve paket sürümlerini kontrol edin
-python --version
-pip list | grep -E "(folium|osmnx|networkx|numpy)"
-
-# İndirilen GraphML dosyalarını kontrol edin
-ls -la *.graphml
-
-# Cache klasörünü kontrol edin
-ls -la cache/
-
-# API test (veritabanı ile)
-python -c "from poi_database_adapter import POIDatabaseFactory; print('✅ Veritabanı adaptörü çalışıyor')"
-```
-
-**Performans testi:**
-```bash
-# Küçük alan testi
-time python category_route_planner.py gastronomik --radius 1
-
-# Büyük alan testi  
-time python category_route_planner.py --radius 15
-```
-
-### Güncelleme Prosedürü
-
-```bash
-# Güncel sürümü indirin
-git pull origin main
-
-# Bağımlılıkları güncelleyin
-pip install --upgrade -r requirements.txt
-
-# Cache'i temizleyin (isteğe bağlı)
-rm -rf cache/*
-
-# Veritabanını güncelleyin (varsa)
-python setup_poi_database.py <db_type> <connection_string>
-```
-
-### Kaldırma İşlemi
-
-```bash
-# Sanal ortamı kaldırın
-rm -rf venv/
-
-# Proje dosyalarını kaldırın
-cd .. && rm -rf kapadokya-rota-planlayicisi/
-
-# Veritabanını kaldırın (isteğe bağlı)
-# MongoDB:
-mongo
-use poi_cappadocia
-db.dropDatabase()
-
-# PostgreSQL:
-sudo -u postgres psql
-DROP DATABASE poi_db;
-```
-
-### Yedekleme ve Geri Yükleme
-Projeyi ve veritabanını yedeklemek için `backup_restore.sh` scriptini kullanabilirsiniz.
-```bash
-# Yedek oluştur
-./backup_restore.sh backup
-
-# Yedekleri listele
-./backup_restore.sh list
-
-# Geri yükleme
-./backup_restore.sh restore <yedek_adi>
-```
-Detaylı açıklama için `YEDEKLEME_REHBERI.md` dosyasına bakabilirsiniz.
-
-## 📚 Detaylı Kullanım
-
-### Komut Satırı Parametreleri
-
-```bash
-python category_route_planner.py [kategori] [seçenekler]
-
-Pozisyonel Argümanlar:
-  kategori              İşlenecek POI kategorisi (gastronomik, kulturel, sanatsal, doga_macera, konaklama)
-
-Seçenekler:
-  -o, --output          Çıktı HTML dosya adı
-  -g, --graphfile       Yol ağı GraphML dosyası (varsayılan: urgup_merkez_walking.graphml)
-  -r, --radius          Yol ağı indirme yarıçapı (km, varsayılan: 10)
-  --start               Rotanın başlayacağı POI adı
-  --no-optimize         Rota optimizasyonunu devre dışı bırak
-  --no-elevation        Yükseklik profilini devre dışı bırak
-  -h, --help            Yardım mesajını göster
-```
-
-### Örnek Kullanım Senaryoları
-
-#### 1. Gastronomik Tur Planı
-```bash
-python category_route_planner.py gastronomik --start "Ziggy Cafe & Restaurant (Ürgüp)"
-```
-
-#### 2. Kültürel Gezi Rotası
-```bash
-python category_route_planner.py kulturel --start "Ürgüp Müzesi" -o kulturel_tur.html
-```
-
-#### 3. Tam Kapsamlı Ürgüp Turu
-```bash
-python category_route_planner.py -o urgup_komple_tur.html
-```
-
-## 💽 Veritabanı Kurulumu
-
-### PostgreSQL + PostGIS
-
-```bash
-# PostgreSQL veritabanı kurulumu
-python setup_poi_database.py postgresql "postgresql://user:password@localhost/poi_db"
-
-# Veritabanı ile rota planlama
-python category_route_planner_with_db.py --db-type postgresql --db-connection "postgresql://user:password@localhost/poi_db"
-```
-
-### MongoDB
-
-```bash
-# MongoDB veritabanı kurulumu
-python setup_poi_database.py mongodb "mongodb://localhost:27017/" --db-name poi_cappadocia
-
-# MongoDB ile rota planlama
-python category_route_planner_with_db.py --db-type mongodb --db-connection "mongodb://localhost:27017/" --db-name poi_cappadocia
-```
-
-### Veritabanı Şeması
-
-Detaylı mimari için `PROJE_MIMARISI.md`, tablo açıklamaları için `poi_database_design.md` dosyalarına bakabilirsiniz.
-- **POI Tablosu**: Ana ilgi noktaları bilgileri
-- **Kategoriler**: POI sınıflandırması
-- **Görseller**: POI fotoğrafları ve thumbnails
-- **3D Modeller**: 3 boyutlu model verileri
-- **Mekansal İndeksler**: Performanslı coğrafi sorgular
-
-## 📁 Proje Yapısı
-
-```
-seyahat_onerisi/
-├── category_route_planner.py          # Ana rota planlayıcı
-├── category_route_planner_with_db.py  # Veritabanı destekli versiyon
-├── poi_database_adapter.py            # Veritabanı adaptörü
-├── setup_poi_database.py              # Veritabanı kurulum scripti
-├── poi_database_design.md             # Veritabanı tasarım dokümantasyonu
-├── requirements.txt                   # Python bağımlılıkları
-├── cache/                             # Performans önbellek dosyaları
-├── *.graphml                          # OSM yol ağı verileri
-└── *.html                             # Üretilen harita dosyaları
-```
-
-## 🛠️ Bağımlılıklar
-
-### Ana Kütüphaneler
-- **folium**: İnteraktif harita oluşturma
-- **osmnx**: OpenStreetMap veri işleme
-- **psycopg2-binary**: PostgreSQL bağlantısı
-- **sqlalchemy**: ORM ve veritabanı yönetimi
-- **geoalchemy2**: Mekansal veritabanı işlemleri
-- **pymongo**: MongoDB bağlantısı
-
-### Sistem Gereksinimleri
-- Python 3.7+
-- PostgreSQL 12+ (PostGIS uzantısı ile) veya MongoDB 4.0+
-- İnternet bağlantısı (OSM verileri ve yükseklik API'si için)
-
-## 🎨 Harita Özellikleri
-
-### İnteraktif Kontroller
-- **Katman Seçimi**: Farklı harita görünümleri
-- **POI Filtreleme**: Kategori bazlı gösterim/gizleme
-- **Mesafe Ölçümü**: Harita üzerinde mesafe ölçüm aracı
-- **Tam Ekran**: Büyütülmüş harita görünümü
-- **Mini Harita**: Konum referansı
-
-### Rota Bilgileri
-- **Toplam Mesafe**: Kilometre cinsinden rota uzunluğu
-- **Yükseklik Profili**: İnteraktif yükseklik grafikleri
-- **Zorluk Seviyesi**: Otomatik hesaplanan rota zorluğu
-- **Tırmanış/İniş**: Toplam yükselti değişimleri
-
-### POI Detayları
-- **Sıralı Numaralandırma**: Optimize edilmiş ziyaret sırası
-- **Detaylı Bilgiler**: Açıklama, iletişim, özellikler
-- **Google Maps Entegrasyonu**: Direkt navigasyon linki
-- **Kategori Renklendirme**: Görsel sınıflandırma
-
-## ⚡ Performans Optimizasyonu
-
-### Önbellekleme Sistemi
-- OSM yol ağı verileri yerel olarak saklanır
-- API çağrıları minimize edilir
-- İşlenmiş rota verileri önbelleğe alınır
-
-### Veri İndirme Stratejileri
-- **Otomatik İndirme**: İlk çalıştırmada OSM verilerini indirir
-- **Offline Mod**: Mevcut verilerle çalışma imkanı
-- **API Hata Yönetimi**: Bağlantı sorunlarında alternatif çözümler
-
-## 🔧 Gelişmiş Konfigürasyon
-
-### Özel POI Ekleme
-
-POI verilerini `category_route_planner.py` dosyasındaki `POI_DATA` sözlüğünde düzenleyebilirsiniz:
-
-```python
-POI_DATA = {
-    "ozel_kategori": {
-        "Özel Nokta 1": (38.6310, 34.9130),
-        "Özel Nokta 2": (38.6320, 34.9140)
+## 📊 Veri Yapısı
+
+### POI Veri Formatı
+```json
+{
+  "doga_macera": [
+    {
+      "id": "unique_id",
+      "name": "POI Adı",
+      "latitude": 38.6320,
+      "longitude": 34.9120,
+      "description": "POI açıklaması",
+      "category": "doga_macera",
+      "ratings": {
+        "doga": 85,
+        "macera": 90,
+        "spor": 70
+      }
     }
+  ]
 }
 ```
 
-### Stil Özelleştirme
+### Kategori Sistemi
+- **🌿 Doğa & Macera**: Doğal güzellikler, hiking, outdoor aktiviteler
+- **🍽️ Gastronomi**: Restoranlar, yerel lezzetler, wine tasting
+- **🏨 Konaklama**: Oteller, pansiyonlar, butik konaklama
+- **🏛️ Kültürel**: Müzeler, tarihi yerler, kültürel mekanlar
+- **🎨 Sanatsal**: Sanat galerileri, atölyeler, kültür merkezleri
 
-Kategori renklerini ve simgelerini `CATEGORY_STYLES` sözlüğünde değiştirebilirsiniz:
+## 🎛️ Kullanım Kılavuzu
 
-```python
-CATEGORY_STYLES = {
-    "ozel_kategori": {
-        "color": "#ff6b6b",
-        "icon": "star",
-        "display_name": "⭐ Özel Yerler"
-    }
+### 1. Tercih Belirleme
+- Ana sayfada 10 farklı kategori için tercih seviyenizi ayarlayın
+- Slider'ları kullanarak ilgi seviyenizi belirtin:
+  - **İlgilenmiyorum** (0)
+  - **Az İlgiliyim** (25)
+  - **Orta Seviye** (50)
+  - **Çok İlgiliyim** (75)
+  - **Kesinlikle İhtiyacım Var** (100)
+
+### 2. Öneri Alma
+- "Önerilerimi Getir" butonuna tıklayın
+- Sistem tercihlerinizi analiz ederek önerileri hesaplar
+- Yüksek puanlı öneriler (≥45 puan) öncelikli gösterilir
+
+### 3. Harita Kullanımı
+- POI kartlarındaki "Haritada Göster" butonunu kullanın
+- Marker'lara tıklayarak detaylı bilgi alın
+- Harita üzerinde zoom ve pan işlemleri yapın
+
+### 4. Rota Planlama
+- İstediğiniz POI'leri "Rotaya Ekle" ile seçin
+- Rota detaylarını görüntüleyin
+- Google Maps'e aktararak navigasyon başlatın
+
+### 5. Medya Görüntüleme
+- POI kartlarındaki medya önizlemelerine tıklayın
+- Modal pencerede tam ekran görüntüleme
+- Resim, video ve ses dosyalarını inceleyin
+
+## 🔧 Özelleştirme
+
+### CSS Değişkenleri
+```css
+:root {
+    --primary-color: #667eea;
+    --secondary-color: #f8f9fa;
+    --accent-color: #28a745;
+    --text-color: #2c3e50;
+    --border-color: #dee2e6;
 }
 ```
 
-## 🌐 API Entegrasyonları
-
-### Yükseklik Verileri
-- **Open-Meteo API**: Ücretsiz yükseklik profili verileri
-- **Chunk İşleme**: Büyük rotaları parçalara bölerek işler
-- **Hata Toleransı**: API erişim sorunlarında graceful degradation
-
-### Harita Servisleri
-- **OpenStreetMap**: Ücretsiz harita katmanları
-- **CartoDB**: Çoklu stil seçenekleri
-- **Esri**: Uydu görüntüleri
-
-## 🚨 Sorun Giderme
-
-### Yaygın Sorunlar ve Çözümleri
-
-#### OSM Verisi İndirilememe
-```bash
-# Manuel GraphML dosyası oluşturma
-python -c "
-import osmnx as ox
-G = ox.graph_from_place('Ürgüp, Türkiye', network_type='walk')
-ox.save_graphml(G, 'urgup_merkez_walking.graphml')
-"
+### Kategori Renkleri
+Her kategori için özel renkler tanımlanmıştır:
+```css
+--doga-color: #27ae60;
+--yemek-color: #e74c3c;
+--tarihi-color: #8e44ad;
+/* ... diğer kategoriler */
 ```
 
-#### Yükseklik API'si Erişim Hatası
-```bash
-# Yükseklik özelliğini devre dışı bırakma
-python category_route_planner.py --no-elevation
+### Responsive Breakpoint'ler
+- **Mobile**: < 768px
+- **Tablet**: 768px - 1024px
+- **Desktop**: > 1024px
+
+## 🚀 Performans Optimizasyonları
+
+### Frontend
+- **Lazy Loading**: Medya dosyaları için gecikmeli yükleme
+- **GPU Acceleration**: CSS transform'lar için hardware acceleration
+- **Debounced Events**: Scroll ve resize event'leri için debouncing
+- **Image Optimization**: Otomatik resim boyutlandırma
+
+### Backend
+- **Caching**: POI verilerini memory'de cache'leme
+- **Gzip Compression**: HTTP response'ları için sıkıştırma
+- **Static File Serving**: Efficient static file delivery
+
+## 🔒 Güvenlik
+
+- **Input Validation**: Tüm kullanıcı girdileri doğrulanır
+- **XSS Protection**: HTML içeriği sanitize edilir
+- **CORS Headers**: Uygun CORS politikaları
+- **Rate Limiting**: API endpoint'leri için rate limiting
+
+## 🐛 Sorun Giderme
+
+### Yaygın Sorunlar
+
+**1. Harita Yüklenmiyor**
+```javascript
+// Konsol hatalarını kontrol edin
+// Leaflet.js kütüphanesinin yüklendiğinden emin olun
 ```
 
-#### Veritabanı Bağlantı Sorunları
+**2. POI Verileri Gelmiyor**
 ```bash
-# PostgreSQL servis kontrolü
-sudo systemctl status postgresql
-
-# MongoDB servis kontrolü  
-sudo systemctl status mongod
+# API sunucusunun çalıştığından emin olun
+curl http://localhost:5000/api/pois
 ```
 
-### Performans Sorunları
+**3. Medya Dosyaları Görünmüyor**
+```bash
+# poi_media klasörünün var olduğundan emin olun
+ls -la poi_media/
+```
 
-#### Büyük Veri Setleri
-- Cache klasörünü temizleyin
-- Radius parametresini azaltın
-- POI sayısını sınırlayın
+### Debug Modu
+```javascript
+// Konsol loglarını etkinleştirin
+localStorage.setItem('debug', 'true');
+```
 
-#### Bellek Kullanımı
-- `--no-elevation` parametresini kullanın
-- Daha küçük GraphML dosyaları tercih edin
+## 📈 Gelecek Geliştirmeler
 
-## 📈 Gelecek Özellikler
-
-### Planlanan Geliştirmeler
-- [ ] Çoklu şehir desteği (Göreme, Avanos, Nevşehir)
-- [ ] Mobil uygulama entegrasyonu
-- [ ] Sosyal medya paylaşım özellikleri
-- [ ] Hava durumu entegrasyonu
-- [ ] Çoklu dil desteği
-- [ ] Özel tur paketi oluşturma
-- [ ] QR kod tabanlı POI bilgileri
-
-### Teknik İyileştirmeler
-- [ ] WebSocket tabanlı gerçek zamanlı güncellemeler
-- [ ] Machine Learning tabanlı öneri sistemi
-- [ ] PWA (Progressive Web App) desteği
-- [ ] Docker konteyner desteği
+- [ ] **Kullanıcı Hesapları**: Kişisel tercih kaydetme
+- [ ] **Sosyal Özellikler**: POI paylaşımı ve yorumlar
+- [ ] **Offline Destek**: PWA özellikleri
+- [ ] **AI Önerileri**: Machine learning tabanlı öneriler
+- [ ] **Çoklu Dil**: İngilizce ve diğer dil desteği
+- [ ] **API Genişletme**: RESTful API endpoint'leri
+- [ ] **Admin Panel**: POI yönetimi için admin arayüzü
 
 ## 🤝 Katkıda Bulunma
 
-Bu projeye katkıda bulunmak için:
-
-1. Bu repository'i fork edin
-2. Yeni bir feature branch oluşturun (`git checkout -b feature/yeni-ozellik`)
-3. Değişikliklerinizi commit edin (`git commit -am 'Yeni özellik eklendi'`)
-4. Branch'inizi push edin (`git push origin feature/yeni-ozellik`)
+1. Fork yapın
+2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
+3. Değişikliklerinizi commit edin (`git commit -m 'Add amazing feature'`)
+4. Branch'inizi push edin (`git push origin feature/amazing-feature`)
 5. Pull Request oluşturun
-
 
 ## 📄 Lisans
 
-Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosyasını inceleyin.
+Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosyasına bakın.
 
+## 📞 İletişim
+
+Proje hakkında sorularınız için:
+- GitHub Issues kullanın
+- Email: [your-email@example.com]
+
+---
+
+**Not**: Bu proje Ürgüp turizmi için geliştirilmiş bir demo uygulamadır. Gerçek kullanım için POI verilerinin güncel tutulması önerilir.
