@@ -2039,7 +2039,8 @@ function createSimpleRoute(waypoints) {
                         <small>(Gerçek yol rotası değil)</small>
                     </p>
                 </div>
-                `
+                `,
+        { autoPan: false }
     );
 
     // Add route details panel click event
@@ -2818,7 +2819,8 @@ async function setStartLocation() {
                                     Doğruluk: ±${Math.round(location.accuracy)}m
                                 </div>
                             </div>
-                            `
+                            `,
+                    { autoPan: false }
                 );
 
             // Center map on user location
@@ -4014,7 +4016,8 @@ async function initializeMap(recommendationData) {
                             </div>
                         `, {
                 maxWidth: 400,
-                className: 'custom-popup'
+                className: 'custom-popup',
+                autoPan: false
             });
 
         // Marker'ı listeye ekle ve düşük puanlı ise başlangıçta gizle
