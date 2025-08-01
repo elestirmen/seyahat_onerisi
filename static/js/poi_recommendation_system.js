@@ -701,25 +701,98 @@ class RouteDetailsPanel {
             return;
         }
 
-        // Focus map on segment
+        // Focus map on segment with smooth animation
         const coordinates = segment.coordinates;
         const bounds = L.latLngBounds(coordinates.map(coord => [coord.lat, coord.lng]));
 
         if (map) {
-            map.fitBounds(bounds, { padding: [20, 20] });
-
-            // Highlight segment temporarily
-            const segmentItems = document.querySelectorAll('.segment-item');
-            segmentItems.forEach((item, i) => {
-                item.classList.toggle('highlighted', i === segmentIndex);
+            // Smooth zoom to segment
+            map.fitBounds(bounds, { 
+                padding: [30, 30],
+                animate: true,
+                duration: 0.8
             });
 
-            // Remove highlight after 2 seconds
+            // Create highlighted route overlay
+            const highlightedRoute = L.polyline(
+                coordinates.map(coord => [coord.lat, coord.lng]), 
+                {
+                    color: '#ff6b35',
+                    weight: 8,
+                    opacity: 0.9,
+                    dashArray: segment.fallback ? '15, 10' : null,
+                    className: 'highlighted-segment'
+                }
+            ).addTo(map);
+
+            // Add pulsing effect
+            let pulseCount = 0;
+            const pulseInterval = setInterval(() => {
+                if (pulseCount < 6) {
+                    highlightedRoute.setStyle({
+                        weight: pulseCount % 2 === 0 ? 12 : 8,
+                        opacity: pulseCount % 2 === 0 ? 1 : 0.7
+                    });
+                    pulseCount++;
+                } else {
+                    clearInterval(pulseInterval);
+                }
+            }, 300);
+
+            // Highlight segment in list with enhanced styling
+            const segmentItems = document.querySelectorAll('.segment-item');
+            segmentItems.forEach((item, i) => {
+                if (i === segmentIndex) {
+                    item.classList.add('segment-highlighted', 'segment-pulse');
+                    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    item.classList.remove('segment-highlighted', 'segment-pulse');
+                }
+            });
+
+            // Show segment info popup
+            const midPoint = coordinates[Math.floor(coordinates.length / 2)];
+            const segmentPopup = L.popup({
+                closeButton: false,
+                autoClose: true,
+                closeOnEscapeKey: true,
+                className: 'segment-highlight-popup'
+            })
+            .setLatLng([midPoint.lat, midPoint.lng])
+            .setContent(`
+                <div style="text-align: center; padding: 10px;">
+                    <h4 style="margin: 0 0 8px 0; color: #ff6b35; font-size: 1.1rem;">
+                        ${segment.fallback ? '📏' : '🚶'} Segment ${segmentIndex + 1}
+                    </h4>
+                    <p style="margin: 0 0 5px 0; font-weight: 600;">
+                        ${segment.from} → ${segment.to}
+                    </p>
+                    <div style="display: flex; gap: 15px; justify-content: center; font-size: 0.9rem;">
+                        <span>📏 ${segment.distance.toFixed(2)} km</span>
+                        <span>⏱️ ${Math.round(segment.distance * 12)} dk</span>
+                        <span>${segment.fallback ? 'Düz çizgi' : 'Yürüyüş'}</span>
+                    </div>
+                </div>
+            `)
+            .openOn(map);
+
+            // Remove highlights after 4 seconds
             setTimeout(() => {
+                if (map.hasLayer(highlightedRoute)) {
+                    map.removeLayer(highlightedRoute);
+                }
+                if (map.hasLayer(segmentPopup)) {
+                    map.closePopup(segmentPopup);
+                }
                 segmentItems.forEach(item => {
-                    item.classList.remove('highlighted');
+                    item.classList.remove('segment-highlighted', 'segment-pulse');
                 });
-            }, 2000);
+            }, 4000);
+
+            // Add click handler to highlighted route for Google Maps
+            highlightedRoute.on('click', () => {
+                openRouteInGoogleMaps(segment);
+            });
         }
 
         console.log(`🎯 Focused on segment ${segmentIndex + 1}: ${segment.from} → ${segment.to}`);
