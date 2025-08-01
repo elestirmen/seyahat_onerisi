@@ -707,7 +707,7 @@ class RouteDetailsPanel {
 
         if (map) {
             // Smooth zoom to segment
-            map.fitBounds(bounds, { 
+            map.fitBounds(bounds, {
                 padding: [30, 30],
                 animate: true,
                 duration: 0.8
@@ -715,7 +715,7 @@ class RouteDetailsPanel {
 
             // Create highlighted route overlay
             const highlightedRoute = L.polyline(
-                coordinates.map(coord => [coord.lat, coord.lng]), 
+                coordinates.map(coord => [coord.lat, coord.lng]),
                 {
                     color: '#ff6b35',
                     weight: 8,
@@ -758,8 +758,8 @@ class RouteDetailsPanel {
                 closeOnEscapeKey: true,
                 className: 'segment-highlight-popup'
             })
-            .setLatLng([midPoint.lat, midPoint.lng])
-            .setContent(`
+                .setLatLng([midPoint.lat, midPoint.lng])
+                .setContent(`
                 <div style="text-align: center; padding: 10px;">
                     <h4 style="margin: 0 0 8px 0; color: #ff6b35; font-size: 1.1rem;">
                         ${segment.fallback ? '📏' : '🚶'} Segment ${segmentIndex + 1}
@@ -774,7 +774,7 @@ class RouteDetailsPanel {
                     </div>
                 </div>
             `)
-            .openOn(map);
+                .openOn(map);
 
             // Remove highlights after 4 seconds
             setTimeout(() => {
@@ -802,7 +802,7 @@ class RouteDetailsPanel {
 // Create custom marker icons
 function createCustomIcon(category, score, isLowScore = false) {
     const style = categoryStyles[category] || { color: '#667eea', icon: '📍' };
-    
+
     // Düşük puanlı POI'ler için gri ve silik stil
     const markerColor = isLowScore ? '#9ca3af' : style.color;
     const opacity = isLowScore ? '0.85' : '1';
@@ -3975,7 +3975,7 @@ async function initializeMap(recommendationData) {
 
     // Add markers for all recommendations (high and low score)
     const allPOIs = [...recommendationData.highScore, ...recommendationData.lowScore];
-    
+
     for (const [index, poi] of allPOIs.entries()) {
         const isLowScore = poi.recommendationScore < 45;
         const customIcon = createCustomIcon(poi.category, poi.recommendationScore, isLowScore);
@@ -3999,8 +3999,8 @@ async function initializeMap(recommendationData) {
 
         // Düşük puanlı POI'ler için farklı popup renkleri
         const popupHeaderColor = isLowScore ? '#9ca3af' : categoryStyle.color;
-        const popupScoreBackground = isLowScore ? 
-            'linear-gradient(135deg, #6b7280 0%, #9ca3af 100%)' : 
+        const popupScoreBackground = isLowScore ?
+            'linear-gradient(135deg, #6b7280 0%, #9ca3af 100%)' :
             'linear-gradient(135deg, var(--accent-color) 0%, #20c997 100%)';
         const popupOpacity = isLowScore ? '0.8' : '1';
 
@@ -4106,12 +4106,12 @@ async function initializeMap(recommendationData) {
         // Marker'ı listeye ekle ve düşük puanlı ise başlangıçta gizle
         marker.isLowScore = isLowScore;
         marker.poiData = poi;
-        
+
         if (isLowScore) {
             marker.setOpacity(0); // Başlangıçta gizli
             marker._icon.style.display = 'none';
         }
-        
+
         markers.push(marker);
     }
 
@@ -4227,7 +4227,7 @@ function toggleLowScorePOIs() {
                 if (marker.isLowScore) {
                     marker._icon.style.display = 'block';
                     marker.setOpacity(0);
-                    
+
                     // Animate marker appearance
                     setTimeout(() => {
                         marker._icon.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
@@ -4267,7 +4267,7 @@ function toggleLowScorePOIs() {
                 mapContainer.style.transition = 'all 0.5s ease';
                 mapContainer.style.transform = 'scale(1.02)';
                 mapContainer.style.boxShadow = '0 12px 40px rgba(102, 126, 234, 0.3)';
-                
+
                 setTimeout(() => {
                     mapContainer.style.transform = 'scale(1)';
                     mapContainer.style.boxShadow = '';
@@ -4290,7 +4290,7 @@ function toggleLowScorePOIs() {
                     marker._icon.style.transition = 'opacity 0.3s ease-in, transform 0.3s ease-in';
                     marker.setOpacity(0);
                     marker._icon.style.transform += ' scale(0.8)';
-                    
+
                     setTimeout(() => {
                         marker._icon.style.display = 'none';
                     }, 300);
@@ -4309,3 +4309,150 @@ function toggleLowScorePOIs() {
         console.log('🗺️ Low score POIs hidden on map');
     }
 }
+// Enhanced Recommend Button Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const recommendBtn = document.getElementById('recommendBtn');
+    
+    if (recommendBtn) {
+        recommendBtn.addEventListener('click', async function() {
+            // Prevent multiple clicks
+            if (recommendBtn.disabled) return;
+            
+            const btnIcon = recommendBtn.querySelector('.btn-icon');
+            const btnText = recommendBtn.querySelector('.btn-text');
+            
+            // Set loading state
+            recommendBtn.disabled = true;
+            recommendBtn.classList.add('loading');
+            btnIcon.className = 'fas fa-spinner btn-icon';
+            btnText.textContent = 'Öneriler Hazırlanıyor...';
+            
+            try {
+                // Get user preferences
+                const preferences = {};
+                const sliders = document.querySelectorAll('.slider');
+                sliders.forEach(slider => {
+                    preferences[slider.id] = parseInt(slider.value);
+                });
+                
+                // Validate preferences
+                if (Object.values(preferences).every(val => val === 0)) {
+                    showNotification('⚠️ Lütfen en az bir kategori için tercih belirtin!', 'warning');
+                    resetButton();
+                    return;
+                }
+                
+                // Make API request
+                const response = await fetch(`${apiBase}/recommendations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ preferences })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Success state
+                recommendBtn.classList.remove('loading');
+                recommendBtn.classList.add('success');
+                btnIcon.className = 'fas fa-check btn-icon';
+                btnText.textContent = 'Öneriler Hazır!';
+                
+                // Show results
+                displayResults(data);
+                
+                // Reset button after delay
+                setTimeout(resetButton, 2000);
+                
+            } catch (error) {
+                console.error('Error getting recommendations:', error);
+                
+                // Error state
+                recommendBtn.classList.remove('loading');
+                recommendBtn.classList.add('error');
+                btnIcon.className = 'fas fa-exclamation-triangle btn-icon';
+                btnText.textContent = 'Tekrar Deneyin';
+                
+                showNotification('❌ Öneriler alınırken bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+                
+                // Reset button after delay
+                setTimeout(resetButton, 3000);
+            }
+        });
+    }
+    
+    function resetButton() {
+        const recommendBtn = document.getElementById('recommendBtn');
+        const btnIcon = recommendBtn.querySelector('.btn-icon');
+        const btnText = recommendBtn.querySelector('.btn-text');
+        
+        recommendBtn.disabled = false;
+        recommendBtn.classList.remove('loading', 'success', 'error');
+        btnIcon.className = 'fas fa-magic btn-icon';
+        btnText.textContent = 'Önerilerimi Getir';
+    }
+    
+    function displayResults(data) {
+        const resultsSection = document.getElementById('resultsSection');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+        
+        if (resultsSection) {
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        showNotification(`✅ ${data.recommendations ? data.recommendations.length : 0} öneri bulundu!`, 'success');
+    }
+    
+    function showNotification(message, type = 'info') {
+        // Remove existing notifications
+        document.querySelectorAll('.notification').forEach(n => n.remove());
+        
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.style.cssText = `
+            position: fixed; top: 20px; right: 20px; z-index: 10000;
+            background: ${getNotificationColor(type)}; color: white;
+            padding: 15px 20px; border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            transform: translateX(400px);
+            transition: all 0.4s ease; max-width: 400px;
+        `;
+        
+        notification.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                <span>${message}</span>
+                <button onclick="this.parentElement.parentElement.remove()" 
+                        style="background: none; border: none; color: white; cursor: pointer; padding: 5px;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => notification.style.transform = 'translateX(0)', 100);
+        
+        // Auto remove
+        setTimeout(() => {
+            notification.style.transform = 'translateX(400px)';
+            setTimeout(() => notification.remove(), 400);
+        }, 5000);
+    }
+    
+    function getNotificationColor(type) {
+        const colors = {
+            'success': 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+            'error': 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+            'warning': 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)',
+            'info': 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)'
+        };
+        

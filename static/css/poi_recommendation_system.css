@@ -612,19 +612,25 @@
             background: linear-gradient(135deg, var(--accent-color) 0%, #20c997 100%);
             border: none;
             color: white;
-            padding: 18px 45px;
-            font-size: 1.2rem;
+            padding: 20px 50px;
+            font-size: 1.3rem;
             font-weight: 700;
             border-radius: 50px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            display: block;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
             margin: 30px auto;
-            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+            box-shadow: 0 10px 30px rgba(40, 167, 69, 0.4);
             position: relative;
             overflow: hidden;
             min-height: var(--touch-target-min);
             touch-action: manipulation;
+            text-decoration: none;
+            border: 2px solid transparent;
+            backdrop-filter: blur(10px);
         }
 
         .recommend-btn::before {
@@ -634,22 +640,41 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .recommend-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.4s ease;
         }
 
         .recommend-btn:hover::before {
             left: 100%;
         }
 
+        .recommend-btn:hover::after {
+            width: 300px;
+            height: 300px;
+        }
+
         .recommend-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 35px rgba(40, 167, 69, 0.4);
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(40, 167, 69, 0.5);
+            border-color: rgba(255, 255, 255, 0.3);
         }
 
         .recommend-btn:active {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
         }
 
         .recommend-btn:disabled {
@@ -657,10 +682,74 @@
             cursor: not-allowed;
             transform: none;
             box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
         }
 
-        .recommend-btn:disabled::before {
+        .recommend-btn:disabled::before,
+        .recommend-btn:disabled::after {
             display: none;
+        }
+
+        .recommend-btn .btn-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .recommend-btn:hover .btn-icon {
+            transform: rotate(360deg) scale(1.1);
+        }
+
+        .recommend-btn .btn-text {
+            position: relative;
+            z-index: 2;
+        }
+
+        .recommend-btn.loading {
+            pointer-events: none;
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+
+        .recommend-btn.loading .btn-icon {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .recommend-btn.success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            animation: successPulse 0.6s ease;
+        }
+
+        @keyframes successPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .recommend-btn.error {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            animation: errorShake 0.6s ease;
+        }
+
+        @keyframes errorShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Notification styles */
+        .notification {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .notification-close:hover {
+            background: rgba(255, 255, 255, 0.2) !important;
+            opacity: 1 !important;
         }
 
         .results-section {
@@ -3434,4 +3523,171 @@ nhanced Segment Highlighting */
             .segment-highlight-popup .leaflet-popup-content-wrapper {
                 font-size: 0.9rem !important;
             }
-        }
+        }/* 
+Custom marker styles */
+.custom-marker {
+    background: none !important;
+    border: none !important;
+}
+
+.marker-content {
+    width: 40px;
+    height: 40px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 3px solid white;
+    transition: all 0.3s ease;
+}
+
+.marker-content:hover {
+    transform: rotate(-45deg) scale(1.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.marker-icon {
+    transform: rotate(45deg);
+    font-size: 1.2rem;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Marker popup styles */
+.marker-popup {
+    min-width: 200px;
+}
+
+.marker-popup h4 {
+    margin: 0 0 8px 0;
+    color: var(--text-color);
+    font-size: 1.1rem;
+}
+
+.marker-popup p {
+    margin: 0 0 12px 0;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.popup-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.popup-actions .btn {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+}
+
+/* No results styles */
+.no-results {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+}
+
+.no-results h3 {
+    margin: 0 0 15px 0;
+    color: var(--text-color);
+}
+
+.no-results p {
+    margin: 0;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+/* Section subtitle styles */
+.section-subtitle {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 30px 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+}
+
+/* POI grid styles */
+.poi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+/* Low score toggle styles */
+.low-score-toggle {
+    text-align: center;
+    margin: 30px 0;
+}
+
+.low-score-toggle .btn {
+    padding: 12px 24px;
+    font-size: 1rem;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+}
+
+.low-score-toggle .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Enhanced button styles */
+.btn--secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+    border: none;
+}
+
+.btn--warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #212529;
+    border: none;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .poi-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .recommend-btn {
+        padding: 18px 40px;
+        font-size: 1.2rem;
+    }
+    
+    .marker-content {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .marker-icon {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .recommend-btn {
+        padding: 16px 35px;
+        font-size: 1.1rem;
+    }
+    
+    .poi-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .poi-action-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
