@@ -1,9 +1,9 @@
         :root {
-            --primary-color: #667eea;
-            --secondary-color: #f8f9fa;
-            --accent-color: #28a745;
-            --text-color: #2c3e50;
-            --border-color: #dee2e6;
+            --primary-color: #4a5568;
+            --secondary-color: #ffffff;
+            --accent-color: #2d3748;
+            --text-color: #1a202c;
+            --border-color: #e2e8f0;
             --legend-width-mobile: 90vw;
             --legend-width-desktop: 320px;
             --legend-animation-duration: 300ms;
@@ -11,32 +11,32 @@
             --legend-backdrop-blur: 10px;
             --toggle-button-size: 50px;
             --touch-target-min: 44px;
-            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --gradient-secondary: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            --gradient-primary: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            --gradient-secondary: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
             --card-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
             --card-shadow-hover: 0 12px 35px rgba(0, 0, 0, 0.15);
 
-            /* Category specific colors */
-            --doga-color: #27ae60;
-            --doga-light: rgba(39, 174, 96, 0.1);
-            --yemek-color: #e74c3c;
-            --yemek-light: rgba(231, 76, 60, 0.1);
-            --tarihi-color: #8e44ad;
-            --tarihi-light: rgba(142, 68, 173, 0.1);
-            --eglence-color: #f39c12;
-            --eglence-light: rgba(243, 156, 18, 0.1);
-            --sanat-kultur-color: #3498db;
-            --sanat-kultur-light: rgba(52, 152, 219, 0.1);
-            --macera-color: #e67e22;
-            --macera-light: rgba(230, 126, 34, 0.1);
-            --rahatlatici-color: #1abc9c;
-            --rahatlatici-light: rgba(26, 188, 156, 0.1);
-            --spor-color: #9b59b6;
-            --spor-light: rgba(155, 89, 182, 0.1);
-            --alisveris-color: #34495e;
-            --alisveris-light: rgba(52, 73, 94, 0.1);
-            --gece-hayati-color: #2c3e50;
-            --gece-hayati-light: rgba(44, 62, 80, 0.1);
+            /* Category specific colors - Daha yüksek kontrast */
+            --doga-color: #22543d;
+            --doga-light: rgba(34, 84, 61, 0.15);
+            --yemek-color: #c53030;
+            --yemek-light: rgba(197, 48, 48, 0.15);
+            --tarihi-color: #553c9a;
+            --tarihi-light: rgba(85, 60, 154, 0.15);
+            --eglence-color: #d69e2e;
+            --eglence-light: rgba(214, 158, 46, 0.15);
+            --sanat-kultur-color: #2b6cb0;
+            --sanat-kultur-light: rgba(43, 108, 176, 0.15);
+            --macera-color: #c05621;
+            --macera-light: rgba(192, 86, 33, 0.15);
+            --rahatlatici-color: #2c7a7b;
+            --rahatlatici-light: rgba(44, 122, 123, 0.15);
+            --spor-color: #6b46c1;
+            --spor-light: rgba(107, 70, 193, 0.15);
+            --alisveris-color: #2d3748;
+            --alisveris-light: rgba(45, 55, 72, 0.15);
+            --gece-hayati-color: #1a202c;
+            --gece-hayati-light: rgba(26, 32, 44, 0.15);
         }
 
         * {
@@ -45,23 +45,23 @@
 
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--gradient-primary);
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
             min-height: 100vh;
             margin: 0;
             padding: 20px 0;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            color: var(--text-color);
         }
 
         .main-container {
             max-width: 1200px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
+            background: #ffffff;
             border-radius: 16px;
-            box-shadow: var(--card-shadow);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
             overflow: hidden;
-            backdrop-filter: blur(var(--legend-backdrop-blur));
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid #e2e8f0;
         }
 
         .header {
@@ -119,13 +119,12 @@
         }
 
         .slider-container {
-            background: var(--gradient-secondary);
+            background: #ffffff;
             border-radius: 24px;
             padding: 35px;
             margin-bottom: 30px;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(20px);
+            border: 2px solid #e2e8f0;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
             position: relative;
             overflow: hidden;
         }
@@ -175,9 +174,9 @@
             flex-direction: column;
             gap: 14px;
             padding: 20px;
-            background: rgba(255, 255, 255, 0.9);
+            background: #ffffff;
             border-radius: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.6);
+            border: 2px solid #e2e8f0;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             min-height: var(--touch-target-min);
             position: relative;
@@ -212,8 +211,9 @@
 
         .slider-item:hover {
             transform: translateY(-4px) scale(1.02);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
-            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
+            background: #ffffff;
+            border-color: #cbd5e0;
         }
 
         .slider-item:hover::before {
@@ -384,7 +384,7 @@
             text-align: center;
             font-size: 16px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.8);
+            background: #f7fafc;
             transition: all 0.3s ease;
             flex-shrink: 0;
         }
@@ -533,9 +533,9 @@
         }
 
         .slider-value.zero {
-            color: #999;
-            background: rgba(153, 153, 153, 0.1);
-            border-color: rgba(153, 153, 153, 0.2);
+            color: #718096;
+            background: rgba(113, 128, 150, 0.1);
+            border-color: rgba(113, 128, 150, 0.3);
         }
 
         .slider-value.high::before {
@@ -609,7 +609,7 @@
         }
 
         .recommend-btn {
-            background: linear-gradient(135deg, var(--accent-color) 0%, #20c997 100%);
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
             border: none;
             color: white;
             padding: 20px 50px;
@@ -623,14 +623,13 @@
             justify-content: center;
             gap: 12px;
             margin: 30px auto;
-            box-shadow: 0 10px 30px rgba(40, 167, 69, 0.4);
+            box-shadow: 0 10px 30px rgba(45, 55, 72, 0.3);
             position: relative;
             overflow: hidden;
             min-height: var(--touch-target-min);
             touch-action: manipulation;
             text-decoration: none;
             border: 2px solid transparent;
-            backdrop-filter: blur(10px);
         }
 
         .recommend-btn::before {
@@ -668,13 +667,13 @@
 
         .recommend-btn:hover {
             transform: translateY(-4px) scale(1.02);
-            box-shadow: 0 15px 40px rgba(40, 167, 69, 0.5);
-            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 15px 40px rgba(45, 55, 72, 0.4);
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
         }
 
         .recommend-btn:active {
             transform: translateY(-2px) scale(1.01);
-            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+            box-shadow: 0 8px 25px rgba(45, 55, 72, 0.3);
         }
 
         .recommend-btn:disabled {
@@ -781,14 +780,13 @@
         }
 
         .poi-card {
-            background: rgba(255, 255, 255, 0.98);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 24px;
             margin-bottom: 28px;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
-            backdrop-filter: blur(15px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
             position: relative;
             overflow: hidden;
             min-height: var(--touch-target-min);
@@ -824,9 +822,9 @@
 
         .poi-card:hover {
             transform: translateY(-6px) scale(1.02);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-            background: rgba(255, 255, 255, 1);
-            border-color: rgba(102, 126, 234, 0.3);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+            background: #ffffff;
+            border-color: #cbd5e0;
         }
 
         .poi-card:hover::before {
@@ -911,13 +909,13 @@
         }
 
         .poi-score {
-            background: linear-gradient(135deg, var(--accent-color) 0%, #20c997 100%);
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
             color: white;
             padding: 10px 18px;
             border-radius: 30px;
             font-weight: 700;
             font-size: 1rem;
-            box-shadow: 0 6px 15px rgba(40, 167, 69, 0.4);
+            box-shadow: 0 6px 15px rgba(45, 55, 72, 0.3);
             white-space: nowrap;
             flex-shrink: 0;
             position: relative;
