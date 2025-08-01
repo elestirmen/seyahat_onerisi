@@ -3873,8 +3873,18 @@ async function initializeMap(recommendationData) {
         map.remove();
     }
 
-    // Initialize map
-    map = L.map('mapContainer').setView([38.632, 34.912], 13);
+    // Initialize map with better options
+    map = L.map('mapContainer', {
+        zoomControl: true,
+        scrollWheelZoom: true,
+        doubleClickZoom: true,
+        touchZoom: true,
+        dragging: true,
+        tap: true,
+        tapTolerance: 15,
+        worldCopyJump: false,
+        maxBoundsViscosity: 0.0
+    }).setView([38.632, 34.912], 13);
 
     // Add tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -4042,6 +4052,10 @@ async function initializeMap(recommendationData) {
     // Remove loading state after map is fully loaded
     setTimeout(() => {
         mapContainer.classList.remove('loading');
+        // Fix map size issues
+        if (map) {
+            map.invalidateSize();
+        }
         console.log('🗺️ Map fully loaded and displayed');
     }, 1000);
 }
