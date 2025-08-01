@@ -2805,611 +2805,633 @@
             }
         }
 
-/* Enhanced Map Styles */
-.map-container-enhanced {
-    height: 500px;
-    width: 100%;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: var(--card-shadow);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    background: #f8f9fa;
-    position: relative;
-    margin-bottom: 20px;
-}
+        /* Enhanced Map Styles */
+        .map-container-enhanced {
+            height: 500px;
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: #f8f9fa;
+            position: relative;
+            margin-bottom: 20px;
+        }
 
-.map-container-enhanced::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(45deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-    pointer-events: none;
-    z-index: 0;
-}
+        .map-container-enhanced::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
 
-/* Map section styling */
-#mapSection {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 20px;
-    padding: 25px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: var(--card-shadow);
-    margin-top: 30px;
-}
+        /* Map section styling */
+        #mapSection {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: var(--card-shadow);
+            margin-top: 30px;
+        }
 
-/* Responsive map height */
-@media (max-width: 768px) {
-    .map-container-enhanced {
-        height: 400px;
-        border-radius: 12px;
-    }
-    
-    #mapSection {
-        padding: 20px;
-        border-radius: 16px;
-    }
-}
+        /* Responsive map height */
+        @media (max-width: 768px) {
+            .map-container-enhanced {
+                height: 400px;
+                border-radius: 12px;
+            }
 
-@media (max-width: 480px) {
-    .map-container-enhanced {
-        height: 350px;
-        border-radius: 8px;
-    }
-    
-    #mapSection {
-        padding: 15px;
-        border-radius: 12px;
-    }
-}
+            #mapSection {
+                padding: 20px;
+                border-radius: 16px;
+            }
+        }
 
-/* Map loading state */
-.map-container-enhanced.loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-}
+        @media (max-width: 480px) {
+            .map-container-enhanced {
+                height: 350px;
+                border-radius: 8px;
+            }
 
-.map-container-enhanced.loading::after {
-    content: '🗺️ Harita yükleniyor...';
-    font-size: 1.1rem;
-    color: #666;
-    font-weight: 500;
-}
+            #mapSection {
+                padding: 15px;
+                border-radius: 12px;
+            }
+        }
 
-/* Custom popup styles for better visibility */
-.leaflet-popup-content-wrapper {
-    border-radius: 12px !important;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
-}
+        /* Map loading state */
+        .map-container-enhanced.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
 
-.leaflet-popup-tip {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-}
+        .map-container-enhanced.loading::after {
+            content: '🗺️ Harita yükleniyor...';
+            font-size: 1.1rem;
+            color: #666;
+            font-weight: 500;
+        }
 
-/* Map controls enhancement */
-.leaflet-control-zoom {
-    border-radius: 8px !important;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-}
+        /* Custom popup styles for better visibility */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+        }
 
-.leaflet-control-zoom a {
-    border-radius: 0 !important;
-    font-weight: bold !important;
-    transition: all 0.2s ease !important;
-}
+        .leaflet-popup-tip {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+        }
 
-.leaflet-control-zoom a:hover {
-    background: var(--primary-color) !important;
-    color: white !important;
-}/*
+        /* Map controls enhancement */
+        .leaflet-control-zoom {
+            border-radius: 8px !important;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .leaflet-control-zoom a {
+            border-radius: 0 !important;
+            font-weight: bold !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .leaflet-control-zoom a:hover {
+            background: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        /*
  High and Low Score Styling */
-.poi-card__score.high-score {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
-}
+        .poi-card__score.high-score {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+        }
 
-.poi-card__score.low-score {
-    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-    color: white;
-    font-weight: 500;
-    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
-}
+        .poi-card__score.low-score {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+        }
 
-/* Recommendation sections */
-.recommendation-section {
-    margin-bottom: 25px;
-}
+        /* Recommendation sections */
+        .recommendation-section {
+            margin-bottom: 25px;
+        }
 
-.recommendation-section h4 {
-    font-size: 1.3rem;
-    font-weight: 600;
-    text-align: center;
-    padding: 12px 20px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
+        .recommendation-section h4 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 12px 20px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
 
-.low-score-header {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 16px;
-    padding: 20px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
+        .low-score-header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
 
-/* Animation for low score POIs */
-#lowScorePOIs {
-    transition: all 0.5s ease-out;
-}
+        /* Animation for low score POIs */
+        #lowScorePOIs {
+            transition: all 0.5s ease-out;
+        }
 
-/* Button styling for toggle */
-#showLowScoreBtn {
-    transition: all 0.3s ease;
-    min-width: 200px;
-}
+        /* Button styling for toggle */
+        #showLowScoreBtn {
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
 
-#showLowScoreBtn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+        #showLowScoreBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .recommendation-section h4 {
-        font-size: 1.1rem;
-        padding: 10px 15px;
-    }
-    
-    .low-score-header {
-        padding: 15px;
-    }
-    
-    #showLowScoreBtn {
-        min-width: 180px;
-        font-size: 0.9rem;
-    }
-}/* Low
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .recommendation-section h4 {
+                font-size: 1.1rem;
+                padding: 10px 15px;
+            }
+
+            .low-score-header {
+                padding: 15px;
+            }
+
+            #showLowScoreBtn {
+                min-width: 180px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Low
  Score Marker Styles */
-.low-score-marker {
-    filter: grayscale(0.3) !important;
-    opacity: 0.85 !important;
-    transition: all 0.2s ease !important;
-}
+        .low-score-marker {
+            filter: grayscale(0.3) !important;
+            opacity: 0.85 !important;
+            transition: all 0.2s ease !important;
+        }
 
-.low-score-marker:hover {
-    filter: grayscale(0.1) brightness(1.15) !important;
-    opacity: 1 !important;
-    z-index: 1000 !important;
-    cursor: pointer !important;
-}
+        .low-score-marker:hover {
+            filter: grayscale(0.1) brightness(1.15) !important;
+            opacity: 1 !important;
+            z-index: 1000 !important;
+            cursor: pointer !important;
+        }
 
-.high-score-marker {
-    transition: all 0.2s ease !important;
-}
+        .high-score-marker {
+            transition: all 0.2s ease !important;
+        }
 
-.high-score-marker:hover {
-    filter: brightness(1.15) saturate(1.2) !important;
-    z-index: 1000 !important;
-    cursor: pointer !important;
-}
+        .high-score-marker:hover {
+            filter: brightness(1.15) saturate(1.2) !important;
+            z-index: 1000 !important;
+            cursor: pointer !important;
+        }
 
-/* Map marker animations - safe properties with scale */
-.custom-poi-marker {
-    transition: filter 0.2s ease, opacity 0.2s ease !important;
-}
+        /* Map marker animations - safe properties with scale */
+        .custom-poi-marker {
+            transition: filter 0.2s ease, opacity 0.2s ease !important;
+        }
 
-/* Prevent markers from jumping out of bounds */
-.leaflet-marker-icon {
-    transition: filter 0.2s ease !important;
-}
+        /* Prevent markers from jumping out of bounds */
+        .leaflet-marker-icon {
+            transition: filter 0.2s ease !important;
+        }
 
-/* Smooth hover effects for all markers */
-.leaflet-marker-icon:hover {
-    z-index: 1000 !important;
-    cursor: pointer !important;
-}
+        /* Smooth hover effects for all markers */
+        .leaflet-marker-icon:hover {
+            z-index: 1000 !important;
+            cursor: pointer !important;
+        }
 
-/* Popup styling for low score POIs */
-.leaflet-popup-content-wrapper.low-score {
-    opacity: 0.9 !important;
-    filter: grayscale(0.2) !important;
-}
+        /* Popup styling for low score POIs */
+        .leaflet-popup-content-wrapper.low-score {
+            opacity: 0.9 !important;
+            filter: grayscale(0.2) !important;
+        }
 
-/* Map legend for marker types */
-.map-legend {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 15px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    font-size: 0.9rem;
-    z-index: 1000;
-}
+        /* Map legend for marker types */
+        .map-legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            font-size: 0.9rem;
+            z-index: 1000;
+        }
 
-.map-legend h4 {
-    margin: 0 0 10px 0;
-    font-size: 1rem;
-    color: #333;
-}
+        .map-legend h4 {
+            margin: 0 0 10px 0;
+            font-size: 1rem;
+            color: #333;
+        }
 
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 5px;
-}
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
 
-.legend-marker {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-}
+        .legend-marker {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
 
-.legend-marker.high-score {
-    background: var(--accent-color);
-    color: white;
-}
+        .legend-marker.high-score {
+            background: var(--accent-color);
+            color: white;
+        }
 
-.legend-marker.low-score {
-    background: #9ca3af;
-    color: white;
-    opacity: 0.6;
-    filter: grayscale(0.7);
-}
+        .legend-marker.low-score {
+            background: #9ca3af;
+            color: white;
+            opacity: 0.6;
+            filter: grayscale(0.7);
+        }
 
-@media (max-width: 768px) {
-    .map-legend {
-        bottom: 10px;
-        right: 10px;
-        padding: 10px;
-        font-size: 0.8rem;
-    }
-    
-    .legend-marker {
-        width: 16px;
-        height: 16px;
-        font-size: 10px;
-    }
-}/*
+        @media (max-width: 768px) {
+            .map-legend {
+                bottom: 10px;
+                right: 10px;
+                padding: 10px;
+                font-size: 0.8rem;
+            }
+
+            .legend-marker {
+                width: 16px;
+                height: 16px;
+                font-size: 10px;
+            }
+        }
+
+        /*
  Fix marker clickability issues */
-.leaflet-marker-icon {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-    user-select: none !important;
-}
+        .leaflet-marker-icon {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            user-select: none !important;
+        }
 
-.custom-poi-marker {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-    user-select: none !important;
-}
+        .custom-poi-marker {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            user-select: none !important;
+        }
 
-.custom-poi-marker > * {
-    pointer-events: auto !important;
-}
+        .custom-poi-marker>* {
+            pointer-events: auto !important;
+        }
 
-/* Ensure markers stay in place */
-.leaflet-marker-icon,
-.custom-poi-marker {
-    position: relative !important;
-}
+        /* Ensure markers stay in place */
+        .leaflet-marker-icon,
+        .custom-poi-marker {
+            position: relative !important;
+        }
 
-/* Remove problematic animations */
-.leaflet-marker-icon * {
-    pointer-events: auto !important;
-}
+        /* Remove problematic animations */
+        .leaflet-marker-icon * {
+            pointer-events: auto !important;
+        }
 
-/* Make sure the marker container is clickable */
-.leaflet-marker-pane .leaflet-marker-icon {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-}
+        /* Make sure the marker container is clickable */
+        .leaflet-marker-pane .leaflet-marker-icon {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+        }
 
-/* Enhanced hover effects with smooth animations */
-.custom-poi-marker:hover {
-    transition: filter 0.2s ease !important;
-}
+        /* Enhanced hover effects with smooth animations */
+        .custom-poi-marker:hover {
+            transition: filter 0.2s ease !important;
+        }
 
-/* Pulse animation for active markers */
-@keyframes markerPulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
-    }
-    50% {
-        box-shadow: 0 0 0 8px rgba(102, 126, 234, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
-    }
-}
+        /* Pulse animation for active markers */
+        @keyframes markerPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
+            }
 
-@keyframes lowScoreMarkerPulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(156, 163, 175, 0.3);
-    }
-    50% {
-        box-shadow: 0 0 0 6px rgba(156, 163, 175, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(156, 163, 175, 0);
-    }
-}
+            50% {
+                box-shadow: 0 0 0 8px rgba(102, 126, 234, 0);
+            }
 
-.high-score-marker:active {
-    animation: markerPulse 0.6s ease-out;
-}
+            100% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+            }
+        }
 
-.low-score-marker:active {
-    animation: lowScoreMarkerPulse 0.6s ease-out;
-}/* For
+        @keyframes lowScoreMarkerPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(156, 163, 175, 0.3);
+            }
+
+            50% {
+                box-shadow: 0 0 0 6px rgba(156, 163, 175, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(156, 163, 175, 0);
+            }
+        }
+
+        .high-score-marker:active {
+            animation: markerPulse 0.6s ease-out;
+        }
+
+        .low-score-marker:active {
+            animation: lowScoreMarkerPulse 0.6s ease-out;
+        }
+
+        /* For
 ce marker clickability */
-.leaflet-marker-icon,
-.custom-poi-marker {
-    z-index: 1000 !important;
-    pointer-events: auto !important;
-    cursor: pointer !important;
-}
+        .leaflet-marker-icon,
+        .custom-poi-marker {
+            z-index: 1000 !important;
+            pointer-events: auto !important;
+            cursor: pointer !important;
+        }
 
-.leaflet-marker-icon:hover,
-.custom-poi-marker:hover {
-    z-index: 1001 !important;
-}
+        .leaflet-marker-icon:hover,
+        .custom-poi-marker:hover {
+            z-index: 1001 !important;
+        }
 
-/* Ensure all marker children are clickable */
-.custom-poi-marker div,
-.custom-poi-marker span {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-}
+        /* Ensure all marker children are clickable */
+        .custom-poi-marker div,
+        .custom-poi-marker span {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+        }
 
-/* Debug: make markers more visible for testing */
-.leaflet-marker-pane {
-    z-index: 600 !important;
-}/* Simple m
+        /* Debug: make markers more visible for testing */
+        .leaflet-marker-pane {
+            z-index: 600 !important;
+        }
+
+        /* Simple m
 arker styles */
-.simple-poi-marker {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-}
+        .simple-poi-marker {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+        }
 
-.simple-marker {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-}
+        .simple-marker {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+        }
 
-.simple-poi-marker:hover .simple-marker {
-    transform: scale(1.1) !important;
-    transition: transform 0.2s ease !important;
-}/* Pop
+        .simple-poi-marker:hover .simple-marker {
+            transform: scale(1.1) !important;
+            transition: transform 0.2s ease !important;
+        }
+
+        /* Pop
 up positioning fixes */
-.leaflet-popup {
-    z-index: 1002 !important;
-}
+        .leaflet-popup {
+            z-index: 1002 !important;
+        }
 
-.leaflet-popup-pane {
-    z-index: 700 !important;
-}
+        .leaflet-popup-pane {
+            z-index: 700 !important;
+        }
 
-.custom-popup .leaflet-popup-content-wrapper {
-    border-radius: 12px !important;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
-    max-width: 400px !important;
-}
+        .custom-popup .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+            max-width: 400px !important;
+        }
 
-/* Prevent popup from causing marker displacement */
-.leaflet-popup-tip-container {
-    z-index: 1003 !important;
-}/*
+        /* Prevent popup from causing marker displacement */
+        .leaflet-popup-tip-container {
+            z-index: 1003 !important;
+        }
+
+        /*
  Fix map mouse behavior issues */
-.map-container-enhanced {
-    touch-action: pan-x pan-y;
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-}
+        .map-container-enhanced {
+            touch-action: pan-x pan-y;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
 
-/* Ensure Leaflet map has proper mouse events */
-.leaflet-container {
-    touch-action: pan-x pan-y !important;
-    cursor: grab !important;
-}
+        /* Ensure Leaflet map has proper mouse events */
+        .leaflet-container {
+            touch-action: pan-x pan-y !important;
+            cursor: grab !important;
+        }
 
-.leaflet-container:active {
-    cursor: grabbing !important;
-}
+        .leaflet-container:active {
+            cursor: grabbing !important;
+        }
 
-/* Fix dragging behavior */
-.leaflet-dragging .leaflet-container {
-    cursor: grabbing !important;
-}
+        /* Fix dragging behavior */
+        .leaflet-dragging .leaflet-container {
+            cursor: grabbing !important;
+        }
 
-/* Prevent text selection during map interaction */
-.leaflet-container,
-.leaflet-container * {
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-    user-select: none !important;
-}
+        /* Prevent text selection during map interaction */
+        .leaflet-container,
+        .leaflet-container * {
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+            user-select: none !important;
+        }
 
-/* Fix zoom control positioning */
-.leaflet-control-zoom {
-    z-index: 1000 !important;
-}
+        /* Fix zoom control positioning */
+        .leaflet-control-zoom {
+            z-index: 1000 !important;
+        }
 
-/* Ensure map tiles load properly */
-.leaflet-tile-pane {
-    z-index: 200 !important;
-}
+        /* Ensure map tiles load properly */
+        .leaflet-tile-pane {
+            z-index: 200 !important;
+        }
 
-/* Fix overlay positioning */
-.leaflet-overlay-pane {
-    z-index: 400 !important;
-}
+        /* Fix overlay positioning */
+        .leaflet-overlay-pane {
+            z-index: 400 !important;
+        }
 
-/* Ensure shadow pane doesn't interfere */
-.leaflet-shadow-pane {
-    z-index: 500 !important;
-}
+        /* Ensure shadow pane doesn't interfere */
+        .leaflet-shadow-pane {
+            z-index: 500 !important;
+        }
 
-/* Fix marker pane z-index */
-.leaflet-marker-pane {
-    z-index: 600 !important;
-}
+        /* Fix marker pane z-index */
+        .leaflet-marker-pane {
+            z-index: 600 !important;
+        }
 
-/* Prevent backdrop filter from interfering with map */
-#mapSection {
-    backdrop-filter: blur(10px);
-}
+        /* Prevent backdrop filter from interfering with map */
+        #mapSection {
+            backdrop-filter: blur(10px);
+        }
 
-.map-container-enhanced {
-    backdrop-filter: none !important;
-}
+        .map-container-enhanced {
+            backdrop-filter: none !important;
+        }
 
-/* Fix for touch devices */
-@media (hover: none) and (pointer: coarse) {
-    .leaflet-container {
-        touch-action: pan-x pan-y zoom-disable-double-tap-zoom !important;
-    }
-}/* E
+        /* Fix for touch devices */
+        @media (hover: none) and (pointer: coarse) {
+            .leaflet-container {
+                touch-action: pan-x pan-y zoom-disable-double-tap-zoom !important;
+            }
+        }
+
+        /* E
 nhanced Segment Highlighting */
-.segment-highlighted {
-    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%) !important;
-    color: white !important;
-    transform: scale(1.02) !important;
-    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4) !important;
-    border-left: 4px solid #ff4500 !important;
-    z-index: 10 !important;
-    position: relative !important;
-}
+        .segment-highlighted {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%) !important;
+            color: white !important;
+            transform: scale(1.02) !important;
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4) !important;
+            border-left: 4px solid #ff4500 !important;
+            z-index: 10 !important;
+            position: relative !important;
+        }
 
-.segment-highlighted .segment-icon {
-    background: rgba(255, 255, 255, 0.2) !important;
-    color: white !important;
-    border: 2px solid rgba(255, 255, 255, 0.3) !important;
-}
+        .segment-highlighted .segment-icon {
+            background: rgba(255, 255, 255, 0.2) !important;
+            color: white !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        }
 
-.segment-highlighted .segment-route {
-    font-weight: 700 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
-}
+        .segment-highlighted .segment-route {
+            font-weight: 700 !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+        }
 
-.segment-highlighted .segment-details span {
-    background: rgba(255, 255, 255, 0.2) !important;
-    color: white !important;
-    border-radius: 12px !important;
-    padding: 2px 8px !important;
-    font-weight: 600 !important;
-}
+        .segment-highlighted .segment-details span {
+            background: rgba(255, 255, 255, 0.2) !important;
+            color: white !important;
+            border-radius: 12px !important;
+            padding: 2px 8px !important;
+            font-weight: 600 !important;
+        }
 
-/* Pulse animation for highlighted segment */
-@keyframes segmentPulse {
-    0% { 
-        box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
-        transform: scale(1.02);
-    }
-    50% { 
-        box-shadow: 0 12px 35px rgba(255, 107, 53, 0.6);
-        transform: scale(1.03);
-    }
-    100% { 
-        box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
-        transform: scale(1.02);
-    }
-}
+        /* Pulse animation for highlighted segment */
+        @keyframes segmentPulse {
+            0% {
+                box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+                transform: scale(1.02);
+            }
 
-.segment-pulse {
-    animation: segmentPulse 1.5s ease-in-out 3 !important;
-}
+            50% {
+                box-shadow: 0 12px 35px rgba(255, 107, 53, 0.6);
+                transform: scale(1.03);
+            }
 
-/* Segment highlight popup styling */
-.segment-highlight-popup .leaflet-popup-content-wrapper {
-    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%) !important;
-    color: white !important;
-    border-radius: 15px !important;
-    box-shadow: 0 10px 30px rgba(255, 107, 53, 0.4) !important;
-    border: 2px solid rgba(255, 255, 255, 0.3) !important;
-}
+            100% {
+                box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+                transform: scale(1.02);
+            }
+        }
 
-.segment-highlight-popup .leaflet-popup-tip {
-    background: #ff6b35 !important;
-    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3) !important;
-}
+        .segment-pulse {
+            animation: segmentPulse 1.5s ease-in-out 3 !important;
+        }
 
-/* Highlighted route line styling */
-.highlighted-segment {
-    filter: drop-shadow(0 0 8px rgba(255, 107, 53, 0.6)) !important;
-    z-index: 1000 !important;
-}
+        /* Segment highlight popup styling */
+        .segment-highlight-popup .leaflet-popup-content-wrapper {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%) !important;
+            color: white !important;
+            border-radius: 15px !important;
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.4) !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        }
 
-/* Segment item hover enhancement */
-.segment-item:hover {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
-    transform: translateX(5px) !important;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
-    border-left: 3px solid var(--primary-color) !important;
-}
+        .segment-highlight-popup .leaflet-popup-tip {
+            background: #ff6b35 !important;
+            box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3) !important;
+        }
 
-.segment-item {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    cursor: pointer !important;
-    border-radius: 12px !important;
-    margin-bottom: 8px !important;
-    padding: 12px !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
-}
+        /* Highlighted route line styling */
+        .highlighted-segment {
+            filter: drop-shadow(0 0 8px rgba(255, 107, 53, 0.6)) !important;
+            z-index: 1000 !important;
+        }
 
-/* Segment icon enhancements */
-.segment-icon {
-    transition: all 0.3s ease !important;
-}
+        /* Segment item hover enhancement */
+        .segment-item:hover {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+            transform: translateX(5px) !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+            border-left: 3px solid var(--primary-color) !important;
+        }
 
-.segment-item:hover .segment-icon {
-    transform: scale(1.1) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-}
+        .segment-item {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            cursor: pointer !important;
+            border-radius: 12px !important;
+            margin-bottom: 8px !important;
+            padding: 12px !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        }
 
-/* Segment details styling */
-.segment-details span {
-    transition: all 0.2s ease !important;
-}
+        /* Segment icon enhancements */
+        .segment-icon {
+            transition: all 0.3s ease !important;
+        }
 
-.segment-item:hover .segment-details span {
-    background: var(--primary-color) !important;
-    color: white !important;
-    transform: translateY(-1px) !important;
-}
+        .segment-item:hover .segment-icon {
+            transform: scale(1.1) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
 
-/* Mobile responsive adjustments */
-@media (max-width: 768px) {
-    .segment-highlighted {
-        transform: scale(1.01) !important;
-    }
-    
-    .segment-item:hover {
-        transform: translateX(3px) !important;
-    }
-    
-    .segment-highlight-popup .leaflet-popup-content-wrapper {
-        font-size: 0.9rem !important;
-    }
-}
+        /* Segment details styling */
+        .segment-details span {
+            transition: all 0.2s ease !important;
+        }
+
+        .segment-item:hover .segment-details span {
+            background: var(--primary-color) !important;
+            color: white !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            .segment-highlighted {
+                transform: scale(1.01) !important;
+            }
+
+            .segment-item:hover {
+                transform: translateX(3px) !important;
+            }
+
+            .segment-highlight-popup .leaflet-popup-content-wrapper {
+                font-size: 0.9rem !important;
+            }
+        }

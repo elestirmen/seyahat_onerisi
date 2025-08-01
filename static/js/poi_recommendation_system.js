@@ -4249,13 +4249,31 @@ function toggleLowScorePOIs() {
             }, 500);
         }
 
-        // Scroll to low score section
+        // Scroll to map section and stay there
         setTimeout(() => {
-            lowScorePOIs.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
+            const mapSection = document.getElementById('mapSection');
+            if (mapSection) {
+                mapSection.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
         }, 300);
+
+        // Highlight map section briefly
+        setTimeout(() => {
+            const mapContainer = document.getElementById('mapContainer');
+            if (mapContainer) {
+                mapContainer.style.transition = 'all 0.5s ease';
+                mapContainer.style.transform = 'scale(1.02)';
+                mapContainer.style.boxShadow = '0 12px 40px rgba(102, 126, 234, 0.3)';
+                
+                setTimeout(() => {
+                    mapContainer.style.transform = 'scale(1)';
+                    mapContainer.style.boxShadow = '';
+                }, 1000);
+            }
+        }, 1200);
 
         console.log('🗺️ Low score POIs shown on map');
 
