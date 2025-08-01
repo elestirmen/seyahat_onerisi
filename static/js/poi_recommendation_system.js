@@ -4455,4 +4455,6 @@ document.addEventListener('DOMContentLoaded', function() {
             'warning': 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)',
             'info': 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)'
         };
-        
+        return colors[type] || colors.info;
+    }
+});
