@@ -803,13 +803,13 @@ class RouteDetailsPanel {
 function createCustomIcon(category, score, isLowScore = false) {
     const style = categoryStyles[category] || { color: '#667eea', icon: '📍' };
 
-    // Düşük puanlı POI'ler için gri ve silik stil
-    const markerColor = isLowScore ? '#9ca3af' : style.color;
-    const opacity = isLowScore ? '0.85' : '1';
-    const boxShadow = isLowScore ? '0 3px 8px rgba(0,0,0,0.25)' : '0 4px 12px rgba(0,0,0,0.3)';
-    const borderColor = isLowScore ? '#d1d5db' : 'white';
-    const scoreBackgroundColor = isLowScore ? '#f3f4f6' : 'white';
-    const scoreTextColor = isLowScore ? '#6b7280' : style.color;
+    // Düşük puanlı POI'ler için daha silik ama renkli stil
+    const markerColor = isLowScore ? style.color : style.color;
+    const opacity = isLowScore ? '0.7' : '1';
+    const boxShadow = isLowScore ? '0 2px 6px rgba(0,0,0,0.2)' : '0 4px 12px rgba(0,0,0,0.3)';
+    const borderColor = isLowScore ? '#e5e7eb' : 'white';
+    const scoreBackgroundColor = isLowScore ? '#f9fafb' : 'white';
+    const scoreTextColor = isLowScore ? style.color : style.color;
 
     return L.divIcon({
         html: `
@@ -827,7 +827,7 @@ function createCustomIcon(category, score, isLowScore = false) {
                 transform: rotate(-45deg);
                 position: relative;
                 opacity: ${opacity};
-                ${isLowScore ? 'filter: grayscale(0.3);' : ''}
+                ${isLowScore ? 'filter: grayscale(0.2) brightness(0.9);' : ''}
             ">
                 <span style="transform: rotate(45deg); opacity: ${isLowScore ? '0.8' : '1'};">${style.icon}</span>
                 <div style="
@@ -846,7 +846,7 @@ function createCustomIcon(category, score, isLowScore = false) {
                     font-weight: bold;
                     border: 2px solid ${markerColor};
                     transform: rotate(45deg);
-                    opacity: ${isLowScore ? '0.9' : '1'};
+                    opacity: ${isLowScore ? '0.8' : '1'};
                 ">${score}</div>
             </div>
         `,
@@ -4231,7 +4231,7 @@ function toggleLowScorePOIs() {
                     // Animate marker appearance
                     setTimeout(() => {
                         marker._icon.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
-                        marker.setOpacity(0.85); // Daha belirgin görünüm
+                        marker.setOpacity(0.7); // Silik ama görünür
                         marker._icon.style.transform += ' scale(1)';
                     }, 100);
                 }

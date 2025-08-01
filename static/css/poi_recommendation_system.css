@@ -714,8 +714,13 @@
         }
 
         @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .recommend-btn.success {
@@ -724,9 +729,17 @@
         }
 
         @keyframes successPulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
         .recommend-btn.error {
@@ -735,9 +748,19 @@
         }
 
         @keyframes errorShake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-5px);
+            }
+
+            75% {
+                transform: translateX(5px);
+            }
         }
 
         /* Notification styles */
@@ -3523,171 +3546,173 @@ nhanced Segment Highlighting */
             .segment-highlight-popup .leaflet-popup-content-wrapper {
                 font-size: 0.9rem !important;
             }
-        }/* 
+        }
+
+        /* 
 Custom marker styles */
-.custom-marker {
-    background: none !important;
-    border: none !important;
-}
+        .custom-marker {
+            background: none !important;
+            border: none !important;
+        }
 
-.marker-content {
-    width: 40px;
-    height: 40px;
-    border-radius: 50% 50% 50% 0;
-    transform: rotate(-45deg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    border: 3px solid white;
-    transition: all 0.3s ease;
-}
+        .marker-content {
+            width: 40px;
+            height: 40px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 3px solid white;
+            transition: all 0.3s ease;
+        }
 
-.marker-content:hover {
-    transform: rotate(-45deg) scale(1.1);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-}
+        .marker-content:hover {
+            transform: rotate(-45deg) scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
 
-.marker-icon {
-    transform: rotate(45deg);
-    font-size: 1.2rem;
-    color: white;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
+        .marker-icon {
+            transform: rotate(45deg);
+            font-size: 1.2rem;
+            color: white;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
 
-/* Marker popup styles */
-.marker-popup {
-    min-width: 200px;
-}
+        /* Marker popup styles */
+        .marker-popup {
+            min-width: 200px;
+        }
 
-.marker-popup h4 {
-    margin: 0 0 8px 0;
-    color: var(--text-color);
-    font-size: 1.1rem;
-}
+        .marker-popup h4 {
+            margin: 0 0 8px 0;
+            color: var(--text-color);
+            font-size: 1.1rem;
+        }
 
-.marker-popup p {
-    margin: 0 0 12px 0;
-    color: #666;
-    font-size: 0.9rem;
-    line-height: 1.4;
-}
+        .marker-popup p {
+            margin: 0 0 12px 0;
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
 
-.popup-actions {
-    display: flex;
-    gap: 8px;
-}
+        .popup-actions {
+            display: flex;
+            gap: 8px;
+        }
 
-.popup-actions .btn {
-    font-size: 0.8rem;
-    padding: 6px 12px;
-}
+        .popup-actions .btn {
+            font-size: 0.8rem;
+            padding: 6px 12px;
+        }
 
-/* No results styles */
-.no-results {
-    text-align: center;
-    padding: 60px 20px;
-    color: #666;
-}
+        /* No results styles */
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
 
-.no-results h3 {
-    margin: 0 0 15px 0;
-    color: var(--text-color);
-}
+        .no-results h3 {
+            margin: 0 0 15px 0;
+            color: var(--text-color);
+        }
 
-.no-results p {
-    margin: 0;
-    font-size: 1.1rem;
-    line-height: 1.6;
-}
+        .no-results p {
+            margin: 0;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
 
-/* Section subtitle styles */
-.section-subtitle {
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: var(--text-color);
-    margin: 30px 0 20px 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid rgba(102, 126, 234, 0.2);
-}
+        /* Section subtitle styles */
+        .section-subtitle {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin: 30px 0 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+        }
 
-/* POI grid styles */
-.poi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 25px;
-    margin-bottom: 30px;
-}
+        /* POI grid styles */
+        .poi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
 
-/* Low score toggle styles */
-.low-score-toggle {
-    text-align: center;
-    margin: 30px 0;
-}
+        /* Low score toggle styles */
+        .low-score-toggle {
+            text-align: center;
+            margin: 30px 0;
+        }
 
-.low-score-toggle .btn {
-    padding: 12px 24px;
-    font-size: 1rem;
-    border-radius: 25px;
-    transition: all 0.3s ease;
-}
+        .low-score-toggle .btn {
+            padding: 12px 24px;
+            font-size: 1rem;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
 
-.low-score-toggle .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
+        .low-score-toggle .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
 
-/* Enhanced button styles */
-.btn--secondary {
-    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-    color: white;
-    border: none;
-}
+        /* Enhanced button styles */
+        .btn--secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+            border: none;
+        }
 
-.btn--warning {
-    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-    color: #212529;
-    border: none;
-}
+        .btn--warning {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+            border: none;
+        }
 
-/* Responsive design */
-@media (max-width: 768px) {
-    .poi-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-    
-    .recommend-btn {
-        padding: 18px 40px;
-        font-size: 1.2rem;
-    }
-    
-    .marker-content {
-        width: 35px;
-        height: 35px;
-    }
-    
-    .marker-icon {
-        font-size: 1rem;
-    }
-}
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .poi-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
 
-@media (max-width: 480px) {
-    .recommend-btn {
-        padding: 16px 35px;
-        font-size: 1.1rem;
-    }
-    
-    .poi-actions {
-        flex-direction: column;
-        gap: 8px;
-    }
-    
-    .poi-action-btn {
-        width: 100%;
-        justify-content: center;
-    }
-}
+            .recommend-btn {
+                padding: 18px 40px;
+                font-size: 1.2rem;
+            }
+
+            .marker-content {
+                width: 35px;
+                height: 35px;
+            }
+
+            .marker-icon {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .recommend-btn {
+                padding: 16px 35px;
+                font-size: 1.1rem;
+            }
+
+            .poi-actions {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .poi-action-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
