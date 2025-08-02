@@ -2696,6 +2696,105 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     
     return c * r
 
+# POI Recommendation System endpoint
+@app.route('/api/recommendations', methods=['POST'])
+def get_recommendations():
+    """Get POI recommendations based on user preferences"""
+    try:
+        data = request.get_json()
+        preferences = data.get('preferences', {})
+        
+        if not preferences:
+            return jsonify({'error': 'No preferences provided'}), 400
+        
+        # Get all POIs with their ratings
+        db = get_db()
+        if JSON_FALLBACK:
+            # JSON fallback mode
+            with open('poi_data.json', 'r', encoding='utf-8') as f:
+                poi_data = json.load(f)
+            pois = poi_data.get('pois', [])
+        else:
+            # Database mode
+            with db.conn.cursor() as cursor:
+                # Get POIs with their ratings pivoted
+                cursor.execute("""
+                    SELECT p.id, p.name, p.category, 
+                           ST_Y(p.location::geometry) as latitude,
+                           ST_X(p.location::geometry) as longitude,
+                           p.description, '' as tags,
+                           MAX(CASE WHEN r.category = 'tarihi' THEN r.rating END) as tarihi,
+                           MAX(CASE WHEN r.category = 'sanat_kultur' THEN r.rating END) as sanat_kultur,
+                           MAX(CASE WHEN r.category = 'doga' THEN r.rating END) as doga,
+                           MAX(CASE WHEN r.category = 'eglence' THEN r.rating END) as eglence,
+                           MAX(CASE WHEN r.category = 'alisveris' THEN r.rating END) as alisveris,
+                           MAX(CASE WHEN r.category = 'spor' THEN r.rating END) as spor,
+                           MAX(CASE WHEN r.category = 'macera' THEN r.rating END) as macera,
+                           MAX(CASE WHEN r.category = 'rahatlatici' THEN r.rating END) as rahatlatici,
+                           MAX(CASE WHEN r.category = 'yemek' THEN r.rating END) as yemek,
+                           MAX(CASE WHEN r.category = 'gece_hayati' THEN r.rating END) as gece_hayati
+                    FROM pois p
+                    LEFT JOIN poi_ratings r ON p.id = r.poi_id
+                    WHERE p.location IS NOT NULL
+                    GROUP BY p.id, p.name, p.category, p.location, p.description
+                """)
+                pois = [dict(zip([col[0] for col in cursor.description], row)) 
+                       for row in cursor.fetchall()]
+            db.disconnect()
+        
+        # Calculate recommendation scores
+        recommendations = []
+        for poi in pois:
+            score = 0
+            rating_count = 0
+            
+            # Calculate score based on user preferences and POI ratings
+            rating_fields = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 
+                           'alisveris', 'spor', 'macera', 'rahatlatici', 
+                           'yemek', 'gece_hayati']
+            
+            for field in rating_fields:
+                user_pref = preferences.get(field, 0)
+                poi_rating = poi.get(field, 0) if poi.get(field) is not None else 0
+                
+                if user_pref > 0 and poi_rating > 0:
+                    # Normalize both values to 0-1 range and calculate weighted score
+                    normalized_pref = user_pref / 100.0
+                    normalized_rating = poi_rating / 100.0
+                    score += normalized_pref * normalized_rating
+                    rating_count += 1
+            
+            # Only include POIs that have some matching preferences
+            if score > 0 and rating_count > 0:
+                # Average the score
+                final_score = (score / rating_count) * 100
+                
+                recommendations.append({
+                    'id': poi['id'],
+                    'name': poi['name'],
+                    'category': poi['category'],
+                    'latitude': poi['latitude'],
+                    'longitude': poi['longitude'],
+                    'description': poi.get('description', ''),
+                    'tags': poi.get('tags', ''),
+                    'score': round(final_score, 2),
+                    'ratings': {field: poi.get(field, 0) for field in rating_fields}
+                })
+        
+        # Sort by score (highest first) and limit to top 20
+        recommendations.sort(key=lambda x: x['score'], reverse=True)
+        recommendations = recommendations[:20]
+        
+        return jsonify({
+            'recommendations': recommendations,
+            'total': len(recommendations),
+            'preferences_used': preferences
+        })
+        
+    except Exception as e:
+        print(f"Recommendation error: {str(e)}")
+        return jsonify({'error': f'Recommendation error: {str(e)}'}), 500
+
 if __name__ == '__main__':
     print("🚀 POI Yönetim Sistemi başlatılıyor...")
     print("📊 Web arayüzü: http://localhost:5505/poi_manager_ui.html")

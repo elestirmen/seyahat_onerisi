@@ -4416,8 +4416,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Set loading state
             recommendBtn.disabled = true;
             recommendBtn.classList.add('loading');
-            btnIcon.className = 'fas fa-spinner btn-icon';
-            btnText.textContent = 'Öneriler Hazırlanıyor...';
+            if (btnIcon) btnIcon.className = 'fas fa-spinner btn-icon';
+            if (btnText) btnText.textContent = 'Öneriler Hazırlanıyor...';
             
             try {
                 // Get user preferences
@@ -4450,8 +4450,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Success state
                 recommendBtn.classList.remove('loading');
                 recommendBtn.classList.add('success');
-                btnIcon.className = 'fas fa-check btn-icon';
-                btnText.textContent = 'Öneriler Hazır!';
+                if (btnIcon) btnIcon.className = 'fas fa-check btn-icon';
+                if (btnText) btnText.textContent = 'Öneriler Hazır!';
                 
                 // Show results
                 displayResults(data);
@@ -4465,8 +4465,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Error state
                 recommendBtn.classList.remove('loading');
                 recommendBtn.classList.add('error');
-                btnIcon.className = 'fas fa-exclamation-triangle btn-icon';
-                btnText.textContent = 'Tekrar Deneyin';
+                if (btnIcon) btnIcon.className = 'fas fa-exclamation-triangle btn-icon';
+                if (btnText) btnText.textContent = 'Tekrar Deneyin';
                 
                 showNotification('❌ Öneriler alınırken bir hata oluştu. Lütfen tekrar deneyin.', 'error');
                 
@@ -4478,13 +4478,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function resetButton() {
         const recommendBtn = document.getElementById('recommendBtn');
+        if (!recommendBtn) return;
+        
         const btnIcon = recommendBtn.querySelector('.btn-icon');
         const btnText = recommendBtn.querySelector('.btn-text');
         
         recommendBtn.disabled = false;
         recommendBtn.classList.remove('loading', 'success', 'error');
-        btnIcon.className = 'fas fa-magic btn-icon';
-        btnText.textContent = 'Önerilerimi Getir';
+        if (btnIcon) btnIcon.className = 'fas fa-magic btn-icon';
+        if (btnText) btnText.textContent = 'Önerilerimi Getir';
     }
     
     function displayResults(data) {
