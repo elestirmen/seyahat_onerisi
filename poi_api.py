@@ -605,10 +605,6 @@ JSON_FALLBACK = False
 JSON_FILE_PATH = 'test_data.json'
 
 # Pre-loaded walking network graph
-WALKING_GRAPH = None
-WALKING_GRAPH_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  'urgup_merkez_walking.graphml')
-
 def load_walking_graph():
     """Load walking GraphML data once and cache it."""
     global WALKING_GRAPH
@@ -2556,6 +2552,85 @@ def get_media_system_info():
     except Exception as e:
         return jsonify({'error': f'Bilgi alınamadı: {str(e)}'}), 500
 
+# Graph management for different transport modes
+WALKING_GRAPH = None
+DRIVING_GRAPH = None
+WALKING_GRAPH_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'urgup_merkez_walking.graphml')
+DRIVING_GRAPH_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'urgup_driving.graphml')
+
+# Ürgüp merkez koordinatları ve sınırları
+URGUP_CENTER = (38.6310, 34.9130)
+URGUP_BOUNDS = {
+    'north': 38.65,
+    'south': 38.61,
+    'east': 34.93,
+    'west': 34.89
+}
+
+def is_within_urgup_center(lat, lon):
+    """Check if coordinates are within Ürgüp center walking area"""
+    return (URGUP_BOUNDS['south'] <= lat <= URGUP_BOUNDS['north'] and 
+            URGUP_BOUNDS['west'] <= lon <= URGUP_BOUNDS['east'])
+
+def download_driving_graph():
+    """Download and save driving network for wider Ürgüp area"""
+    try:
+        import osmnx as ox
+        print("🚗 Downloading driving network for wider Ürgüp area...")
+        
+        # Daha geniş bir alan tanımla (Ürgüp merkezi etrafında 20km radius)
+        center_point = (38.6310, 34.9130)  # Ürgüp merkezi
+        radius = 20000  # 20 km radius
+        
+        print(f"📍 Center: {center_point}, Radius: {radius/1000} km")
+        
+        # Araba ağını indir (daha geniş alan)
+        G = ox.graph_from_point(center_point, dist=radius, network_type='drive')
+        
+        # GraphML olarak kaydet
+        ox.save_graphml(G, DRIVING_GRAPH_PATH)
+        print(f"✅ Driving network saved to: {DRIVING_GRAPH_PATH}")
+        print(f"📊 Network stats: {len(G.nodes)} nodes, {len(G.edges)} edges")
+        
+        # Graph'ın sınırlarını yazdır
+        nodes_data = [(data['y'], data['x']) for node, data in G.nodes(data=True)]
+        lats = [lat for lat, lon in nodes_data]
+        lons = [lon for lat, lon in nodes_data]
+        
+        print(f"🗺️ Coverage area:")
+        print(f"   North: {max(lats):.4f}")
+        print(f"   South: {min(lats):.4f}")
+        print(f"   East: {max(lons):.4f}")
+        print(f"   West: {min(lons):.4f}")
+        
+        return G
+        
+    except Exception as e:
+        print(f"❌ Error downloading driving network: {e}")
+        return None
+
+def load_driving_graph():
+    """Load driving GraphML data once and cache it."""
+    global DRIVING_GRAPH
+    if DRIVING_GRAPH is None:
+        try:
+            import osmnx as ox
+        except Exception as e:
+            raise ImportError(f"OSMnx required for driving routes: {e}")
+
+        # Eğer dosya yoksa indir
+        if not os.path.exists(DRIVING_GRAPH_PATH):
+            print(f"🔄 Driving graph not found, downloading...")
+            DRIVING_GRAPH = download_driving_graph()
+            if DRIVING_GRAPH is None:
+                raise FileNotFoundError(f"Could not download driving network")
+        else:
+            print(f"📁 Loading driving network from: {DRIVING_GRAPH_PATH}")
+            DRIVING_GRAPH = ox.load_graphml(DRIVING_GRAPH_PATH)
+            print(f"✅ Driving network loaded: {len(DRIVING_GRAPH.nodes)} nodes, {len(DRIVING_GRAPH.edges)} edges")
+
+    return DRIVING_GRAPH
+
 # Walking route endpoint
 @app.route('/api/route/walking', methods=['POST'])
 def create_walking_route():
@@ -2695,6 +2770,394 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     r = 6371  # Earth radius in km
     
     return c * r
+
+# Driving route endpoint
+@app.route('/api/route/driving', methods=['POST'])
+def create_driving_route():
+    """Create driving route between POIs using OSMnx"""
+    try:
+        data = request.get_json()
+        waypoints = data.get('waypoints', [])
+        
+        if len(waypoints) < 2:
+            return jsonify({'error': 'At least 2 waypoints required'}), 400
+        
+        # Import required libraries and load driving graph
+        try:
+            import networkx as nx
+            import osmnx as ox  # Needed for nearest node lookup
+
+            G = load_driving_graph()
+            error_msg = None
+        except Exception as e:
+            error_msg = str(e)
+            print(f"OSMnx driving network error: {error_msg}")
+
+        if error_msg:
+            return jsonify({
+                'error': f'Driving network not available: {error_msg}',
+                'fallback_used': True,
+                'route': {
+                    'coordinates': [[wp['lng'], wp['lat']] for wp in waypoints],
+                    'distance': sum(haversine_distance(waypoints[i]['lat'], waypoints[i]['lng'], 
+                                                     waypoints[i+1]['lat'], waypoints[i+1]['lng']) 
+                                  for i in range(len(waypoints)-1)),
+                    'duration': 0,
+                    'instructions': [f"Drive to {wp.get('name', f'Point {i+1}')}" for i, wp in enumerate(waypoints)]
+                }
+            })
+
+        # Find nearest nodes for each waypoint
+        route_nodes = []
+        for i, wp in enumerate(waypoints):
+            try:
+                nearest_node = ox.nearest_nodes(G, wp['lng'], wp['lat'])
+                route_nodes.append(nearest_node)
+                print(f"Waypoint {i+1}: {wp.get('name', 'Unknown')} ({wp['lat']:.4f}, {wp['lng']:.4f}) -> Node {nearest_node}")
+            except Exception as e:
+                print(f"❌ Error finding nearest node for waypoint {i+1} ({wp['lat']:.4f}, {wp['lng']:.4f}): {e}")
+                # Fallback to straight line if node not found
+                return jsonify({
+                    'error': f'Waypoint {i+1} is outside driving network coverage',
+                    'fallback_used': True,
+                    'route': {
+                        'coordinates': [[wp['lng'], wp['lat']] for wp in waypoints],
+                        'distance': sum(haversine_distance(waypoints[j]['lat'], waypoints[j]['lng'], 
+                                                         waypoints[j+1]['lat'], waypoints[j+1]['lng']) 
+                                      for j in range(len(waypoints)-1)) * 1000,  # convert to meters
+                        'duration': 0,
+                        'instructions': [f"Direct route to {wp.get('name', f'Point {j+1}')}" for j, wp in enumerate(waypoints)],
+                        'transport_mode': 'direct'
+                    }
+                })
+
+        # Calculate route through all waypoints
+        full_route = []
+        total_distance = 0
+        total_time = 0
+        instructions = []
+        
+        for i in range(len(route_nodes) - 1):
+            start_node = route_nodes[i]
+            end_node = route_nodes[i + 1]
+            
+            try:
+                # Find shortest path
+                path = nx.shortest_path(G, start_node, end_node, weight='length')
+                
+                # Get coordinates for this segment
+                segment_coords = []
+                segment_distance = 0
+                
+                for j, node in enumerate(path):
+                    node_data = G.nodes[node]
+                    coord = [node_data['x'], node_data['y']]
+                    segment_coords.append(coord)
+                    
+                    # Calculate distance for this edge
+                    if j > 0:
+                        prev_node = path[j-1]
+                        if G.has_edge(prev_node, node):
+                            edge_data = G.edges[prev_node, node, 0]
+                            segment_distance += edge_data.get('length', 0)
+                
+                full_route.extend(segment_coords)
+                total_distance += segment_distance
+                
+                # Estimate driving time (assuming average speed based on road type)
+                avg_speed_kmh = 50  # Default speed for driving
+                segment_time = (segment_distance / 1000) / avg_speed_kmh * 60  # minutes
+                total_time += segment_time
+                
+                # Add instruction
+                start_name = waypoints[i].get('name', f'Point {i+1}')
+                end_name = waypoints[i+1].get('name', f'Point {i+2}')
+                instructions.append(f"Drive from {start_name} to {end_name} ({segment_distance/1000:.1f} km)")
+                
+                print(f"Segment {i+1}: {len(path)} nodes, {segment_distance/1000:.2f} km")
+                
+            except nx.NetworkXNoPath:
+                print(f"No driving path found between waypoints {i+1} and {i+2}")
+                return jsonify({'error': f'No driving route found between waypoints {i+1} and {i+2}'}), 400
+            except Exception as e:
+                print(f"Error calculating driving route segment {i+1}: {e}")
+                return jsonify({'error': f'Route calculation error: {str(e)}'}), 500
+
+        return jsonify({
+            'route': {
+                'coordinates': full_route,
+                'distance': round(total_distance, 2),  # meters
+                'duration': round(total_time, 1),      # minutes
+                'instructions': instructions,
+                'waypoints_count': len(waypoints),
+                'transport_mode': 'driving'
+            }
+        })
+
+    except Exception as e:
+        print(f"Driving route error: {str(e)}")
+        return jsonify({'error': f'Driving route error: {str(e)}'}), 500
+
+# Smart route endpoint (automatically chooses walking or driving)
+@app.route('/api/route/smart', methods=['POST'])
+def create_smart_route():
+    """Create route using walking for center POIs, driving for distant ones"""
+    try:
+        data = request.get_json()
+        waypoints = data.get('waypoints', [])
+        
+        if len(waypoints) < 2:
+            return jsonify({'error': 'At least 2 waypoints required'}), 400
+        
+        # Check if all waypoints are within Ürgüp center
+        all_in_center = all(is_within_urgup_center(wp['lat'], wp['lng']) for wp in waypoints)
+        
+        if all_in_center:
+            # Use walking route
+            print("🚶 All POIs in center - using walking route")
+            # Call walking route logic directly
+            try:
+                import networkx as nx
+                import osmnx as ox
+                G = load_walking_graph()
+                error_msg = None
+            except Exception as e:
+                error_msg = str(e)
+                print(f"OSMnx walking network error: {error_msg}")
+
+            if error_msg:
+                return jsonify({
+                    'error': f'Walking network not available: {error_msg}',
+                    'fallback_used': True,
+                    'route': {
+                        'coordinates': [[wp['lng'], wp['lat']] for wp in waypoints],
+                        'distance': sum(haversine_distance(waypoints[i]['lat'], waypoints[i]['lng'], 
+                                                         waypoints[i+1]['lat'], waypoints[i+1]['lng']) 
+                                      for i in range(len(waypoints)-1)),
+                        'duration': 0,
+                        'instructions': [f"Walk to {wp.get('name', f'Point {i+1}')}" for i, wp in enumerate(waypoints)]
+                    }
+                })
+
+            # Walking route logic (simplified version)
+            route_nodes = []
+            for i, wp in enumerate(waypoints):
+                try:
+                    nearest_node = ox.nearest_nodes(G, wp['lng'], wp['lat'])
+                    route_nodes.append(nearest_node)
+                except Exception as e:
+                    print(f"Error finding walking node for waypoint {i+1}: {e}")
+                    return jsonify({'error': f'Could not find walking route node for waypoint {i+1}'}), 400
+
+            # Calculate walking route
+            full_route = []
+            total_distance = 0
+            
+            for i in range(len(route_nodes) - 1):
+                try:
+                    path = nx.shortest_path(G, route_nodes[i], route_nodes[i + 1], weight='length')
+                    segment_coords = []
+                    segment_distance = 0
+                    
+                    for j, node in enumerate(path):
+                        node_data = G.nodes[node]
+                        coord = {'lat': node_data['y'], 'lng': node_data['x']}
+                        segment_coords.append(coord)
+                        
+                        if j > 0:
+                            prev_node = path[j-1]
+                            if G.has_edge(prev_node, node):
+                                edge_data = G.edges[prev_node, node, 0]
+                                segment_distance += edge_data.get('length', 0)
+                    
+                    full_route.extend(segment_coords)
+                    total_distance += segment_distance
+                    
+                except nx.NetworkXNoPath:
+                    return jsonify({'error': f'No walking path found between waypoints {i+1} and {i+2}'}), 400
+
+            return jsonify({
+                'success': True,
+                'route': {
+                    'segments': [{
+                        'coordinates': full_route,
+                        'distance': round(total_distance / 1000, 2),
+                        'from': waypoints[0].get('name', 'Start'),
+                        'to': waypoints[-1].get('name', 'End')
+                    }],
+                    'total_distance': round(total_distance / 1000, 2),
+                    'estimated_time': round(total_distance / 1000 / 5 * 60, 1),  # 5 km/h walking speed
+                    'waypoint_count': len(waypoints),
+                    'network_type': 'walking'
+                }
+            })
+        else:
+            # Use driving route
+            print("🚗 POIs outside center - using driving route")
+            # Call driving route logic directly (same as create_driving_route but inline)
+            try:
+                import networkx as nx
+                import osmnx as ox
+                G = load_driving_graph()
+                error_msg = None
+            except Exception as e:
+                error_msg = str(e)
+                print(f"OSMnx driving network error: {error_msg}")
+
+            if error_msg:
+                return jsonify({
+                    'error': f'Driving network not available: {error_msg}',
+                    'fallback_used': True,
+                    'route': {
+                        'coordinates': [[wp['lng'], wp['lat']] for wp in waypoints],
+                        'distance': sum(haversine_distance(waypoints[i]['lat'], waypoints[i]['lng'], 
+                                                         waypoints[i+1]['lat'], waypoints[i+1]['lng']) 
+                                      for i in range(len(waypoints)-1)) * 1000,
+                        'duration': 0,
+                        'instructions': [f"Drive to {wp.get('name', f'Point {i+1}')}" for i, wp in enumerate(waypoints)]
+                    }
+                })
+
+            # Find nearest nodes for each waypoint
+            route_nodes = []
+            for i, wp in enumerate(waypoints):
+                try:
+                    nearest_node = ox.nearest_nodes(G, wp['lng'], wp['lat'])
+                    route_nodes.append(nearest_node)
+                    print(f"Waypoint {i+1}: {wp.get('name', 'Unknown')} ({wp['lat']:.4f}, {wp['lng']:.4f}) -> Node {nearest_node}")
+                except Exception as e:
+                    print(f"❌ Error finding nearest node for waypoint {i+1} ({wp['lat']:.4f}, {wp['lng']:.4f}): {e}")
+                    # Fallback to straight line if node not found
+                    return jsonify({
+                        'error': f'Waypoint {i+1} is outside driving network coverage',
+                        'fallback_used': True,
+                        'route': {
+                            'coordinates': [[wp['lng'], wp['lat']] for wp in waypoints],
+                            'distance': sum(haversine_distance(waypoints[j]['lat'], waypoints[j]['lng'], 
+                                                             waypoints[j+1]['lat'], waypoints[j+1]['lng']) 
+                                          for j in range(len(waypoints)-1)) * 1000,  # convert to meters
+                            'duration': 0,
+                            'instructions': [f"Direct route to {wp.get('name', f'Point {j+1}')}" for j, wp in enumerate(waypoints)],
+                            'transport_mode': 'direct'
+                        }
+                    })
+
+            # Calculate route through all waypoints
+            full_route = []
+            total_distance = 0
+            total_time = 0
+            instructions = []
+            
+            for i in range(len(route_nodes) - 1):
+                start_node = route_nodes[i]
+                end_node = route_nodes[i + 1]
+                
+                try:
+                    # Find shortest path
+                    path = nx.shortest_path(G, start_node, end_node, weight='length')
+                    
+                    # Get coordinates for this segment with higher resolution
+                    segment_coords = []
+                    segment_distance = 0
+                    
+                    for j, node in enumerate(path):
+                        node_data = G.nodes[node]
+                        coord = [node_data['x'], node_data['y']]
+                        segment_coords.append(coord)
+                        
+                        # Add intermediate points for smoother curves
+                        if j > 0:
+                            prev_node = path[j-1]
+                            if G.has_edge(prev_node, node):
+                                edge_data = G.edges[prev_node, node, 0]
+                                segment_distance += edge_data.get('length', 0)
+                                
+                                # Use geometry if available for higher resolution
+                                if 'geometry' in edge_data:
+                                    try:
+                                        # Extract coordinates from geometry
+                                        geom = edge_data['geometry']
+                                        if hasattr(geom, 'coords'):
+                                            # Remove the last coordinate to avoid duplication
+                                            geom_coords = list(geom.coords)[:-1]
+                                            for geom_coord in geom_coords:
+                                                if len(geom_coord) >= 2:
+                                                    segment_coords.insert(-1, [geom_coord[0], geom_coord[1]])
+                                    except Exception as e:
+                                        print(f"Warning: Could not extract geometry: {e}")
+                                        # Fallback to interpolation
+                                        edge_length = edge_data.get('length', 0)
+                                        if edge_length > 100:
+                                            prev_node_data = G.nodes[prev_node]
+                                            curr_node_data = G.nodes[node]
+                                            num_points = min(int(edge_length / 50), 3)
+                                            for k in range(1, num_points + 1):
+                                                ratio = k / (num_points + 1)
+                                                inter_x = prev_node_data['x'] + (curr_node_data['x'] - prev_node_data['x']) * ratio
+                                                inter_y = prev_node_data['y'] + (curr_node_data['y'] - prev_node_data['y']) * ratio
+                                                segment_coords.insert(-1, [inter_x, inter_y])
+                                else:
+                                    # Fallback to interpolation for long edges
+                                    edge_length = edge_data.get('length', 0)
+                                    if edge_length > 100:
+                                        prev_node_data = G.nodes[prev_node]
+                                        curr_node_data = G.nodes[node]
+                                        num_points = min(int(edge_length / 50), 3)
+                                        for k in range(1, num_points + 1):
+                                            ratio = k / (num_points + 1)
+                                            inter_x = prev_node_data['x'] + (curr_node_data['x'] - prev_node_data['x']) * ratio
+                                            inter_y = prev_node_data['y'] + (curr_node_data['y'] - prev_node_data['y']) * ratio
+                                            segment_coords.insert(-1, [inter_x, inter_y])
+                    
+                    full_route.extend(segment_coords)
+                    total_distance += segment_distance
+                    
+                    # Estimate driving time (assuming average speed based on road type)
+                    avg_speed_kmh = 50  # Default speed for driving
+                    segment_time = (segment_distance / 1000) / avg_speed_kmh * 60  # minutes
+                    total_time += segment_time
+                    
+                    # Add instruction
+                    start_name = waypoints[i].get('name', f'Point {i+1}')
+                    end_name = waypoints[i+1].get('name', f'Point {i+2}')
+                    instructions.append(f"Drive from {start_name} to {end_name} ({segment_distance/1000:.1f} km)")
+                    
+                    print(f"Segment {i+1}: {len(path)} nodes, {segment_distance/1000:.2f} km")
+                    
+                except nx.NetworkXNoPath:
+                    print(f"No driving path found between waypoints {i+1} and {i+2}")
+                    return jsonify({'error': f'No driving route found between waypoints {i+1} and {i+2}'}), 400
+                except Exception as e:
+                    print(f"Error calculating driving route segment {i+1}: {e}")
+                    return jsonify({'error': f'Route calculation error: {str(e)}'}), 500
+
+            # Convert coordinates to the format expected by JavaScript
+            formatted_coordinates = [{'lat': coord[1], 'lng': coord[0]} for coord in full_route]
+            
+            return jsonify({
+                'success': True,
+                'route': {
+                    'segments': [{
+                        'coordinates': formatted_coordinates,
+                        'distance': round(total_distance / 1000, 2),  # convert to km
+                        'from': waypoints[0].get('name', 'Start'),
+                        'to': waypoints[-1].get('name', 'End')
+                    }],
+                    'total_distance': round(total_distance / 1000, 2),  # km
+                    'estimated_time': round(total_time, 1),  # minutes
+                    'waypoint_count': len(waypoints),
+                    'network_type': 'driving',
+                    'instructions': instructions
+                }
+            })
+            
+    except Exception as e:
+        print(f"Smart route error: {str(e)}")
+        return jsonify({'error': f'Smart route error: {str(e)}'}), 500
+
+
+
+
 
 # POI Recommendation System endpoint
 @app.route('/api/recommendations', methods=['POST'])

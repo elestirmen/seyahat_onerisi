@@ -2133,8 +2133,8 @@ async function createRoute() {
     try {
         console.log('🚶 Requesting walking route from API...');
 
-        // Call walking route API
-        const response = await fetch(`${apiBase}/route/walking`, {
+        // Call smart route API (automatically chooses walking or driving)
+        const response = await fetch(`${apiBase}/route/smart`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
