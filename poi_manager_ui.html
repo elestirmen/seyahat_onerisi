@@ -287,6 +287,11 @@
                                     <i class="fas fa-info-circle me-1"></i>Detaylar
                                 </button>
                             </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="categories-tab" data-bs-toggle="tab" data-bs-target="#categories-content" type="button" role="tab">
+                                    <i class="fas fa-tags me-1"></i>Kategoriler
+                                </button>
+                            </li>
                         </ul>
                     </div>
                     
@@ -304,11 +309,7 @@
                                         <label class="form-label">Kategori *</label>
                                         <select class="form-select" id="poiCategory" required>
                                             <option value="">Seçiniz</option>
-                                            <option value="gastronomik">🍽️ Gastronomik</option>
-                                            <option value="kulturel">🏛️ Kültürel</option>
-                                            <option value="sanatsal">🎨 Sanatsal</option>
-                                            <option value="doga_macera">🌿 Doğa & Macera</option>
-                                            <option value="konaklama">🏨 Konaklama</option>
+                                            <!-- Kategoriler dinamik olarak yüklenecek -->
                                         </select>
                                     </div>
                                     <div class="row">
@@ -564,6 +565,116 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Categories Management Content -->
+                            <div class="tab-pane fade" id="categories-content" role="tabpanel">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-plus-circle me-2"></i>Yeni Kategori Ekle</h6>
+                                        <form id="categoryForm" class="mb-4">
+                                            <div class="mb-3">
+                                                <label class="form-label">Kategori Adı *</label>
+                                                <input type="text" class="form-control" id="categoryName" required 
+                                                       placeholder="Örn: yeni_kategori" pattern="[a-z_]+" 
+                                                       title="Sadece küçük harf ve alt çizgi kullanın">
+                                                <div class="form-text">Sadece küçük harf ve alt çizgi (_) kullanın</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Görünen Ad *</label>
+                                                <input type="text" class="form-control" id="categoryDisplayName" required 
+                                                       placeholder="Örn: 🎭 Yeni Kategori">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Renk *</label>
+                                                <input type="color" class="form-control form-control-color" id="categoryColor" 
+                                                       value="#007bff" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">İkon *</label>
+                                                <input type="text" class="form-control" id="categoryIcon" required 
+                                                       placeholder="Örn: star, heart, map-pin">
+                                                <div class="form-text">FontAwesome ikon adı (fa- olmadan)</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Açıklama</label>
+                                                <textarea class="form-control" id="categoryDescription" rows="2" 
+                                                          placeholder="Kategori açıklaması..."></textarea>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-plus me-1"></i>Kategori Ekle
+                                            </button>
+                                        </form>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-list me-2"></i>Mevcut Kategoriler</h6>
+                                        <div id="categoriesList" class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                                            <div class="text-center text-muted py-3">
+                                                <i class="fas fa-spinner fa-spin"></i>
+                                                <p class="mb-0">Kategoriler yükleniyor...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kategori Düzenleme Modal -->
+            <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editCategoryModalLabel">
+                                <i class="fas fa-edit me-2"></i>Kategori Düzenle
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editCategoryForm">
+                                <input type="hidden" id="editCategoryOriginalName">
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Kategori Adı *</label>
+                                    <input type="text" class="form-control" id="editCategoryName" required 
+                                           pattern="[a-z_]+" title="Sadece küçük harf ve alt çizgi kullanın" readonly>
+                                    <div class="form-text">Kategori adı değiştirilemez (POI'lerde kullanıldığı için)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Görünen Ad *</label>
+                                    <input type="text" class="form-control" id="editCategoryDisplayName" required 
+                                           placeholder="Örn: 🎭 Yeni Kategori">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Renk *</label>
+                                    <input type="color" class="form-control form-control-color" id="editCategoryColor" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">İkon *</label>
+                                    <input type="text" class="form-control" id="editCategoryIcon" required 
+                                           placeholder="Örn: star, heart, map-pin">
+                                    <div class="form-text">FontAwesome ikon adı (fa- olmadan)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Açıklama</label>
+                                    <textarea class="form-control" id="editCategoryDescription" rows="2" 
+                                              placeholder="Kategori açıklaması..."></textarea>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i>İptal
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="updateCategory()">
+                                <i class="fas fa-save me-1"></i>Güncelle
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -582,11 +693,7 @@
                                     <input type="text" class="form-control" id="searchPOI" placeholder="POI ara...">
                                     <select id="filterCategory" class="form-select">
                                         <option value="">Tüm Kategoriler</option>
-                                        <option value="gastronomik">🍽️ Gastronomik</option>
-                                        <option value="kulturel">🏛️ Kültürel</option>
-                                        <option value="sanatsal">🎨 Sanatsal</option>
-                                        <option value="doga_macera">🌿 Doğa & Macera</option>
-                                        <option value="konaklama">🏨 Konaklama</option>
+                                        <!-- Kategoriler dinamik olarak yüklenecek -->
                                     </select>
                                 </div>
                             </div>
@@ -925,6 +1032,61 @@
             }
         }
 
+        // Global kategori verileri
+        let categoryData = {};
+
+        // Kategorileri yükle
+        async function loadCategories() {
+            try {
+                console.log('📋 Kategoriler yükleniyor...');
+                const response = await authenticatedFetch(`${apiBase}/categories`);
+                
+                if (!response.ok) {
+                    throw new Error('Kategoriler yüklenemedi');
+                }
+                
+                const categories = await response.json();
+                console.log('✅ Kategoriler yüklendi:', categories);
+                
+                // POI ekleme formundaki kategori dropdown'ını güncelle
+                const poiCategorySelect = document.getElementById('poiCategory');
+                poiCategorySelect.innerHTML = '<option value="">Seçiniz</option>';
+                
+                // Filtre dropdown'ını güncelle
+                const filterCategorySelect = document.getElementById('filterCategory');
+                filterCategorySelect.innerHTML = '<option value="">Tüm Kategoriler</option>';
+                
+                // Global kategori verilerini güncelle
+                categoryData = {};
+                categories.forEach(category => {
+                    categoryData[category.name] = {
+                        display_name: category.display_name,
+                        color: category.color,
+                        icon: category.icon,
+                        description: category.description
+                    };
+                    
+                    // POI ekleme formu için option
+                    const poiOption = document.createElement('option');
+                    poiOption.value = category.name;
+                    poiOption.textContent = category.display_name;
+                    poiCategorySelect.appendChild(poiOption);
+                    
+                    // Filtre için option
+                    const filterOption = document.createElement('option');
+                    filterOption.value = category.name;
+                    filterOption.textContent = category.display_name;
+                    filterCategorySelect.appendChild(filterOption);
+                });
+                
+                console.log('✅ Kategori dropdown\'ları ve renk verileri güncellendi');
+                
+            } catch (error) {
+                console.error('❌ Kategori yükleme hatası:', error);
+                showToast('Kategoriler yüklenirken hata oluştu', 'error');
+            }
+        }
+
         // POI'leri getir
         async function fetchPOIs(category = '') {
             console.log('🔍 fetchPOIs called with category:', category);
@@ -999,24 +1161,19 @@
                 highlightedMarker = null;
             }
 
-            // Kategori renkleri
-            const categoryColors = {
-                'gastronomik': '#e74c3c',
-                'kulturel': '#3498db',
-                'sanatsal': '#2ecc71',
-                'doga_macera': '#f39c12',
-                'konaklama': '#9b59b6'
-            };
-
             // Yeni markerları ekle
             pois.forEach(poi => {
                 if (poi.latitude === undefined || poi.longitude === undefined) {
                     console.warn('Skipping POI with missing coordinates:', poi);
                     return;
                 }
+                
+                // Dinamik kategori rengini al
+                const categoryColor = getCategoryColor(poi.category);
+                
                 const marker = L.circleMarker([poi.latitude, poi.longitude], {
                     color: '#ffffff',
-                    fillColor: categoryColors[poi.category] || '#666',
+                    fillColor: categoryColor,
                     fillOpacity: 0.9,
                     radius: 12,
                     weight: 3,
@@ -1037,16 +1194,44 @@
             });
         }
 
-        // Kategori görüntü adını getir
+        // Kategori görüntü adını getir (dinamik)
         function getCategoryDisplayName(category) {
-            const names = {
+            if (categoryData[category]) {
+                return categoryData[category].display_name;
+            }
+            
+            // Fallback için sabit değerler
+            const fallbackNames = {
                 'gastronomik': '🍽️ Gastronomik',
                 'kulturel': '🏛️ Kültürel',
                 'sanatsal': '🎨 Sanatsal',
                 'doga_macera': '🌿 Doğa & Macera',
                 'konaklama': '🏨 Konaklama'
             };
-            return names[category] || category;
+            return fallbackNames[category] || category;
+        }
+
+        // Kategori rengini getir (dinamik)
+        function getCategoryColor(category) {
+            if (categoryData[category]) {
+                return categoryData[category].color;
+            }
+            
+            // Fallback için sabit renkler
+            const fallbackColors = {
+                'gastronomik': '#e74c3c',
+                'kulturel': '#3498db',
+                'sanatsal': '#2ecc71',
+                'doga_macera': '#f39c12',
+                'konaklama': '#9b59b6',
+                'dini': '#8B4513',
+                'tarihi': '#CD853F',
+                'mimari': '#4682B4',
+                'mezarlik': '#696969',
+                'saray_kale': '#B8860B',
+                'diger': '#708090'
+            };
+            return fallbackColors[category] || '#666666';
         }
 
         // POI'yi haritada vurgula
@@ -1141,7 +1326,13 @@
                                             autoLoadRatingsOnPOIChange(${poi._id});
                                         }
                                     " title="Haritada göster ve detayları aç">${poi.name}</td>
-            <td class="pointer" onclick="highlightPOIOnMap(${poi._id})" title="Haritada göster">${getCategoryDisplayName(poi.category)}</td>
+            <td class="pointer" onclick="highlightPOIOnMap(${poi._id})" title="Haritada göster">
+                <div class="d-flex align-items-center">
+                    <div class="category-color-indicator me-2" 
+                         style="width: 12px; height: 12px; background-color: ${getCategoryColor(poi.category)}; border-radius: 50%; border: 1px solid #ccc;"></div>
+                    ${getCategoryDisplayName(poi.category)}
+                </div>
+            </td>
             <td class="pointer text-muted" onclick="highlightPOIOnMap(${poi._id})" title="Haritada göster">${(poi.latitude || 0).toFixed(6)}</td>
             <td class="pointer text-muted" onclick="highlightPOIOnMap(${poi._id})" title="Haritada göster">${(poi.longitude || 0).toFixed(6)}</td>
             <td>
@@ -2898,12 +3089,337 @@
             }
         }
 
+        // Kategori Yönetimi Fonksiyonları
+        async function loadCategoriesManagement() {
+            try {
+                console.log('📋 Kategori yönetimi yükleniyor...');
+                const response = await authenticatedFetch(`${apiBase}/categories`);
+                
+                if (!response.ok) {
+                    throw new Error('Kategoriler yüklenemedi');
+                }
+                
+                const categories = await response.json();
+                console.log('✅ Kategoriler yüklendi:', categories);
+                
+                renderCategoriesManagement(categories);
+                
+            } catch (error) {
+                console.error('❌ Kategori yönetimi yükleme hatası:', error);
+                document.getElementById('categoriesList').innerHTML = `
+                    <div class="text-center text-danger py-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p class="mb-0">Kategoriler yüklenirken hata oluştu</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function renderCategoriesManagement(categories) {
+            const container = document.getElementById('categoriesList');
+            
+            if (categories.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-tags"></i>
+                        <p class="mb-0">Henüz kategori yok</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Her kategori için POI sayısını al
+            let categoriesWithCounts = [];
+            for (const category of categories) {
+                try {
+                    const response = await authenticatedFetch(`${apiBase}/pois?category=${category.name}`);
+                    if (response.ok) {
+                        const pois = await response.json();
+                        categoriesWithCounts.push({
+                            ...category,
+                            poiCount: Array.isArray(pois) ? pois.length : 0
+                        });
+                    } else {
+                        categoriesWithCounts.push({...category, poiCount: 0});
+                    }
+                } catch (error) {
+                    categoriesWithCounts.push({...category, poiCount: 0});
+                }
+            }
+            
+            let html = '';
+            categoriesWithCounts.forEach(category => {
+                const canDelete = category.poiCount === 0;
+                html += `
+                    <div class="category-item border rounded p-3 mb-3 bg-light" data-category="${category.name}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="d-flex align-items-start flex-grow-1">
+                                <div class="category-color-box me-3 mt-1" 
+                                     style="width: 24px; height: 24px; background-color: ${category.color}; border-radius: 4px; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"></div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <i class="fas fa-${category.icon} me-2 text-muted"></i>
+                                        <strong class="text-dark">${category.display_name}</strong>
+                                        <span class="badge bg-secondary ms-2">${category.poiCount} POI</span>
+                                    </div>
+                                    <div class="text-muted small mb-1">
+                                        <code>${category.name}</code>
+                                    </div>
+                                    ${category.description ? `<div class="text-muted small">${category.description}</div>` : ''}
+                                </div>
+                            </div>
+                            <div class="btn-group btn-group-sm ms-2">
+                                <button class="btn btn-outline-primary" onclick="editCategory('${category.name}')" 
+                                        title="Kategoriyi Düzenle">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger ${!canDelete ? 'disabled' : ''}" 
+                                        onclick="deleteCategory('${category.name}')" 
+                                        title="${canDelete ? 'Kategoriyi Sil' : 'Bu kategoriyi kullanan POI\'ler var, silinemez'}"
+                                        ${!canDelete ? 'disabled' : ''}>
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        async function addCategory(categoryData) {
+            try {
+                showLoading();
+                console.log('📤 Yeni kategori ekleniyor:', categoryData);
+                
+                const response = await authenticatedFetch(`${apiBase}/categories`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(categoryData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showToast('Kategori başarıyla eklendi!', 'success');
+                    document.getElementById('categoryForm').reset();
+                    await loadCategoriesManagement();
+                    await loadCategories(); // Dropdown'ları güncelle
+                } else {
+                    throw new Error(result.error || 'Kategori eklenemedi');
+                }
+                
+            } catch (error) {
+                console.error('❌ Kategori ekleme hatası:', error);
+                showToast(`Kategori ekleme hatası: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function deleteCategory(categoryName) {
+            if (!confirm(`"${categoryName}" kategorisini silmek istediğinizden emin misiniz?\n\nBu kategoriyi kullanan POI'ler varsa silme işlemi başarısız olacaktır.`)) {
+                return;
+            }
+            
+            try {
+                showLoading();
+                console.log('🗑️ Kategori siliniyor:', categoryName);
+                
+                const response = await authenticatedFetch(`${apiBase}/categories?name=${encodeURIComponent(categoryName)}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showToast('Kategori başarıyla silindi!', 'success');
+                    await loadCategoriesManagement();
+                    await loadCategories(); // Dropdown'ları güncelle
+                    await fetchPOIs(); // POI listesini güncelle
+                } else {
+                    throw new Error(result.error || 'Kategori silinemedi');
+                }
+                
+            } catch (error) {
+                console.error('❌ Kategori silme hatası:', error);
+                showToast(`Kategori silme hatası: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function editCategory(categoryName) {
+            try {
+                console.log('✏️ Kategori düzenleme açılıyor:', categoryName);
+                
+                // Kategori bilgilerini al
+                const response = await authenticatedFetch(`${apiBase}/categories`);
+                if (!response.ok) {
+                    throw new Error('Kategoriler yüklenemedi');
+                }
+                
+                const categories = await response.json();
+                const category = categories.find(cat => cat.name === categoryName);
+                
+                if (!category) {
+                    throw new Error('Kategori bulunamadı');
+                }
+                
+                // Modal form alanlarını doldur
+                document.getElementById('editCategoryOriginalName').value = category.name;
+                document.getElementById('editCategoryName').value = category.name;
+                document.getElementById('editCategoryDisplayName').value = category.display_name;
+                document.getElementById('editCategoryColor').value = category.color;
+                document.getElementById('editCategoryIcon').value = category.icon;
+                document.getElementById('editCategoryDescription').value = category.description || '';
+                
+                // Modal'ı aç
+                const modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('❌ Kategori düzenleme hatası:', error);
+                showToast(`Kategori düzenleme hatası: ${error.message}`, 'error');
+            }
+        }
+
+        async function updateCategory() {
+            try {
+                showLoading();
+                
+                const originalName = document.getElementById('editCategoryOriginalName').value;
+                const categoryData = {
+                    name: originalName, // Kategori adı değişmez
+                    display_name: document.getElementById('editCategoryDisplayName').value.trim(),
+                    color: document.getElementById('editCategoryColor').value,
+                    icon: document.getElementById('editCategoryIcon').value.trim(),
+                    description: document.getElementById('editCategoryDescription').value.trim()
+                };
+                
+                // Validasyon (name hariç)
+                const validationData = {...categoryData, name: 'valid_name'}; // Geçici geçerli name
+                const errors = validateCategoryForm(validationData);
+                if (errors.length > 0) {
+                    showToast(errors.join('<br>'), 'error');
+                    return;
+                }
+                
+                console.log('📤 Kategori güncelleniyor:', categoryData);
+                
+                const response = await authenticatedFetch(`${apiBase}/categories`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(categoryData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showToast('Kategori başarıyla güncellendi!', 'success');
+                    
+                    // Modal'ı kapat
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'));
+                    modal.hide();
+                    
+                    // Listeleri güncelle
+                    await loadCategoriesManagement();
+                    await loadCategories(); // Dropdown'ları güncelle
+                    
+                    // Harita marker'larını güncelle (yeni renklerle)
+                    if (allPOIs && allPOIs.length > 0) {
+                        updateMapMarkers(allPOIs);
+                    }
+                    
+                } else {
+                    throw new Error(result.error || 'Kategori güncellenemedi');
+                }
+                
+            } catch (error) {
+                console.error('❌ Kategori güncelleme hatası:', error);
+                showToast(`Kategori güncelleme hatası: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Form validasyon fonksiyonları
+        function validateCategoryForm(formData) {
+            const errors = [];
+            
+            if (!formData.name || !formData.name.match(/^[a-z_]+$/)) {
+                errors.push('Kategori adı sadece küçük harf ve alt çizgi içerebilir');
+            }
+            
+            if (!formData.display_name || formData.display_name.length < 2) {
+                errors.push('Görünen ad en az 2 karakter olmalıdır');
+            }
+            
+            if (!formData.color || !formData.color.match(/^#[0-9A-Fa-f]{6}$/)) {
+                errors.push('Geçerli bir renk kodu seçin');
+            }
+            
+            if (!formData.icon || formData.icon.length < 2) {
+                errors.push('Geçerli bir ikon adı girin');
+            }
+            
+            return errors;
+        }
+
+        // Kategori formu submit event'i
+        document.addEventListener('DOMContentLoaded', function() {
+            const categoryForm = document.getElementById('categoryForm');
+            if (categoryForm) {
+                categoryForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const categoryData = {
+                        name: document.getElementById('categoryName').value.trim(),
+                        display_name: document.getElementById('categoryDisplayName').value.trim(),
+                        color: document.getElementById('categoryColor').value,
+                        icon: document.getElementById('categoryIcon').value.trim(),
+                        description: document.getElementById('categoryDescription').value.trim()
+                    };
+                    
+                    // Validasyon
+                    const errors = validateCategoryForm(categoryData);
+                    if (errors.length > 0) {
+                        showToast(errors.join('<br>'), 'error');
+                        return;
+                    }
+                    
+                    await addCategory(categoryData);
+                });
+            }
+
+            // Düzenleme modal form validasyonu
+            const editCategoryForm = document.getElementById('editCategoryForm');
+            if (editCategoryForm) {
+                editCategoryForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    updateCategory();
+                });
+            }
+        });
+
+        // Kategori sekmesi açıldığında kategorileri yükle
+        document.addEventListener('DOMContentLoaded', function() {
+            const categoriesTab = document.getElementById('categories-tab');
+            if (categoriesTab) {
+                categoriesTab.addEventListener('shown.bs.tab', function() {
+                    loadCategoriesManagement();
+                });
+            }
+        });
+
         // Sayfa yüklendiğinde
         document.addEventListener('DOMContentLoaded', async function () {
             // First check authentication
             const isAuthenticated = await checkAuthStatus();
             if (isAuthenticated) {
                 initMap();
+                await loadCategories(); // Önce kategorileri yükle
                 fetchPOIs();
                 
                 // Start enhanced session monitoring

@@ -1404,13 +1404,22 @@ def list_pois():
             db.disconnect()
             return jsonify(pois)
         
-        # Tüm kategorilerdeki POI'leri döndür
-        categories = ['gastronomik', 'kulturel', 'sanatsal', 'doga_macera', 'konaklama']
-        all_pois = {}
-        for cat in categories:
-            all_pois[cat] = db.list_pois(cat)
-        db.disconnect()
-        return jsonify(all_pois)
+        # Tüm kategorilerdeki POI'leri döndür - dinamik kategori listesi
+        try:
+            with db.conn.cursor() as cur:
+                cur.execute("SELECT DISTINCT category FROM pois WHERE is_active = true ORDER BY category")
+                categories = [row[0] for row in cur.fetchall()]
+            
+            all_pois = {}
+            for cat in categories:
+                pois = db.list_pois(cat)
+                if pois:  # Sadece POI'si olan kategorileri ekle
+                    all_pois[cat] = pois
+            db.disconnect()
+            return jsonify(all_pois)
+        except Exception as e:
+            db.disconnect()
+            return jsonify({'error': f'Category fetch error: {str(e)}'}), 500
         
     except Exception as e:
         db.disconnect()
@@ -1897,6 +1906,176 @@ def get_rating_categories():
         'categories': RATING_CATEGORIES,
         'description': 'POI rating kategorileri ve bilgileri'
     })
+
+@app.route('/api/categories', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@auth_middleware.require_auth
+def manage_categories():
+    """Kategori yönetimi - GET, POST, PUT, DELETE"""
+    
+    if request.method == 'GET':
+        # Kategorileri getir
+        if JSON_FALLBACK:
+            categories = [
+                {"name": "gastronomik", "display_name": "🍽️ Gastronomik", "color": "#e74c3c", "icon": "utensils"},
+                {"name": "kulturel", "display_name": "🏛️ Kültürel", "color": "#3498db", "icon": "landmark"},
+                {"name": "sanatsal", "display_name": "🎨 Sanatsal", "color": "#2ecc71", "icon": "palette"},
+                {"name": "doga_macera", "display_name": "🌿 Doğa & Macera", "color": "#f39c12", "icon": "hiking"},
+                {"name": "konaklama", "display_name": "🏨 Konaklama", "color": "#9b59b6", "icon": "bed"}
+            ]
+            return jsonify(categories)
+        
+        db = get_db()
+        if not db:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        try:
+            with db.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT name, display_name, color, icon, description FROM categories ORDER BY name")
+                categories = [dict(row) for row in cur.fetchall()]
+            
+            db.disconnect()
+            return jsonify(categories)
+            
+        except Exception as e:
+            db.disconnect()
+            return jsonify({'error': f'Categories fetch error: {str(e)}'}), 500
+    
+    elif request.method == 'POST':
+        # Yeni kategori ekle
+        if JSON_FALLBACK:
+            return jsonify({'error': 'JSON mode does not support category management'}), 400
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        required_fields = ['name', 'display_name', 'color', 'icon']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        db = get_db()
+        if not db:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        try:
+            with db.conn.cursor() as cur:
+                # Kategori adının benzersiz olduğunu kontrol et
+                cur.execute("SELECT COUNT(*) FROM categories WHERE name = %s", (data['name'],))
+                if cur.fetchone()[0] > 0:
+                    db.disconnect()
+                    return jsonify({'error': 'Category name already exists'}), 409
+                
+                # Yeni kategoriyi ekle
+                cur.execute("""
+                    INSERT INTO categories (name, display_name, color, icon, description)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    data['name'],
+                    data['display_name'],
+                    data['color'],
+                    data['icon'],
+                    data.get('description', '')
+                ))
+                db.conn.commit()
+            
+            db.disconnect()
+            return jsonify({'success': True, 'message': 'Category added successfully'}), 201
+            
+        except Exception as e:
+            db.disconnect()
+            return jsonify({'error': f'Category add error: {str(e)}'}), 500
+    
+    elif request.method == 'PUT':
+        # Kategori güncelle
+        if JSON_FALLBACK:
+            return jsonify({'error': 'JSON mode does not support category management'}), 400
+        
+        data = request.get_json()
+        if not data or not data.get('name'):
+            return jsonify({'error': 'Category name is required'}), 400
+        
+        db = get_db()
+        if not db:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        try:
+            with db.conn.cursor() as cur:
+                # Kategori var mı kontrol et
+                cur.execute("SELECT COUNT(*) FROM categories WHERE name = %s", (data['name'],))
+                if cur.fetchone()[0] == 0:
+                    db.disconnect()
+                    return jsonify({'error': 'Category not found'}), 404
+                
+                # Güncelleme alanlarını hazırla
+                update_fields = []
+                update_values = []
+                
+                for field in ['display_name', 'color', 'icon', 'description']:
+                    if field in data:
+                        update_fields.append(f"{field} = %s")
+                        update_values.append(data[field])
+                
+                if not update_fields:
+                    db.disconnect()
+                    return jsonify({'error': 'No fields to update'}), 400
+                
+                update_values.append(data['name'])
+                
+                # Kategoriyi güncelle
+                cur.execute(f"""
+                    UPDATE categories 
+                    SET {', '.join(update_fields)}
+                    WHERE name = %s
+                """, update_values)
+                db.conn.commit()
+            
+            db.disconnect()
+            return jsonify({'success': True, 'message': 'Category updated successfully'})
+            
+        except Exception as e:
+            db.disconnect()
+            return jsonify({'error': f'Category update error: {str(e)}'}), 500
+    
+    elif request.method == 'DELETE':
+        # Kategori sil
+        if JSON_FALLBACK:
+            return jsonify({'error': 'JSON mode does not support category management'}), 400
+        
+        category_name = request.args.get('name')
+        if not category_name:
+            return jsonify({'error': 'Category name is required'}), 400
+        
+        db = get_db()
+        if not db:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        try:
+            with db.conn.cursor() as cur:
+                # Bu kategoride POI var mı kontrol et
+                cur.execute("SELECT COUNT(*) FROM pois WHERE category = %s", (category_name,))
+                poi_count = cur.fetchone()[0]
+                
+                if poi_count > 0:
+                    db.disconnect()
+                    return jsonify({
+                        'error': f'Cannot delete category. {poi_count} POIs are using this category.'
+                    }), 409
+                
+                # Kategoriyi sil
+                cur.execute("DELETE FROM categories WHERE name = %s", (category_name,))
+                if cur.rowcount == 0:
+                    db.disconnect()
+                    return jsonify({'error': 'Category not found'}), 404
+                
+                db.conn.commit()
+            
+            db.disconnect()
+            return jsonify({'success': True, 'message': 'Category deleted successfully'})
+            
+        except Exception as e:
+            db.disconnect()
+            return jsonify({'error': f'Category delete error: {str(e)}'}), 500
 
 @app.route('/api/pois/by-rating', methods=['GET'])
 def search_pois_by_rating():
