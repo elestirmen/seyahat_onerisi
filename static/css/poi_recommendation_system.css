@@ -224,145 +224,80 @@
             opacity: 1;
         }
 
-        /* Category-specific styling */
+        /* Category styling using CSS custom properties */
+        .slider-item[data-category] {
+            border-left: 4px solid var(--category-color);
+        }
+
+        .slider-item[data-category].active {
+            background: var(--category-light);
+            border-color: var(--category-color);
+            box-shadow: 0 8px 25px var(--category-shadow);
+        }
+
+        .slider-item[data-category]::before {
+            background: var(--category-color);
+        }
+
+        /* Category-specific variable assignments */
         .slider-item[data-category="doga"] {
-            border-left: 4px solid var(--doga-color);
-        }
-
-        .slider-item[data-category="doga"].active {
-            background: var(--doga-light);
-            border-color: var(--doga-color);
-            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
-        }
-
-        .slider-item[data-category="doga"]::before {
-            background: var(--doga-color);
+            --category-color: var(--doga-color);
+            --category-light: var(--doga-light);
+            --category-shadow: rgba(39, 174, 96, 0.2);
         }
 
         .slider-item[data-category="yemek"] {
-            border-left: 4px solid var(--yemek-color);
-        }
-
-        .slider-item[data-category="yemek"].active {
-            background: var(--yemek-light);
-            border-color: var(--yemek-color);
-            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
-        }
-
-        .slider-item[data-category="yemek"]::before {
-            background: var(--yemek-color);
+            --category-color: var(--yemek-color);
+            --category-light: var(--yemek-light);
+            --category-shadow: rgba(231, 76, 60, 0.2);
         }
 
         .slider-item[data-category="tarihi"] {
-            border-left: 4px solid var(--tarihi-color);
-        }
-
-        .slider-item[data-category="tarihi"].active {
-            background: var(--tarihi-light);
-            border-color: var(--tarihi-color);
-            box-shadow: 0 8px 25px rgba(142, 68, 173, 0.2);
-        }
-
-        .slider-item[data-category="tarihi"]::before {
-            background: var(--tarihi-color);
+            --category-color: var(--tarihi-color);
+            --category-light: var(--tarihi-light);
+            --category-shadow: rgba(142, 68, 173, 0.2);
         }
 
         .slider-item[data-category="eglence"] {
-            border-left: 4px solid var(--eglence-color);
-        }
-
-        .slider-item[data-category="eglence"].active {
-            background: var(--eglence-light);
-            border-color: var(--eglence-color);
-            box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
-        }
-
-        .slider-item[data-category="eglence"]::before {
-            background: var(--eglence-color);
+            --category-color: var(--eglence-color);
+            --category-light: var(--eglence-light);
+            --category-shadow: rgba(243, 156, 18, 0.2);
         }
 
         .slider-item[data-category="sanat_kultur"] {
-            border-left: 4px solid var(--sanat-kultur-color);
-        }
-
-        .slider-item[data-category="sanat_kultur"].active {
-            background: var(--sanat-kultur-light);
-            border-color: var(--sanat-kultur-color);
-            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
-        }
-
-        .slider-item[data-category="sanat_kultur"]::before {
-            background: var(--sanat-kultur-color);
+            --category-color: var(--sanat-kultur-color);
+            --category-light: var(--sanat-kultur-light);
+            --category-shadow: rgba(52, 152, 219, 0.2);
         }
 
         .slider-item[data-category="macera"] {
-            border-left: 4px solid var(--macera-color);
-        }
-
-        .slider-item[data-category="macera"].active {
-            background: var(--macera-light);
-            border-color: var(--macera-color);
-            box-shadow: 0 8px 25px rgba(230, 126, 34, 0.2);
-        }
-
-        .slider-item[data-category="macera"]::before {
-            background: var(--macera-color);
+            --category-color: var(--macera-color);
+            --category-light: var(--macera-light);
+            --category-shadow: rgba(230, 126, 34, 0.2);
         }
 
         .slider-item[data-category="rahatlatici"] {
-            border-left: 4px solid var(--rahatlatici-color);
-        }
-
-        .slider-item[data-category="rahatlatici"].active {
-            background: var(--rahatlatici-light);
-            border-color: var(--rahatlatici-color);
-            box-shadow: 0 8px 25px rgba(26, 188, 156, 0.2);
-        }
-
-        .slider-item[data-category="rahatlatici"]::before {
-            background: var(--rahatlatici-color);
+            --category-color: var(--rahatlatici-color);
+            --category-light: var(--rahatlatici-light);
+            --category-shadow: rgba(26, 188, 156, 0.2);
         }
 
         .slider-item[data-category="spor"] {
-            border-left: 4px solid var(--spor-color);
-        }
-
-        .slider-item[data-category="spor"].active {
-            background: var(--spor-light);
-            border-color: var(--spor-color);
-            box-shadow: 0 8px 25px rgba(155, 89, 182, 0.2);
-        }
-
-        .slider-item[data-category="spor"]::before {
-            background: var(--spor-color);
+            --category-color: var(--spor-color);
+            --category-light: var(--spor-light);
+            --category-shadow: rgba(155, 89, 182, 0.2);
         }
 
         .slider-item[data-category="alisveris"] {
-            border-left: 4px solid var(--alisveris-color);
-        }
-
-        .slider-item[data-category="alisveris"].active {
-            background: var(--alisveris-light);
-            border-color: var(--alisveris-color);
-            box-shadow: 0 8px 25px rgba(52, 73, 94, 0.2);
-        }
-
-        .slider-item[data-category="alisveris"]::before {
-            background: var(--alisveris-color);
+            --category-color: var(--alisveris-color);
+            --category-light: var(--alisveris-light);
+            --category-shadow: rgba(52, 73, 94, 0.2);
         }
 
         .slider-item[data-category="gece_hayati"] {
-            border-left: 4px solid var(--gece-hayati-color);
-        }
-
-        .slider-item[data-category="gece_hayati"].active {
-            background: var(--gece-hayati-light);
-            border-color: var(--gece-hayati-color);
-            box-shadow: 0 8px 25px rgba(44, 62, 80, 0.2);
-        }
-
-        .slider-item[data-category="gece_hayati"]::before {
-            background: var(--gece-hayati-color);
+            --category-color: var(--gece-hayati-color);
+            --category-light: var(--gece-hayati-light);
+            --category-shadow: rgba(44, 62, 80, 0.2);
         }
 
         .slider-label {
