@@ -58,7 +58,7 @@ class RouteDetailsPanel {
     }
 
     show(routeData) {
-        console.log('🎯 Showing route details panel with data:', routeData);
+        if (window.DEBUG) console.log('🎯 Showing route details panel with data:', routeData);
 
         this.currentRoute = routeData;
         this.updateSummary(routeData);
@@ -81,7 +81,7 @@ class RouteDetailsPanel {
     }
 
     hide() {
-        console.log('🎯 Hiding route details panel');
+        if (window.DEBUG) console.log('🎯 Hiding route details panel');
 
         this.panel.classList.remove('show');
         this.isVisible = false;
@@ -236,7 +236,7 @@ class RouteDetailsPanel {
     }
 
     static highlightStop(lat, lng) {
-        console.log('🎯 Highlighting stop at:', lat, lng);
+        if (window.DEBUG) console.log('🎯 Highlighting stop at:', lat, lng);
 
         // Find and highlight the marker
         markers.forEach(marker => {
@@ -278,7 +278,7 @@ class RouteDetailsPanel {
             this.createElevationChart(elevationData);
 
         } catch (error) {
-            console.error('Error loading elevation profile:', error);
+            if (window.DEBUG) console.error('Error loading elevation profile:', error);
             this.showElevationError();
         }
     }
@@ -390,12 +390,12 @@ class RouteDetailsPanel {
                 const now = Date.now();
                 // Cache for 1 hour to reduce API calls
                 if (now - cacheData.timestamp < 60 * 60 * 1000) {
-                    console.log(`📦 Using cached elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${cacheData.elevation}m`);
+                    if (window.DEBUG) console.log(`📦 Using cached elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${cacheData.elevation}m`);
                     return cacheData.elevation;
                 }
             }
         } catch (error) {
-            console.warn('Error reading elevation cache:', error);
+            if (window.DEBUG) console.warn('Error reading elevation cache:', error);
         }
 
         // Get fresh elevation data
@@ -408,7 +408,7 @@ class RouteDetailsPanel {
                 timestamp: Date.now()
             }));
         } catch (error) {
-            console.warn('Error caching elevation data:', error);
+            if (window.DEBUG) console.warn('Error caching elevation data:', error);
         }
 
         return elevation;
@@ -600,7 +600,7 @@ class RouteDetailsPanel {
                     if (activeElements.length > 0) {
                         const index = activeElements[0].index;
                         const point = elevationData[index];
-                        console.log(`Clicked on elevation point: ${point.name} at ${point.elevation}m`);
+                        if (window.DEBUG) console.log(`Clicked on elevation point: ${point.name} at ${point.elevation}m`);
 
                         // Highlight corresponding stop in the stops list
                         const stopItems = document.querySelectorAll('.stop-item');
@@ -669,11 +669,11 @@ class RouteDetailsPanel {
         // Create URL with coordinates (most reliable)
         const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypointParam}&travelmode=walking`;
 
-        console.log('🗺️ Exporting route to Google Maps:');
-        console.log('Origin:', origin, startLocation ? `(${startLocation.name})` : '');
-        console.log('Destination:', destination, selectedPOIs.length > 0 ? `(${selectedPOIs[selectedPOIs.length - 1].name})` : '');
-        console.log('Waypoints:', waypoints.slice(1, -1));
-        console.log('URL:', url);
+        if (window.DEBUG) console.log('🗺️ Exporting route to Google Maps:');
+        if (window.DEBUG) console.log('Origin:', origin, startLocation ? `(${startLocation.name})` : '');
+        if (window.DEBUG) console.log('Destination:', destination, selectedPOIs.length > 0 ? `(${selectedPOIs[selectedPOIs.length - 1].name})` : '');
+        if (window.DEBUG) console.log('Waypoints:', waypoints.slice(1, -1));
+        if (window.DEBUG) console.log('URL:', url);
 
         window.open(url, '_blank');
 
@@ -795,7 +795,7 @@ class RouteDetailsPanel {
             });
         }
 
-        console.log(`🎯 Focused on segment ${segmentIndex + 1}: ${segment.from} → ${segment.to}`);
+        if (window.DEBUG) console.log(`🎯 Focused on segment ${segmentIndex + 1}: ${segment.from} → ${segment.to}`);
     }
 }
 
@@ -877,7 +877,7 @@ async function loadPOIMedia(poiId) {
             };
 
             if (apiData.media && Array.isArray(apiData.media)) {
-                console.log('Processing media for POI:', poiId, apiData.media);
+                if (window.DEBUG) console.log('Processing media for POI:', poiId, apiData.media);
                 apiData.media.forEach(item => {
                     switch (item.media_type) {
                         case 'image':
@@ -917,7 +917,7 @@ async function loadPOIMedia(poiId) {
             return mediaData;
         }
     } catch (error) {
-        console.error('Error loading POI media:', error);
+        if (window.DEBUG) console.error('Error loading POI media:', error);
     }
 
     return { images: [], videos: [], audio: [], models: [] };
@@ -925,9 +925,9 @@ async function loadPOIMedia(poiId) {
 
 // Create media gallery HTML
 function createMediaGallery(media, poi = {}) {
-    console.log('Creating media gallery with:', media);
+    if (window.DEBUG) console.log('Creating media gallery with:', media);
     if (!media || (!media.images?.length && !media.videos?.length && !media.audio?.length)) {
-        console.log('No media found or empty arrays');
+        if (window.DEBUG) console.log('No media found or empty arrays');
         return '';
     }
 
@@ -1069,7 +1069,7 @@ let poiMediaCache = {}; // Cache for POI media items
 
 function showMediaModal(mediaItems, startIndex = 0, poiId = null) {
     if (!mediaItems || mediaItems.length === 0) {
-        console.warn('No media items provided');
+        if (window.DEBUG) console.warn('No media items provided');
         return;
     }
 
@@ -1392,7 +1392,7 @@ function checkSecurityContext() {
     const isSecure = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
 
     if (!isSecure && location.hostname !== '127.0.0.1') {
-        console.warn('⚠️ Page not served over HTTPS - geolocation may not work');
+        if (window.DEBUG) console.warn('⚠️ Page not served over HTTPS - geolocation may not work');
 
         // Show a subtle warning
         const warning = document.createElement('div');
@@ -1535,20 +1535,6 @@ function announceToScreenReader(message) {
     }, 1000);
 }
 
-//         // Debug and testing helper
-//         function testMediaModal() {
-//             const testMedia = [
-//                 { type: 'image', path: '/test-image.jpg', title: 'Test Görsel' },
-//                 { type: 'video', path: '/test-video.mp4', title: 'Test Video' },
-//                 { type: 'audio', path: '/test-audio.mp3', title: 'Test Ses' }
-//             ];
-// 
-//             console.log('Testing media modal with sample data...');
-//             showMediaModal(testMedia, 0, 'Test POI');
-//         }
-// 
-//         // Expose test function globally for debugging
-//         window.testMediaModal = testMediaModal;
 
 function showMediaError(message, canRetry = true) {
     const modalBody = document.getElementById('mediaModalBody');
@@ -1568,13 +1554,13 @@ function showMediaError(message, canRetry = true) {
 }
 
 function retryLoadMedia() {
-    console.log('Retrying media load...');
+    if (window.DEBUG) console.log('Retrying media load...');
     loadCurrentMedia();
 }
 
 // Enhanced error handling for different media types
 function handleMediaError(mediaElement, mediaType) {
-    console.error(`${mediaType} load error:`, mediaElement.error);
+    if (window.DEBUG) console.error(`${mediaType} load error:`, mediaElement.error);
 
     let errorMessage = 'Medya dosyası yüklenemedi';
     if (mediaElement.error) {
@@ -1639,7 +1625,7 @@ function showPOIMediaFromCache(cacheKey, startIndex) {
     if (cachedData && cachedData.items) {
         showMediaModal(cachedData.items, startIndex, cachedData.poiName);
     } else {
-        console.error('Media cache not found for key:', cacheKey);
+        if (window.DEBUG) console.error('Media cache not found for key:', cacheKey);
         showMediaError('Medya verileri bulunamadı');
     }
 }
@@ -1740,7 +1726,7 @@ function setupImageDrag(img) {
 // Video load handler
 function onVideoLoad(video) {
     video.style.opacity = '1';
-    console.log('Video loaded:', video.duration, 'seconds');
+    if (window.DEBUG) console.log('Video loaded:', video.duration, 'seconds');
     // Preload adjacent media after current media loads
     setTimeout(preloadAdjacentMedia, 500);
 }
@@ -1851,7 +1837,7 @@ function getEstimatedElevation(lat, lng) {
     // Ensure reasonable bounds for the region (900-1300m)
     const clampedElevation = Math.max(900, Math.min(1300, estimatedElevation));
 
-    console.log(`📏 Estimated elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${clampedElevation}m`);
+    if (window.DEBUG) console.log(`📏 Estimated elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${clampedElevation}m`);
     return clampedElevation;
 }
 
@@ -1861,18 +1847,18 @@ function openInGoogleMaps(lat, lng, name) {
     const coords = `${lat},${lng}`;
     const url = `https://www.google.com/maps/search/?api=1&query=${coords}`;
 
-    console.log('🗺️ Opening POI in Google Maps:', name, 'at', coords);
+    if (window.DEBUG) console.log('🗺️ Opening POI in Google Maps:', name, 'at', coords);
     window.open(url, '_blank');
 }
 
 // Add to route with throttling
 function addToRoute(poi) {
-    console.log('➕ Adding POI to route:', poi.name);
+    if (window.DEBUG) console.log('➕ Adding POI to route:', poi.name);
     const poiId = poi.id || poi._id;
     if (!selectedPOIs.find(p => (p.id || p._id) === poiId)) {
         poi.id = poiId; // Normalize ID
         selectedPOIs.push(poi);
-        console.log('📝 Updated selectedPOIs:', selectedPOIs.length);
+        if (window.DEBUG) console.log('📝 Updated selectedPOIs:', selectedPOIs.length);
         updateRouteDisplay();
 
         // Throttle route creation to prevent rapid requests
@@ -1885,7 +1871,7 @@ function addToRoute(poi) {
         }, 1000); // 1 second delay
 
     } else {
-        console.log('⚠️ POI already in route');
+        if (window.DEBUG) console.log('⚠️ POI already in route');
         showNotification('Bu POI zaten rotada mevcut', 'info');
     }
 }
@@ -1993,15 +1979,15 @@ function updateRouteDisplay() {
 
 // Create route using walking paths
 async function createRoute() {
-    console.log('🚶 Creating walking route with selectedPOIs:', selectedPOIs.length, 'startLocation:', startLocation);
+    if (window.DEBUG) console.log('🚶 Creating walking route with selectedPOIs:', selectedPOIs.length, 'startLocation:', startLocation);
 
     if (selectedPOIs.length < 1) {
-        console.log('❌ Not enough POIs for route');
+        if (window.DEBUG) console.log('❌ Not enough POIs for route');
         return;
     }
 
     if (routingControl) {
-        console.log('🗑️ Removing existing route control');
+        if (window.DEBUG) console.log('🗑️ Removing existing route control');
         map.removeControl(routingControl);
         routingControl = null;
     }
@@ -2022,7 +2008,7 @@ async function createRoute() {
             lng: startLocation.longitude,
             name: startLocation.name
         });
-        console.log('📍 Added start location to waypoints');
+        if (window.DEBUG) console.log('📍 Added start location to waypoints');
     }
 
     selectedPOIs.forEach((poi, index) => {
@@ -2031,18 +2017,18 @@ async function createRoute() {
             lng: poi.longitude,
             name: poi.name
         });
-        console.log(`📍 Added POI ${index + 1}: ${poi.name}`);
+        if (window.DEBUG) console.log(`📍 Added POI ${index + 1}: ${poi.name}`);
     });
 
-    console.log('🗺️ Total waypoints:', waypoints.length);
+    if (window.DEBUG) console.log('🗺️ Total waypoints:', waypoints.length);
 
     if (waypoints.length < 2) {
-        console.log('❌ Need at least 2 waypoints for routing');
+        if (window.DEBUG) console.log('❌ Need at least 2 waypoints for routing');
         return;
     }
 
     try {
-        console.log('🚶 Requesting walking route from API...');
+        if (window.DEBUG) console.log('🚶 Requesting walking route from API...');
 
         // Call walking route API
         const response = await fetch(`${apiBase}/route/walking`, {
@@ -2060,7 +2046,7 @@ async function createRoute() {
         }
 
         const routeData = await response.json();
-        console.log('🗺️ Walking route received:', routeData);
+        if (window.DEBUG) console.log('🗺️ Walking route received:', routeData);
 
         if (routeData.success && routeData.route) {
             // Draw walking route on map
@@ -2073,8 +2059,8 @@ async function createRoute() {
         }
 
     } catch (error) {
-        console.error('Walking route error:', error);
-        console.log('🔄 Fallback: Using simple line connections...');
+        if (window.DEBUG) console.error('Walking route error:', error);
+        if (window.DEBUG) console.log('🔄 Fallback: Using simple line connections...');
 
         // Fallback to simple line connections
         createSimpleRoute(waypoints);
@@ -2083,7 +2069,7 @@ async function createRoute() {
 
 // Create simple route with straight lines (fallback)
 function createSimpleRoute(waypoints) {
-    console.log('📏 Creating simple route with straight lines');
+    if (window.DEBUG) console.log('📏 Creating simple route with straight lines');
 
     if (waypoints.length < 2) return;
 
@@ -2170,7 +2156,7 @@ function createSimpleRoute(waypoints) {
         totalDistance += getDistance(latlngs[i][0], latlngs[i][1], latlngs[i + 1][0], latlngs[i + 1][1]);
     }
 
-    console.log(`📏 Basit rota oluşturuldu: ${totalDistance.toFixed(2)} km (düz çizgi mesafesi)`);
+    if (window.DEBUG) console.log(`📏 Basit rota oluşturuldu: ${totalDistance.toFixed(2)} km (düz çizgi mesafesi)`);
 
     // Show notification
     showNotification(`📏 Basit rota oluşturuldu (${totalDistance.toFixed(2)} km düz çizgi mesafesi)`, 'info');
@@ -2228,7 +2214,7 @@ function clearRoute() {
         });
     }
 
-    console.log('🗑️ Route cleared');
+    if (window.DEBUG) console.log('🗑️ Route cleared');
 }
 
 // Optimize route (wrapper for backward compatibility)
@@ -2250,7 +2236,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
 // Draw walking route on map
 function drawWalkingRoute(routeInfo) {
-    console.log('🎨 Drawing walking route:', routeInfo);
+    if (window.DEBUG) console.log('🎨 Drawing walking route:', routeInfo);
 
     // Remove existing route layers
     map.eachLayer(function (layer) {
@@ -2325,7 +2311,7 @@ function drawWalkingRoute(routeInfo) {
         }
     });
 
-    console.log('✅ Walking route drawn successfully');
+    if (window.DEBUG) console.log('✅ Walking route drawn successfully');
 }
 
 // Removed createRoutePopupContent - now using unified route details panel
@@ -2367,12 +2353,12 @@ function openRouteInGoogleMaps(segment) {
         originParam = encodeURIComponent(`${segment.from}, Ürgüp`) + '+' + originCoords;
         destinationParam = encodeURIComponent(`${segment.to}, Ürgüp`) + '+' + destCoords;
 
-        console.log('�️ Openming segment with place names:', segment.from, '→', segment.to);
+        if (window.DEBUG) console.log('�️ Openming segment with place names:', segment.from, '→', segment.to);
     } else {
         // Fallback to coordinates only
         originParam = `${startCoord.lat},${startCoord.lng}`;
         destinationParam = `${endCoord.lat},${endCoord.lng}`;
-        console.log('🗺️ Opening segment with coordinates only');
+        if (window.DEBUG) console.log('🗺️ Opening segment with coordinates only');
     }
 
     // Use coordinates for reliable routing
@@ -2381,8 +2367,8 @@ function openRouteInGoogleMaps(segment) {
 
     const url = `https://www.google.com/maps/dir/?api=1&origin=${originCoords}&destination=${destCoords}${waypoints}&travelmode=walking`;
 
-    console.log('🗺️ Opening segment:', segment.from || 'Start', '→', segment.to || 'End');
-    console.log('🗺️ Segment URL:', url);
+    if (window.DEBUG) console.log('🗺️ Opening segment:', segment.from || 'Start', '→', segment.to || 'End');
+    if (window.DEBUG) console.log('🗺️ Segment URL:', url);
     window.open(url, '_blank');
     showNotification('🗺️ Segment Google Maps\'te açıldı!', 'success');
 }
@@ -2464,11 +2450,11 @@ function exportFullRoute() {
 
     const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypointParam}&travelmode=walking`;
 
-    console.log('🗺️ Exporting full route:');
-    console.log('Origin:', origin, startLocation ? `(${startLocation.name})` : selectedPOIs[0] ? `(${selectedPOIs[0].name})` : '');
-    console.log('Destination:', destination, selectedPOIs.length > 0 ? `(${selectedPOIs[selectedPOIs.length - 1].name})` : '');
-    console.log('Waypoints:', waypoints.slice(1, -1));
-    console.log('URL:', url);
+    if (window.DEBUG) console.log('🗺️ Exporting full route:');
+    if (window.DEBUG) console.log('Origin:', origin, startLocation ? `(${startLocation.name})` : selectedPOIs[0] ? `(${selectedPOIs[0].name})` : '');
+    if (window.DEBUG) console.log('Destination:', destination, selectedPOIs.length > 0 ? `(${selectedPOIs[selectedPOIs.length - 1].name})` : '');
+    if (window.DEBUG) console.log('Waypoints:', waypoints.slice(1, -1));
+    if (window.DEBUG) console.log('URL:', url);
 
     window.open(url, '_blank');
     showNotification('🗺️ Google Maps\'te rota açıldı!', 'success');
@@ -2477,7 +2463,7 @@ function exportFullRoute() {
 
 // Show route information
 function showRouteInfo(routeInfo) {
-    console.log('📊 Showing route info:', routeInfo);
+    if (window.DEBUG) console.log('📊 Showing route info:', routeInfo);
 
     let routeInfoDiv = document.getElementById('routeInfo');
     if (!routeInfoDiv) {
@@ -2525,7 +2511,7 @@ const LocationPermission = {
         try {
             localStorage.setItem(this.STORAGE_KEY, preference);
         } catch (e) {
-            console.warn('Could not save location preference:', e);
+            if (window.DEBUG) console.warn('Could not save location preference:', e);
         }
     },
 
@@ -2533,7 +2519,7 @@ const LocationPermission = {
         try {
             return localStorage.getItem(this.STORAGE_KEY);
         } catch (e) {
-            console.warn('Could not read location preference:', e);
+            if (window.DEBUG) console.warn('Could not read location preference:', e);
             return null;
         }
     },
@@ -2542,7 +2528,7 @@ const LocationPermission = {
         try {
             localStorage.removeItem(this.STORAGE_KEY);
         } catch (e) {
-            console.warn('Could not clear location preference:', e);
+            if (window.DEBUG) console.warn('Could not clear location preference:', e);
         }
     }
 };
@@ -2639,7 +2625,7 @@ function getBrowserName() {
 
 // Handle location permission choice
 async function handleLocationPermission(choice) {
-    console.log('🎯 User chose:', choice);
+    if (window.DEBUG) console.log('🎯 User chose:', choice);
     const overlay = document.getElementById('locationPermissionOverlay');
     overlay.classList.remove('show');
 
@@ -2658,7 +2644,7 @@ async function handleLocationPermission(choice) {
     // Check browser permission state before requesting
     try {
         const permission = await navigator.permissions.query({ name: 'geolocation' });
-        console.log('🔍 Browser permission state:', permission.state);
+        if (window.DEBUG) console.log('🔍 Browser permission state:', permission.state);
 
         if (permission.state === 'denied') {
             // Browser has denied permission, show detailed instructions
@@ -2666,7 +2652,7 @@ async function handleLocationPermission(choice) {
             return;
         }
     } catch (e) {
-        console.warn('Permission API not supported:', e);
+        if (window.DEBUG) console.warn('Permission API not supported:', e);
     }
 
     // Proceed with actual geolocation request
@@ -2675,7 +2661,7 @@ async function handleLocationPermission(choice) {
 
 // Request actual location from browser
 function requestActualLocation() {
-    console.log('📱 Requesting actual location from browser...');
+    if (window.DEBUG) console.log('📱 Requesting actual location from browser...');
     const options = {
         enableHighAccuracy: false,
         timeout: 15000,
@@ -2684,21 +2670,21 @@ function requestActualLocation() {
 
     navigator.geolocation.getCurrentPosition(
         (position) => {
-            console.log('✅ Position received:', position);
+            if (window.DEBUG) console.log('✅ Position received:', position);
             const location = {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
                 accuracy: position.coords.accuracy
             };
             userLocation = location;
-            console.log('📍 User location set:', location);
+            if (window.DEBUG) console.log('📍 User location set:', location);
 
             if (window.locationPermissionResolve) {
                 window.locationPermissionResolve(location);
             }
         },
         (error) => {
-            console.error('❌ Geolocation error:', error);
+            if (window.DEBUG) console.error('❌ Geolocation error:', error);
             let errorMessage = 'Konum alınamadı';
             let helpText = '';
 
@@ -2734,14 +2720,14 @@ function requestActualLocation() {
 // Get user's current location with native browser dialog
 async function getCurrentLocation() {
     return new Promise(async (resolve, reject) => {
-        console.log('🔍 Checking geolocation support...');
+        if (window.DEBUG) console.log('🔍 Checking geolocation support...');
 
         // First check if we're on HTTPS or localhost
         const isSecureContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
-        console.log('🔒 Secure context:', isSecureContext);
+        if (window.DEBUG) console.log('🔒 Secure context:', isSecureContext);
 
         if (!navigator.geolocation) {
-            console.error('❌ Geolocation not supported');
+            if (window.DEBUG) console.error('❌ Geolocation not supported');
             const error = new Error('Bu tarayıcı konum hizmetlerini desteklemiyor');
             error.helpText = 'Lütfen güncel bir tarayıcı kullanın (Chrome, Firefox, Safari, Edge)';
             reject(error);
@@ -2749,7 +2735,7 @@ async function getCurrentLocation() {
         }
 
         if (!isSecureContext) {
-            console.error('❌ Not secure context');
+            if (window.DEBUG) console.error('❌ Not secure context');
             const error = new Error('Konum servisleri güvenli bağlantı gerektiriyor');
             error.helpText = 'Sayfayı HTTPS üzerinden açın veya localhost kullanın';
             reject(error);
@@ -2759,14 +2745,14 @@ async function getCurrentLocation() {
         // Check permission state for debugging
         try {
             const permission = await navigator.permissions.query({ name: 'geolocation' });
-            console.log('🔍 Permission state:', permission.state);
+            if (window.DEBUG) console.log('🔍 Permission state:', permission.state);
         } catch (e) {
-            console.warn('Permission API not supported');
+            if (window.DEBUG) console.warn('Permission API not supported');
         }
 
         // Always try getCurrentPosition - even if permission state is 'denied'
         // This allows the native dialog to show if user has changed browser settings
-        console.log('📱 Requesting geolocation permission...');
+        if (window.DEBUG) console.log('📱 Requesting geolocation permission...');
 
         const options = {
             enableHighAccuracy: false,
@@ -2776,18 +2762,18 @@ async function getCurrentLocation() {
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                console.log('✅ Position received:', position);
+                if (window.DEBUG) console.log('✅ Position received:', position);
                 const location = {
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
                     accuracy: position.coords.accuracy
                 };
                 userLocation = location;
-                console.log('📍 User location set:', location);
+                if (window.DEBUG) console.log('📍 User location set:', location);
                 resolve(location);
             },
             (error) => {
-                console.error('❌ Geolocation error:', error);
+                if (window.DEBUG) console.error('❌ Geolocation error:', error);
                 let errorMessage = 'Konum alınamadı';
                 let helpText = '';
 
@@ -2825,17 +2811,17 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
 
 // Set start location for route
 async function setStartLocation() {
-    console.log('📍 Requesting user location...');
+    if (window.DEBUG) console.log('📍 Requesting user location...');
 
     try {
-        console.log('🔍 Checking geolocation support...');
+        if (window.DEBUG) console.log('🔍 Checking geolocation support...');
         if (!navigator.geolocation) {
             throw new Error('Bu tarayıcı konum hizmetlerini desteklemiyor');
         }
 
-        console.log('📱 Getting current position...');
+        if (window.DEBUG) console.log('📱 Getting current position...');
         const location = await getCurrentLocation();
-        console.log('✅ Location received:', location);
+        if (window.DEBUG) console.log('✅ Location received:', location);
 
         startLocation = {
             name: 'Mevcut Konumum',
@@ -2846,7 +2832,7 @@ async function setStartLocation() {
 
         // Add start location marker to map
         if (map) {
-            console.log('📍 Adding start location marker to map');
+            if (window.DEBUG) console.log('📍 Adding start location marker to map');
 
             // Remove existing start location markers
             map.eachLayer(function (layer) {
@@ -2898,7 +2884,7 @@ async function setStartLocation() {
 
             // Center map on user location
             map.setView([location.latitude, location.longitude], 15);
-            console.log('🗺️ Map centered on user location');
+            if (window.DEBUG) console.log('🗺️ Map centered on user location');
         }
 
         updateRouteDisplay();
@@ -2911,7 +2897,7 @@ async function setStartLocation() {
         alert(`✅ Başlangıç noktası belirlendi!\nKonum: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}\nDoğruluk: ±${Math.round(location.accuracy)}m`);
 
     } catch (error) {
-        console.error('❌ Location error:', error);
+        if (window.DEBUG) console.error('❌ Location error:', error);
 
         // Create a better error dialog
         const errorDialog = document.createElement('div');
@@ -3061,7 +3047,7 @@ function optimizeRouteAdvanced() {
         return;
     }
 
-    console.log('🔄 Rota optimize ediliyor...');
+    if (window.DEBUG) console.log('🔄 Rota optimize ediliyor...');
 
     // Include start location if available
     let allPoints = [...selectedPOIs];
@@ -3095,7 +3081,7 @@ function optimizeRouteAdvanced() {
                     bestRoute = newRoute;
                     bestDistance = newDistance;
                     improved = true;
-                    console.log(`📈 İyileştirme bulundu! Yeni mesafe: ${bestDistance.toFixed(2)} km`);
+                    if (window.DEBUG) console.log(`📈 İyileştirme bulundu! Yeni mesafe: ${bestDistance.toFixed(2)} km`);
                 }
             }
         }
@@ -3156,7 +3142,7 @@ function getRouteStatistics() {
 
 // Initialize everything when DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
-    console.log('🚀 DOM loaded, initializing...');
+    if (window.DEBUG) console.log('🚀 DOM loaded, initializing...');
 
     // Feature detection for touch support
     const supportsTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -3172,17 +3158,17 @@ document.addEventListener('DOMContentLoaded', function () {
         // Wait for loading manager to be available
         const initializeLoadingManager = () => {
             if (window.loadingManager) {
-                console.log('✅ Loading manager initialized');
+                if (window.DEBUG) console.log('✅ Loading manager initialized');
                 // Setup lazy loading for any existing images
                 if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
                     try {
                         window.lazyLoader.setupImageLazyLoading();
                     } catch (error) {
-                        console.warn('Lazy loading setup error:', error);
+                        if (window.DEBUG) console.warn('Lazy loading setup error:', error);
                     }
                 }
             } else {
-                console.log('⏳ Loading manager not yet available, will use fallbacks');
+                if (window.DEBUG) console.log('⏳ Loading manager not yet available, will use fallbacks');
             }
         };
 
@@ -3203,81 +3189,43 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         initializeSliders();
         setupEventListeners();
-        console.log('✅ All components initialized');
+        if (window.DEBUG) console.log('✅ All components initialized');
     } catch (error) {
-        console.error('❌ Initialization error:', error);
+        if (window.DEBUG) console.error('❌ Initialization error:', error);
     }
 
-    //             // Debug function - remove after fixing
-    //             setTimeout(function () {
-    //                 try {
-    //                     debugElements();
-    //                 } catch (error) {
-    //                     console.error('❌ Debug error:', error);
-    //                 }
-    //             }, 1000);
 });
 
-//         // Debug function to check elements
-//         function debugElements() {
-//             // Check loading manager availability
-//             console.log('Loading Manager Status:', {
-//                 available: !!window.loadingManager,
-//                 showPOISkeletons: !!(window.loadingManager && window.loadingManager.showPOISkeletons),
-//                 lazyLoader: !!window.lazyLoader
-//             });
-//             console.log('� DEBUGE: Checking elements...');
-// 
-//             // Check sliders
-//             Object.keys(ratingCategories).forEach(category => {
-//                 const slider = document.getElementById(category);
-//                 const valueDisplay = document.getElementById(category + '-value');
-//                 console.log(`Slider ${category}:`, {
-//                     slider: !!slider,
-//                     valueDisplay: !!valueDisplay,
-//                     sliderValue: slider ? slider.value : 'N/A',
-//                     displayValue: valueDisplay ? valueDisplay.textContent : 'N/A'
-//                 });
-//             });
-// 
-//             // Check recommend button
-//             const recommendBtn = document.getElementById('recommendBtn');
-//             console.log('Recommend button:', {
-//                 found: !!recommendBtn,
-//                 hasEventListener: recommendBtn ? recommendBtn.onclick !== null : false,
-//                 text: recommendBtn ? recommendBtn.textContent : 'N/A'
-//             });
-//         }
 
 function initializeSliders() {
-    console.log('🎚️ Initializing sliders...');
+    if (window.DEBUG) console.log('🎚️ Initializing sliders...');
 
     Object.keys(ratingCategories).forEach(category => {
         const slider = document.getElementById(category);
         const valueDisplay = document.getElementById(category + '-value');
 
         if (!slider) {
-            console.error(`❌ Slider not found: ${category}`);
+            if (window.DEBUG) console.error(`❌ Slider not found: ${category}`);
             return;
         }
 
         if (!valueDisplay) {
-            console.error(`❌ Value display not found: ${category}-value`);
+            if (window.DEBUG) console.error(`❌ Value display not found: ${category}-value`);
             return;
         }
 
         const sliderItem = slider.closest('.slider-item');
         if (!sliderItem) {
-            console.error(`❌ Slider item not found for: ${category}`);
+            if (window.DEBUG) console.error(`❌ Slider item not found for: ${category}`);
             return;
         }
 
-        console.log(`✅ Setting up slider: ${category}`);
+        if (window.DEBUG) console.log(`✅ Setting up slider: ${category}`);
 
         // Add both input and change events for better compatibility
         const handleSliderChange = function () {
             const value = parseInt(this.value);
-            console.log(`🎚️ Slider ${category} changed to: ${value}`);
+            if (window.DEBUG) console.log(`🎚️ Slider ${category} changed to: ${value}`);
             valueDisplay.textContent = value;
             updateSliderBackground(this);
             updateSliderItemState(sliderItem, valueDisplay, value);
@@ -3288,13 +3236,13 @@ function initializeSliders() {
 
         // Initialize background and state
         const initialValue = parseInt(slider.value);
-        console.log(`ℹ️ Initial value for ${category}: ${initialValue}`);
+        if (window.DEBUG) console.log(`ℹ️ Initial value for ${category}: ${initialValue}`);
         valueDisplay.textContent = initialValue;
         updateSliderBackground(slider);
         updateSliderItemState(sliderItem, valueDisplay, initialValue);
     });
 
-    console.log('✅ All sliders initialized');
+    if (window.DEBUG) console.log('✅ All sliders initialized');
 }
 
 function updateSliderBackground(slider) {
@@ -3373,38 +3321,38 @@ function updateSliderItemState(sliderItem, valueDisplay, value) {
 }
 
 function setupEventListeners() {
-    console.log('🔗 Setting up event listeners...');
+    if (window.DEBUG) console.log('🔗 Setting up event listeners...');
 
     const recommendBtn = document.getElementById('recommendBtn');
     if (recommendBtn) {
-        console.log('✅ Recommend button found, adding event listener');
+        if (window.DEBUG) console.log('✅ Recommend button found, adding event listener');
         recommendBtn.addEventListener('click', function (e) {
-            console.log('🔥 Recommend button clicked!');
+            if (window.DEBUG) console.log('🔥 Recommend button clicked!');
             e.preventDefault();
             getRecommendations();
         });
     } else {
-        console.error('❌ Recommend button not found!');
+        if (window.DEBUG) console.error('❌ Recommend button not found!');
         // Try to find it with a different approach
         const allButtons = document.querySelectorAll('button');
-        console.log('🔍 All buttons found:', allButtons.length);
+        if (window.DEBUG) console.log('🔍 All buttons found:', allButtons.length);
         allButtons.forEach((btn, index) => {
-            console.log(`Button ${index}:`, btn.id, btn.className, btn.textContent.substring(0, 20));
+            if (window.DEBUG) console.log(`Button ${index}:`, btn.id, btn.className, btn.textContent.substring(0, 20));
         });
     }
 
-    console.log('✅ Event listeners setup complete');
+    if (window.DEBUG) console.log('✅ Event listeners setup complete');
 }
 
 async function getRecommendations() {
-    console.log('🚀 getRecommendations function called');
+    if (window.DEBUG) console.log('🚀 getRecommendations function called');
 
     const button = document.getElementById('recommendBtn');
     const resultsSection = document.getElementById('resultsSection');
     const loadingIndicator = document.getElementById('loadingIndicator');
     const resultsContainer = document.getElementById('recommendationResults');
 
-    console.log('Elements found:', {
+    if (window.DEBUG) console.log('Elements found:', {
         button: !!button,
         resultsSection: !!resultsSection,
         loadingIndicator: !!loadingIndicator,
@@ -3422,7 +3370,7 @@ async function getRecommendations() {
         try {
             window.loadingManager.showPOISkeletons('recommendationResults', 6);
         } catch (error) {
-            console.warn('Loading manager error, using fallback:', error);
+            if (window.DEBUG) console.warn('Loading manager error, using fallback:', error);
             showFallbackLoading();
         }
     } else {
@@ -3466,7 +3414,7 @@ async function getRecommendations() {
                 progress: 0
             });
         } catch (error) {
-            console.warn('Loading manager error, using fallback:', error);
+            if (window.DEBUG) console.warn('Loading manager error, using fallback:', error);
             loadingIndicator.style.display = 'block';
         }
     } else {
@@ -3480,7 +3428,7 @@ async function getRecommendations() {
             try {
                 window.loadingManager.updateProgress('loadingIndicator', 20);
             } catch (error) {
-                console.warn('Progress update error:', error);
+                if (window.DEBUG) console.warn('Progress update error:', error);
             }
         }
 
@@ -3497,14 +3445,14 @@ async function getRecommendations() {
             }
         });
 
-        console.log('User preferences:', preferences);
+        if (window.DEBUG) console.log('User preferences:', preferences);
 
         // Update progress
         if (window.loadingManager && typeof window.loadingManager.updateProgress === 'function') {
             try {
                 window.loadingManager.updateProgress('loadingIndicator', 40);
             } catch (error) {
-                console.warn('Progress update error:', error);
+                if (window.DEBUG) console.warn('Progress update error:', error);
             }
         }
 
@@ -3516,7 +3464,7 @@ async function getRecommendations() {
                     showProgress: false // We're handling progress manually
                 });
             } catch (error) {
-                console.warn('Lazy loader error, using fallback fetch:', error);
+                if (window.DEBUG) console.warn('Lazy loader error, using fallback fetch:', error);
                 // Fallback to regular fetch
                 const response = await fetch(`${apiBase}/pois`);
                 if (!response.ok) {
@@ -3537,7 +3485,7 @@ async function getRecommendations() {
             try {
                 window.loadingManager.updateProgress('loadingIndicator', 70);
             } catch (error) {
-                console.warn('Progress update error:', error);
+                if (window.DEBUG) console.warn('Progress update error:', error);
             }
         }
 
@@ -3550,7 +3498,7 @@ async function getRecommendations() {
                     () => calculateRecommendations(poisData, preferences)
                 );
             } catch (error) {
-                console.warn('Performance monitoring error:', error);
+                if (window.DEBUG) console.warn('Performance monitoring error:', error);
                 recommendationData = calculateRecommendations(poisData, preferences);
             }
         } else {
@@ -3558,17 +3506,17 @@ async function getRecommendations() {
             recommendationData = calculateRecommendations(poisData, preferences);
         }
 
-        console.log('Calculated recommendation data:', recommendationData);
+        if (window.DEBUG) console.log('Calculated recommendation data:', recommendationData);
         if (window.loadingManager && typeof window.loadingManager.updateProgress === 'function') {
             try {
                 window.loadingManager.updateProgress('loadingIndicator', 90);
             } catch (error) {
-                console.warn('Progress update error:', error);
+                if (window.DEBUG) console.warn('Progress update error:', error);
             }
         }
 
         if (recommendationData.highScore.length === 0 && recommendationData.lowScore.length === 0) {
-            console.warn('No recommendations found');
+            if (window.DEBUG) console.warn('No recommendations found');
         }
 
         // Display results with animation - start with high score POIs
@@ -3578,20 +3526,20 @@ async function getRecommendations() {
             try {
                 window.loadingManager.updateProgress('loadingIndicator', 100);
             } catch (error) {
-                console.warn('Progress update error:', error);
+                if (window.DEBUG) console.warn('Progress update error:', error);
             }
         }
 
         // Initialize map with all recommendations (high and low score)
         if (recommendationData.highScore.length > 0 || recommendationData.lowScore.length > 0) {
-            console.log('Initializing map with all recommendations...');
+            if (window.DEBUG) console.log('Initializing map with all recommendations...');
             await initializeMap(recommendationData);
         } else {
-            console.log('Skipping map initialization - no recommendations');
+            if (window.DEBUG) console.log('Skipping map initialization - no recommendations');
         }
 
     } catch (error) {
-        console.error('Recommendation error:', error);
+        if (window.DEBUG) console.error('Recommendation error:', error);
         resultsContainer.innerHTML = `
                     <div class="no-results animate-fade-in">
                         <i class="fas fa-exclamation-triangle"></i>
@@ -3609,7 +3557,7 @@ async function getRecommendations() {
         button.innerHTML = '<i class="fas fa-magic"></i> Önerilerimi Getir';
 
         // Reset button state only - loading indicator will be handled by displayRecommendations
-        console.log('✅ Finally block executed - button reset');
+        if (window.DEBUG) console.log('✅ Finally block executed - button reset');
     }
 }
 
@@ -3628,7 +3576,7 @@ function calculateRecommendations(poisData, preferences) {
         }
     });
 
-    console.log('All POIs:', allPois.length);
+    if (window.DEBUG) console.log('All POIs:', allPois.length);
 
     // Calculate scores for each POI
     const scoredPois = allPois.map(poi => {
@@ -3679,8 +3627,8 @@ function calculateRecommendations(poisData, preferences) {
     const highScorePois = allSortedPois.filter(poi => poi.recommendationScore >= 45);
     const lowScorePois = allSortedPois.filter(poi => poi.recommendationScore < 45);
 
-    console.log('High score POIs (≥45):', highScorePois.length);
-    console.log('Low score POIs (<45):', lowScorePois.length);
+    if (window.DEBUG) console.log('High score POIs (≥45):', highScorePois.length);
+    if (window.DEBUG) console.log('Low score POIs (<45):', lowScorePois.length);
 
     return {
         highScore: highScorePois.slice(0, 15), // Top 15 high-scoring
@@ -3782,7 +3730,7 @@ async function displayRecommendations(recommendationData) {
         try {
             window.lazyLoader.setupImageLazyLoading();
         } catch (error) {
-            console.warn('Lazy loading setup error:', error);
+            if (window.DEBUG) console.warn('Lazy loading setup error:', error);
         }
     }
 
@@ -3810,11 +3758,11 @@ async function displayRecommendations(recommendationData) {
                     try {
                         window.loadingManager.hideLoading('loadingIndicator');
                     } catch (error) {
-                        console.warn('Hide loading error:', error);
+                        if (window.DEBUG) console.warn('Hide loading error:', error);
                     }
                 }
 
-                console.log('✅ Loading indicator hidden with smooth transition');
+                if (window.DEBUG) console.log('✅ Loading indicator hidden with smooth transition');
             }, 500); // Wait for fade out to complete
         }
     }, 2000); // Show loading for at least 2 seconds
@@ -3909,7 +3857,7 @@ async function displayRecommendations(recommendationData) {
                     }
                 }
             } catch (err) {
-                console.warn('Could not load media for POI:', poi.name, err);
+                if (window.DEBUG) console.warn('Could not load media for POI:', poi.name, err);
             }
         }, 0); // Execute immediately but asynchronously
     });
@@ -3988,13 +3936,13 @@ async function initializeMap(recommendationData) {
         try {
             media = await loadPOIMedia(poi.id || poi._id);
         } catch (error) {
-            console.warn('Could not load media for POI:', poi.name, error);
+            if (window.DEBUG) console.warn('Could not load media for POI:', poi.name, error);
         }
 
         try {
             elevation = await getElevation(poi.latitude, poi.longitude);
         } catch (error) {
-            console.warn('Could not get elevation for POI:', poi.name, error);
+            if (window.DEBUG) console.warn('Could not get elevation for POI:', poi.name, error);
         }
 
         // Düşük puanlı POI'ler için farklı popup renkleri
@@ -4129,7 +4077,7 @@ async function initializeMap(recommendationData) {
         if (map) {
             map.invalidateSize();
         }
-        console.log('🗺️ Map fully loaded and displayed');
+        if (window.DEBUG) console.log('🗺️ Map fully loaded and displayed');
     }, 1000);
 }
 
@@ -4275,7 +4223,7 @@ function toggleLowScorePOIs() {
             }
         }, 1200);
 
-        console.log('🗺️ Low score POIs shown on map');
+        if (window.DEBUG) console.log('🗺️ Low score POIs shown on map');
 
     } else {
         // Hide low score POIs
@@ -4306,7 +4254,7 @@ function toggleLowScorePOIs() {
         toggleBtn.classList.remove('btn--warning');
         toggleBtn.classList.add('btn--secondary');
 
-        console.log('🗺️ Low score POIs hidden on map');
+        if (window.DEBUG) console.log('🗺️ Low score POIs hidden on map');
     }
 }
 // Enhanced Recommend Button Functionality
@@ -4368,7 +4316,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(resetButton, 2000);
                 
             } catch (error) {
-                console.error('Error getting recommendations:', error);
+                if (window.DEBUG) console.error('Error getting recommendations:', error);
                 
                 // Error state
                 recommendBtn.classList.remove('loading');
