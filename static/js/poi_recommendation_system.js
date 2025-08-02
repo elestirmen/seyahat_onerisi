@@ -23,23 +23,112 @@ const ratingCategories = {
     'gece_hayati': { name: 'Gece Hayatı', icon: 'fas fa-moon' }
 };
 
-// Category display names
-const categoryNames = {
+// Dynamic category data (will be loaded from API)
+let categoryData = {};
+
+// Fallback category display names
+const fallbackCategoryNames = {
     'doga_macera': 'Doğa & Macera',
     'gastronomik': 'Gastronomi',
     'konaklama': 'Konaklama',
     'kulturel': 'Kültürel',
-    'sanatsal': 'Sanatsal'
+    'sanatsal': 'Sanatsal',
+    'dini': 'Dini Yapılar',
+    'tarihi': 'Tarihi Yapılar',
+    'mimari': 'Mimari Yapılar',
+    'mezarlik': 'Mezarlık Alanları',
+    'saray_kale': 'Saray ve Kaleler',
+    'diger': 'Diğer'
 };
 
-// Category colors and icons for markers
-const categoryStyles = {
+// Fallback category colors and icons for markers
+const fallbackCategoryStyles = {
     'doga_macera': { color: '#2ecc71', icon: '🌿' },
     'gastronomik': { color: '#e74c3c', icon: '🍽️' },
     'konaklama': { color: '#9b59b6', icon: '🏨' },
     'kulturel': { color: '#3498db', icon: '🏛️' },
-    'sanatsal': { color: '#f39c12', icon: '🎨' }
+    'sanatsal': { color: '#f39c12', icon: '🎨' },
+    'dini': { color: '#8B4513', icon: '🕌' },
+    'tarihi': { color: '#CD853F', icon: '🏛️' },
+    'mimari': { color: '#4682B4', icon: '🏗️' },
+    'mezarlik': { color: '#696969', icon: '⚰️' },
+    'saray_kale': { color: '#B8860B', icon: '🏰' },
+    'diger': { color: '#708090', icon: '📍' }
 };
+
+// Load categories from API
+async function loadCategories() {
+    try {
+        console.log('📋 Kategoriler API\'den yükleniyor...');
+        const response = await fetch(`${apiBase}/categories`);
+        
+        if (response.ok) {
+            const categories = await response.json();
+            console.log('✅ Kategoriler yüklendi:', categories);
+            
+            // Global kategori verilerini güncelle
+            categoryData = {};
+            categories.forEach(category => {
+                // İkon için emoji çıkar (eğer varsa)
+                let iconEmoji = category.display_name.match(/^[\u{1F300}-\u{1F9FF}]/u);
+                if (!iconEmoji) {
+                    // Fallback emoji'leri kullan
+                    iconEmoji = fallbackCategoryStyles[category.name]?.icon || '📍';
+                } else {
+                    iconEmoji = iconEmoji[0];
+                }
+                
+                categoryData[category.name] = {
+                    display_name: category.display_name,
+                    color: category.color,
+                    icon: iconEmoji,
+                    description: category.description
+                };
+            });
+            
+            console.log('✅ Kategori verileri güncellendi:', categoryData);
+            return true;
+        } else {
+            console.warn('⚠️ Kategoriler yüklenemedi, fallback kullanılacak');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Kategori yükleme hatası:', error);
+        return false;
+    }
+}
+
+// Get category display name (dynamic)
+function getCategoryDisplayName(category) {
+    if (categoryData[category]) {
+        return categoryData[category].display_name;
+    }
+    return fallbackCategoryNames[category] || category;
+}
+
+// Get category color (dynamic)
+function getCategoryColor(category) {
+    if (categoryData[category]) {
+        return categoryData[category].color;
+    }
+    return fallbackCategoryStyles[category]?.color || '#666666';
+}
+
+// Get category icon (dynamic)
+function getCategoryIcon(category) {
+    if (categoryData[category]) {
+        return categoryData[category].icon;
+    }
+    return fallbackCategoryStyles[category]?.icon || '📍';
+}
+
+// Get category style (dynamic)
+function getCategoryStyle(category) {
+    return {
+        color: getCategoryColor(category),
+        icon: getCategoryIcon(category)
+    };
+}
 
 // Route Details Panel Class
 class RouteDetailsPanel {
@@ -157,7 +246,7 @@ class RouteDetailsPanel {
         // Add all POI stops from routeData waypoints or selectedPOIs
         const waypoints = routeData.waypoints || selectedPOIs;
         waypoints.forEach((poi, index) => {
-            const categoryStyle = categoryStyles[poi.category] || { color: '#667eea', icon: '📍' };
+            const categoryStyle = getCategoryStyle(poi.category);
             const lat = poi.lat || poi.latitude;
             const lng = poi.lng || poi.longitude;
 
@@ -168,7 +257,7 @@ class RouteDetailsPanel {
                             </div>
                             <div class="stop-info">
                                 <div class="stop-name">${poi.name}</div>
-                                <div class="stop-category">${categoryNames[poi.category] || poi.category}</div>
+                                <div class="stop-category">${getCategoryDisplayName(poi.category)}</div>
                                 <div class="stop-coordinates">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
                             </div>
                             <div class="stop-number">${stopIndex}</div>
@@ -801,7 +890,7 @@ class RouteDetailsPanel {
 
 // Create custom marker icons
 function createCustomIcon(category, score, isLowScore = false) {
-    const style = categoryStyles[category] || { color: '#667eea', icon: '📍' };
+    const style = getCategoryStyle(category);
 
     // Düşük puanlı POI'ler için daha silik ama renkli stil
     const markerColor = isLowScore ? style.color : style.color;
@@ -1946,7 +2035,7 @@ function updateRouteDisplay() {
     }
 
     selectedPOIs.forEach((poi, index) => {
-        const categoryStyle = categoryStyles[poi.category] || { color: '#667eea', icon: '📍' };
+        const categoryStyle = getCategoryStyle(poi.category);
         const stepNumber = startLocation ? index + 2 : index + 1;
         routeHTML += `
                     <div style="display: flex; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 8px; margin-bottom: 6px;">
@@ -1955,7 +2044,7 @@ function updateRouteDisplay() {
                         </div>
                         <div style="flex: 1; font-size: 13px;">
                             <div style="font-weight: 600;">${poi.name}</div>
-                            <div style="color: #666; font-size: 11px;">${categoryNames[poi.category] || poi.category}</div>
+                            <div style="color: #666; font-size: 11px;">${getCategoryDisplayName(poi.category)}</div>
                         </div>
                         <button onclick="removeFromRoute('${poi.id || poi._id}')" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
                     </div>
@@ -3155,8 +3244,11 @@ function getRouteStatistics() {
 }
 
 // Initialize everything when DOM is loaded
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
     console.log('🚀 DOM loaded, initializing...');
+
+    // Load categories first
+    await loadCategories();
 
     // Feature detection for touch support
     const supportsTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -3979,7 +4071,7 @@ async function initializeMap(recommendationData) {
     for (const [index, poi] of allPOIs.entries()) {
         const isLowScore = poi.recommendationScore < 45;
         const customIcon = createCustomIcon(poi.category, poi.recommendationScore, isLowScore);
-        const categoryStyle = categoryStyles[poi.category] || { color: '#667eea', icon: '📍' };
+        const categoryStyle = getCategoryStyle(poi.category);
 
         // Load media and elevation data (with error handling)
         let media = { images: [], videos: [], audio: [], models: [] };
@@ -4026,7 +4118,7 @@ async function initializeMap(recommendationData) {
                                     ${isLowScore ? ' <small style="opacity: 0.7;">(Düşük Uygunluk)</small>' : ''}
                                 </h6>
                                 <small style="opacity: 0.9; font-size: 12px;">
-                                    ${categoryNames[poi.category] || poi.category}
+                                    ${getCategoryDisplayName(poi.category)}
                                 </small>
                             </div>
                             
@@ -4179,7 +4271,7 @@ function createPOICards(pois) {
                     <i class="fas fa-image"></i>
                 </div>
                 <div class="poi-card__image-overlay"></div>
-                <span class="poi-card__category">${categoryNames[poi.category] || poi.category}</span>
+                <span class="poi-card__category">${getCategoryDisplayName(poi.category)}</span>
             </div>
 
             <div class="poi-card__content">
