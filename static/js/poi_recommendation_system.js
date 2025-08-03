@@ -9,6 +9,11 @@ let startLocation = null;
 const apiBase = '/api';
 window.apiBase = apiBase; // Make it globally accessible
 
+// Route tabs management
+let currentTab = 'dynamic-routes';
+let predefinedRoutes = [];
+let filteredRoutes = [];
+
 // Rating categories with their display names and icons
 const ratingCategories = {
     'doga': { name: 'Doğa', icon: 'fas fa-tree' },
@@ -3243,12 +3248,476 @@ function getRouteStatistics() {
     };
 }
 
+// Route Tab Management Functions
+function initializeRouteTabs() {
+    console.log('🔄 Initializing route tabs...');
+    
+    const dynamicTab = document.getElementById('dynamicRoutesTab');
+    const predefinedTab = document.getElementById('predefinedRoutesTab');
+    const dynamicContent = document.getElementById('dynamicRoutesContent');
+    const predefinedContent = document.getElementById('predefinedRoutesContent');
+    
+    if (!dynamicTab || !predefinedTab || !dynamicContent || !predefinedContent) {
+        console.error('❌ Route tab elements not found');
+        return;
+    }
+    
+    // Add click event listeners
+    dynamicTab.addEventListener('click', () => switchTab('dynamic-routes'));
+    predefinedTab.addEventListener('click', () => switchTab('predefined-routes'));
+    
+    // Initialize predefined routes functionality
+    initializePredefinedRoutes();
+    
+    console.log('✅ Route tabs initialized');
+}
+
+function switchTab(tabName) {
+    console.log(`🔄 Switching to tab: ${tabName}`);
+    
+    currentTab = tabName;
+    
+    // Update tab buttons
+    const dynamicTab = document.getElementById('dynamicRoutesTab');
+    const predefinedTab = document.getElementById('predefinedRoutesTab');
+    const dynamicContent = document.getElementById('dynamicRoutesContent');
+    const predefinedContent = document.getElementById('predefinedRoutesContent');
+    
+    // Remove active classes
+    dynamicTab.classList.remove('active');
+    predefinedTab.classList.remove('active');
+    dynamicContent.classList.remove('active');
+    predefinedContent.classList.remove('active');
+    
+    // Add active class to selected tab
+    if (tabName === 'dynamic-routes') {
+        dynamicTab.classList.add('active');
+        dynamicContent.classList.add('active');
+    } else if (tabName === 'predefined-routes') {
+        predefinedTab.classList.add('active');
+        predefinedContent.classList.add('active');
+        
+        // Load predefined routes if not already loaded
+        if (predefinedRoutes.length === 0) {
+            loadPredefinedRoutes();
+        }
+    }
+}
+
+function initializePredefinedRoutes() {
+    console.log('🔄 Initializing predefined routes functionality...');
+    
+    // Initialize filter event listeners
+    const routeTypeFilter = document.getElementById('routeTypeFilter');
+    const difficultyFilter = document.getElementById('difficultyFilter');
+    const durationFilter = document.getElementById('durationFilter');
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    
+    if (routeTypeFilter) {
+        routeTypeFilter.addEventListener('change', applyRouteFilters);
+    }
+    if (difficultyFilter) {
+        difficultyFilter.addEventListener('change', applyRouteFilters);
+    }
+    if (durationFilter) {
+        durationFilter.addEventListener('change', applyRouteFilters);
+    }
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', clearRouteFilters);
+    }
+    
+    console.log('✅ Predefined routes functionality initialized');
+}
+
+async function loadPredefinedRoutes() {
+    console.log('📋 Loading predefined routes...');
+    
+    const loadingIndicator = document.getElementById('routesLoadingIndicator');
+    const routesList = document.getElementById('predefinedRoutesList');
+    const noRoutesMessage = document.getElementById('noRoutesMessage');
+    
+    if (loadingIndicator) loadingIndicator.style.display = 'block';
+    if (routesList) routesList.style.display = 'none';
+    if (noRoutesMessage) noRoutesMessage.style.display = 'none';
+    
+    try {
+        const response = await fetch(`${apiBase}/routes`);
+        
+        if (response.ok) {
+            const routes = await response.json();
+            console.log('✅ Predefined routes loaded:', routes);
+            
+            predefinedRoutes = routes;
+            filteredRoutes = [...routes];
+            
+            displayPredefinedRoutes(filteredRoutes);
+        } else {
+            console.error('❌ Failed to load predefined routes:', response.status);
+            showNoRoutesMessage('Rotalar yüklenirken hata oluştu.');
+        }
+    } catch (error) {
+        console.error('❌ Error loading predefined routes:', error);
+        showNoRoutesMessage('Rotalar yüklenirken hata oluştu.');
+    } finally {
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+    }
+}
+
+function displayPredefinedRoutes(routes) {
+    const routesList = document.getElementById('predefinedRoutesList');
+    const noRoutesMessage = document.getElementById('noRoutesMessage');
+    
+    if (!routesList) return;
+    
+    if (routes.length === 0) {
+        routesList.style.display = 'none';
+        if (noRoutesMessage) noRoutesMessage.style.display = 'block';
+        return;
+    }
+    
+    routesList.style.display = 'grid';
+    if (noRoutesMessage) noRoutesMessage.style.display = 'none';
+    
+    routesList.innerHTML = routes.map(route => createRouteCard(route)).join('');
+    
+    // Add click event listeners to route cards
+    routesList.querySelectorAll('.route-card').forEach((card, index) => {
+        card.addEventListener('click', () => showRouteDetails(routes[index]));
+    });
+}
+
+function createRouteCard(route) {
+    const difficultyStars = createDifficultyStars(route.difficulty_level || 1);
+    const duration = Math.round((route.estimated_duration || 0) / 60);
+    const distance = (route.total_distance || 0).toFixed(1);
+    
+    return `
+        <div class="route-card" data-route-id="${route.id}">
+            <div class="route-card-header">
+                <h3 class="route-card-title">${route.name || 'İsimsiz Rota'}</h3>
+                <p class="route-card-description">${route.description || 'Açıklama bulunmuyor.'}</p>
+            </div>
+            <div class="route-card-meta">
+                <div class="route-meta-item">
+                    <i class="fas fa-route"></i>
+                    <span>${getRouteTypeDisplayName(route.route_type)}</span>
+                </div>
+                <div class="route-meta-item">
+                    <i class="fas fa-clock"></i>
+                    <span>${duration} saat</span>
+                </div>
+                <div class="route-meta-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>${distance} km</span>
+                </div>
+                <div class="route-meta-item route-difficulty">
+                    <i class="fas fa-mountain"></i>
+                    <div class="difficulty-stars">${difficultyStars}</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function createDifficultyStars(level) {
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+        const filled = i <= level ? 'filled' : '';
+        stars += `<div class="difficulty-star ${filled}"></div>`;
+    }
+    return stars;
+}
+
+function getRouteTypeDisplayName(routeType) {
+    const types = {
+        'walking': 'Yürüyüş',
+        'hiking': 'Doğa Yürüyüşü',
+        'cycling': 'Bisiklet',
+        'driving': 'Araç'
+    };
+    return types[routeType] || routeType || 'Bilinmiyor';
+}
+
+function applyRouteFilters() {
+    console.log('🔍 Applying route filters...');
+    
+    const routeTypeFilter = document.getElementById('routeTypeFilter');
+    const difficultyFilter = document.getElementById('difficultyFilter');
+    const durationFilter = document.getElementById('durationFilter');
+    
+    const filters = {
+        routeType: routeTypeFilter ? routeTypeFilter.value : '',
+        difficulty: difficultyFilter ? difficultyFilter.value : '',
+        duration: durationFilter ? durationFilter.value : ''
+    };
+    
+    filteredRoutes = predefinedRoutes.filter(route => {
+        // Route type filter
+        if (filters.routeType && route.route_type !== filters.routeType) {
+            return false;
+        }
+        
+        // Difficulty filter
+        if (filters.difficulty && route.difficulty_level !== parseInt(filters.difficulty)) {
+            return false;
+        }
+        
+        // Duration filter
+        if (filters.duration) {
+            const duration = route.estimated_duration || 0;
+            const [min, max] = filters.duration.split('-').map(Number);
+            if (duration < min || (max !== 999 && duration > max)) {
+                return false;
+            }
+        }
+        
+        return true;
+    });
+    
+    console.log(`✅ Filtered routes: ${filteredRoutes.length}/${predefinedRoutes.length}`);
+    displayPredefinedRoutes(filteredRoutes);
+}
+
+function clearRouteFilters() {
+    console.log('🧹 Clearing route filters...');
+    
+    const routeTypeFilter = document.getElementById('routeTypeFilter');
+    const difficultyFilter = document.getElementById('difficultyFilter');
+    const durationFilter = document.getElementById('durationFilter');
+    
+    if (routeTypeFilter) routeTypeFilter.value = '';
+    if (difficultyFilter) difficultyFilter.value = '';
+    if (durationFilter) durationFilter.value = '';
+    
+    filteredRoutes = [...predefinedRoutes];
+    displayPredefinedRoutes(filteredRoutes);
+}
+
+function showNoRoutesMessage(message = 'Seçilen kriterlere uygun rota bulunamadı.') {
+    const routesList = document.getElementById('predefinedRoutesList');
+    const noRoutesMessage = document.getElementById('noRoutesMessage');
+    
+    if (routesList) routesList.style.display = 'none';
+    if (noRoutesMessage) {
+        noRoutesMessage.style.display = 'block';
+        const messageP = noRoutesMessage.querySelector('p');
+        if (messageP) messageP.textContent = message;
+    }
+}
+
+function showRouteDetails(route) {
+    console.log('📋 Showing route details for:', route);
+    
+    const modal = document.getElementById('routeDetailModal');
+    const modalTitle = document.getElementById('routeDetailModalTitle');
+    const modalBody = document.getElementById('routeDetailModalBody');
+    const selectBtn = document.getElementById('routeSelectBtn');
+    
+    if (!modal || !modalTitle || !modalBody || !selectBtn) {
+        console.error('❌ Route detail modal elements not found');
+        return;
+    }
+    
+    // Set modal title
+    modalTitle.textContent = route.name || 'Rota Detayları';
+    
+    // Show loading state
+    modalBody.innerHTML = `
+        <div class="loading">
+            <div class="loading__spinner"></div>
+            <p class="loading__text">Rota detayları yükleniyor...</p>
+        </div>
+    `;
+    
+    // Show modal
+    modal.classList.add('show');
+    
+    // Load route details
+    loadRouteDetails(route, modalBody);
+    
+    // Setup select button
+    selectBtn.onclick = () => selectPredefinedRoute(route);
+    
+    // Setup close functionality
+    const closeBtn = document.getElementById('routeDetailModalClose');
+    if (closeBtn) {
+        closeBtn.onclick = () => closeRouteDetailModal();
+    }
+    
+    // Close on backdrop click
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            closeRouteDetailModal();
+        }
+    };
+    
+    // Close on Escape key
+    document.addEventListener('keydown', handleRouteModalKeydown);
+}
+
+function handleRouteModalKeydown(e) {
+    if (e.key === 'Escape') {
+        closeRouteDetailModal();
+    }
+}
+
+function closeRouteDetailModal() {
+    const modal = document.getElementById('routeDetailModal');
+    if (modal) {
+        modal.classList.remove('show');
+        document.removeEventListener('keydown', handleRouteModalKeydown);
+    }
+}
+
+async function loadRouteDetails(route, container) {
+    try {
+        // Fetch detailed route information including POIs
+        const response = await fetch(`${apiBase}/routes/${route.id}`);
+        
+        if (response.ok) {
+            const detailedRoute = await response.json();
+            displayRouteDetails(detailedRoute, container);
+        } else {
+            throw new Error(`HTTP ${response.status}`);
+        }
+    } catch (error) {
+        console.error('❌ Error loading route details:', error);
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #666;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 16px; color: #f56565;"></i>
+                <p>Rota detayları yüklenirken hata oluştu.</p>
+                <p style="font-size: 0.9rem; margin-top: 8px;">Lütfen daha sonra tekrar deneyin.</p>
+            </div>
+        `;
+    }
+}
+
+function displayRouteDetails(route, container) {
+    const duration = Math.round((route.estimated_duration || 0) / 60);
+    const distance = (route.total_distance || 0).toFixed(1);
+    const difficultyStars = createDifficultyStars(route.difficulty_level || 1);
+    const poiCount = route.pois ? route.pois.length : 0;
+    
+    container.innerHTML = `
+        <div class="route-detail-content">
+            <div class="route-detail-summary">
+                <div class="route-summary-grid">
+                    <div class="summary-item">
+                        <i class="fas fa-route"></i>
+                        <div>
+                            <span class="summary-label">Rota Tipi</span>
+                            <span class="summary-value">${getRouteTypeDisplayName(route.route_type)}</span>
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <span class="summary-label">Süre</span>
+                            <span class="summary-value">${duration} saat</span>
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div>
+                            <span class="summary-label">Mesafe</span>
+                            <span class="summary-value">${distance} km</span>
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <i class="fas fa-mountain"></i>
+                        <div>
+                            <span class="summary-label">Zorluk</span>
+                            <div class="difficulty-stars">${difficultyStars}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="route-detail-description">
+                <h4><i class="fas fa-info-circle"></i> Açıklama</h4>
+                <p>${route.description || 'Bu rota için açıklama bulunmuyor.'}</p>
+            </div>
+            
+            <div class="route-detail-pois">
+                <h4><i class="fas fa-map-marked-alt"></i> Rota Üzerindeki Yerler (${poiCount})</h4>
+                ${poiCount > 0 ? createPOIList(route.pois) : '<p style="color: #666; font-style: italic;">Bu rotada henüz POI tanımlanmamış.</p>'}
+            </div>
+        </div>
+    `;
+}
+
+function createPOIList(pois) {
+    if (!pois || pois.length === 0) {
+        return '<p style="color: #666; font-style: italic;">Bu rotada POI bulunmuyor.</p>';
+    }
+    
+    return `
+        <div class="route-pois-list">
+            ${pois.map((poi, index) => `
+                <div class="route-poi-item">
+                    <div class="poi-order">${index + 1}</div>
+                    <div class="poi-info">
+                        <div class="poi-name">${poi.name}</div>
+                        <div class="poi-category">${getCategoryDisplayName(poi.category)}</div>
+                        ${poi.notes ? `<div class="poi-notes">${poi.notes}</div>` : ''}
+                    </div>
+                    <div class="poi-time">
+                        ${poi.estimated_time_at_poi ? `${poi.estimated_time_at_poi} dk` : ''}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function selectPredefinedRoute(route) {
+    console.log('✅ Selecting predefined route:', route);
+    
+    // Close modal
+    closeRouteDetailModal();
+    
+    // Switch to dynamic routes tab to show the selected route
+    switchTab('dynamic-routes');
+    
+    // Show notification
+    showNotification(`✅ "${route.name}" rotası seçildi!`, 'success');
+    
+    // Here you would typically load the route's POIs and display them
+    // For now, we'll show a placeholder message
+    const resultsSection = document.getElementById('resultsSection');
+    if (resultsSection) {
+        resultsSection.style.display = 'block';
+        
+        const recommendationResults = document.getElementById('recommendationResults');
+        if (recommendationResults) {
+            recommendationResults.innerHTML = `
+                <div style="text-align: center; padding: 40px; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                    <i class="fas fa-route" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 16px;"></i>
+                    <h3 style="margin: 0 0 12px 0; color: var(--text-color);">${route.name}</h3>
+                    <p style="color: #666; margin: 0 0 20px 0;">${route.description || 'Seçilen rota yükleniyor...'}</p>
+                    <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                        <span style="color: #666;"><i class="fas fa-clock"></i> ${Math.round((route.estimated_duration || 0) / 60)} saat</span>
+                        <span style="color: #666;"><i class="fas fa-map-marker-alt"></i> ${(route.total_distance || 0).toFixed(1)} km</span>
+                        <span style="color: #666;"><i class="fas fa-route"></i> ${getRouteTypeDisplayName(route.route_type)}</span>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // TODO: Load and display route POIs on map
+    // This would be implemented in the next subtasks
+}
+
 // Initialize everything when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function () {
     console.log('🚀 DOM loaded, initializing...');
 
     // Load categories first
     await loadCategories();
+
+    // Initialize route tabs
+    initializeRouteTabs();
 
     // Feature detection for touch support
     const supportsTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;

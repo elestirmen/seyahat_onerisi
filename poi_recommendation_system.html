@@ -36,17 +36,33 @@
         </div>
 
         <div class="content p-6 md:p-8 lg:p-12">
-            <div class="preferences-section">
-                <h2 class="section-title">
-                    <i class="fas fa-sliders-h"></i>
-                    Tercihlerinizi Belirleyin
-                </h2>
-                <p style="color: #666; font-size: 1rem; margin-bottom: 25px; text-align: center; line-height: 1.6;"
-                    class="preferences-description">
-                    Aşağıdaki kategorilerde ilgi seviyenizi belirtin.
-                    <strong>İlgilenmiyorum</strong>'dan <strong>Kesinlikle İhtiyacım Var</strong>'a kadar seçenekler
-                    arasından seçim yapın.
-                </p>
+            <!-- Route Type Tabs -->
+            <div class="route-tabs-container">
+                <div class="route-tabs">
+                    <button class="route-tab active" data-tab="dynamic-routes" id="dynamicRoutesTab">
+                        <i class="fas fa-sliders-h"></i>
+                        <span>Kişisel Tercihlerime Göre Rotalar</span>
+                    </button>
+                    <button class="route-tab" data-tab="predefined-routes" id="predefinedRoutesTab">
+                        <i class="fas fa-route"></i>
+                        <span>Hazır Rotalar</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic Routes Content -->
+            <div class="tab-content active" id="dynamicRoutesContent">
+                <div class="preferences-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-sliders-h"></i>
+                        Tercihlerinizi Belirleyin
+                    </h2>
+                    <p style="color: #666; font-size: 1rem; margin-bottom: 25px; text-align: center; line-height: 1.6;"
+                        class="preferences-description">
+                        Aşağıdaki kategorilerde ilgi seviyenizi belirtin.
+                        <strong>İlgilenmiyorum</strong>'dan <strong>Kesinlikle İhtiyacım Var</strong>'a kadar seçenekler
+                        arasından seçim yapın.
+                    </p>
 
                 <div class="slider-container">
                     <div class="grid grid-auto-fit gap-6">
@@ -152,49 +168,146 @@
                     </div>
                 </div>
 
-                <button class="recommend-btn" id="recommendBtn">
-                    <i class="fas fa-magic btn-icon"></i>
-                    <span class="btn-text">Önerilerimi Getir</span>
-                </button>
-            </div>
-
-            <div class="results-section" id="resultsSection">
-                <h2 class="section-title">
-                    <i class="fas fa-star"></i>
-                    Size Özel Öneriler
-                </h2>
-
-                <div id="loadingIndicator" class="loading">
-                    <div class="loading__spinner"></div>
-                    <p class="loading__text">Öneriler hazırlanıyor...</p>
+                    <button class="recommend-btn" id="recommendBtn">
+                        <i class="fas fa-magic btn-icon"></i>
+                        <span class="btn-text">Önerilerimi Getir</span>
+                    </button>
                 </div>
 
-                <div id="recommendationResults"></div>
+                    <div class="results-section" id="resultsSection">
+                        <h2 class="section-title">
+                            <i class="fas fa-star"></i>
+                            Size Özel Öneriler
+                        </h2>
 
-                <div id="mapSection" style="display: none; margin-top: 30px;">
-                    <h3 class="section-title">
-                        <i class="fas fa-map-marked-alt"></i>
-                        Öneriler Haritası
-                    </h3>
-                    <p style="color: #666; font-size: 1rem; margin-bottom: 20px; text-align: center; line-height: 1.6;">
-                        Önerilen yerleri harita üzerinde görün ve detaylarına ulaşın. Marker'lara tıklayarak daha fazla bilgi alabilirsiniz.
-                    </p>
-                    <div id="mapContainer" class="map-container-enhanced"></div>
-                </div>
+                        <div id="loadingIndicator" class="loading">
+                            <div class="loading__spinner"></div>
+                            <p class="loading__text">Öneriler hazırlanıyor...</p>
+                        </div>
 
-                <div id="routeSection" style="display: none; margin-top: 30px;">
-                    <h3 class="section-title">
-                        <i class="fas fa-route"></i>
-                        Rota Planlayıcı
-                    </h3>
-                    <div
-                        style="background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3);">
-                        <div id="routeContainer">
-                            <p style="text-align: center; color: #666; font-style: italic;">Rota oluşturmak için
-                                POI'leri seçin</p>
+                        <div id="recommendationResults"></div>
+
+                        <div id="mapSection" style="display: none; margin-top: 30px;">
+                            <h3 class="section-title">
+                                <i class="fas fa-map-marked-alt"></i>
+                                Öneriler Haritası
+                            </h3>
+                            <p style="color: #666; font-size: 1rem; margin-bottom: 20px; text-align: center; line-height: 1.6;">
+                                Önerilen yerleri harita üzerinde görün ve detaylarına ulaşın. Marker'lara tıklayarak daha fazla bilgi alabilirsiniz.
+                            </p>
+                            <div id="mapContainer" class="map-container-enhanced"></div>
+                        </div>
+
+                        <div id="routeSection" style="display: none; margin-top: 30px;">
+                            <h3 class="section-title">
+                                <i class="fas fa-route"></i>
+                                Rota Planlayıcı
+                            </h3>
+                            <div
+                                style="background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3);">
+                                <div id="routeContainer">
+                                    <p style="text-align: center; color: #666; font-style: italic;">Rota oluşturmak için
+                                        POI'leri seçin</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Predefined Routes Content -->
+            <div class="tab-content" id="predefinedRoutesContent">
+                <div class="predefined-routes-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-route"></i>
+                        Hazır Rotalar
+                    </h2>
+                    <p style="color: #666; font-size: 1rem; margin-bottom: 25px; text-align: center; line-height: 1.6;"
+                        class="predefined-routes-description">
+                        Uzmanlar tarafından önceden hazırlanmış rotalar arasından seçim yapın.
+                        Her rota farklı deneyimler ve zorluk seviyeleri sunar.
+                    </p>
+
+                    <!-- Route Filters -->
+                    <div class="route-filters">
+                        <div class="filter-group">
+                            <label for="routeTypeFilter">Rota Tipi:</label>
+                            <select id="routeTypeFilter" class="filter-select">
+                                <option value="">Tümü</option>
+                                <option value="walking">Yürüyüş</option>
+                                <option value="hiking">Doğa Yürüyüşü</option>
+                                <option value="cycling">Bisiklet</option>
+                                <option value="driving">Araç</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="difficultyFilter">Zorluk Seviyesi:</label>
+                            <select id="difficultyFilter" class="filter-select">
+                                <option value="">Tümü</option>
+                                <option value="1">Kolay</option>
+                                <option value="2">Orta</option>
+                                <option value="3">Zor</option>
+                                <option value="4">Çok Zor</option>
+                                <option value="5">Uzman</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="durationFilter">Süre:</label>
+                            <select id="durationFilter" class="filter-select">
+                                <option value="">Tümü</option>
+                                <option value="0-60">1 saat altı</option>
+                                <option value="60-180">1-3 saat</option>
+                                <option value="180-360">3-6 saat</option>
+                                <option value="360-999">6+ saat</option>
+                            </select>
+                        </div>
+                        <button class="filter-clear-btn" id="clearFiltersBtn">
+                            <i class="fas fa-times"></i>
+                            Filtreleri Temizle
+                        </button>
+                    </div>
+
+                    <!-- Routes Loading -->
+                    <div id="routesLoadingIndicator" class="loading">
+                        <div class="loading__spinner"></div>
+                        <p class="loading__text">Hazır rotalar yükleniyor...</p>
+                    </div>
+
+                    <!-- Routes List -->
+                    <div id="predefinedRoutesList" class="predefined-routes-list">
+                        <!-- Routes will be loaded here dynamically -->
+                    </div>
+
+                    <!-- No Routes Message -->
+                    <div id="noRoutesMessage" class="no-routes-message" style="display: none;">
+                        <i class="fas fa-info-circle"></i>
+                        <p>Seçilen kriterlere uygun rota bulunamadı.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Route Detail Modal -->
+    <div id="routeDetailModal" class="route-detail-modal">
+        <div class="route-detail-modal-content">
+            <div class="route-detail-modal-header">
+                <h3 class="route-detail-modal-title" id="routeDetailModalTitle">Rota Detayları</h3>
+                <button class="route-detail-modal-close" id="routeDetailModalClose" aria-label="Kapat">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="route-detail-modal-body" id="routeDetailModalBody">
+                <div class="loading">
+                    <div class="loading__spinner"></div>
+                    <p class="loading__text">Rota detayları yükleniyor...</p>
+                </div>
+            </div>
+            <div class="route-detail-modal-footer">
+                <button class="route-select-btn" id="routeSelectBtn">
+                    <i class="fas fa-check"></i>
+                    Bu Rotayı Seç
+                </button>
             </div>
         </div>
     </div>
