@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory, session, redirec
 from flask_cors import CORS
 from poi_database_adapter import POIDatabaseFactory
 from poi_media_manager import POIMediaManager
+from route_service import RouteService
 from psycopg2.extras import RealDictCursor
 import os
 import json
@@ -14,6 +15,8 @@ from werkzeug.utils import secure_filename
 from auth_middleware import auth_middleware
 from auth_config import auth_config
 from session_config import configure_session
+import time
+from functools import wraps
 
 app = Flask(__name__)
 CORS(app, origins=["*"], supports_credentials=True)
@@ -23,6 +26,47 @@ configure_session(app)
 
 # Initialize authentication middleware
 auth_middleware.init_app(app)
+
+# Rate limiting for admin endpoints
+admin_rate_limits = {}
+
+def admin_rate_limit(max_requests=30, window_seconds=60):
+    """
+    Rate limiting decorator for admin endpoints
+    
+    Args:
+        max_requests: Maximum requests allowed in the time window
+        window_seconds: Time window in seconds
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+            current_time = time.time()
+            
+            # Clean old entries
+            if client_ip in admin_rate_limits:
+                admin_rate_limits[client_ip] = [
+                    timestamp for timestamp in admin_rate_limits[client_ip]
+                    if current_time - timestamp < window_seconds
+                ]
+            else:
+                admin_rate_limits[client_ip] = []
+            
+            # Check rate limit
+            if len(admin_rate_limits[client_ip]) >= max_requests:
+                logger.warning(f"Rate limit exceeded for admin endpoint from IP: {client_ip}")
+                return jsonify({
+                    'success': False,
+                    'error': 'Rate limit exceeded. Please try again later.'
+                }), 429
+            
+            # Record this request
+            admin_rate_limits[client_ip].append(current_time)
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 # Create authentication blueprint
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -3257,6 +3301,684 @@ def get_recommendations():
     except Exception as e:
         print(f"Recommendation error: {str(e)}")
         return jsonify({'error': f'Recommendation error: {str(e)}'}), 500
+
+
+# ============================================================================
+# PREDEFINED ROUTES ENDPOINTS
+# ============================================================================
+
+# Initialize route service
+route_service = RouteService()
+
+def get_route_service():
+    """Get route service instance with connection"""
+    if not route_service.conn:
+        route_service.connect()
+    return route_service
+
+# Rate limiting for public endpoints
+public_rate_limits = {}
+
+def public_rate_limit(max_requests=100, window_seconds=60):
+    """
+    Rate limiting decorator for public endpoints
+    
+    Args:
+        max_requests: Maximum requests allowed in the time window
+        window_seconds: Time window in seconds
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+            current_time = time.time()
+            
+            # Clean old entries
+            if client_ip in public_rate_limits:
+                public_rate_limits[client_ip] = [
+                    timestamp for timestamp in public_rate_limits[client_ip]
+                    if current_time - timestamp < window_seconds
+                ]
+            else:
+                public_rate_limits[client_ip] = []
+            
+            # Check rate limit
+            if len(public_rate_limits[client_ip]) >= max_requests:
+                logger.warning(f"Rate limit exceeded for public endpoint from IP: {client_ip}")
+                return jsonify({
+                    'success': False,
+                    'error': 'Rate limit exceeded. Please try again later.'
+                }), 429
+            
+            # Record this request
+            public_rate_limits[client_ip].append(current_time)
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+# Public route endpoints
+@app.route('/api/routes', methods=['GET'])
+@public_rate_limit(max_requests=100, window_seconds=60)
+def get_predefined_routes():
+    """Get all active predefined routes"""
+    try:
+        service = get_route_service()
+        routes = service.get_all_active_routes()
+        
+        return jsonify({
+            'success': True,
+            'routes': routes,
+            'count': len(routes)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching routes: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error fetching routes: {str(e)}'
+        }), 500
+
+@app.route('/api/routes/<int:route_id>', methods=['GET'])
+@public_rate_limit(max_requests=100, window_seconds=60)
+def get_route_details(route_id):
+    """Get detailed information about a specific route"""
+    try:
+        # Validate route_id parameter
+        if route_id <= 0:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid route ID'
+            }), 400
+        
+        service = get_route_service()
+        route = service.get_route_by_id(route_id)
+        
+        if not route:
+            return jsonify({
+                'success': False,
+                'error': 'Route not found'
+            }), 404
+        
+        response = jsonify({
+            'success': True,
+            'route': route
+        })
+        
+        # Add security headers
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error fetching route {route_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error fetching route: {str(e)}'
+        }), 500
+
+@app.route('/api/routes/filter', methods=['POST'])
+@public_rate_limit(max_requests=50, window_seconds=60)
+def filter_routes():
+    """Filter routes based on criteria"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No filter data provided'
+            }), 400
+        
+        filters = data.get('filters', {})
+        
+        # Validate filter structure
+        if not isinstance(filters, dict):
+            return jsonify({
+                'success': False,
+                'error': 'Filters must be an object'
+            }), 400
+        
+        # Validate route_type filter
+        if 'route_type' in filters:
+            valid_route_types = ['walking', 'hiking', 'cycling', 'driving']
+            if filters['route_type'] not in valid_route_types:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid route_type. Must be one of: {", ".join(valid_route_types)}'
+                }), 400
+        
+        # Validate difficulty_level filter
+        if 'difficulty_level' in filters:
+            difficulty = filters['difficulty_level']
+            if isinstance(difficulty, dict):
+                if 'min' in difficulty and (not isinstance(difficulty['min'], int) or difficulty['min'] < 1 or difficulty['min'] > 5):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Difficulty level min must be between 1 and 5'
+                    }), 400
+                if 'max' in difficulty and (not isinstance(difficulty['max'], int) or difficulty['max'] < 1 or difficulty['max'] > 5):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Difficulty level max must be between 1 and 5'
+                    }), 400
+        
+        service = get_route_service()
+        routes = service.filter_routes(filters)
+        
+        response = jsonify({
+            'success': True,
+            'routes': routes,
+            'count': len(routes),
+            'filters_applied': filters
+        })
+        
+        # Add security headers
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error filtering routes: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error filtering routes: {str(e)}'
+        }), 500
+
+@app.route('/api/routes/search', methods=['GET'])
+@public_rate_limit(max_requests=50, window_seconds=60)
+def search_routes():
+    """Search routes by name, description, or tags"""
+    try:
+        search_term = request.args.get('q', '').strip()
+        
+        if not search_term:
+            return jsonify({
+                'success': False,
+                'error': 'Search term is required'
+            }), 400
+        
+        # Validate search term length
+        if len(search_term) < 2:
+            return jsonify({
+                'success': False,
+                'error': 'Search term must be at least 2 characters long'
+            }), 400
+        
+        if len(search_term) > 100:
+            return jsonify({
+                'success': False,
+                'error': 'Search term too long. Maximum 100 characters allowed'
+            }), 400
+        
+        # Basic sanitization - remove potentially dangerous characters
+        import re
+        search_term = re.sub(r'[<>"\';]', '', search_term)
+        
+        service = get_route_service()
+        routes = service.search_routes(search_term)
+        
+        response = jsonify({
+            'success': True,
+            'routes': routes,
+            'count': len(routes),
+            'search_term': search_term
+        })
+        
+        # Add security headers
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error searching routes: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error searching routes: {str(e)}'
+        }), 500
+
+# Admin route management endpoints (authentication required)
+@app.route('/api/admin/routes', methods=['GET'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=60, window_seconds=60)
+def admin_get_routes():
+    """Get all routes for admin management"""
+    try:
+        # Log admin access
+        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+        logger.info(f"Admin routes access from IP: {client_ip}")
+        
+        service = get_route_service()
+        routes = service.get_all_active_routes()
+        stats = service.get_route_statistics()
+        
+        response = jsonify({
+            'success': True,
+            'routes': routes,
+            'statistics': stats,
+            'count': len(routes)
+        })
+        
+        # Add security headers
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error fetching admin routes: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error fetching routes: {str(e)}'
+        }), 500
+
+@app.route('/api/admin/routes', methods=['POST'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=10, window_seconds=60)
+def create_route():
+    """Create a new route"""
+    try:
+        # Log admin action
+        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+        logger.info(f"Route creation attempt from IP: {client_ip}")
+        
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Validate CSRF token
+        csrf_token = data.get('csrf_token', '')
+        if not auth_middleware.validate_csrf_token(csrf_token):
+            logger.warning(f"Invalid CSRF token in route creation from IP: {client_ip}")
+            return jsonify({
+                'success': False,
+                'error': 'Invalid CSRF token'
+            }), 403
+        
+        # Validate required fields
+        required_fields = ['name', 'description', 'route_type']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({
+                    'success': False,
+                    'error': f'Required field missing: {field}'
+                }), 400
+        
+        # Input sanitization and validation
+        data['name'] = str(data['name']).strip()[:255]  # Limit length
+        data['description'] = str(data['description']).strip()[:1000]  # Limit length
+        
+        # Validate route_type
+        valid_route_types = ['walking', 'hiking', 'cycling', 'driving']
+        if data['route_type'] not in valid_route_types:
+            return jsonify({
+                'success': False,
+                'error': f'Invalid route_type. Must be one of: {", ".join(valid_route_types)}'
+            }), 400
+        
+        # Validate numeric fields
+        if 'difficulty_level' in data:
+            try:
+                difficulty = int(data['difficulty_level'])
+                if difficulty < 1 or difficulty > 5:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Difficulty level must be between 1 and 5'
+                    }), 400
+                data['difficulty_level'] = difficulty
+            except (ValueError, TypeError):
+                return jsonify({
+                    'success': False,
+                    'error': 'Difficulty level must be a valid integer'
+                }), 400
+        
+        service = get_route_service()
+        route_id = service.create_route(data)
+        
+        if route_id:
+            # Get the created route details
+            route = service.get_route_by_id(route_id)
+            logger.info(f"Route {route_id} created successfully by IP: {client_ip}")
+            
+            response = jsonify({
+                'success': True,
+                'message': 'Route created successfully',
+                'route_id': route_id,
+                'route': route
+            })
+            
+            # Add security headers
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers['X-Frame-Options'] = 'DENY'
+            
+            return response, 201
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to create route'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error creating route: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error creating route: {str(e)}'
+        }), 500
+
+@app.route('/api/admin/routes/<int:route_id>', methods=['PUT'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=20, window_seconds=60)
+def update_route(route_id):
+    """Update an existing route"""
+    try:
+        # Log admin action
+        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+        logger.info(f"Route {route_id} update attempt from IP: {client_ip}")
+        
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided for update'
+            }), 400
+        
+        # Validate CSRF token
+        csrf_token = data.get('csrf_token', '')
+        if not auth_middleware.validate_csrf_token(csrf_token):
+            logger.warning(f"Invalid CSRF token in route update from IP: {client_ip}")
+            return jsonify({
+                'success': False,
+                'error': 'Invalid CSRF token'
+            }), 403
+        
+        # Input sanitization and validation
+        if 'name' in data:
+            data['name'] = str(data['name']).strip()[:255]
+        if 'description' in data:
+            data['description'] = str(data['description']).strip()[:1000]
+        
+        # Validate route_type if provided
+        if 'route_type' in data:
+            valid_route_types = ['walking', 'hiking', 'cycling', 'driving']
+            if data['route_type'] not in valid_route_types:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid route_type. Must be one of: {", ".join(valid_route_types)}'
+                }), 400
+        
+        # Validate numeric fields
+        if 'difficulty_level' in data:
+            try:
+                difficulty = int(data['difficulty_level'])
+                if difficulty < 1 or difficulty > 5:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Difficulty level must be between 1 and 5'
+                    }), 400
+                data['difficulty_level'] = difficulty
+            except (ValueError, TypeError):
+                return jsonify({
+                    'success': False,
+                    'error': 'Difficulty level must be a valid integer'
+                }), 400
+        
+        service = get_route_service()
+        success = service.update_route(route_id, data)
+        
+        if success:
+            # Get the updated route details
+            route = service.get_route_by_id(route_id)
+            logger.info(f"Route {route_id} updated successfully by IP: {client_ip}")
+            
+            response = jsonify({
+                'success': True,
+                'message': 'Route updated successfully',
+                'route': route
+            })
+            
+            # Add security headers
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers['X-Frame-Options'] = 'DENY'
+            
+            return response
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to update route or route not found'
+            }), 404
+        
+    except Exception as e:
+        logger.error(f"Error updating route {route_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error updating route: {str(e)}'
+        }), 500
+
+@app.route('/api/admin/routes/<int:route_id>', methods=['DELETE'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=10, window_seconds=60)
+def delete_route(route_id):
+    """Delete a route (soft delete)"""
+    try:
+        # Log admin action
+        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+        logger.info(f"Route {route_id} deletion attempt from IP: {client_ip}")
+        
+        # For DELETE requests, CSRF token can be in headers or query params
+        csrf_token = request.headers.get('X-CSRF-Token') or request.args.get('csrf_token', '')
+        if not auth_middleware.validate_csrf_token(csrf_token):
+            logger.warning(f"Invalid CSRF token in route deletion from IP: {client_ip}")
+            return jsonify({
+                'success': False,
+                'error': 'Invalid CSRF token'
+            }), 403
+        
+        # Validate route_id parameter
+        if route_id <= 0:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid route ID'
+            }), 400
+        
+        service = get_route_service()
+        success = service.delete_route(route_id)
+        
+        if success:
+            logger.info(f"Route {route_id} deleted successfully by IP: {client_ip}")
+            
+            response = jsonify({
+                'success': True,
+                'message': 'Route deleted successfully'
+            })
+            
+            # Add security headers
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers['X-Frame-Options'] = 'DENY'
+            
+            return response
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to delete route or route not found'
+            }), 404
+        
+    except Exception as e:
+        logger.error(f"Error deleting route {route_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error deleting route: {str(e)}'
+        }), 500
+
+@app.route('/api/admin/routes/<int:route_id>/pois', methods=['GET'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=60, window_seconds=60)
+def get_route_pois(route_id):
+    """Get POIs associated with a route"""
+    try:
+        service = get_route_service()
+        pois = service.get_route_pois(route_id)
+        
+        return jsonify({
+            'success': True,
+            'route_id': route_id,
+            'pois': pois,
+            'count': len(pois)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching route POIs for route {route_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error fetching route POIs: {str(e)}'
+        }), 500
+
+@app.route('/api/admin/routes/<int:route_id>/pois', methods=['POST'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=15, window_seconds=60)
+def associate_pois_with_route(route_id):
+    """Associate POIs with a route"""
+    try:
+        # Log admin action
+        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+        logger.info(f"POI association attempt for route {route_id} from IP: {client_ip}")
+        
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Validate CSRF token
+        csrf_token = data.get('csrf_token', '')
+        if not auth_middleware.validate_csrf_token(csrf_token):
+            logger.warning(f"Invalid CSRF token in POI association from IP: {client_ip}")
+            return jsonify({
+                'success': False,
+                'error': 'Invalid CSRF token'
+            }), 403
+        
+        # Validate route_id parameter
+        if route_id <= 0:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid route ID'
+            }), 400
+        
+        poi_associations = data.get('pois', [])
+        
+        if not isinstance(poi_associations, list):
+            return jsonify({
+                'success': False,
+                'error': 'POI associations must be a list'
+            }), 400
+        
+        # Limit number of POIs per route for security
+        if len(poi_associations) > 50:
+            return jsonify({
+                'success': False,
+                'error': 'Too many POIs. Maximum 50 POIs per route allowed'
+            }), 400
+        
+        # Validate POI association structure
+        for i, association in enumerate(poi_associations):
+            if not isinstance(association, dict) or 'poi_id' not in association:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid POI association at index {i}: poi_id is required'
+                }), 400
+            
+            # Validate poi_id is a positive integer
+            try:
+                poi_id = int(association['poi_id'])
+                if poi_id <= 0:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Invalid POI ID at index {i}: must be a positive integer'
+                    }), 400
+                association['poi_id'] = poi_id
+            except (ValueError, TypeError):
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid POI ID at index {i}: must be a valid integer'
+                }), 400
+            
+            # Validate order_in_route if provided
+            if 'order_in_route' in association:
+                try:
+                    order = int(association['order_in_route'])
+                    if order < 1:
+                        return jsonify({
+                            'success': False,
+                            'error': f'Invalid order at index {i}: must be a positive integer'
+                        }), 400
+                    association['order_in_route'] = order
+                except (ValueError, TypeError):
+                    return jsonify({
+                        'success': False,
+                        'error': f'Invalid order at index {i}: must be a valid integer'
+                    }), 400
+        
+        service = get_route_service()
+        success = service.associate_pois(route_id, poi_associations)
+        
+        if success:
+            # Get updated POI list
+            pois = service.get_route_pois(route_id)
+            logger.info(f"POIs associated with route {route_id} successfully by IP: {client_ip}")
+            
+            response = jsonify({
+                'success': True,
+                'message': 'POIs associated with route successfully',
+                'route_id': route_id,
+                'pois': pois,
+                'count': len(pois)
+            })
+            
+            # Add security headers
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers['X-Frame-Options'] = 'DENY'
+            
+            return response
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to associate POIs with route'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error associating POIs with route {route_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error associating POIs: {str(e)}'
+        }), 500
+
+@app.route('/api/admin/routes/statistics', methods=['GET'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=30, window_seconds=60)
+def get_route_statistics():
+    """Get route statistics for admin dashboard"""
+    try:
+        service = get_route_service()
+        stats = service.get_route_statistics()
+        
+        return jsonify({
+            'success': True,
+            'statistics': stats
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching route statistics: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error fetching statistics: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
     print("🚀 POI Yönetim Sistemi başlatılıyor...")
