@@ -2691,6 +2691,13 @@ def admin_associate_route_pois(route_id):
     """Rotaya POI'leri ilişkilendir (admin)"""
     try:
         data = request.get_json()
+        
+        # CSRF token kontrolü
+        csrf_token = data.get('csrf_token', '')
+        if not auth_middleware.validate_csrf_token(csrf_token):
+            logger.warning(f"Invalid CSRF token for route POI association: {csrf_token}")
+            return jsonify({'error': 'Invalid CSRF token'}), 403
+        
         poi_associations = data.get('pois', [])
         
         if not isinstance(poi_associations, list):

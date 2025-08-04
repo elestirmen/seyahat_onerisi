@@ -141,7 +141,10 @@ class RouteService:
     def get_route_pois(self, route_id: int) -> List[Dict[str, Any]]:
         """Rotaya ait POI'leri sıralı şekilde getir"""
         query = """
-            SELECT rp.*, p.name, p.latitude as lat, p.longitude as lon, p.category, p.description
+            SELECT rp.*, p.name, 
+                   ST_Y(p.location::geometry) as lat, 
+                   ST_X(p.location::geometry) as lon, 
+                   p.category, p.description
             FROM route_pois rp
             JOIN pois p ON rp.poi_id = p.id
             WHERE rp.route_id = %s
@@ -403,13 +406,24 @@ class RouteService:
         Returns:
             Başarılıysa True
         """
+        logger.info(f"Associating {len(poi_associations)} POIs with route {route_id}")
+        
         if not poi_associations:
-            return True
+            logger.info(f"No POIs to associate with route {route_id}, clearing existing associations")
+            try:
+                delete_query = "DELETE FROM route_pois WHERE route_id = %s;"
+                result = self._execute_query(delete_query, (route_id,), fetch_all=False)
+                logger.info(f"Cleared existing POI associations for route {route_id}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to clear POI associations for route {route_id}: {e}")
+                return False
         
         try:
             # Önce mevcut ilişkileri sil
             delete_query = "DELETE FROM route_pois WHERE route_id = %s;"
-            self._execute_query(delete_query, (route_id,), fetch_all=False)
+            delete_result = self._execute_query(delete_query, (route_id,), fetch_all=False)
+            logger.info(f"Deleted {delete_result} existing POI associations for route {route_id}")
             
             # Yeni ilişkileri ekle
             insert_query = """
@@ -419,23 +433,27 @@ class RouteService:
                 ) VALUES (%s, %s, %s, %s, %s, %s);
             """
             
-            for association in poi_associations:
+            for i, association in enumerate(poi_associations):
                 params = (
                     route_id,
                     association['poi_id'],
-                    association.get('order_in_route', 1),
+                    association.get('order_in_route', i + 1),
                     association.get('is_mandatory', True),
                     association.get('estimated_time_at_poi', 15),
                     association.get('notes', '')
                 )
                 
-                self._execute_query(insert_query, params, fetch_all=False)
+                logger.debug(f"Inserting POI association: {params}")
+                result = self._execute_query(insert_query, params, fetch_all=False)
+                logger.debug(f"Insert result: {result}")
             
-            logger.info(f"POI associations updated for route {route_id}")
+            logger.info(f"Successfully associated {len(poi_associations)} POIs with route {route_id}")
             return True
             
         except Exception as e:
             logger.error(f"Failed to associate POIs with route {route_id}: {e}")
+            if self.conn:
+                self.conn.rollback()
             return False
     
     def _add_route_ratings(self, route_id: int, ratings: Dict[str, int]):
