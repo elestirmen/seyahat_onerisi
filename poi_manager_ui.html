@@ -4029,12 +4029,44 @@
         
         // POI'leri rota yönetimi için yükle
         async function loadPOIsForRoutes() {
+            console.log('🔄 Loading POIs for routes...');
             try {
                 const response = await authenticatedFetch(`${apiBase}/pois`);
+                console.log('📡 POIs API response:', response.status);
+                
                 if (response.ok) {
                     const poisData = await response.json();
-                    // Ensure availablePOIs is always an array
-                    availablePOIs = Array.isArray(poisData) ? poisData : [];
+                    console.log('📊 POIs data received:', poisData);
+                    
+                    // API'den gelen veri yapısını kontrol et
+                    if (poisData && poisData.pois && Array.isArray(poisData.pois)) {
+                        // Eğer {pois: [...]} formatındaysa
+                        availablePOIs = poisData.pois;
+                    } else if (Array.isArray(poisData)) {
+                        // Eğer doğrudan array formatındaysa
+                        availablePOIs = poisData;
+                    } else if (typeof poisData === 'object') {
+                        // Eğer kategorilere göre gruplandırılmışsa (dogal_miras, tarihi_yapilar, vb.)
+                        availablePOIs = [];
+                        Object.keys(poisData).forEach(category => {
+                            if (Array.isArray(poisData[category])) {
+                                // POI'leri normalize et (latitude/longitude -> lat/lon)
+                                const normalizedPOIs = poisData[category].map(poi => ({
+                                    ...poi,
+                                    id: poi._id || poi.id,
+                                    lat: poi.latitude || poi.lat,
+                                    lon: poi.longitude || poi.lon
+                                }));
+                                availablePOIs = availablePOIs.concat(normalizedPOIs);
+                            }
+                        });
+                        console.log('🔄 Flattened and normalized POIs:', availablePOIs.length);
+                    } else {
+                        console.warn('⚠️ Unexpected POIs data format:', poisData);
+                        availablePOIs = [];
+                    }
+                    
+                    console.log('✅ Available POIs loaded:', availablePOIs.length);
                     renderAvailablePOIs();
                     
                     // POI kategori filtresini doldur
@@ -4045,6 +4077,7 @@
                             categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
                     }
                 } else {
+                    console.error('❌ POIs API failed:', response.status);
                     availablePOIs = [];
                     renderAvailablePOIs();
                 }
