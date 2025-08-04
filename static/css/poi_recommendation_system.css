@@ -5073,3 +5073,89 @@ Custom marker styles */
                 border: 2px solid var(--text-color);
             }
         }
+/* Rou
+te POI Marker Styles */
+.route-poi-marker {
+    background: transparent !important;
+    border: none !important;
+}
+
+.route-poi-item {
+    transition: all 0.2s ease;
+}
+
+.route-poi-item:hover {
+    background: #e2e8f0 !important;
+    transform: translateX(4px);
+}
+
+/* Route line styles */
+.leaflet-interactive {
+    cursor: pointer;
+}
+
+/* Route selection styles */
+.route-pois-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.route-pois-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.route-pois-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.route-pois-list::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+}
+
+.route-pois-list::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* Route info display */
+.route-info-stats {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+}
+
+.route-info-stats span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #666;
+    font-size: 14px;
+}
+
+.route-info-stats i {
+    color: var(--primary-color);
+}
+
+/* Responsive adjustments for route display */
+@media (max-width: 768px) {
+    .route-info-stats {
+        gap: 12px;
+    }
+    
+    .route-info-stats span {
+        font-size: 13px;
+    }
+    
+    .route-poi-item {
+        padding: 10px !important;
+    }
+    
+    .poi-order {
+        width: 20px !important;
+        height: 20px !important;
+        font-size: 11px !important;
+    }
+}

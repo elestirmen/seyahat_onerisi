@@ -3595,11 +3595,21 @@ async function loadRouteDetails(route, container) {
     }
 }
 
-function displayRouteDetails(route, container) {
+function displayRouteDetails(routeData, container) {
+    // Handle API response structure - API returns {success: true, route: {...}}
+    const route = routeData.success ? routeData.route : routeData;
+    
     const duration = Math.round((route.estimated_duration || 0) / 60);
     const distance = (route.total_distance || 0).toFixed(1);
     const difficultyStars = createDifficultyStars(route.difficulty_level || 1);
-    const poiCount = route.pois ? route.pois.length : 0;
+    const pois = route.pois || [];
+    const poiCount = pois.length;
+    
+    console.log('📊 Displaying route details:', {
+        routeName: route.name,
+        poiCount: poiCount,
+        pois: pois
+    });
     
     container.innerHTML = `
         <div class="route-detail-content">
@@ -3643,7 +3653,7 @@ function displayRouteDetails(route, container) {
             
             <div class="route-detail-pois">
                 <h4><i class="fas fa-map-marked-alt"></i> Rota Üzerindeki Yerler (${poiCount})</h4>
-                ${poiCount > 0 ? createPOIList(route.pois) : '<p style="color: #666; font-style: italic;">Bu rotada henüz POI tanımlanmamış.</p>'}
+                ${poiCount > 0 ? createPOIList(pois) : '<p style="color: #666; font-style: italic;">Bu rotada henüz POI tanımlanmamış.</p>'}
             </div>
         </div>
     `;
@@ -3673,7 +3683,7 @@ function createPOIList(pois) {
     `;
 }
 
-function selectPredefinedRoute(route) {
+async function selectPredefinedRoute(route) {
     console.log('✅ Selecting predefined route:', route);
     
     // Close modal
@@ -3685,9 +3695,10 @@ function selectPredefinedRoute(route) {
     // Show notification
     showNotification(`✅ "${route.name}" rotası seçildi!`, 'success');
     
-    // Here you would typically load the route's POIs and display them
-    // For now, we'll show a placeholder message
+    // Show loading state and ensure sections are visible
     const resultsSection = document.getElementById('resultsSection');
+    const routeSection = document.getElementById('routeSection');
+    
     if (resultsSection) {
         resultsSection.style.display = 'block';
         
@@ -3695,22 +3706,462 @@ function selectPredefinedRoute(route) {
         if (recommendationResults) {
             recommendationResults.innerHTML = `
                 <div style="text-align: center; padding: 40px; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-                    <i class="fas fa-route" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 16px;"></i>
-                    <h3 style="margin: 0 0 12px 0; color: var(--text-color);">${route.name}</h3>
-                    <p style="color: #666; margin: 0 0 20px 0;">${route.description || 'Seçilen rota yükleniyor...'}</p>
-                    <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
-                        <span style="color: #666;"><i class="fas fa-clock"></i> ${Math.round((route.estimated_duration || 0) / 60)} saat</span>
-                        <span style="color: #666;"><i class="fas fa-map-marker-alt"></i> ${(route.total_distance || 0).toFixed(1)} km</span>
-                        <span style="color: #666;"><i class="fas fa-route"></i> ${getRouteTypeDisplayName(route.route_type)}</span>
+                    <div class="loading">
+                        <div class="loading__spinner"></div>
+                        <p class="loading__text">Rota POI'leri yükleniyor...</p>
                     </div>
                 </div>
             `;
         }
     }
     
-    // TODO: Load and display route POIs on map
-    // This would be implemented in the next subtasks
+    // Make sure route section (which contains the map) is visible
+    if (routeSection) {
+        routeSection.style.display = 'block';
+    }
+    
+    try {
+        // Load route POIs from API
+        console.log('📍 Loading POIs for route:', route.id);
+        const response = await fetch(`${apiBase}/routes/${route.id}`);
+        
+        if (response.ok) {
+            const routeData = await response.json();
+            console.log('✅ Route data loaded:', routeData);
+            
+            // Extract POIs from route data - API returns {success: true, route: {...}}
+            const routePOIs = routeData.route?.pois || [];
+            console.log('📍 Route POIs:', routePOIs);
+            
+            if (routePOIs.length > 0) {
+                // Display route info and POIs
+                displaySelectedRoute(route, routePOIs);
+                
+                // Show POIs on map with a small delay to ensure everything is ready
+                setTimeout(async () => {
+                    await displayRoutePOIsOnMap(routePOIs);
+                    
+                    // Fit map to show all POIs
+                    setTimeout(() => {
+                        fitMapToRoutePOIs(routePOIs);
+                    }, 300);
+                }, 200);
+            } else {
+                // No POIs found, show message
+                displayRouteWithoutPOIs(route);
+            }
+        } else {
+            console.error('❌ Failed to load route data:', response.status);
+            showNotification('Rota detayları yüklenirken hata oluştu', 'error');
+            displayRouteWithoutPOIs(route);
+        }
+    } catch (error) {
+        console.error('❌ Error loading route POIs:', error);
+        showNotification('Rota yüklenirken hata oluştu', 'error');
+        displayRouteWithoutPOIs(route);
+    }
 }
+
+function displaySelectedRoute(route, pois) {
+    const recommendationResults = document.getElementById('recommendationResults');
+    if (!recommendationResults) return;
+    
+    const poisHtml = pois.map((poi, index) => `
+        <div class="route-poi-item" style="display: flex; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px;">
+            <div class="poi-order" style="background: var(--primary-color); color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 12px;">
+                ${poi.order_in_route || index + 1}
+            </div>
+            <div class="poi-info" style="flex: 1;">
+                <div style="font-weight: 500; color: var(--text-color);">${poi.name}</div>
+                <div style="font-size: 12px; color: #666;">
+                    ${poi.category} • ${poi.estimated_time_at_poi || 15} dakika
+                    ${poi.is_mandatory ? ' • <span style="color: #dc3545;">Zorunlu</span>' : ' • <span style="color: #28a745;">İsteğe bağlı</span>'}
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    recommendationResults.innerHTML = `
+        <div style="background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 20px; overflow: hidden;">
+            <div style="padding: 24px; border-bottom: 1px solid #e2e8f0;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <i class="fas fa-route" style="font-size: 2.5rem; color: var(--primary-color); margin-bottom: 12px;"></i>
+                    <h3 style="margin: 0 0 8px 0; color: var(--text-color);">${route.name}</h3>
+                    <p style="color: #666; margin: 0 0 16px 0;">${route.description || 'Hazır rota'}</p>
+                    <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                        <span style="color: #666;"><i class="fas fa-clock"></i> ${Math.round((route.estimated_duration || 0) / 60)} saat</span>
+                        <span style="color: #666;"><i class="fas fa-map-marker-alt"></i> ${(route.total_distance || 0).toFixed(1)} km</span>
+                        <span style="color: #666;"><i class="fas fa-route"></i> ${getRouteTypeDisplayName(route.route_type)}</span>
+                        <span style="color: #666;"><i class="fas fa-star"></i> Zorluk: ${getDifficultyStars(route.difficulty_level)}</span>
+                    </div>
+                </div>
+            </div>
+            <div style="padding: 20px;">
+                <h4 style="margin: 0 0 16px 0; color: var(--text-color); display: flex; align-items: center;">
+                    <i class="fas fa-map-marked-alt" style="margin-right: 8px; color: var(--primary-color);"></i>
+                    Rota Durakları (${pois.length})
+                </h4>
+                <div class="route-pois-list">
+                    ${poisHtml}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function displayRouteWithoutPOIs(route) {
+    const recommendationResults = document.getElementById('recommendationResults');
+    if (!recommendationResults) return;
+    
+    recommendationResults.innerHTML = `
+        <div style="text-align: center; padding: 40px; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+            <i class="fas fa-route" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 16px;"></i>
+            <h3 style="margin: 0 0 12px 0; color: var(--text-color);">${route.name}</h3>
+            <p style="color: #666; margin: 0 0 20px 0;">${route.description || 'Seçilen rota'}</p>
+            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+                <span style="color: #666;"><i class="fas fa-clock"></i> ${Math.round((route.estimated_duration || 0) / 60)} saat</span>
+                <span style="color: #666;"><i class="fas fa-map-marker-alt"></i> ${(route.total_distance || 0).toFixed(1)} km</span>
+                <span style="color: #666;"><i class="fas fa-route"></i> ${getRouteTypeDisplayName(route.route_type)}</span>
+            </div>
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 16px; color: #856404;">
+                <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+                Bu rota için henüz POI bilgileri tanımlanmamış.
+            </div>
+        </div>
+    `;
+}
+
+async function displayRoutePOIsOnMap(pois) {
+    console.log('🗺️ Displaying route POIs on map:', pois);
+    
+    // Ensure map is initialized
+    if (!map) {
+        console.log('🗺️ Map not initialized, initializing now...');
+        await initializeMapForRoute();
+    }
+    
+    if (!map) {
+        console.error('❌ Failed to initialize map');
+        return;
+    }
+    
+    // Clear existing markers
+    clearMapMarkers();
+    
+    // Add POI markers to map
+    const routeCoordinates = [];
+    let markersAdded = 0;
+    
+    for (let i = 0; i < pois.length; i++) {
+        const poi = pois[i];
+        
+        if (poi.lat && poi.lon) {
+            try {
+                const lat = parseFloat(poi.lat);
+                const lon = parseFloat(poi.lon);
+                
+                // Validate coordinates
+                if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+                    console.warn(`Invalid coordinates for POI ${poi.name}: ${lat}, ${lon}`);
+                    continue;
+                }
+                
+                const coordinates = [lat, lon];
+                routeCoordinates.push(coordinates);
+                
+                // Create custom marker icon with order number
+                const markerIcon = L.divIcon({
+                    className: 'route-poi-marker',
+                    html: `
+                        <div style="
+                            background: ${poi.is_mandatory ? '#dc3545' : '#28a745'};
+                            color: white;
+                            border-radius: 50%;
+                            width: 32px;
+                            height: 32px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-weight: bold;
+                            font-size: 14px;
+                            border: 3px solid white;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                        ">
+                            ${poi.order_in_route || i + 1}
+                        </div>
+                    `,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16],
+                    popupAnchor: [0, -16]
+                });
+                
+                // Create marker
+                const marker = L.marker(coordinates, { icon: markerIcon }).addTo(map);
+                
+                // Create popup content
+                const popupContent = `
+                    <div style="min-width: 200px;">
+                        <h6 style="margin: 0 0 8px 0; color: var(--primary-color);">
+                            ${poi.order_in_route || i + 1}. ${poi.name}
+                        </h6>
+                        <p style="margin: 0 0 8px 0; font-size: 13px; color: #666;">
+                            ${poi.description || poi.category}
+                        </p>
+                        <div style="font-size: 12px; color: #666;">
+                            <div><i class="fas fa-clock"></i> ${poi.estimated_time_at_poi || 15} dakika</div>
+                            <div><i class="fas fa-tag"></i> ${poi.category}</div>
+                            <div>
+                                <i class="fas fa-${poi.is_mandatory ? 'exclamation-circle' : 'info-circle'}"></i> 
+                                ${poi.is_mandatory ? 'Zorunlu durak' : 'İsteğe bağlı durak'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+                markers.push(marker);
+                markersAdded++;
+                
+                console.log(`✅ Added marker ${markersAdded} for POI: ${poi.name} at [${lat}, ${lon}]`);
+            } catch (error) {
+                console.error(`❌ Error adding marker for POI ${poi.name}:`, error);
+            }
+        } else {
+            console.warn(`POI ${poi.name} has no coordinates: lat=${poi.lat}, lon=${poi.lon}`);
+        }
+    }
+    
+    console.log(`📍 Added ${markersAdded} markers to map out of ${pois.length} POIs`);
+    
+    // Draw route line if we have multiple POIs
+    if (routeCoordinates.length > 1) {
+        const routeLine = L.polyline(routeCoordinates, {
+            color: '#007bff',
+            weight: 4,
+            opacity: 0.7,
+            dashArray: '10, 5'
+        }).addTo(map);
+        
+        markers.push(routeLine);
+        
+        // If route is circular, connect last point to first
+        const route = predefinedRoutes.find(r => r.pois && r.pois.length > 0);
+        if (route && route.is_circular && routeCoordinates.length > 2) {
+            const circularLine = L.polyline([
+                routeCoordinates[routeCoordinates.length - 1],
+                routeCoordinates[0]
+            ], {
+                color: '#28a745',
+                weight: 4,
+                opacity: 0.7,
+                dashArray: '5, 10'
+            }).addTo(map);
+            
+            markers.push(circularLine);
+        }
+    }
+    
+    console.log('✅ Route POIs displayed on map');
+}
+
+function fitMapToRoutePOIs(pois) {
+    if (!map || !pois || pois.length === 0) {
+        console.warn('Cannot fit map: map not initialized or no POIs');
+        return;
+    }
+    
+    const validPOIs = pois.filter(poi => {
+        const lat = parseFloat(poi.lat);
+        const lon = parseFloat(poi.lon);
+        return !isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+    });
+    
+    if (validPOIs.length === 0) {
+        console.warn('No valid POIs with coordinates found');
+        return;
+    }
+    
+    try {
+        if (validPOIs.length === 1) {
+            // Single POI - center on it
+            const poi = validPOIs[0];
+            const lat = parseFloat(poi.lat);
+            const lon = parseFloat(poi.lon);
+            console.log(`🎯 Centering map on single POI: ${poi.name} at [${lat}, ${lon}]`);
+            map.setView([lat, lon], 15);
+        } else {
+            // Multiple POIs - fit bounds
+            const coordinates = validPOIs.map(poi => [parseFloat(poi.lat), parseFloat(poi.lon)]);
+            const bounds = L.latLngBounds(coordinates);
+            console.log(`🎯 Fitting map to ${validPOIs.length} POIs`);
+            map.fitBounds(bounds, { 
+                padding: [20, 20],
+                maxZoom: 16
+            });
+        }
+        
+        // Force map to update
+        setTimeout(() => {
+            if (map) {
+                map.invalidateSize();
+            }
+        }, 100);
+        
+    } catch (error) {
+        console.error('❌ Error fitting map to POIs:', error);
+    }
+}
+
+async function initializeMapForRoute() {
+    console.log('🗺️ Initializing map for route display...');
+    
+    const mapContainer = document.getElementById('mapContainer');
+    if (!mapContainer) {
+        console.error('❌ Map container not found');
+        return false;
+    }
+    
+    // Make sure map container is visible
+    const routeSection = document.getElementById('routeSection');
+    if (routeSection) {
+        routeSection.style.display = 'block';
+    }
+    
+    // Wait a bit for the container to be visible
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Clear existing map
+    if (map) {
+        try {
+            map.remove();
+        } catch (e) {
+            console.warn('Error removing existing map:', e);
+        }
+        map = null;
+    }
+    
+    try {
+        // Check if Leaflet is available
+        if (typeof L === 'undefined') {
+            console.error('❌ Leaflet library not loaded');
+            return false;
+        }
+        
+        // Initialize map
+        map = L.map('mapContainer', {
+            zoomControl: true,
+            scrollWheelZoom: true,
+            doubleClickZoom: true,
+            touchZoom: true,
+            dragging: true,
+            tap: true,
+            tapTolerance: 15,
+            worldCopyJump: false,
+            maxBoundsViscosity: 0.0
+        }).setView([38.632, 34.912], 13);
+        
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Clear markers array
+        markers = [];
+        
+        // Force map to resize after initialization
+        setTimeout(() => {
+            if (map) {
+                map.invalidateSize();
+            }
+        }, 200);
+        
+        console.log('✅ Map initialized successfully for route display');
+        return true;
+    } catch (error) {
+        console.error('❌ Error initializing map:', error);
+        return false;
+    }
+}
+
+function clearMapMarkers() {
+    markers.forEach(marker => {
+        if (map && map.hasLayer(marker)) {
+            map.removeLayer(marker);
+        }
+    });
+    markers = [];
+}
+
+function getDifficultyStars(level) {
+    const stars = '★'.repeat(level || 1) + '☆'.repeat(5 - (level || 1));
+    return stars;
+}
+
+function getRouteTypeDisplayName(type) {
+    const typeNames = {
+        'walking': 'Yürüyüş',
+        'hiking': 'Doğa Yürüyüşü',
+        'cycling': 'Bisiklet',
+        'driving': 'Araç'
+    };
+    return typeNames[type] || type;
+}
+
+// Debug function for testing route selection
+window.testRouteSelection = async function(routeId) {
+    console.log('🧪 Testing route selection for route ID:', routeId);
+    
+    try {
+        const response = await fetch(`${apiBase}/routes/${routeId}`);
+        console.log('📡 API Response status:', response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('📊 API Response data:', data);
+            
+            if (data.success && data.route) {
+                console.log('✅ Route found:', data.route.name);
+                console.log('📍 Route POIs:', data.route.pois?.length || 0);
+                
+                // Log POI details
+                if (data.route.pois && data.route.pois.length > 0) {
+                    data.route.pois.forEach((poi, index) => {
+                        console.log(`  POI ${index + 1}: ${poi.name} at [${poi.lat}, ${poi.lon}]`);
+                    });
+                }
+                
+                // Test the selection function
+                await selectPredefinedRoute(data.route);
+            } else {
+                console.error('❌ Route not found or API error');
+            }
+        } else {
+            console.error('❌ API request failed:', response.status);
+        }
+    } catch (error) {
+        console.error('❌ Error testing route selection:', error);
+    }
+};
+
+// Debug function for testing map initialization
+window.testMapInit = async function() {
+    console.log('🧪 Testing map initialization...');
+    
+    const success = await initializeMapForRoute();
+    if (success) {
+        console.log('✅ Map initialization successful');
+        
+        // Test adding a sample marker
+        if (map) {
+            const testMarker = L.marker([38.632, 34.912]).addTo(map);
+            testMarker.bindPopup('Test marker').openPopup();
+            console.log('✅ Test marker added');
+        }
+    } else {
+        console.error('❌ Map initialization failed');
+    }
+};
 
 // Initialize everything when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function () {
