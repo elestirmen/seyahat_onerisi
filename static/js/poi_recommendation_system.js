@@ -3393,6 +3393,13 @@ function createRouteCard(route) {
     const difficultyStars = createDifficultyStars(route.difficulty_level || 1);
     const duration = Math.round((route.estimated_duration || 0) / 60);
     const distance = (route.total_distance || 0).toFixed(1);
+    const poiCount = route.poi_count || 0;
+    
+    console.log('🏷️ Creating route card:', {
+        name: route.name,
+        poiCount: poiCount,
+        rawPoiCount: route.poi_count
+    });
     
     return `
         <div class="route-card" data-route-id="${route.id}">
@@ -3412,6 +3419,10 @@ function createRouteCard(route) {
                 <div class="route-meta-item">
                     <i class="fas fa-map-marker-alt"></i>
                     <span>${distance} km</span>
+                </div>
+                <div class="route-meta-item">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span>${poiCount} yer</span>
                 </div>
                 <div class="route-meta-item route-difficulty">
                     <i class="fas fa-mountain"></i>
@@ -4123,6 +4134,7 @@ window.testRouteSelection = async function(routeId) {
             if (data.success && data.route) {
                 console.log('✅ Route found:', data.route.name);
                 console.log('📍 Route POIs:', data.route.pois?.length || 0);
+                console.log('📊 Route POI count field:', data.route.poi_count);
                 
                 // Log POI details
                 if (data.route.pois && data.route.pois.length > 0) {
@@ -4141,6 +4153,35 @@ window.testRouteSelection = async function(routeId) {
         }
     } catch (error) {
         console.error('❌ Error testing route selection:', error);
+    }
+};
+
+// Debug function for testing route list
+window.testRouteList = async function() {
+    console.log('🧪 Testing route list loading...');
+    
+    try {
+        const response = await fetch(`${apiBase}/routes`);
+        console.log('📡 Routes API Response status:', response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('📊 Routes API Response data:', data);
+            
+            if (data.success && data.routes) {
+                console.log('✅ Routes found:', data.routes.length);
+                
+                data.routes.forEach((route, index) => {
+                    console.log(`  Route ${index + 1}: ${route.name} - POI count: ${route.poi_count}`);
+                });
+            } else {
+                console.error('❌ Routes not found or API error');
+            }
+        } else {
+            console.error('❌ Routes API request failed:', response.status);
+        }
+    } catch (error) {
+        console.error('❌ Error testing route list:', error);
     }
 };
 
