@@ -53,27 +53,27 @@
   - Modal açma/kapama ve etkileşim JavaScript'lerini yaz
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 3. Admin rota yönetimi arayüzü
+- [x] 3. Admin rota yönetimi arayüzü
   - POI manager'a rota yönetimi sekmesi ekle
   - Rota oluşturma ve düzenleme formlarını implement et
   - POI seçimi ve ilişkilendirme arayüzünü oluştur
   - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 6.1, 6.2_
 
-- [ ] 3.1 POI manager'a rota yönetimi sekmesi ekle
+- [x] 3.1 POI manager'a rota yönetimi sekmesi ekle
   - `poi_manager_ui.html` dosyasına "Rota Yönetimi" sekmesini ekle
   - Mevcut rotaları listeleyen arayüzü oluştur
   - Yeni rota ekleme butonu ve temel navigasyonu implement et
   - Tab yapısını genişlet ve stil uyumluluğunu sağla
   - _Requirements: 2.1, 2.2_
 
-- [ ] 3.2 Rota oluşturma ve düzenleme formları
+- [x] 3.2 Rota oluşturma ve düzenleme formları
   - Rota oluşturma formu HTML yapısını oluştur
   - Form validasyonu ve JavaScript kontrollerini ekle
   - Rota düzenleme modalını implement et
   - Form gönderimi ve API entegrasyonunu yap
   - _Requirements: 2.3, 2.4, 3.1, 3.2, 3.3_
 
-- [ ] 3.3 POI seçimi ve ilişkilendirme arayüzü
+- [x] 3.3 POI seçimi ve ilişkilendirme arayüzü
   - Mevcut POI'leri seçilebilir liste olarak göster
   - Drag-and-drop ile rota sıralaması özelliği ekle
   - POI-rota ilişkilendirme JavaScript fonksiyonlarını yaz

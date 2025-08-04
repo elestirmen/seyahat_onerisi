@@ -3344,8 +3344,11 @@ async function loadPredefinedRoutes() {
         const response = await fetch(`${apiBase}/routes`);
         
         if (response.ok) {
-            const routes = await response.json();
-            console.log('✅ Predefined routes loaded:', routes);
+            const data = await response.json();
+            console.log('✅ Predefined routes loaded:', data);
+            
+            // API returns {success: true, routes: [...], count: ...}
+            const routes = data.routes || [];
             
             predefinedRoutes = routes;
             filteredRoutes = [...routes];

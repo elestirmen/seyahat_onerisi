@@ -141,7 +141,7 @@ class RouteService:
     def get_route_pois(self, route_id: int) -> List[Dict[str, Any]]:
         """Rotaya ait POI'leri sıralı şekilde getir"""
         query = """
-            SELECT rp.*, p.name, p.latitude, p.longitude, p.category, p.description
+            SELECT rp.*, p.name, p.latitude as lat, p.longitude as lon, p.category, p.description
             FROM route_pois rp
             JOIN pois p ON rp.poi_id = p.id
             WHERE rp.route_id = %s
