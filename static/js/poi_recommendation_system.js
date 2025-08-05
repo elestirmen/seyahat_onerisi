@@ -3838,6 +3838,9 @@ async function selectPredefinedRoute(route) {
                 setTimeout(async () => {
                     await displayRoutePOIsOnMap(routePOIs);
                     
+                    // Try to load and display saved route geometry
+                    await loadAndDisplayRouteGeometry(route.id);
+                    
                     // Fit map to show all POIs
                     setTimeout(() => {
                         fitMapToRoutePOIs(routePOIs);
@@ -4455,6 +4458,92 @@ function cleanupPreviewMaps() {
         }
     });
     previewMaps.clear();
+}
+
+// Load and display saved route geometry
+async function loadAndDisplayRouteGeometry(routeId) {
+    try {
+        console.log('🗺️ Loading saved route geometry for route:', routeId);
+        
+        const response = await fetch(`${apiBase}/routes/${routeId}/geometry`);
+        
+        if (response.ok) {
+            const geometryData = await response.json();
+            console.log('✅ Route geometry loaded:', geometryData);
+            
+            if (geometryData.success && geometryData.geometry) {
+                displaySavedRouteGeometry(geometryData.geometry);
+                return true;
+            }
+        } else {
+            console.log('ℹ️ No saved geometry found for route:', routeId);
+        }
+    } catch (error) {
+        console.error('❌ Error loading route geometry:', error);
+    }
+    
+    return false;
+}
+
+// Display saved route geometry on map
+function displaySavedRouteGeometry(geometryData) {
+    if (!map || !geometryData.geometry) return;
+    
+    console.log('🎨 Displaying saved route geometry');
+    
+    // Remove existing route layers
+    map.eachLayer(function(layer) {
+        if (layer.options && (layer.options.className === 'saved-route' || layer.options.className === 'walking-route')) {
+            map.removeLayer(layer);
+        }
+    });
+    
+    // Remove simple route layer if exists
+    if (window.simpleRouteLayer) {
+        map.removeLayer(window.simpleRouteLayer);
+        window.simpleRouteLayer = null;
+    }
+    
+    try {
+        const geometry = geometryData.geometry;
+        
+        if (geometry.type === 'LineString' && geometry.coordinates) {
+            // Convert GeoJSON coordinates to Leaflet format
+            const latlngs = geometry.coordinates.map(coord => [coord[1], coord[0]]); // [lng, lat] to [lat, lng]
+            
+            // Create route line
+            const routeLine = L.polyline(latlngs, {
+                color: '#4ecdc4',
+                weight: 4,
+                opacity: 0.8,
+                className: 'saved-route'
+            }).addTo(map);
+            
+            // Add popup with route info
+            const distance = geometryData.total_distance ? `${geometryData.total_distance.toFixed(1)} km` : 'Bilinmiyor';
+            const duration = geometryData.estimated_duration ? `${geometryData.estimated_duration} dk` : 'Bilinmiyor';
+            
+            routeLine.bindPopup(`
+                <div style="text-align: center;">
+                    <strong>📍 Kaydedilmiş Rota</strong><br>
+                    <small>Mesafe: ${distance}</small><br>
+                    <small>Süre: ${duration}</small><br>
+                    <small style="color: #4ecdc4;">✅ Gerçek yol ağı</small>
+                </div>
+            `);
+            
+            console.log('✅ Saved route geometry displayed successfully');
+            
+            // Show success notification
+            showNotification('✅ Kaydedilmiş rota yolu gösteriliyor', 'success');
+            
+        } else {
+            console.warn('⚠️ Invalid geometry format:', geometry);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error displaying saved route geometry:', error);
+    }
 }
 
 // Expand route preview to full screen

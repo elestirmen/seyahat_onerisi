@@ -2718,6 +2718,48 @@ def admin_associate_route_pois(route_id):
         print(f"❌ Route POI association error: {e}")
         return jsonify({'error': f'Failed to associate POIs: {str(e)}'}), 500
 
+@app.route('/api/admin/routes/<int:route_id>/geometry', methods=['POST'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=20, window_seconds=60)
+def save_route_geometry(route_id):
+    """Rota geometrisini kaydet"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Geometry data is required'}), 400
+        
+        # Extract geometry data
+        geometry_segments = data.get('geometry', [])
+        total_distance = data.get('total_distance', 0)
+        estimated_time = data.get('estimated_time', 0)
+        waypoints = data.get('waypoints', [])
+        
+        if not route_service.connect():
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        # Save geometry to database
+        success = route_service.save_route_geometry(
+            route_id, 
+            geometry_segments, 
+            total_distance, 
+            estimated_time, 
+            waypoints
+        )
+        
+        route_service.disconnect()
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Route geometry saved for route {route_id}'
+            })
+        else:
+            return jsonify({'error': 'Failed to save route geometry'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error saving route geometry for route {route_id}: {str(e)}")
+        return jsonify({'error': f'Failed to save route geometry: {str(e)}'}), 500
+
 @app.route('/api/admin/routes/search', methods=['GET'])
 @auth_middleware.require_auth
 @admin_rate_limit(max_requests=50, window_seconds=60)
@@ -3672,6 +3714,44 @@ def get_route_details(route_id):
         return jsonify({
             'success': False,
             'error': f'Error fetching route: {str(e)}'
+        }), 500
+
+@app.route('/api/routes/<int:route_id>/geometry', methods=['GET'])
+@public_rate_limit(max_requests=100, window_seconds=60)
+def get_route_geometry(route_id):
+    """Get route geometry for visualization"""
+    try:
+        # Validate route_id parameter
+        if route_id <= 0:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid route ID'
+            }), 400
+        
+        service = get_route_service()
+        geometry = service.get_route_geometry(route_id)
+        
+        if not geometry:
+            return jsonify({
+                'success': False,
+                'error': 'Route geometry not found'
+            }), 404
+        
+        response = jsonify({
+            'success': True,
+            'geometry': geometry
+        })
+        
+        # Add security headers
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error fetching route geometry {route_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error fetching route geometry: {str(e)}'
         }), 500
 
 @app.route('/api/routes/filter', methods=['POST'])

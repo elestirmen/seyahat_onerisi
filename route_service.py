@@ -598,6 +598,117 @@ class RouteService:
                 self.conn.rollback()
             return False
     
+    def save_route_geometry(self, route_id: int, geometry_segments: List[Dict], 
+                          total_distance: float, estimated_time: int, waypoints: List[Dict]) -> bool:
+        """
+        Rota geometrisini veritabanına kaydet
+        
+        Args:
+            route_id: Rota ID'si
+            geometry_segments: Rota segmentleri
+            total_distance: Toplam mesafe (metre)
+            estimated_time: Tahmini süre (saniye)
+            waypoints: Waypoint'ler
+            
+        Returns:
+            Başarılıysa True
+        """
+        try:
+            logger.info(f"Saving geometry for route {route_id}")
+            
+            # Geometry segments'i LineString formatına çevir
+            linestring_coords = []
+            for segment in geometry_segments:
+                if 'coordinates' in segment and segment['coordinates']:
+                    for coord in segment['coordinates']:
+                        if 'lat' in coord and 'lng' in coord:
+                            linestring_coords.append([coord['lng'], coord['lat']])
+            
+            if not linestring_coords:
+                logger.warning(f"No valid coordinates found for route {route_id}")
+                return False
+            
+            # PostGIS LineString formatı oluştur
+            linestring_wkt = "LINESTRING(" + ",".join([f"{lng} {lat}" for lng, lat in linestring_coords]) + ")"
+            
+            # Veritabanını güncelle
+            update_query = """
+                UPDATE routes 
+                SET route_geometry = ST_GeomFromText(%s, 4326),
+                    total_distance = %s,
+                    estimated_duration = %s,
+                    waypoints = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s;
+            """
+            
+            # Estimated duration'ı dakikaya çevir
+            estimated_duration_minutes = int(estimated_time / 60) if estimated_time > 0 else None
+            
+            params = (
+                linestring_wkt,
+                total_distance / 1000,  # Metre'den km'ye çevir
+                estimated_duration_minutes,
+                Json(waypoints),
+                route_id
+            )
+            
+            result = self._execute_query(update_query, params, fetch_all=False)
+            
+            # Cache'i temizle
+            _route_cache.clear()
+            
+            logger.info(f"Successfully saved geometry for route {route_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to save geometry for route {route_id}: {e}")
+            if self.conn:
+                self.conn.rollback()
+            return False
+    
+    def get_route_geometry(self, route_id: int) -> Optional[Dict]:
+        """
+        Rota geometrisini getir
+        
+        Args:
+            route_id: Rota ID'si
+            
+        Returns:
+            Rota geometrisi veya None
+        """
+        try:
+            query = """
+                SELECT 
+                    ST_AsGeoJSON(route_geometry) as geometry,
+                    total_distance,
+                    estimated_duration,
+                    waypoints
+                FROM routes 
+                WHERE id = %s AND route_geometry IS NOT NULL;
+            """
+            
+            result = self._execute_query(query, (route_id,), fetch_one=True)
+            
+            if result:
+                geometry_data = {
+                    'route_id': route_id,
+                    'geometry': json.loads(result['geometry']) if result['geometry'] else None,
+                    'total_distance': result['total_distance'],
+                    'estimated_duration': result['estimated_duration'],
+                    'waypoints': result['waypoints'] or []
+                }
+                
+                logger.info(f"Retrieved geometry for route {route_id}")
+                return geometry_data
+            else:
+                logger.info(f"No geometry found for route {route_id}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Failed to get geometry for route {route_id}: {e}")
+            return None
+    
     def _add_route_ratings(self, route_id: int, ratings: Dict[str, int]):
         """Rota puanlarını ekle"""
         for category, rating in ratings.items():
