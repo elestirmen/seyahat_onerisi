@@ -36,6 +36,21 @@
             margin-bottom: 1rem;
         }
 
+        #map.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 1050;
+            border-radius: 0;
+            margin: 0;
+        }
+
+        body.map-fullscreen {
+            overflow: hidden;
+        }
+
         .toast-container {
             position: fixed;
             top: 1rem;
@@ -371,10 +386,15 @@
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Harita</h5>
-                        <small class="text-muted">POI'leri görmek için haritaya tıklayın. Yeni POI eklemek için haritada
-                            bir noktaya çift tıklayın.</small>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">Harita</h5>
+                            <small class="text-muted">POI'leri görmek için haritaya tıklayın. Yeni POI eklemek için haritada
+                                bir noktaya çift tıklayın.</small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleFullscreenBtn" onclick="toggleMapFullscreen()">
+                            <i class="fas fa-expand"></i>
+                        </button>
                     </div>
                     <div class="card-body">
                         <div id="map"></div>
@@ -1387,6 +1407,26 @@
                     showToast('Konum seçildi!', 'success');
                 }
             });
+        }
+
+        function toggleMapFullscreen() {
+            const mapEl = document.getElementById('map');
+            const btn = document.getElementById('toggleFullscreenBtn');
+            mapEl.classList.toggle('fullscreen');
+            document.body.classList.toggle('map-fullscreen');
+
+            const icon = btn.querySelector('i');
+            if (mapEl.classList.contains('fullscreen')) {
+                icon.classList.remove('fa-expand');
+                icon.classList.add('fa-compress');
+            } else {
+                icon.classList.remove('fa-compress');
+                icon.classList.add('fa-expand');
+            }
+
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 300);
         }
 
         // Konum seçme modu
@@ -4755,14 +4795,21 @@
                 const isEdit = !!routeId;
 
                 const normalizedName = routeData.name.toLowerCase();
-                const hasDuplicate = allRoutes.some(r => r.name.toLowerCase() === normalizedName && (!isEdit || r.id !== parseInt(routeId, 10)));
-                if (hasDuplicate) {
-                    showToast('Bu isimde bir rota zaten mevcut', 'error');
-                    return;
-                }
+                const existingRoute = allRoutes.find(r => r.name.toLowerCase() === normalizedName);
 
-                const url = isEdit ? `${apiBase}/admin/routes/${routeId}` : `${apiBase}/admin/routes`;
-                const method = isEdit ? 'PUT' : 'POST';
+                let url, method, targetRouteId;
+                if (isEdit) {
+                    targetRouteId = routeId;
+                    url = `${apiBase}/admin/routes/${routeId}`;
+                    method = 'PUT';
+                } else if (existingRoute) {
+                    targetRouteId = existingRoute.id;
+                    url = `${apiBase}/admin/routes/${existingRoute.id}`;
+                    method = 'PUT';
+                } else {
+                    url = `${apiBase}/admin/routes`;
+                    method = 'POST';
+                }
 
                 const response = await authenticatedFetch(url, {
                     method: method,
@@ -4772,23 +4819,20 @@
 
                 if (response.ok) {
                     const result = await response.json();
-                    showToast(`Rota başarıyla ${isEdit ? 'güncellendi' : 'eklendi'}!`, 'success');
+                    showToast(`Rota başarıyla ${method === 'PUT' ? 'güncellendi' : 'eklendi'}!`, 'success');
 
                     // Rotaları yeniden yükle
                     await loadRoutes();
 
                     // Yeni oluşturulan/güncellenen rotayı otomatik seç
-                    const savedRouteId = isEdit ? routeId : result.id;
+                    const savedRouteId = method === 'PUT' ? targetRouteId : result.id;
                     if (savedRouteId) {
-                        // Kısa bir gecikme ile rotayı seç (DOM güncellemesi için)
                         setTimeout(async () => {
                             selectRoute(parseInt(savedRouteId));
 
-                            // Eğer yeni rota oluştururken POI'ler eklenmişse, bunları kaydet
-                            if (!isEdit && selectedRoutePOIs.length > 0) {
+                            if (method === 'POST' && selectedRoutePOIs.length > 0) {
                                 showToast('🔄 POI\'ler rotaya bağlanıyor...', 'info');
 
-                                // POI'leri kaydet
                                 try {
                                     const currentCSRFToken = await getCSRFToken();
                                     const requestData = {
@@ -4809,7 +4853,6 @@
                                         showToast('✅ Rota ve POI\'ler başarıyla kaydedildi!', 'success');
                                         await loadRoutePOIs(savedRouteId);
 
-                                        // POI'ler kaydedildikten sonra otomatik olarak rota geometrisini hesapla ve kaydet
                                         setTimeout(async () => {
                                             await calculateAndSaveRouteGeometry(savedRouteId);
                                         }, 1000);
