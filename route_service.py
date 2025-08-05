@@ -180,7 +180,18 @@ class RouteService:
         if routes:
             return [dict(route) for route in routes]
         return []
-    
+
+    def get_route_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """İsme göre rota getir"""
+        query = """
+            SELECT id, name
+            FROM routes
+            WHERE LOWER(name) = LOWER(%s) AND is_active = true
+            LIMIT 1;
+        """
+        result = self._execute_query(query, (name,), fetch_one=True)
+        return dict(result) if result else None
+
     @cache_result(ttl=600)
     def get_route_by_id(self, route_id: int) -> Optional[Dict[str, Any]]:
         """ID'ye göre rota detaylarını getir (cached, optimized)"""

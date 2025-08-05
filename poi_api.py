@@ -2605,13 +2605,22 @@ def admin_create_route():
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'error': f'Missing required field: {field}'}), 400
-        
+
         if not route_service.connect():
             return jsonify({'error': 'Database connection failed'}), 500
-        
+
+        existing_route = route_service.get_route_by_name(data['name'])
+        if existing_route:
+            success = route_service.update_route(existing_route['id'], data)
+            route_service.disconnect()
+            if success:
+                return jsonify({'id': existing_route['id'], 'message': 'Route updated successfully'}), 200
+            else:
+                return jsonify({'error': 'Failed to update route'}), 500
+
         route_id = route_service.create_route(data)
         route_service.disconnect()
-        
+
         if route_id:
             return jsonify({'id': route_id, 'message': 'Route created successfully'}), 201
         else:
