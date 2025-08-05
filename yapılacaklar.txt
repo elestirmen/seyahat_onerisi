@@ -1,11 +1,4 @@
-- şu an 6 kategori var ama ürgüp için seyir noktalarına özel bri kategori hazırlmaak istiyroum.  
-    kategoriler'de simge değiştirmek istiroum ama olmuyor
-
-
-
-
-    şimdi projeyi daha da ilerletmek istiyorum. Şu ana kadar kişisel tercihlere göre poi tavsiye ediyordu. 
-    ama ben şunu da yapmak istiyorum. poiler gibi ayrı bir rotalar bilgisi-tablosu olsun. 
-    kişi tercihlerine göre poiler gibi hazır rotalardan da seçebilisin. Yani mevcut poilerden seçerek  oluşturduğumuz rotalar ayrı, hazır rotalar ayrı bir kavram.
-
-    Bir de poi_manager sayfasına rota hazırlama da eklenebilisin, düzenlenebilsin. ve bunları yaparken de programın çalışan kısımları bozulmasın.
+- projede hazır rota import edebilelim.
+-dil modeli ile yazılı giriş yapılabilisin. örneğin pide yapılan yer var mı ürgüpte dendiği zaman buna uygun yerler gelsin.
+- hazır rota seçme kısmında popup penceresinde rota önizlemesi görünsün.
+-hazır rotalar kuş uçumu oluşturuluyor. Bu yol ağını izlesin ya da hazır her bir noktası rotanın olsun

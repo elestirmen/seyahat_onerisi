@@ -3293,6 +3293,18 @@ function switchTab(tabName) {
     if (tabName === 'dynamic-routes') {
         dynamicTab.classList.add('active');
         dynamicContent.classList.add('active');
+        
+        // Keep map visible if it exists and has content
+        const mapSection = document.getElementById('mapSection');
+        if (mapSection && map && (markers.length > 0 || selectedPOIs.length > 0)) {
+            mapSection.style.display = 'block';
+            // Refresh map size in case it was hidden
+            setTimeout(() => {
+                if (map) {
+                    map.invalidateSize();
+                }
+            }, 100);
+        }
     } else if (tabName === 'predefined-routes') {
         predefinedTab.classList.add('active');
         predefinedContent.classList.add('active');
@@ -3301,6 +3313,25 @@ function switchTab(tabName) {
         if (predefinedRoutes.length === 0) {
             loadPredefinedRoutes();
         }
+        
+        // Initialize map for predefined routes if not already initialized
+        setTimeout(async () => {
+            const mapSection = document.getElementById('mapSection');
+            if (mapSection && !map) {
+                console.log('🗺️ Initializing map for predefined routes tab...');
+                mapSection.style.display = 'block';
+                await initializeEmptyMap();
+            } else if (mapSection && map) {
+                // Just show the map section if map already exists
+                mapSection.style.display = 'block';
+                // Refresh map size in case it was hidden
+                setTimeout(() => {
+                    if (map) {
+                        map.invalidateSize();
+                    }
+                }, 100);
+            }
+        }, 100);
     }
 }
 
@@ -3580,6 +3611,9 @@ function closeRouteDetailModal() {
     if (modal) {
         modal.classList.remove('show');
         document.removeEventListener('keydown', handleRouteModalKeydown);
+        
+        // Clean up preview maps
+        cleanupPreviewMaps();
     }
 }
 
@@ -3622,6 +3656,9 @@ function displayRouteDetails(routeData, container) {
         pois: pois
     });
     
+    // Generate unique ID for this modal's map
+    const previewMapId = `routePreviewMap_${route.id}`;
+    
     container.innerHTML = `
         <div class="route-detail-content">
             <div class="route-detail-summary">
@@ -3657,6 +3694,25 @@ function displayRouteDetails(routeData, container) {
                 </div>
             </div>
             
+            ${poiCount > 0 ? `
+            <div class="route-preview-section">
+                <h4><i class="fas fa-map"></i> Rota Ön İzlemesi</h4>
+                <div class="route-preview-map-container" onclick="expandRoutePreview('${route.id}', '${route.name}')" style="cursor: pointer;" title="Büyük haritada görüntülemek için tıklayın">
+                    <div id="${previewMapId}" class="route-preview-map"></div>
+                    <div class="route-preview-overlay">
+                        <div class="route-preview-info">
+                            <span><i class="fas fa-map-marked-alt"></i> ${poiCount} durak</span>
+                            <span><i class="fas fa-route"></i> ${distance} km</span>
+                        </div>
+                        <div class="route-preview-expand-hint">
+                            <i class="fas fa-expand-alt"></i>
+                            <span>Büyütmek için tıklayın</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            ` : ''}
+            
             <div class="route-detail-description">
                 <h4><i class="fas fa-info-circle"></i> Açıklama</h4>
                 <p>${route.description || 'Bu rota için açıklama bulunmuyor.'}</p>
@@ -3668,6 +3724,24 @@ function displayRouteDetails(routeData, container) {
             </div>
         </div>
     `;
+    
+    // Initialize preview map if POIs exist
+    if (poiCount > 0) {
+        // Show loading state initially
+        const previewMapContainer = document.getElementById(previewMapId);
+        if (previewMapContainer) {
+            previewMapContainer.innerHTML = `
+                <div class="route-preview-loading">
+                    <i class="fas fa-spinner"></i>
+                    Harita yükleniyor...
+                </div>
+            `;
+        }
+        
+        setTimeout(() => {
+            initializeRoutePreviewMap(previewMapId, pois);
+        }, 200);
+    }
 }
 
 function createPOIList(pois) {
@@ -3709,6 +3783,7 @@ async function selectPredefinedRoute(route) {
     // Show loading state and ensure sections are visible
     const resultsSection = document.getElementById('resultsSection');
     const routeSection = document.getElementById('routeSection');
+    const mapSection = document.getElementById('mapSection');
     
     if (resultsSection) {
         resultsSection.style.display = 'block';
@@ -3729,6 +3804,17 @@ async function selectPredefinedRoute(route) {
     // Make sure route section (which contains the map) is visible
     if (routeSection) {
         routeSection.style.display = 'block';
+    }
+    
+    // Make sure map section is visible and initialize map if needed
+    if (mapSection) {
+        mapSection.style.display = 'block';
+        
+        // Initialize map immediately if it doesn't exist
+        if (!map) {
+            console.log('🗺️ Initializing map for predefined route...');
+            await initializeEmptyMap();
+        }
     }
     
     try {
@@ -3848,16 +3934,16 @@ async function displayRoutePOIsOnMap(pois) {
     // Ensure map is initialized
     if (!map) {
         console.log('🗺️ Map not initialized, initializing now...');
-        await initializeMapForRoute();
-    }
-    
-    if (!map) {
-        console.error('❌ Failed to initialize map');
-        return;
+        await initializeEmptyMap();
+        if (!map) {
+            console.error('❌ Failed to initialize map');
+            return;
+        }
     }
     
     // Clear existing markers
-    clearMapMarkers();
+    markers.forEach(marker => marker.remove());
+    markers = [];
     
     // Add POI markers to map
     const routeCoordinates = [];
@@ -3880,30 +3966,50 @@ async function displayRoutePOIsOnMap(pois) {
                 const coordinates = [lat, lon];
                 routeCoordinates.push(coordinates);
                 
-                // Create custom marker icon with order number
+                // Create custom marker icon with category style and order number
+                const categoryStyle = getCategoryStyle(poi.category || 'diger');
+                const markerColor = poi.is_mandatory ? '#dc3545' : categoryStyle.color;
+                
                 const markerIcon = L.divIcon({
                     className: 'route-poi-marker',
                     html: `
                         <div style="
-                            background: ${poi.is_mandatory ? '#dc3545' : '#28a745'};
-                            color: white;
-                            border-radius: 50%;
-                            width: 32px;
-                            height: 32px;
+                            background: ${markerColor};
+                            width: 40px;
+                            height: 40px;
+                            border-radius: 50% 50% 50% 0;
+                            border: 3px solid white;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
                             display: flex;
                             align-items: center;
                             justify-content: center;
-                            font-weight: bold;
-                            font-size: 14px;
-                            border: 3px solid white;
-                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                            font-size: 18px;
+                            transform: rotate(-45deg);
+                            position: relative;
                         ">
-                            ${poi.order_in_route || i + 1}
+                            <span style="transform: rotate(45deg);">${categoryStyle.icon}</span>
+                            <div style="
+                                position: absolute;
+                                top: -8px;
+                                right: -8px;
+                                background: white;
+                                color: ${markerColor};
+                                border-radius: 50%;
+                                width: 20px;
+                                height: 20px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 10px;
+                                font-weight: bold;
+                                border: 2px solid ${markerColor};
+                                transform: rotate(45deg);
+                            ">${poi.order_in_route || i + 1}</div>
                         </div>
                     `,
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 16],
-                    popupAnchor: [0, -16]
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 40],
+                    popupAnchor: [0, -40]
                 });
                 
                 // Create marker
@@ -4023,8 +4129,8 @@ function fitMapToRoutePOIs(pois) {
     }
 }
 
-async function initializeMapForRoute() {
-    console.log('🗺️ Initializing map for route display...');
+async function initializeMainMap() {
+    console.log('🗺️ Initializing main map...');
     
     const mapContainer = document.getElementById('mapContainer');
     if (!mapContainer) {
@@ -4087,12 +4193,17 @@ async function initializeMapForRoute() {
             }
         }, 200);
         
-        console.log('✅ Map initialized successfully for route display');
+        console.log('✅ Main map initialized successfully');
         return true;
     } catch (error) {
-        console.error('❌ Error initializing map:', error);
+        console.error('❌ Error initializing main map:', error);
         return false;
     }
+}
+
+// Backward compatibility - keep the old function name
+async function initializeMapForRoute() {
+    return await initializeMainMap();
 }
 
 function clearMapMarkers() {
@@ -4189,7 +4300,7 @@ window.testRouteList = async function() {
 window.testMapInit = async function() {
     console.log('🧪 Testing map initialization...');
     
-    const success = await initializeMapForRoute();
+    const success = await initializeMainMap();
     if (success) {
         console.log('✅ Map initialization successful');
         
@@ -4204,6 +4315,196 @@ window.testMapInit = async function() {
     }
 };
 
+// Route preview map functionality
+let previewMaps = new Map(); // Store multiple preview maps
+
+async function initializeRoutePreviewMap(mapId, pois) {
+    console.log('🗺️ Initializing route preview map:', mapId, 'with', pois.length, 'POIs');
+    
+    const mapContainer = document.getElementById(mapId);
+    if (!mapContainer) {
+        console.error('❌ Preview map container not found:', mapId);
+        return;
+    }
+    
+    // Check if Leaflet is available
+    if (typeof L === 'undefined') {
+        console.error('❌ Leaflet library not loaded');
+        return;
+    }
+    
+    try {
+        // Clean up existing map if any
+        if (previewMaps.has(mapId)) {
+            previewMaps.get(mapId).remove();
+            previewMaps.delete(mapId);
+        }
+        
+        // Initialize preview map
+        const previewMap = L.map(mapId, {
+            zoomControl: false,
+            scrollWheelZoom: false,
+            doubleClickZoom: false,
+            touchZoom: false,
+            dragging: false,
+            tap: false,
+            boxZoom: false,
+            keyboard: false,
+            attributionControl: false
+        });
+        
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: ''
+        }).addTo(previewMap);
+        
+        // Store the map
+        previewMaps.set(mapId, previewMap);
+        
+        // Add POI markers
+        const validPOIs = pois.filter(poi => {
+            const lat = parseFloat(poi.lat);
+            const lon = parseFloat(poi.lon);
+            return !isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+        });
+        
+        if (validPOIs.length === 0) {
+            console.warn('No valid POIs for preview map');
+            return;
+        }
+        
+        const routeCoordinates = [];
+        
+        validPOIs.forEach((poi, index) => {
+            const lat = parseFloat(poi.lat);
+            const lon = parseFloat(poi.lon);
+            const coordinates = [lat, lon];
+            routeCoordinates.push(coordinates);
+            
+            // Create small marker for preview
+            const markerIcon = L.divIcon({
+                className: 'route-preview-marker',
+                html: `
+                    <div style="
+                        background: ${poi.is_mandatory ? '#dc3545' : '#28a745'};
+                        color: white;
+                        border-radius: 50%;
+                        width: 16px;
+                        height: 16px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        font-size: 10px;
+                        border: 2px solid white;
+                        box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                    ">
+                        ${poi.order_in_route || index + 1}
+                    </div>
+                `,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+            
+            L.marker(coordinates, { icon: markerIcon }).addTo(previewMap);
+        });
+        
+        // Draw route line
+        if (routeCoordinates.length > 1) {
+            L.polyline(routeCoordinates, {
+                color: '#007bff',
+                weight: 2,
+                opacity: 0.8
+            }).addTo(previewMap);
+        }
+        
+        // Fit map to show all POIs
+        if (validPOIs.length === 1) {
+            const poi = validPOIs[0];
+            previewMap.setView([parseFloat(poi.lat), parseFloat(poi.lon)], 14);
+        } else {
+            const bounds = L.latLngBounds(routeCoordinates);
+            previewMap.fitBounds(bounds, { padding: [10, 10] });
+        }
+        
+        // Force map to resize
+        setTimeout(() => {
+            previewMap.invalidateSize();
+            
+            // Clear loading state
+            const loadingElement = mapContainer.querySelector('.route-preview-loading');
+            if (loadingElement) {
+                loadingElement.remove();
+            }
+        }, 100);
+        
+        console.log('✅ Route preview map initialized successfully');
+        
+    } catch (error) {
+        console.error('❌ Error initializing route preview map:', error);
+    }
+}
+
+// Clean up preview maps when modal is closed
+function cleanupPreviewMaps() {
+    previewMaps.forEach((map, mapId) => {
+        try {
+            map.remove();
+        } catch (e) {
+            console.warn('Error removing preview map:', mapId, e);
+        }
+    });
+    previewMaps.clear();
+}
+
+// Expand route preview to full screen
+async function expandRoutePreview(routeId, routeName) {
+    console.log('🔍 Expanding route preview for:', routeName);
+    
+    try {
+        // Fetch route details
+        const response = await fetch(`${apiBase}/routes/${routeId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const route = data.success ? data.route : data;
+        const pois = route.pois || [];
+        
+        if (pois.length === 0) {
+            showNotification('Bu rotada görüntülenecek POI bulunmuyor', 'warning');
+            return;
+        }
+        
+        // Close current modal
+        closeRouteDetailModal();
+        
+        // Switch to dynamic routes tab
+        switchTab('dynamic-routes');
+        
+        // Ensure main map is initialized before showing route
+        if (!map) {
+            console.log('🗺️ Main map not initialized, initializing for route preview...');
+            const mapInitialized = await initializeMainMap();
+            if (!mapInitialized) {
+                showNotification('Harita başlatılamadı', 'error');
+                return;
+            }
+        }
+        
+        // Show route on main map
+        await selectPredefinedRoute(route);
+        
+        // Show notification
+        showNotification(`📍 "${routeName}" rotası haritada gösteriliyor`, 'success');
+        
+    } catch (error) {
+        console.error('❌ Error expanding route preview:', error);
+        showNotification('Rota haritada gösterilirken hata oluştu', 'error');
+    }
+}
+
 // Initialize everything when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function () {
     console.log('🚀 DOM loaded, initializing...');
@@ -4213,6 +4514,15 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Initialize route tabs
     initializeRouteTabs();
+    
+    // Initialize main map early so it's ready for route selection
+    setTimeout(async () => {
+        const mapContainer = document.getElementById('mapContainer');
+        if (mapContainer) {
+            console.log('🗺️ Pre-initializing main map for better UX...');
+            await initializeMainMap();
+        }
+    }, 1000); // Wait 1 second after page load
 
     // Feature detection for touch support
     const supportsTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -4969,6 +5279,72 @@ async function displayRecommendations(recommendationData) {
             }
         }, 0); // Execute immediately but asynchronously
     });
+}
+
+// Initialize empty map for predefined routes
+async function initializeEmptyMap() {
+    const mapContainer = document.getElementById('mapContainer');
+    const mapSection = document.getElementById('mapSection');
+
+    console.log('🗺️ Initializing empty map...');
+
+    // Show map section with animation
+    if (mapSection) {
+        mapSection.style.display = 'block';
+        mapSection.style.opacity = '0';
+        mapSection.style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            mapSection.style.transition = 'all 0.6s ease-out';
+            mapSection.style.opacity = '1';
+            mapSection.style.transform = 'translateY(0)';
+        }, 100);
+    }
+
+    // Add loading state to map container
+    mapContainer.classList.add('loading');
+
+    // Clear existing map
+    if (map) {
+        map.remove();
+    }
+
+    // Initialize map with better options
+    map = L.map('mapContainer', {
+        zoomControl: true,
+        scrollWheelZoom: true,
+        doubleClickZoom: true,
+        touchZoom: true,
+        dragging: true,
+        tap: true,
+        tapTolerance: 15,
+        worldCopyJump: false,
+        maxBoundsViscosity: 0.0
+    }).setView([38.632, 34.912], 13);
+
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Add map controls
+    if (L.Control.Fullscreen) {
+        map.addControl(new L.Control.Fullscreen());
+    }
+
+    // Clear existing markers
+    markers.forEach(marker => marker.remove());
+    markers = [];
+
+    // Remove loading state after map is fully loaded
+    setTimeout(() => {
+        mapContainer.classList.remove('loading');
+        // Fix map size issues
+        if (map) {
+            map.invalidateSize();
+        }
+        console.log('🗺️ Empty map initialized and ready');
+    }, 1000);
 }
 
 async function initializeMap(recommendationData) {
