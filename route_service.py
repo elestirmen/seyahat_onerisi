@@ -12,8 +12,60 @@ from psycopg2.extras import RealDictCursor, Json
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 import logging
+import time
+import hashlib
+from functools import wraps
 
 logger = logging.getLogger(__name__)
+
+# Simple in-memory cache for performance
+class SimpleCache:
+    def __init__(self, ttl=300):
+        self.cache = {}
+        self.timestamps = {}
+        self.ttl = ttl
+    
+    def get(self, key):
+        if key in self.cache:
+            if time.time() - self.timestamps[key] < self.ttl:
+                return self.cache[key]
+            else:
+                del self.cache[key]
+                del self.timestamps[key]
+        return None
+    
+    def set(self, key, value):
+        self.cache[key] = value
+        self.timestamps[key] = time.time()
+    
+    def clear(self):
+        self.cache.clear()
+        self.timestamps.clear()
+
+# Global cache instance
+_route_cache = SimpleCache(ttl=300)
+
+def cache_result(ttl=300):
+    """Decorator to cache function results"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Generate cache key
+            cache_key = f"{func.__name__}_{hash(str(args) + str(sorted(kwargs.items())))}"
+            
+            # Try cache first
+            cached = _route_cache.get(cache_key)
+            if cached is not None:
+                logger.debug(f"Cache hit for {func.__name__}")
+                return cached
+            
+            # Execute and cache
+            result = func(*args, **kwargs)
+            _route_cache.set(cache_key, result)
+            logger.debug(f"Cache miss for {func.__name__}")
+            return result
+        return wrapper
+    return decorator
 
 
 class RouteService:
@@ -90,17 +142,32 @@ class RouteService:
                 self.conn.rollback()
             return None
     
+    @cache_result(ttl=300)
     def get_all_active_routes(self) -> List[Dict[str, Any]]:
-        """Tüm aktif rotaları getir"""
+        """Tüm aktif rotaları getir (cached)"""
+        # Optimized query with better performance
         query = """
-            SELECT r.*, 
-                   COUNT(rp.poi_id) as poi_count,
-                   COALESCE(
-                       json_object_agg(
-                           rr.category, rr.rating
-                       ) FILTER (WHERE rr.category IS NOT NULL), 
-                       '{}'::json
-                   ) as ratings
+            SELECT 
+                r.id,
+                r.name,
+                r.description,
+                r.route_type,
+                r.difficulty_level,
+                r.estimated_duration,
+                r.total_distance,
+                r.elevation_gain,
+                r.is_circular,
+                r.season_availability,
+                r.tags,
+                r.created_at,
+                r.updated_at,
+                COUNT(DISTINCT rp.poi_id) as poi_count,
+                COALESCE(
+                    json_object_agg(
+                        rr.category, rr.rating
+                    ) FILTER (WHERE rr.category IS NOT NULL), 
+                    '{}'::json
+                ) as ratings
             FROM routes r
             LEFT JOIN route_pois rp ON r.id = rp.route_id
             LEFT JOIN route_ratings rr ON r.id = rr.route_id
@@ -114,28 +181,57 @@ class RouteService:
             return [dict(route) for route in routes]
         return []
     
+    @cache_result(ttl=600)
     def get_route_by_id(self, route_id: int) -> Optional[Dict[str, Any]]:
-        """ID'ye göre rota detaylarını getir"""
+        """ID'ye göre rota detaylarını getir (cached, optimized)"""
+        # Single optimized query to get route with POIs
         query = """
-            SELECT r.*, 
-                   COALESCE(
-                       json_object_agg(
-                           rr.category, rr.rating
-                       ) FILTER (WHERE rr.category IS NOT NULL), 
-                       '{}'::json
-                   ) as ratings
-            FROM routes r
-            LEFT JOIN route_ratings rr ON r.id = rr.route_id
-            WHERE r.id = %s AND r.is_active = true
-            GROUP BY r.id;
+            WITH route_data AS (
+                SELECT 
+                    r.*,
+                    COALESCE(
+                        json_object_agg(
+                            rr.category, rr.rating
+                        ) FILTER (WHERE rr.category IS NOT NULL), 
+                        '{}'::json
+                    ) as ratings
+                FROM routes r
+                LEFT JOIN route_ratings rr ON r.id = rr.route_id
+                WHERE r.id = %s AND r.is_active = true
+                GROUP BY r.id
+            ),
+            route_pois AS (
+                SELECT 
+                    rp.route_id,
+                    json_agg(
+                        json_build_object(
+                            'poi_id', rp.poi_id,
+                            'order_in_route', rp.order_in_route,
+                            'is_mandatory', rp.is_mandatory,
+                            'estimated_time_at_poi', rp.estimated_time_at_poi,
+                            'notes', rp.notes,
+                            'name', p.name,
+                            'lat', ST_Y(p.location::geometry),
+                            'lon', ST_X(p.location::geometry),
+                            'category', p.category,
+                            'description', p.description
+                        ) ORDER BY rp.order_in_route
+                    ) as pois
+                FROM route_pois rp
+                JOIN pois p ON rp.poi_id = p.id
+                WHERE rp.route_id = %s
+                GROUP BY rp.route_id
+            )
+            SELECT 
+                rd.*,
+                COALESCE(rp.pois, '[]'::json) as pois
+            FROM route_data rd
+            LEFT JOIN route_pois rp ON rd.id = rp.route_id;
         """
         
-        route = self._execute_query(query, (route_id,), fetch_one=True)
+        route = self._execute_query(query, (route_id, route_id), fetch_one=True)
         if route:
-            # POI'leri de getir
-            route_dict = dict(route)
-            route_dict['pois'] = self.get_route_pois(route_id)
-            return route_dict
+            return dict(route)
         return None
     
     def get_route_pois(self, route_id: int) -> List[Dict[str, Any]]:
@@ -156,7 +252,7 @@ class RouteService:
             return [dict(poi) for poi in pois]
         return []
     
-    def filter_routes(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def filter_routes(self, filters: Dict[str, Any], page: int = 0, limit: int = 20) -> Dict[str, Any]:
         """
         Filtrelere göre rotaları getir
         
@@ -229,33 +325,70 @@ class RouteService:
             where_conditions.append(f"r.season_availability::jsonb ? ${param_count}")
             params.append(filters['season'])
         
-        # Build query
+        # Add pagination parameters
+        offset = page * limit
+        params.extend([limit, offset])
+        param_count += 2
+        
+        # Build query with pagination
         where_clause = " AND ".join(where_conditions)
+        
+        # Count query for total results
+        count_query = f"""
+            SELECT COUNT(DISTINCT r.id)
+            FROM routes r
+            LEFT JOIN route_pois rp ON r.id = rp.route_id
+            LEFT JOIN route_ratings rr ON r.id = rr.route_id
+            WHERE {where_clause};
+        """
+        
+        # Main query with pagination
         query = f"""
-            SELECT r.*, 
-                   COUNT(rp.poi_id) as poi_count,
-                   COALESCE(
-                       json_object_agg(
-                           rr.category, rr.rating
-                       ) FILTER (WHERE rr.category IS NOT NULL), 
-                       '{{}}'::json
-                   ) as ratings
+            SELECT 
+                r.id,
+                r.name,
+                r.description,
+                r.route_type,
+                r.difficulty_level,
+                r.estimated_duration,
+                r.total_distance,
+                r.is_circular,
+                COUNT(DISTINCT rp.poi_id) as poi_count,
+                COALESCE(
+                    json_object_agg(
+                        rr.category, rr.rating
+                    ) FILTER (WHERE rr.category IS NOT NULL), 
+                    '{{}}'::json
+                ) as ratings
             FROM routes r
             LEFT JOIN route_pois rp ON r.id = rp.route_id
             LEFT JOIN route_ratings rr ON r.id = rr.route_id
             WHERE {where_clause}
             GROUP BY r.id
-            ORDER BY r.created_at DESC;
+            ORDER BY r.created_at DESC
+            LIMIT ${param_count-1} OFFSET ${param_count};
         """
         
         # Convert $n placeholders to %s for psycopg2
         for i in range(param_count, 0, -1):
             query = query.replace(f"${i}", "%s")
+            count_query = count_query.replace(f"${i}", "%s")
         
+        # Get total count (excluding pagination params)
+        count_params = params[:-2]
+        total_result = self._execute_query(count_query, tuple(count_params), fetch_one=True)
+        total = total_result['count'] if total_result else 0
+        
+        # Get paginated results
         routes = self._execute_query(query, tuple(params))
-        if routes:
-            return [dict(route) for route in routes]
-        return []
+        
+        return {
+            'routes': [dict(route) for route in routes] if routes else [],
+            'total': total,
+            'page': page,
+            'limit': limit,
+            'has_more': (page + 1) * limit < total
+        }
     
     def create_route(self, route_data: Dict[str, Any]) -> Optional[int]:
         """
@@ -302,6 +435,9 @@ class RouteService:
             # Ratings ekle
             if route_data.get('ratings'):
                 self._add_route_ratings(route_id, route_data['ratings'])
+            
+            # Clear cache after creation
+            _route_cache.clear()
             
             logger.info(f"Route created with ID: {route_id}")
             return route_id
@@ -358,6 +494,9 @@ class RouteService:
             if route_data.get('ratings'):
                 self._update_route_ratings(route_id, route_data['ratings'])
             
+            # Clear cache after update
+            _route_cache.clear()
+            
             logger.info(f"Route {route_id} updated successfully")
             return True
         
@@ -382,6 +521,9 @@ class RouteService:
         result = self._execute_query(query, (route_id,), fetch_all=False)
         
         if result and result > 0:
+            # Clear cache after deletion
+            _route_cache.clear()
+            
             logger.info(f"Route {route_id} deleted successfully")
             return True
         

@@ -3591,16 +3591,43 @@ def public_rate_limit(max_requests=100, window_seconds=60):
 @app.route('/api/routes', methods=['GET'])
 @public_rate_limit(max_requests=100, window_seconds=60)
 def get_predefined_routes():
-    """Get all active predefined routes"""
+    """Get all active predefined routes with pagination support"""
     try:
         service = get_route_service()
-        routes = service.get_all_active_routes()
         
-        return jsonify({
-            'success': True,
-            'routes': routes,
-            'count': len(routes)
-        })
+        # Get pagination parameters
+        page = int(request.args.get('page', 0))
+        limit = min(int(request.args.get('limit', 20)), 100)  # Max 100 per page
+        
+        # Get filters if provided
+        filters = {}
+        if request.args.get('route_type'):
+            filters['route_type'] = request.args.get('route_type')
+        if request.args.get('difficulty_min'):
+            filters['difficulty_level'] = filters.get('difficulty_level', {})
+            filters['difficulty_level']['min'] = int(request.args.get('difficulty_min'))
+        if request.args.get('difficulty_max'):
+            filters['difficulty_level'] = filters.get('difficulty_level', {})
+            filters['difficulty_level']['max'] = int(request.args.get('difficulty_max'))
+        
+        # Use pagination if filters provided, otherwise get all
+        if filters or page > 0 or limit != 20:
+            result = service.filter_routes(filters, page, limit)
+            return jsonify({
+                'success': True,
+                **result
+            })
+        else:
+            # Fallback to cached get_all for backward compatibility
+            routes = service.get_all_active_routes()
+            return jsonify({
+                'success': True,
+                'routes': routes,
+                'total': len(routes),
+                'page': 0,
+                'limit': len(routes),
+                'has_more': False
+            })
         
     except Exception as e:
         logger.error(f"Error fetching routes: {e}")
