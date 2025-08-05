@@ -4470,16 +4470,20 @@ async function loadAndDisplayRouteGeometry(routeId) {
         if (response.ok) {
             const geometryData = await response.json();
             console.log('✅ Route geometry loaded:', geometryData);
-            
+
             if (geometryData.success && geometryData.geometry) {
                 displaySavedRouteGeometry(geometryData.geometry);
                 return true;
+            } else {
+                showNotification('⚠️ Rota geometrisi bulunamadı. Ön izleme için yalnızca düz çizgiler gösteriliyor.', 'warning');
             }
         } else {
             console.log('ℹ️ No saved geometry found for route:', routeId);
+            showNotification('⚠️ Rota geometrisi bulunamadı. Ön izleme için yalnızca düz çizgiler gösteriliyor.', 'warning');
         }
     } catch (error) {
         console.error('❌ Error loading route geometry:', error);
+        showNotification('⚠️ Rota geometrisi bulunamadı. Ön izleme için yalnızca düz çizgiler gösteriliyor.', 'warning');
     }
     
     return false;
