@@ -4009,12 +4009,12 @@
                                         </small>
                                         ${route.description ? `<p class="mb-0 mt-1 small text-muted">${route.description}</p>` : ''}
                                     </div>
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
-                                                data-bs-toggle="dropdown">
+                                    <div class="dropdown dropup">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                                data-bs-toggle="dropdown" data-bs-display="static">
                                             <i class="fas fa-ellipsis-v"></i>
                                         </button>
-                                        <ul class="dropdown-menu">
+                                        <ul class="dropdown-menu dropdown-menu-end">
                                             <li><a class="dropdown-item" href="#" onclick="editRoute(${route.id})">
                                                 <i class="fas fa-edit me-2"></i>Düzenle
                                             </a></li>
@@ -4606,12 +4606,12 @@
                                 </small>
                                 ${route.description ? `<p class="mb-0 mt-1 small text-muted">${route.description}</p>` : ''}
                             </div>
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
-                                        data-bs-toggle="dropdown">
+                            <div class="dropdown dropup">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                        data-bs-toggle="dropdown" data-bs-display="static">
                                     <i class="fas fa-ellipsis-v"></i>
                                 </button>
-                                <ul class="dropdown-menu">
+                                <ul class="dropdown-menu dropdown-menu-end">
                                     <li><a class="dropdown-item" href="#" onclick="editRoute(${route.id})">
                                         <i class="fas fa-edit me-2"></i>Düzenle
                                     </a></li>
@@ -4753,6 +4753,13 @@
 
                 const routeId = document.getElementById('routeId').value;
                 const isEdit = !!routeId;
+
+                const normalizedName = routeData.name.toLowerCase();
+                const hasDuplicate = allRoutes.some(r => r.name.toLowerCase() === normalizedName && (!isEdit || r.id !== parseInt(routeId, 10)));
+                if (hasDuplicate) {
+                    showToast('Bu isimde bir rota zaten mevcut', 'error');
+                    return;
+                }
 
                 const url = isEdit ? `${apiBase}/admin/routes/${routeId}` : `${apiBase}/admin/routes`;
                 const method = isEdit ? 'PUT' : 'POST';

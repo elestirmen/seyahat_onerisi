@@ -4444,7 +4444,49 @@ async function initializeRoutePreviewMap(mapId, routeId, pois) {
             }
         }
 
-        // Draw simple straight lines only if geometry could not be loaded
+        // If geometry still not loaded, request smart route from API for road network
+        if (!geometryLatLngs && routeCoordinates.length > 1) {
+            try {
+                const waypointPayload = validPOIs.map(p => ({
+                    lat: parseFloat(p.lat),
+                    lng: parseFloat(p.lon),
+                    name: p.name || ''
+                }));
+
+                const resp = await fetch(`${apiBase}/route/smart`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ waypoints: waypointPayload })
+                });
+
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.success && data.route && data.route.segments && data.route.segments.length > 0) {
+                        geometryLatLngs = data.route.segments[0].coordinates.map(c => [c.lat, c.lng]);
+                        L.polyline(geometryLatLngs, {
+                            color: '#4ecdc4',
+                            weight: 4,
+                            opacity: 0.8,
+                            className: 'saved-route'
+                        }).addTo(previewMap);
+
+                        // Update distance info in preview overlay if available
+                        if (data.route.total_distance) {
+                            const distanceSpan = mapContainer.querySelector('.route-preview-info span:nth-child(2)');
+                            if (distanceSpan) {
+                                distanceSpan.innerHTML = `<i class="fas fa-route"></i> ${data.route.total_distance} km`;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('❌ Error fetching smart route for preview:', err);
+            }
+        }
+
+        // Draw simple straight lines only if no geometry could be loaded
         if (!geometryLatLngs && routeCoordinates.length > 1) {
             L.polyline(routeCoordinates, {
                 color: '#007bff',
