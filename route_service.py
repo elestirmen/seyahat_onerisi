@@ -436,6 +436,11 @@ class RouteService:
             if route_data.get('ratings'):
                 self._add_route_ratings(route_id, route_data['ratings'])
             
+            # Commit the transaction
+            if self.conn:
+                self.conn.commit()
+                logger.info("Route creation transaction committed")
+            
             # Clear cache after creation
             _route_cache.clear()
             
@@ -615,14 +620,19 @@ class RouteService:
         """
         try:
             logger.info(f"Saving geometry for route {route_id}")
+            logger.info(f"Geometry segments: {len(geometry_segments)} segments")
+            logger.info(f"Total distance: {total_distance}m, Estimated time: {estimated_time}s")
             
             # Geometry segments'i LineString formatına çevir
             linestring_coords = []
-            for segment in geometry_segments:
+            for i, segment in enumerate(geometry_segments):
+                logger.info(f"Processing segment {i}: {segment}")
                 if 'coordinates' in segment and segment['coordinates']:
                     for coord in segment['coordinates']:
                         if 'lat' in coord and 'lng' in coord:
                             linestring_coords.append([coord['lng'], coord['lat']])
+            
+            logger.info(f"Extracted {len(linestring_coords)} coordinates")
             
             if not linestring_coords:
                 logger.warning(f"No valid coordinates found for route {route_id}")
@@ -630,6 +640,7 @@ class RouteService:
             
             # PostGIS LineString formatı oluştur
             linestring_wkt = "LINESTRING(" + ",".join([f"{lng} {lat}" for lng, lat in linestring_coords]) + ")"
+            logger.info(f"Generated LineString WKT: {linestring_wkt[:200]}...")
             
             # Veritabanını güncelle
             update_query = """
@@ -644,6 +655,7 @@ class RouteService:
             
             # Estimated duration'ı dakikaya çevir
             estimated_duration_minutes = int(estimated_time / 60) if estimated_time > 0 else None
+            logger.info(f"Converted values - Distance: {total_distance / 1000}km, Duration: {estimated_duration_minutes}min")
             
             params = (
                 linestring_wkt,
@@ -653,7 +665,19 @@ class RouteService:
                 route_id
             )
             
+            logger.info(f"Executing update query with params: {params}")
             result = self._execute_query(update_query, params, fetch_all=False)
+            logger.info(f"Update query result: {result}")
+            
+            # Commit the transaction
+            if self.conn:
+                self.conn.commit()
+                logger.info("Transaction committed")
+            
+            # Verify the update
+            verify_query = "SELECT route_geometry IS NOT NULL as has_geometry FROM routes WHERE id = %s;"
+            verify_result = self._execute_query(verify_query, (route_id,), fetch_one=True)
+            logger.info(f"Verification result: {verify_result}")
             
             # Cache'i temizle
             _route_cache.clear()

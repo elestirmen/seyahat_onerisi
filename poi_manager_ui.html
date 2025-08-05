@@ -4771,7 +4771,7 @@
                     await loadRoutes();
 
                     // Yeni oluşturulan/güncellenen rotayı otomatik seç
-                    const savedRouteId = isEdit ? routeId : result.route_id;
+                    const savedRouteId = isEdit ? routeId : result.id;
                     if (savedRouteId) {
                         // Kısa bir gecikme ile rotayı seç (DOM güncellemesi için)
                         setTimeout(async () => {
@@ -4801,6 +4801,11 @@
                                     if (poiResponse.ok) {
                                         showToast('✅ Rota ve POI\'ler başarıyla kaydedildi!', 'success');
                                         await loadRoutePOIs(savedRouteId);
+
+                                        // POI'ler kaydedildikten sonra otomatik olarak rota geometrisini hesapla ve kaydet
+                                        setTimeout(async () => {
+                                            await calculateAndSaveRouteGeometry(savedRouteId);
+                                        }, 1000);
                                     } else {
                                         showToast('⚠️ Rota kaydedildi ancak POI\'ler bağlanamadı. Manuel olarak kaydedin.', 'warning');
                                     }
@@ -4961,6 +4966,8 @@
         // Rota mesafesi hesaplama fonksiyonu
         async function calculateRouteDistance() {
             console.log('🧮 Calculating route distance...');
+            console.log('🔍 selectedRoutePOIs:', selectedRoutePOIs);
+            console.log('🔍 availablePOIs:', availablePOIs);
 
             if (selectedRoutePOIs.length === 0) {
                 showToast('Rotaya POI ekleyin', 'warning');
@@ -4981,6 +4988,7 @@
                 // Waypoint'leri hazırla
                 const waypoints = sortedPOIs.map(routePoi => {
                     const poi = availablePOIs.find(p => p.id === routePoi.poi_id);
+                    console.log('🔍 Looking for POI ID:', routePoi.poi_id, 'Found:', poi);
                     if (!poi) return null;
 
                     return {
@@ -4990,6 +4998,8 @@
                     };
                 }).filter(wp => wp !== null);
 
+                console.log('🗺️ Prepared waypoints:', waypoints);
+
                 if (waypoints.length < 2) {
                     showToast('En az 2 POI gerekli', 'warning');
                     return;
@@ -4998,6 +5008,7 @@
                 console.log('🗺️ Calculating route for waypoints:', waypoints);
 
                 // Smart route API'sini çağır
+                console.log('📡 Calling route API with waypoints:', waypoints);
                 const response = await fetch('/api/route/smart', {
                     method: 'POST',
                     headers: {
@@ -5008,22 +5019,30 @@
                     })
                 });
 
+                console.log('📡 API Response status:', response.status);
+
                 if (!response.ok) {
-                    throw new Error(`Route API error: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('❌ API Error response:', errorText);
+                    throw new Error(`Route API error: ${response.status} - ${errorText}`);
                 }
 
                 const routeData = await response.json();
                 console.log('🗺️ Route calculation result:', routeData);
 
                 if (routeData.success && routeData.route && routeData.route.total_distance) {
-                    // Mesafeyi km cinsinden göster
-                    const distanceKm = (routeData.route.total_distance / 1000).toFixed(1);
+                    console.log('✅ Route data valid, total_distance:', routeData.route.total_distance);
+
+                    // Mesafeyi km cinsinden göster (API'den km olarak geliyor)
+                    const distanceKm = routeData.route.total_distance.toFixed(1);
+                    console.log('📏 Setting distance to:', distanceKm, 'km');
                     distanceInput.value = distanceKm;
 
                     // Süreyi de güncelle (eğer varsa)
                     const durationInput = document.getElementById('routeDuration');
                     if (durationInput && routeData.route.estimated_time) {
-                        const durationMinutes = Math.round(routeData.route.estimated_time / 60);
+                        const durationMinutes = Math.round(routeData.route.estimated_time); // API'den dakika olarak geliyor
+                        console.log('⏱️ Setting duration to:', durationMinutes, 'minutes');
                         durationInput.value = durationMinutes;
                     }
 
@@ -5109,6 +5128,99 @@
             return deg * (Math.PI / 180);
         }
 
+        // Yeni rota için geometri hesapla ve kaydet
+        async function calculateAndSaveRouteGeometry(routeId) {
+            try {
+                console.log('🧮 Calculating and saving geometry for new route:', routeId);
+
+                // Rota POI'lerini al
+                const routePOIs = selectedRoutePOIs;
+                if (routePOIs.length < 2) {
+                    console.log('⚠️ Not enough POIs for route geometry calculation');
+                    return;
+                }
+
+                // POI'leri sıraya göre sırala
+                const sortedPOIs = [...routePOIs].sort((a, b) => a.order_in_route - b.order_in_route);
+
+                // Waypoint'leri hazırla
+                const waypoints = sortedPOIs.map(routePoi => {
+                    const poi = availablePOIs.find(p => p.id === routePoi.poi_id);
+                    if (!poi) return null;
+
+                    return {
+                        lat: poi.lat,
+                        lng: poi.lon,
+                        name: poi.name
+                    };
+                }).filter(wp => wp !== null);
+
+                if (waypoints.length < 2) {
+                    console.log('⚠️ Not enough valid waypoints for route calculation');
+                    return;
+                }
+
+                console.log('🗺️ Calculating route geometry for waypoints:', waypoints);
+
+                // Smart route API'sini çağır
+                const response = await fetch('/api/route/smart', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        waypoints: waypoints
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Route API error: ${response.status}`);
+                }
+
+                const routeData = await response.json();
+                console.log('🗺️ Route calculation result for new route:', routeData);
+
+                if (routeData.success && routeData.route && routeData.route.segments) {
+                    // Geometriyi kaydet
+                    await saveRouteGeometry(routeId, routeData.route);
+
+                    // Mesafe ve süreyi de güncelle
+                    if (routeData.route.total_distance) {
+                        const distanceKm = routeData.route.total_distance.toFixed(1); // API'den km olarak geliyor
+                        const estimatedMinutes = routeData.route.estimated_time ? Math.round(routeData.route.estimated_time) : null; // API'den dakika olarak geliyor
+
+                        // Rota bilgilerini güncelle
+                        const updateData = {
+                            total_distance: parseFloat(distanceKm)
+                        };
+
+                        if (estimatedMinutes) {
+                            updateData.estimated_duration = estimatedMinutes;
+                        }
+
+                        const updateResponse = await authenticatedFetch(`${apiBase}/admin/routes/${routeId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(updateData)
+                        });
+
+                        if (updateResponse.ok) {
+                            console.log('✅ Route distance and duration updated');
+                            showToast(`✅ Rota geometrisi kaydedildi (${distanceKm} km)`, 'success');
+
+                            // Rota listesini yenile
+                            await loadRoutes();
+                        }
+                    }
+                } else {
+                    console.warn('⚠️ Could not calculate route geometry for new route');
+                }
+
+            } catch (error) {
+                console.error('❌ Error calculating and saving route geometry:', error);
+            }
+        }
+
         // Rota geometrisini veritabanına kaydet
         async function saveRouteGeometry(routeId, routeData) {
             try {
@@ -5117,10 +5229,12 @@
                 const geometryData = {
                     route_id: routeId,
                     geometry: routeData.segments,
-                    total_distance: routeData.total_distance,
-                    estimated_time: routeData.estimated_time,
+                    total_distance: routeData.total_distance * 1000, // km'den metre'ye çevir (veritabanı için)
+                    estimated_time: routeData.estimated_time * 60, // dakika'dan saniye'ye çevir (veritabanı için)
                     waypoints: routeData.waypoints || []
                 };
+
+                console.log('📡 Sending geometry data:', geometryData);
 
                 const response = await authenticatedFetch(`${apiBase}/admin/routes/${routeId}/geometry`, {
                     method: 'POST',

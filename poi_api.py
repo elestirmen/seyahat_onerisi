@@ -2551,8 +2551,7 @@ def download_map(filename):
 
 # ===== ROTA YÖNETİMİ ENDPOINT'LERİ =====
 
-# RouteService instance'ı oluştur
-route_service = RouteService()
+# RouteService instance'ı oluştur (removed duplicate)
 
 @app.route('/api/admin/routes', methods=['GET'])
 @auth_middleware.require_auth
@@ -2734,19 +2733,16 @@ def save_route_geometry(route_id):
         estimated_time = data.get('estimated_time', 0)
         waypoints = data.get('waypoints', [])
         
-        if not route_service.connect():
-            return jsonify({'error': 'Database connection failed'}), 500
+        service = get_route_service()
         
         # Save geometry to database
-        success = route_service.save_route_geometry(
+        success = service.save_route_geometry(
             route_id, 
             geometry_segments, 
             total_distance, 
             estimated_time, 
             waypoints
         )
-        
-        route_service.disconnect()
         
         if success:
             return jsonify({
