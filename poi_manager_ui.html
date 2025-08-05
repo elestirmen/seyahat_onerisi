@@ -1152,10 +1152,6 @@
                                     </div>
 
                                     <div class="route-action-buttons">
-                                        <button type="button" class="btn btn-success" id="saveRoutePOIsBtn"
-                                            onclick="saveRoutePOIs()">
-                                            <i class="fas fa-save"></i>POI İlişkilerini Kaydet
-                                        </button>
                                         <button type="button" class="btn btn-outline-primary"
                                             onclick="updateRoutePreview()">
                                             <i class="fas fa-sync"></i>Önizlemeyi Güncelle
@@ -4049,7 +4045,7 @@
                                         </small>
                                         ${route.description ? `<p class="mb-0 mt-1 small text-muted">${route.description}</p>` : ''}
                                     </div>
-                                    <div class="dropdown dropup">
+                                    <div class="dropdown">
                                         <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
                                                 data-bs-toggle="dropdown" data-bs-display="static">
                                             <i class="fas fa-ellipsis-v"></i>
@@ -4108,9 +4104,6 @@
             // POI seçimi bölümünü göster ve temizle
             document.getElementById('routePoiSelection').style.display = 'block';
             document.getElementById('poiSelectionTitle').innerHTML = '<i class="fas fa-map-marker-alt me-2"></i>POI Seçimi (Yeni Rota)';
-            document.getElementById('saveRoutePOIsBtn').innerHTML = '<i class="fas fa-info-circle"></i>Önce rotayı kaydedin';
-            document.getElementById('saveRoutePOIsBtn').disabled = true;
-            document.getElementById('saveRoutePOIsBtn').className = 'btn btn-secondary';
             selectedRoute = null; // Geçici olarak null yap
             selectedRoutePOIs = []; // POI listesini temizle
 
@@ -4146,9 +4139,6 @@
 
             // POI seçimi başlığını sıfırla
             document.getElementById('poiSelectionTitle').innerHTML = '<i class="fas fa-map-marker-alt me-2"></i>POI Seçimi ve Sıralama';
-            document.getElementById('saveRoutePOIsBtn').innerHTML = '<i class="fas fa-save"></i>POI İlişkilerini Kaydet';
-            document.getElementById('saveRoutePOIsBtn').disabled = false;
-            document.getElementById('saveRoutePOIsBtn').className = 'btn btn-success';
 
             // Seçili rota yoksa POI seçimi bölümünü gizle
             if (!selectedRoute) {
@@ -4175,9 +4165,6 @@
             // POI seçimi bölümünü göster
             document.getElementById('routePoiSelection').style.display = 'block';
             document.getElementById('poiSelectionTitle').innerHTML = `<i class="fas fa-map-marker-alt me-2"></i>POI Seçimi - ${selectedRoute.name}`;
-            document.getElementById('saveRoutePOIsBtn').innerHTML = '<i class="fas fa-save"></i>POI İlişkilerini Kaydet';
-            document.getElementById('saveRoutePOIsBtn').disabled = false;
-            document.getElementById('saveRoutePOIsBtn').className = 'btn btn-success';
 
             // Rota POI'lerini yükle
             loadRoutePOIs(routeId);
@@ -4646,7 +4633,7 @@
                                 </small>
                                 ${route.description ? `<p class="mb-0 mt-1 small text-muted">${route.description}</p>` : ''}
                             </div>
-                            <div class="dropdown dropup">
+                            <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
                                         data-bs-toggle="dropdown" data-bs-display="static">
                                     <i class="fas fa-ellipsis-v"></i>
@@ -4827,46 +4814,22 @@
                     // Yeni oluşturulan/güncellenen rotayı otomatik seç
                     const savedRouteId = method === 'PUT' ? targetRouteId : result.id;
                     if (savedRouteId) {
-                        setTimeout(async () => {
-                            selectRoute(parseInt(savedRouteId));
+                        selectedRoute = allRoutes.find(r => r.id === parseInt(savedRouteId));
 
-                            if (method === 'POST' && selectedRoutePOIs.length > 0) {
-                                showToast('🔄 POI\'ler rotaya bağlanıyor...', 'info');
-
-                                try {
-                                    const currentCSRFToken = await getCSRFToken();
-                                    const requestData = {
-                                        pois: selectedRoutePOIs,
-                                        csrf_token: currentCSRFToken
-                                    };
-
-                                    const poiResponse = await authenticatedFetch(`${apiBase}/admin/routes/${savedRouteId}/pois`, {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-CSRF-Token': currentCSRFToken
-                                        },
-                                        body: JSON.stringify(requestData)
-                                    });
-
-                                    if (poiResponse.ok) {
-                                        showToast('✅ Rota ve POI\'ler başarıyla kaydedildi!', 'success');
-                                        await loadRoutePOIs(savedRouteId);
-
-                                        setTimeout(async () => {
-                                            await calculateAndSaveRouteGeometry(savedRouteId);
-                                        }, 1000);
-                                    } else {
-                                        showToast('⚠️ Rota kaydedildi ancak POI\'ler bağlanamadı. Manuel olarak kaydedin.', 'warning');
-                                    }
-                                } catch (poiError) {
-                                    console.error('POI kaydetme hatası:', poiError);
-                                    showToast('⚠️ Rota kaydedildi ancak POI\'ler bağlanamadı. Manuel olarak kaydedin.', 'warning');
-                                }
-                            } else {
-                                showToast('✅ Rota seçildi, şimdi POI ekleyebilirsiniz!', 'info');
+                        if (selectedRoutePOIs.length > 0) {
+                            showToast('🔄 POI\'ler rotaya bağlanıyor...', 'info');
+                            try {
+                                await saveRoutePOIs();
+                                await calculateAndSaveRouteGeometry(savedRouteId);
+                            } catch (poiError) {
+                                console.error('POI kaydetme hatası:', poiError);
+                                showToast('⚠️ Rota kaydedildi ancak POI ilişkileri bağlanamadı.', 'warning');
                             }
-                        }, 500);
+                        } else {
+                            showToast('✅ Rota seçildi, şimdi POI ekleyebilirsiniz!', 'info');
+                        }
+
+                        selectRoute(parseInt(savedRouteId));
                     } else {
                         hideNewRouteForm();
                     }
