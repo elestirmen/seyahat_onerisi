@@ -3739,7 +3739,7 @@ function displayRouteDetails(routeData, container) {
         }
         
         setTimeout(() => {
-            initializeRoutePreviewMap(previewMapId, pois);
+            initializeRoutePreviewMap(previewMapId, route.id, pois);
         }, 200);
     }
 }
@@ -4321,8 +4321,8 @@ window.testMapInit = async function() {
 // Route preview map functionality
 let previewMaps = new Map(); // Store multiple preview maps
 
-async function initializeRoutePreviewMap(mapId, pois) {
-    console.log('🗺️ Initializing route preview map:', mapId, 'with', pois.length, 'POIs');
+async function initializeRoutePreviewMap(mapId, routeId, pois) {
+    console.log('🗺️ Initializing route preview map:', mapId, 'routeId:', routeId, 'with', pois.length, 'POIs');
     
     const mapContainer = document.getElementById(mapId);
     if (!mapContainer) {
@@ -4412,17 +4412,44 @@ async function initializeRoutePreviewMap(mapId, pois) {
             L.marker(coordinates, { icon: markerIcon }).addTo(previewMap);
         });
         
-        // Draw route line
-        if (routeCoordinates.length > 1) {
+        // Try to load actual route geometry
+        let geometryLatLngs = null;
+        if (routeId) {
+            try {
+                const response = await fetch(`${apiBase}/routes/${routeId}/geometry`);
+                if (response.ok) {
+                    const geometryData = await response.json();
+                    if (geometryData.success && geometryData.geometry &&
+                        geometryData.geometry.type === 'LineString' &&
+                        geometryData.geometry.coordinates) {
+                        geometryLatLngs = geometryData.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                        L.polyline(geometryLatLngs, {
+                            color: '#4ecdc4',
+                            weight: 4,
+                            opacity: 0.8,
+                            className: 'saved-route'
+                        }).addTo(previewMap);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error loading preview route geometry:', error);
+            }
+        }
+
+        // Draw simple straight lines only if geometry could not be loaded
+        if (!geometryLatLngs && routeCoordinates.length > 1) {
             L.polyline(routeCoordinates, {
                 color: '#007bff',
                 weight: 2,
                 opacity: 0.8
             }).addTo(previewMap);
         }
-        
-        // Fit map to show all POIs
-        if (validPOIs.length === 1) {
+
+        // Fit map to show the route
+        if (geometryLatLngs && geometryLatLngs.length > 0) {
+            const bounds = L.latLngBounds(geometryLatLngs);
+            previewMap.fitBounds(bounds, { padding: [10, 10] });
+        } else if (validPOIs.length === 1) {
             const poi = validPOIs[0];
             previewMap.setView([parseFloat(poi.lat), parseFloat(poi.lon)], 14);
         } else {
