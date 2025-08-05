@@ -4875,8 +4875,14 @@
 
             try {
                 showLoading();
+                const currentCSRFToken = await getCSRFToken();
                 const response = await authenticatedFetch(`${apiBase}/admin/routes/${routeId}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': currentCSRFToken
+                    },
+                    body: JSON.stringify({ csrf_token: currentCSRFToken })
                 });
 
                 if (response.ok) {
