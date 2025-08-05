@@ -1327,6 +1327,7 @@
         let isSelectingLocation = false;
         let selectedPOI = null;
         let highlightedMarker = null; // Vurgulanan POI marker'ı
+        let routeLayerGroup = null; // Ana haritada rota katmanı
 
         // Harita başlatma
         function initMap() {
@@ -1365,6 +1366,9 @@
 
             // Katman kontrolünü ekle
             L.control.layers(baseLayers).addTo(map);
+
+            // Rota katmanını hazırla
+            routeLayerGroup = L.layerGroup().addTo(map);
 
             // Haritaya çift tıklama ile POI ekleme
             map.on('dblclick', function (e) {
@@ -3936,6 +3940,22 @@
                         }, 200);
                     }, 100);
                 });
+
+                // Rota sekmesi gizlendiğinde ana haritadaki rotayı temizle
+                routeTab.addEventListener('hidden.bs.tab', function () {
+                    clearMainMapRoutePreview();
+                });
+
+                // POI sekmesi etkinleştirildiğinde rotayı temizle
+                const poiTab = document.getElementById('poi-management-tab');
+                if (poiTab) {
+                    poiTab.addEventListener('shown.bs.tab', function () {
+                        clearMainMapRoutePreview();
+                    });
+                    poiTab.addEventListener('click', function () {
+                        clearMainMapRoutePreview();
+                    });
+                }
             } else {
                 console.error('❌ Route management tab not found!');
             }
@@ -4086,6 +4106,7 @@
                     }
                 });
             }
+            clearMainMapRoutePreview();
 
             showToast('💡 Rota bilgilerini doldurun ve POI ekleyin. Kaydetme işleminden sonra POIler rotaya bağlanacak.', 'info');
         }
@@ -4115,6 +4136,7 @@
                 selectedRoutePOIs = [];
                 renderSelectedPOIs();
                 renderAvailablePOIs();
+                clearMainMapRoutePreview();
             }
         }
 
@@ -4900,6 +4922,7 @@
                             </div>
                         `;
                         document.getElementById('routePoiSelection').style.display = 'none';
+                        clearMainMapRoutePreview();
                     }
                 } else {
                     throw new Error('Rota silinemedi');
@@ -5302,6 +5325,100 @@
                     }
                 });
             }
+            drawRealRouteOnMainMap(routeData);
+            updateMainMapRoutePreview();
+        }
+
+        // Büyük haritada rota önizlemesini güncelle
+        function updateMainMapRoutePreview() {
+            if (!map) return;
+            if (!routeLayerGroup) {
+                routeLayerGroup = L.layerGroup().addTo(map);
+            }
+            routeLayerGroup.clearLayers();
+
+            if (selectedRoutePOIs.length === 0) {
+                return;
+            }
+
+            const sortedPOIs = [...selectedRoutePOIs].sort((a, b) => a.order_in_route - b.order_in_route);
+            const poiCoordinates = [];
+
+            sortedPOIs.forEach((routePoi, index) => {
+                const poi = availablePOIs.find(p => p.id === routePoi.poi_id);
+                if (poi) {
+                    const marker = L.marker([poi.lat, poi.lon])
+                        .bindPopup(`<strong>${index + 1}. ${poi.name}</strong><br><small>${poi.category}</small>`)
+                        .addTo(routeLayerGroup);
+
+                    marker.setIcon(L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color: #007bff; color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">${index + 1}</div>`,
+                        iconSize: [25, 25],
+                        iconAnchor: [12, 12]
+                    }));
+
+                    poiCoordinates.push([poi.lat, poi.lon]);
+                }
+            });
+
+            if (poiCoordinates.length > 1) {
+                L.polyline(poiCoordinates, {
+                    color: '#007bff',
+                    weight: 3,
+                    opacity: 0.7,
+                    dashArray: '5, 10'
+                }).addTo(routeLayerGroup);
+
+                if (selectedRoute && selectedRoute.is_circular && poiCoordinates.length > 2) {
+                    L.polyline([poiCoordinates[poiCoordinates.length - 1], poiCoordinates[0]], {
+                        color: '#28a745',
+                        weight: 3,
+                        opacity: 0.7,
+                        dashArray: '10, 5'
+                    }).addTo(routeLayerGroup);
+                }
+            }
+
+            if (poiCoordinates.length > 0) {
+                const bounds = L.latLngBounds(poiCoordinates).pad(0.1);
+                map.fitBounds(bounds);
+            }
+        }
+
+        // Büyük haritada gerçek rota çizgilerini göster
+        function drawRealRouteOnMainMap(routeData) {
+            if (!map) return;
+            if (!routeLayerGroup) {
+                routeLayerGroup = L.layerGroup().addTo(map);
+            }
+
+            routeLayerGroup.eachLayer(layer => {
+                if (layer instanceof L.Polyline && layer.options && layer.options.className === 'real-route') {
+                    routeLayerGroup.removeLayer(layer);
+                }
+            });
+
+            if (routeData.segments && routeData.segments.length > 0) {
+                routeData.segments.forEach(segment => {
+                    if (segment.coordinates && segment.coordinates.length > 0) {
+                        const coordinates = segment.coordinates.map(coord => [coord.lat, coord.lng]);
+                        L.polyline(coordinates, {
+                            color: segment.fallback ? '#ff6b6b' : '#4ecdc4',
+                            weight: 4,
+                            opacity: 0.8,
+                            className: 'real-route',
+                            dashArray: segment.fallback ? '10, 5' : null
+                        }).addTo(routeLayerGroup);
+                    }
+                });
+            }
+        }
+
+        function clearMainMapRoutePreview() {
+            if (routeLayerGroup) {
+                routeLayerGroup.clearLayers();
+            }
         }
 
         // Rota önizlemesini güncelle
@@ -5395,6 +5512,7 @@
                     routePreviewMap.setView(poiCoordinates[0], 15);
                 }
             }
+            updateMainMapRoutePreview();
         }
 
         // Sayfa yüklendiğinde
