@@ -4055,15 +4055,23 @@ async function displayRoutePOIsOnMap(pois) {
     
     // Draw route line if we have multiple POIs
     if (routeCoordinates.length > 1) {
-        const routeLine = L.polyline(routeCoordinates, {
+        // Remove existing simple route layer if present
+        if (window.simpleRouteLayer) {
+            map.removeLayer(window.simpleRouteLayer);
+            window.simpleRouteLayer = null;
+        }
+
+        // Create polyline for the route and store globally
+        window.simpleRouteLayer = L.polyline(routeCoordinates, {
             color: '#007bff',
             weight: 4,
             opacity: 0.7,
-            dashArray: '10, 5'
+            dashArray: '10, 5',
+            className: 'simple-route-layer'
         }).addTo(map);
-        
-        markers.push(routeLine);
-        
+
+        markers.push(window.simpleRouteLayer);
+
         // If route is circular, connect last point to first
         const route = predefinedRoutes.find(r => r.pois && r.pois.length > 0);
         if (route && route.is_circular && routeCoordinates.length > 2) {
@@ -4076,7 +4084,7 @@ async function displayRoutePOIsOnMap(pois) {
                 opacity: 0.7,
                 dashArray: '5, 10'
             }).addTo(map);
-            
+
             markers.push(circularLine);
         }
     }
@@ -4525,7 +4533,7 @@ function displaySavedRouteGeometry(geometryData) {
         }
     });
     
-    // Remove simple route layer if exists
+    // Remove simple route layer if it exists to avoid overlap
     if (window.simpleRouteLayer) {
         map.removeLayer(window.simpleRouteLayer);
         window.simpleRouteLayer = null;
