@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Route File Parser - KML, KMZ ve GPX dosyalarından rota verilerini çıkarır
-Güçlü hata yakalama ve debug desteği ile
 """
 
 import json
@@ -11,7 +10,6 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 import os
 import xml.etree.ElementTree as ET
-import re
 
 logger = logging.getLogger(__name__)
 
@@ -134,128 +132,47 @@ class RouteFileParser:
         }
     
     def _parse_kml(self, file_path: str) -> Dict[str, Any]:
-        """KML dosyasını parse et - güçlü hata yakalama ile"""
+        """KML dosyasını parse et"""
         logger.info(f"KML dosyası parse ediliyor: {file_path}")
         
-        # Dosyayı binary olarak oku
-        try:
-            with open(file_path, 'rb') as f:
-                raw_content = f.read()
-        except Exception as e:
-            raise ValueError(f"Dosya okunamadı: {e}")
-        
-        # Encoding'i tespit et ve decode et
-        content = self._decode_content(raw_content)
-        
-        if not content:
-            raise ValueError("Dosya içeriği boş veya okunamadı")
-        
-        # XML içeriğini temizle ve düzelt
-        content = self._clean_xml_content(content)
-        
-        # XML'i parse et
-        root, ns = self._parse_xml_content(content)
-        
-        # KML verilerini çıkar
-        return self._extract_kml_data(root, ns)
-    
-    def _decode_content(self, raw_content: bytes) -> str:
-        """İçeriği farklı encoding'lerle decode etmeye çalış"""
-        # BOM kontrolü
-        if raw_content.startswith(b'\xef\xbb\xbf'):
-            raw_content = raw_content[3:]  # UTF-8 BOM kaldır
-        elif raw_content.startswith(b'\xff\xfe'):
-            raw_content = raw_content[2:]  # UTF-16 LE BOM kaldır
-        elif raw_content.startswith(b'\xfe\xff'):
-            raw_content = raw_content[2:]  # UTF-16 BE BOM kaldır
-        
         # Farklı encoding'leri dene
-        encodings = ['utf-8', 'utf-8-sig', 'latin-1', 'cp1252', 'iso-8859-1', 'windows-1252']
-        
-        for encoding in encodings:
+        content = None
+        for encoding in ['utf-8', 'utf-8-sig', 'latin-1', 'cp1252']:
             try:
-                content = raw_content.decode(encoding)
-                logger.info(f"Dosya {encoding} encoding ile decode edildi")
-                return content
+                with open(file_path, 'r', encoding=encoding) as kml_file:
+                    content = kml_file.read()
+                break
             except UnicodeDecodeError:
                 continue
         
-        # Hiçbiri çalışmazsa, hataları ignore ederek utf-8 dene
-        try:
-            content = raw_content.decode('utf-8', errors='ignore')
-            logger.warning("UTF-8 ile hatalı karakterler ignore edilerek decode edildi")
-            return content
-        except Exception:
-            raise ValueError("Dosya hiçbir encoding ile decode edilemedi")
-    
-    def _clean_xml_content(self, content: str) -> str:
-        """XML içeriğini temizle ve düzelt"""
-        # Boşlukları temizle
+        if content is None:
+            raise ValueError("KML dosyası okunamadı - encoding sorunu")
+        
+        # XML içeriğini temizle
         content = content.strip()
         
-        # Null karakterleri kaldır
-        content = content.replace('\x00', '')
+        # BOM karakterini kaldır
+        if content.startswith('\ufeff'):
+            content = content[1:]
         
-        # Kontrol karakterlerini kaldır (tab, newline, carriage return hariç)
-        content = re.sub(r'[\x01-\x08\x0b\x0c\x0e-\x1f\x7f]', '', content)
-        
-        # XML declaration kontrolü
+        # XML declaration'ı kontrol et ve düzelt
         if not content.startswith('<?xml'):
             content = '<?xml version="1.0" encoding="UTF-8"?>\n' + content
         
-        # Encoding declaration'ı UTF-8 yap
-        content = re.sub(r'encoding="[^"]*"', 'encoding="UTF-8"', content)
-        
-        return content
-    
-    def _parse_xml_content(self, content: str) -> tuple:
-        """XML içeriğini parse et"""
-        # İlk olarak normal namespace ile dene
         try:
             root = ET.fromstring(content)
             ns = {'kml': 'http://www.opengis.net/kml/2.2'}
-            logger.info("XML namespace ile parse edildi")
-            return root, ns
         except ET.ParseError as e:
-            logger.warning(f"Namespace ile parse hatası: {e}")
+            logger.error(f"XML parse hatası: {e}")
+            # Namespace olmadan dene
+            try:
+                # Namespace'i kaldır
+                content_no_ns = content.replace(' xmlns="http://www.opengis.net/kml/2.2"', '')
+                root = ET.fromstring(content_no_ns)
+                ns = {}  # Namespace yok
+            except ET.ParseError:
+                raise ValueError(f"KML XML parse edilemedi: {e}")
         
-        # Namespace'i kaldırarak dene
-        try:
-            content_no_ns = re.sub(r' xmlns="[^"]*"', '', content)
-            root = ET.fromstring(content_no_ns)
-            ns = {}
-            logger.info("XML namespace olmadan parse edildi")
-            return root, ns
-        except ET.ParseError as e:
-            logger.warning(f"Namespace olmadan parse hatası: {e}")
-        
-        # CDATA bölümlerini temizleyerek dene
-        try:
-            content_no_cdata = re.sub(r'<!\[CDATA\[(.*?)\]\]>', r'\1', content, flags=re.DOTALL)
-            root = ET.fromstring(content_no_cdata)
-            ns = {}
-            logger.info("XML CDATA temizlenerek parse edildi")
-            return root, ns
-        except ET.ParseError as e:
-            logger.error(f"CDATA temizleme sonrası parse hatası: {e}")
-        
-        # Son çare: HTML entity'leri decode et
-        try:
-            import html
-            content_decoded = html.unescape(content)
-            content_decoded = re.sub(r' xmlns="[^"]*"', '', content_decoded)
-            root = ET.fromstring(content_decoded)
-            ns = {}
-            logger.info("XML HTML entity decode edilerek parse edildi")
-            return root, ns
-        except Exception as e:
-            logger.error(f"HTML entity decode hatası: {e}")
-        
-        # Hiçbiri çalışmazsa hata fırlat
-        raise ValueError("XML içeriği hiçbir yöntemle parse edilemedi")
-    
-    def _extract_kml_data(self, root, ns: dict) -> Dict[str, Any]:
-        """KML verilerini çıkar"""
         routes = []
         waypoints = []
         
@@ -278,93 +195,73 @@ class RouteFileParser:
             coords_xpath = 'coordinates'
         
         # Document name'i al
-        try:
-            doc_name = root.find(doc_xpath, ns)
-            metadata_name = doc_name.text if doc_name is not None else 'KML Route'
-        except Exception:
-            metadata_name = 'KML Route'
+        doc_name = root.find(doc_xpath, ns)
+        metadata_name = doc_name.text if doc_name is not None else 'KML Route'
         
         # Placemark'ları bul
-        try:
-            placemarks = root.findall(placemark_xpath, ns)
-            logger.info(f"{len(placemarks)} placemark bulundu")
-        except Exception as e:
-            logger.error(f"Placemark bulunamadı: {e}")
-            placemarks = []
-        
-        for placemark in placemarks:
-            try:
-                name_elem = placemark.find(name_xpath, ns)
-                desc_elem = placemark.find(desc_xpath, ns)
-                
-                name = name_elem.text if name_elem is not None and name_elem.text else 'Unnamed'
-                description = desc_elem.text if desc_elem is not None and desc_elem.text else ''
-                
-                # Point kontrolü (waypoint)
-                point = placemark.find(point_xpath, ns)
-                if point is not None:
-                    coords_elem = point.find(coords_xpath, ns)
-                    if coords_elem is not None and coords_elem.text:
-                        coords_text = coords_elem.text.strip()
-                        coords = coords_text.split(',')
-                        if len(coords) >= 2:
-                            try:
-                                waypoints.append({
-                                    'name': name,
-                                    'description': description,
-                                    'lat': float(coords[1]),
-                                    'lon': float(coords[0]),
-                                    'elevation': float(coords[2]) if len(coords) > 2 else None
-                                })
-                                logger.debug(f"Waypoint eklendi: {name}")
-                            except (ValueError, IndexError) as e:
-                                logger.warning(f"Waypoint koordinat hatası ({name}): {e}")
-                
-                # LineString kontrolü (route)
-                linestring = placemark.find(linestring_xpath, ns)
-                if linestring is not None:
-                    coords_elem = linestring.find(coords_xpath, ns)
-                    if coords_elem is not None and coords_elem.text:
-                        coords_text = coords_elem.text.strip()
-                        points = []
-                        
-                        # Koordinatları parse et
-                        coord_lines = coords_text.replace('\n', ' ').replace('\t', ' ').split()
-                        for coord_line in coord_lines:
-                            coord_line = coord_line.strip()
-                            if coord_line:
-                                coords = coord_line.split(',')
-                                if len(coords) >= 2:
-                                    try:
-                                        points.append({
-                                            'lat': float(coords[1]),
-                                            'lon': float(coords[0]),
-                                            'elevation': float(coords[2]) if len(coords) > 2 else None
-                                        })
-                                    except (ValueError, IndexError) as e:
-                                        logger.warning(f"Route koordinat hatası ({name}): {e}")
-                        
-                        if points:
-                            routes.append({
+        for placemark in root.findall(placemark_xpath, ns):
+            name_elem = placemark.find(name_xpath, ns)
+            desc_elem = placemark.find(desc_xpath, ns)
+            
+            name = name_elem.text if name_elem is not None else 'Unnamed'
+            description = desc_elem.text if desc_elem is not None else ''
+            
+            # Point kontrolü (waypoint)
+            point = placemark.find(point_xpath, ns)
+            if point is not None:
+                coords_elem = point.find(coords_xpath, ns)
+                if coords_elem is not None and coords_elem.text:
+                    coords_text = coords_elem.text.strip()
+                    coords = coords_text.split(',')
+                    if len(coords) >= 2:
+                        try:
+                            waypoints.append({
                                 'name': name,
                                 'description': description,
-                                'points': points,
-                                'distance': self._calculate_distance(points),
-                                'type': 'route'
+                                'lat': float(coords[1]),
+                                'lon': float(coords[0]),
+                                'elevation': float(coords[2]) if len(coords) > 2 else None
                             })
-                            logger.debug(f"Route eklendi: {name} ({len(points)} nokta)")
+                        except (ValueError, IndexError) as e:
+                            logger.warning(f"Waypoint koordinat hatası: {e}")
             
-            except Exception as e:
-                logger.warning(f"Placemark işleme hatası: {e}")
-                continue
+            # LineString kontrolü (route)
+            linestring = placemark.find(linestring_xpath, ns)
+            if linestring is not None:
+                coords_elem = linestring.find(coords_xpath, ns)
+                if coords_elem is not None and coords_elem.text:
+                    coords_text = coords_elem.text.strip()
+                    points = []
+                    
+                    # Koordinatları parse et
+                    for coord_line in coords_text.split():
+                        coord_line = coord_line.strip()
+                        if coord_line:
+                            coords = coord_line.split(',')
+                            if len(coords) >= 2:
+                                try:
+                                    points.append({
+                                        'lat': float(coords[1]),
+                                        'lon': float(coords[0]),
+                                        'elevation': float(coords[2]) if len(coords) > 2 else None
+                                    })
+                                except (ValueError, IndexError) as e:
+                                    logger.warning(f"Route koordinat hatası: {e}")
+                    
+                    if points:
+                        routes.append({
+                            'name': name,
+                            'description': description,
+                            'points': points,
+                            'distance': self._calculate_distance(points),
+                            'type': 'route'
+                        })
         
         metadata = {
             'name': metadata_name,
             'description': '',
             'creator': 'KML Parser'
         }
-        
-        logger.info(f"KML parse tamamlandı: {len(routes)} rota, {len(waypoints)} waypoint")
         
         return {
             'format': 'kml',
@@ -381,57 +278,35 @@ class RouteFileParser:
         import zipfile
         import tempfile
         
-        logger.info(f"KMZ dosyası parse ediliyor: {file_path}")
-        
         routes = []
         waypoints = []
         
-        try:
-            with zipfile.ZipFile(file_path, 'r') as kmz_file:
-                file_list = kmz_file.namelist()
-                logger.info(f"KMZ içeriği: {file_list}")
+        with zipfile.ZipFile(file_path, 'r') as kmz_file:
+            kml_files = [f for f in kmz_file.namelist() if f.lower().endswith('.kml')]
+            
+            if not kml_files:
+                raise ValueError("KMZ dosyasında KML dosyası bulunamadı")
+            
+            for kml_filename in kml_files:
+                kml_content = kmz_file.read(kml_filename)
                 
-                kml_files = [f for f in file_list if f.lower().endswith('.kml')]
+                with tempfile.NamedTemporaryFile(mode='wb', suffix='.kml', delete=False) as temp_kml:
+                    temp_kml.write(kml_content)
+                    temp_kml_path = temp_kml.name
                 
-                if not kml_files:
-                    raise ValueError("KMZ dosyasında KML dosyası bulunamadı")
-                
-                logger.info(f"{len(kml_files)} KML dosyası bulundu: {kml_files}")
-                
-                for kml_filename in kml_files:
-                    try:
-                        logger.info(f"KML dosyası işleniyor: {kml_filename}")
-                        kml_content = kmz_file.read(kml_filename)
-                        
-                        with tempfile.NamedTemporaryFile(mode='wb', suffix='.kml', delete=False) as temp_kml:
-                            temp_kml.write(kml_content)
-                            temp_kml_path = temp_kml.name
-                        
-                        try:
-                            kml_data = self._parse_kml(temp_kml_path)
-                            routes.extend(kml_data['routes'])
-                            waypoints.extend(kml_data['waypoints'])
-                            logger.info(f"{kml_filename} başarıyla işlendi: {len(kml_data['routes'])} rota, {len(kml_data['waypoints'])} waypoint")
-                        finally:
-                            if os.path.exists(temp_kml_path):
-                                os.remove(temp_kml_path)
-                    
-                    except Exception as e:
-                        logger.error(f"KML dosyası işlenemedi ({kml_filename}): {e}")
-                        continue
-        
-        except zipfile.BadZipFile:
-            raise ValueError("Geçersiz KMZ dosyası (ZIP formatı bozuk)")
-        except Exception as e:
-            raise ValueError(f"KMZ dosyası açılamadı: {e}")
+                try:
+                    kml_data = self._parse_kml(temp_kml_path)
+                    routes.extend(kml_data['routes'])
+                    waypoints.extend(kml_data['waypoints'])
+                finally:
+                    if os.path.exists(temp_kml_path):
+                        os.remove(temp_kml_path)
         
         metadata = {
             'name': 'KMZ Route',
             'description': '',
             'creator': 'KMZ Parser'
         }
-        
-        logger.info(f"KMZ parse tamamlandı: {len(routes)} toplam rota, {len(waypoints)} toplam waypoint")
         
         return {
             'format': 'kmz',
@@ -505,9 +380,6 @@ class RouteFileParser:
 
 
 if __name__ == '__main__':
-    # Logging'i aktif et
-    logging.basicConfig(level=logging.INFO)
-    
     parser = RouteFileParser()
-    print("✅ RouteFileParser hazır (Güçlü hata yakalama ile)")
+    print("✅ RouteFileParser hazır")
     print(f"📁 Desteklenen formatlar: {parser.supported_formats}")
