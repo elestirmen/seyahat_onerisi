@@ -5,3 +5,10 @@ MarkupSafe==2.1.3
 itsdangerous==2.1.2
 click==8.1.7
 blinker==1.6.3
+Flask-CORS==4.0.0
+psycopg2-binary==2.9.7
+bcrypt==4.0.1
+gpxpy==1.5.0
+lxml==4.9.3
+fastkml==0.12
+shapely==2.0.1

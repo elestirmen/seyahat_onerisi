@@ -3880,6 +3880,220 @@ def search_routes():
         }), 500
 
 
+# Route file import endpoints
+@app.route('/api/admin/routes/import', methods=['POST'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=10, window_seconds=60)
+def import_route_file():
+    """KML veya GPX dosyasından rota içe aktar"""
+    try:
+        # Debug logging
+        logger.info("Route import endpoint called")
+        
+        from route_file_parser import RouteFileParser
+        logger.info("RouteFileParser imported successfully")
+        
+        # Dosya kontrolü
+        if 'file' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'Dosya seçilmedi'
+            }), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'error': 'Dosya seçilmedi'
+            }), 400
+        
+        # Dosya uzantısı kontrolü
+        allowed_extensions = {'gpx', 'kml', 'kmz'}
+        file_extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        
+        if file_extension not in allowed_extensions:
+            return jsonify({
+                'success': False,
+                'error': f'Desteklenmeyen dosya formatı. Sadece {", ".join(allowed_extensions)} dosyaları desteklenir.'
+            }), 400
+        
+        # Dosya boyutu kontrolü (max 10MB)
+        file.seek(0, 2)  # Dosya sonuna git
+        file_size = file.tell()
+        file.seek(0)  # Başa dön
+        
+        if file_size > 10 * 1024 * 1024:  # 10MB
+            return jsonify({
+                'success': False,
+                'error': 'Dosya çok büyük. Maksimum 10MB desteklenir.'
+            }), 400
+        
+        # Güvenli dosya adı oluştur
+        import tempfile
+        import uuid
+        
+        safe_filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
+        temp_path = os.path.join(tempfile.gettempdir(), safe_filename)
+        
+        try:
+            # Dosyayı geçici olarak kaydet
+            file.save(temp_path)
+            
+            # Parse et
+            parser = RouteFileParser()
+            parsed_data = parser.parse_file(temp_path, file_extension)
+            
+            logger.info(f"Dosya parse edildi: {parsed_data['total_routes']} rota, {parsed_data['total_waypoints']} waypoint")
+            
+            return jsonify({
+                'success': True,
+                'data': parsed_data,
+                'message': f'Dosya başarıyla parse edildi. {parsed_data["total_routes"]} rota ve {parsed_data["total_waypoints"]} waypoint bulundu.'
+            })
+            
+        finally:
+            # Geçici dosyayı sil
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        
+    except ImportError as e:
+        logger.error(f"Route parser import error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': 'Rota parse modülü yüklenemedi. Gerekli kütüphaneler kurulu değil.'
+        }), 500
+    
+    except Exception as e:
+        logger.error(f"Route import error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'Dosya içe aktarma hatası: {str(e)}'
+        }), 500
+
+
+@app.route('/api/admin/routes/import/create', methods=['POST'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=20, window_seconds=60)
+def create_route_from_import():
+    """Parse edilmiş dosya verisinden rota oluştur"""
+    try:
+        from route_file_parser import RouteFileParser
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Veri gönderilmedi'
+            }), 400
+        
+        parsed_data = data.get('parsed_data')
+        route_index = data.get('route_index', 0)
+        custom_settings = data.get('custom_settings', {})
+        
+        if not parsed_data:
+            return jsonify({
+                'success': False,
+                'error': 'Parse edilmiş veri bulunamadı'
+            }), 400
+        
+        # Parse edilmiş veriyi rota formatına çevir
+        parser = RouteFileParser()
+        route_data = parser.convert_to_route_data(parsed_data, route_index)
+        
+        # Kullanıcı ayarlarını uygula
+        if custom_settings:
+            route_data.update({
+                k: v for k, v in custom_settings.items() 
+                if k in ['name', 'description', 'route_type', 'difficulty_level', 'tags']
+            })
+        
+        # Rota oluştur
+        service = get_route_service()
+        route_id = service.create_route(route_data)
+        
+        if not route_id:
+            return jsonify({
+                'success': False,
+                'error': 'Rota oluşturulamadı'
+            }), 500
+        
+        # Geometriyi kaydet
+        if route_data.get('geometry'):
+            geometry_segments = [{
+                'coordinates': [
+                    {'lat': point['lat'], 'lng': point['lon']} 
+                    for point in route_data['geometry']
+                ]
+            }]
+            
+            total_distance_m = route_data.get('total_distance', 0) * 1000  # km'den m'ye
+            estimated_time_s = route_data.get('estimated_duration', 0) * 60  # dk'dan s'ye
+            
+            waypoints = [
+                {
+                    'lat': point['lat'],
+                    'lng': point['lon'],
+                    'name': f"Point {i+1}"
+                }
+                for i, point in enumerate(route_data['geometry'][::max(1, len(route_data['geometry'])//10)])
+            ]
+            
+            geometry_saved = service.save_route_geometry(
+                route_id, geometry_segments, total_distance_m, estimated_time_s, waypoints
+            )
+            
+            if not geometry_saved:
+                logger.warning(f"Rota {route_id} geometrisi kaydedilemedi")
+        
+        # Waypoint'leri POI olarak ekle (isteğe bağlı)
+        if route_data.get('waypoints') and data.get('import_waypoints_as_pois', False):
+            try:
+                db = get_db()
+                if db and not JSON_FALLBACK:
+                    for waypoint in route_data['waypoints']:
+                        poi_data = {
+                            'name': waypoint['name'],
+                            'description': waypoint['description'],
+                            'category': waypoint.get('category', 'waypoint'),
+                            'lat': waypoint['lat'],
+                            'lon': waypoint['lon']
+                        }
+                        db.add_poi(poi_data)
+                    logger.info(f"Rota {route_id} için {len(route_data['waypoints'])} waypoint POI olarak eklendi")
+            except Exception as e:
+                logger.warning(f"Waypoint'ler POI olarak eklenemedi: {e}")
+        
+        return jsonify({
+            'success': True,
+            'route_id': route_id,
+            'message': f'Rota başarıyla oluşturuldu (ID: {route_id})',
+            'route_data': {
+                'id': route_id,
+                'name': route_data['name'],
+                'distance': route_data['total_distance'],
+                'duration': route_data['estimated_duration'],
+                'type': route_data['route_type']
+            }
+        })
+        
+    except ImportError as e:
+        logger.error(f"Route parser import error: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Rota parse modülü yüklenemedi'
+        }), 500
+    
+    except Exception as e:
+        logger.error(f"Route creation from import error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Rota oluşturma hatası: {str(e)}'
+        }), 500
+
 
 if __name__ == '__main__':
     print("🚀 POI Yönetim Sistemi başlatılıyor...")

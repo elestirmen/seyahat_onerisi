@@ -988,6 +988,95 @@
                                 <div id="newRouteForm" style="display: none;">
                                     <form id="routeForm">
                                         <input type="hidden" id="routeId">
+                                        
+                                        <!-- Dosya İçe Aktarma Seçeneği -->
+                                        <div class="mb-3">
+                                            <div class="card border-info">
+                                                <div class="card-header bg-light">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <h6 class="mb-0">
+                                                            <i class="fas fa-file-import text-info me-2"></i>
+                                                            Dosyadan İçe Aktar
+                                                        </h6>
+                                                        <button type="button" class="btn btn-sm btn-outline-info" 
+                                                                onclick="toggleFileImport()" id="toggleFileImportBtn">
+                                                            <i class="fas fa-chevron-down"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="card-body collapse" id="fileImportSection">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">KML/KMZ/GPX Dosyası Seç</label>
+                                                        <input type="file" class="form-control" id="routeFileInput" 
+                                                               accept=".kml,.kmz,.gpx" onchange="handleRouteFileSelect(event)">
+                                                        <small class="form-text text-muted">
+                                                            <i class="fas fa-info-circle text-info"></i>
+                                                            Desteklenen formatlar: KML, KMZ, GPX (Maksimum 10MB)
+                                                        </small>
+                                                    </div>
+                                                    
+                                                    <!-- Dosya Parse Durumu -->
+                                                    <div id="fileParseStatus" style="display: none;">
+                                                        <div class="alert alert-info mb-3">
+                                                            <div class="d-flex align-items-center">
+                                                                <div class="spinner-border spinner-border-sm text-info me-2" role="status">
+                                                                    <span class="visually-hidden">Yükleniyor...</span>
+                                                                </div>
+                                                                <span>Dosya işleniyor...</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Parse Sonucu -->
+                                                    <div id="parseResult" style="display: none;">
+                                                        <div class="alert alert-success">
+                                                            <h6><i class="fas fa-check-circle me-2"></i>Dosya Başarıyla İşlendi</h6>
+                                                            <div id="parseResultContent"></div>
+                                                            
+                                                            <!-- Rota Seçimi (Çoklu rota durumunda) -->
+                                                            <div id="routeSelection" style="display: none;">
+                                                                <label class="form-label mt-2">İçe Aktarılacak Rota:</label>
+                                                                <select class="form-select" id="selectedRouteIndex">
+                                                                    <!-- Rotalar dinamik olarak yüklenecek -->
+                                                                </select>
+                                                            </div>
+                                                            
+                                                            <!-- Waypoint'leri POI olarak ekle seçeneği -->
+                                                            <div class="form-check mt-2">
+                                                                <input class="form-check-input" type="checkbox" id="importWaypointsAsPois">
+                                                                <label class="form-check-label" for="importWaypointsAsPois">
+                                                                    Waypoint'leri POI olarak ekle
+                                                                </label>
+                                                            </div>
+                                                            
+                                                            <div class="mt-3">
+                                                                <button type="button" class="btn btn-success btn-sm" 
+                                                                        onclick="applyImportedRouteData()">
+                                                                    <i class="fas fa-download me-1"></i>Rota Verilerini Uygula
+                                                                </button>
+                                                                <button type="button" class="btn btn-outline-secondary btn-sm ms-2" 
+                                                                        onclick="clearFileImport()">
+                                                                    <i class="fas fa-times me-1"></i>Temizle
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Hata Durumu -->
+                                                    <div id="parseError" style="display: none;">
+                                                        <div class="alert alert-danger">
+                                                            <h6><i class="fas fa-exclamation-triangle me-2"></i>Dosya İşleme Hatası</h6>
+                                                            <div id="parseErrorContent"></div>
+                                                            <button type="button" class="btn btn-outline-danger btn-sm mt-2" 
+                                                                    onclick="clearFileImport()">
+                                                                <i class="fas fa-redo me-1"></i>Tekrar Dene
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
                                         <div class="mb-3">
                                             <label class="form-label">Rota Adı *</label>
                                             <input type="text" class="form-control" id="routeName" required>
@@ -5416,6 +5505,236 @@
                 startSessionTimeoutMonitoring();
             }
         });
+
+        // KML/GPX Dosya İçe Aktarma Fonksiyonları
+        let parsedRouteData = null;
+
+        // Dosya içe aktarma bölümünü aç/kapat
+        function toggleFileImport() {
+            const section = document.getElementById('fileImportSection');
+            const btn = document.getElementById('toggleFileImportBtn');
+            const icon = btn.querySelector('i');
+            
+            if (section.classList.contains('show')) {
+                section.classList.remove('show');
+                icon.className = 'fas fa-chevron-down';
+            } else {
+                section.classList.add('show');
+                icon.className = 'fas fa-chevron-up';
+            }
+        }
+
+        // Dosya seçildiğinde çalışır
+        async function handleRouteFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Dosya tipini kontrol et
+            const allowedTypes = ['application/vnd.google-earth.kml+xml', 'application/vnd.google-earth.kmz', 'application/gpx+xml', 'text/xml', 'application/xml', 'application/zip'];
+            const allowedExtensions = ['.kml', '.kmz', '.gpx'];
+            const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+            
+            if (!allowedExtensions.includes(fileExtension)) {
+                showToast('Desteklenmeyen dosya formatı. Sadece KML, KMZ ve GPX dosyaları desteklenir.', 'error');
+                clearFileImport();
+                return;
+            }
+
+            // Dosya boyutunu kontrol et (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                showToast('Dosya çok büyük. Maksimum 10MB desteklenir.', 'error');
+                clearFileImport();
+                return;
+            }
+
+            // Parse durumunu göster
+            showFileParseStatus();
+
+            try {
+                // FormData oluştur
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // API'ye gönder
+                const response = await fetch('/api/admin/routes/import', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+
+                let result;
+                try {
+                    result = await response.json();
+                } catch (jsonError) {
+                    // JSON parse hatası - muhtemelen HTML error sayfası döndü
+                    const textResponse = await response.text();
+                    console.error('API Response (not JSON):', textResponse);
+                    throw new Error(`API hatası (${response.status}): JSON parse edilemedi`);
+                }
+
+                if (response.ok && result.success) {
+                    parsedRouteData = result.data;
+                    showParseResult(result.data, result.message);
+                } else {
+                    throw new Error(result.error || 'Dosya işleme hatası');
+                }
+
+            } catch (error) {
+                console.error('File import error:', error);
+                showParseError(error.message);
+            }
+        }
+
+        // Parse durumunu göster
+        function showFileParseStatus() {
+            document.getElementById('fileParseStatus').style.display = 'block';
+            document.getElementById('parseResult').style.display = 'none';
+            document.getElementById('parseError').style.display = 'none';
+        }
+
+        // Parse sonucunu göster
+        function showParseResult(data, message) {
+            document.getElementById('fileParseStatus').style.display = 'none';
+            document.getElementById('parseError').style.display = 'none';
+            
+            const resultDiv = document.getElementById('parseResult');
+            const contentDiv = document.getElementById('parseResultContent');
+            
+            // Sonuç bilgilerini göster
+            let content = `
+                <div class="row">
+                    <div class="col-6">
+                        <strong>Format:</strong> ${data.format.toUpperCase()}<br>
+                        <strong>Toplam Rota:</strong> ${data.total_routes}<br>
+                        <strong>Waypoint:</strong> ${data.total_waypoints}
+                    </div>
+                    <div class="col-6">
+                        <strong>Dosya Adı:</strong> ${data.metadata.name || 'Bilinmiyor'}<br>
+                        <strong>Oluşturan:</strong> ${data.metadata.creator || 'Bilinmiyor'}
+                    </div>
+                </div>
+            `;
+
+            // Rota seçimi (çoklu rota varsa)
+            const allRoutes = [...data.routes, ...data.tracks];
+            if (allRoutes.length > 1) {
+                const routeSelect = document.getElementById('selectedRouteIndex');
+                routeSelect.innerHTML = '';
+                
+                allRoutes.forEach((route, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `${route.name} (${route.distance}km, ${route.points.length} nokta)`;
+                    routeSelect.appendChild(option);
+                });
+                
+                document.getElementById('routeSelection').style.display = 'block';
+            } else {
+                document.getElementById('routeSelection').style.display = 'none';
+            }
+
+            contentDiv.innerHTML = content;
+            resultDiv.style.display = 'block';
+        }
+
+        // Parse hatasını göster
+        function showParseError(errorMessage) {
+            document.getElementById('fileParseStatus').style.display = 'none';
+            document.getElementById('parseResult').style.display = 'none';
+            
+            const errorDiv = document.getElementById('parseError');
+            const errorContent = document.getElementById('parseErrorContent');
+            
+            errorContent.innerHTML = `<p class="mb-0">${errorMessage}</p>`;
+            errorDiv.style.display = 'block';
+        }
+
+        // İçe aktarılan rota verilerini forma uygula
+        async function applyImportedRouteData() {
+            if (!parsedRouteData) {
+                showToast('İçe aktarılacak veri bulunamadı', 'error');
+                return;
+            }
+
+            try {
+                showLoading();
+
+                // Seçilen rota indeksini al
+                const routeIndex = document.getElementById('selectedRouteIndex').value || 0;
+                const importWaypoints = document.getElementById('importWaypointsAsPois').checked;
+
+                // API'ye rota oluşturma isteği gönder
+                const response = await fetch('/api/admin/routes/import/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({
+                        parsed_data: parsedRouteData,
+                        route_index: parseInt(routeIndex),
+                        import_waypoints_as_pois: importWaypoints,
+                        custom_settings: {} // Kullanıcı özel ayarları buraya eklenebilir
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Başarılı - rota verilerini forma doldur
+                    const routeData = result.route_data;
+                    
+                    // Form alanlarını doldur
+                    document.getElementById('routeName').value = routeData.name || '';
+                    document.getElementById('routeType').value = routeData.type || 'walking';
+                    document.getElementById('routeDistance').value = routeData.distance || '';
+                    document.getElementById('routeDuration').value = routeData.duration || '';
+                    
+                    // Dosya içe aktarma bölümünü kapat
+                    clearFileImport();
+                    
+                    // Başarı mesajı
+                    showToast(`Rota başarıyla oluşturuldu! (ID: ${result.route_id})`, 'success');
+                    
+                    // Rota listesini yenile
+                    await loadRoutes();
+                    
+                    // Formu temizle ve listeye dön
+                    hideNewRouteForm();
+                    
+                } else {
+                    throw new Error(result.error || 'Rota oluşturulamadı');
+                }
+
+            } catch (error) {
+                console.error('Route creation error:', error);
+                showToast('Rota oluşturma hatası: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Dosya içe aktarma işlemini temizle
+        function clearFileImport() {
+            // Dosya input'unu temizle
+            document.getElementById('routeFileInput').value = '';
+            
+            // Durumları gizle
+            document.getElementById('fileParseStatus').style.display = 'none';
+            document.getElementById('parseResult').style.display = 'none';
+            document.getElementById('parseError').style.display = 'none';
+            
+            // Rota seçimini gizle
+            document.getElementById('routeSelection').style.display = 'none';
+            
+            // Checkbox'ı temizle
+            document.getElementById('importWaypointsAsPois').checked = false;
+            
+            // Parse edilmiş veriyi temizle
+            parsedRouteData = null;
+        }
     </script>
 </body>
 

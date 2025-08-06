@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometry Display Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 500px; width: 100%; }
+        #controls { margin: 20px 0; }
+        #debug { margin: 20px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Geometry Display Test</h1>
+    
+    <div id="controls">
+        <button onclick="testGeometry(28)">Test Route 28 Geometry</button>
+        <button onclick="testGeometry(21)">Test Route 21 Geometry</button>
+        <button onclick="clearMap()">Clear Map</button>
+    </div>
+    
+    <div id="debug">
+        <h3>Debug Log:</h3>
+        <div id="debugLog"></div>
+    </div>
+    
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map = null;
+        const apiBase = '/api';
+        
+        function log(message) {
+            const debugLog = document.getElementById('debugLog');
+            debugLog.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+            console.log(message);
+        }
+        
+        // Initialize map
+        function initMap() {
+            if (map) return;
+            
+            map = L.map('map').setView([38.6310, 34.9130], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            log('✅ Map initialized');
+        }
+        
+        // Clear map
+        function clearMap() {
+            if (!map) return;
+            
+            map.eachLayer(function(layer) {
+                if (layer.options && (layer.options.className === 'saved-route' || layer.options.className === 'walking-route')) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            log('🗑️ Map cleared');
+        }
+        
+        // Test geometry loading
+        async function testGeometry(routeId) {
+            log(`🧪 Testing geometry for route ${routeId}`);
+            
+            if (!map) {
+                initMap();
+            }
+            
+            try {
+                const response = await fetch(`${apiBase}/routes/${routeId}/geometry`);
+                log(`📡 API Response status: ${response.status}`);
+                
+                if (response.ok) {
+                    const geometryData = await response.json();
+                    log(`✅ Geometry data received: ${JSON.stringify(geometryData).substring(0, 100)}...`);
+                    
+                    if (geometryData.success && geometryData.geometry) {
+                        displayGeometry(geometryData.geometry);
+                    } else {
+                        log(`❌ Invalid geometry data: ${JSON.stringify(geometryData)}`);
+                    }
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ API Error: ${errorText}`);
+                }
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`);
+            }
+        }
+        
+        // Display geometry on map
+        function displayGeometry(geometryData) {
+            log(`🎨 Displaying geometry`);
+            log(`📐 Geometry type: ${geometryData.geometry?.type}`);
+            log(`📍 Coordinates count: ${geometryData.geometry?.coordinates?.length}`);
+            
+            if (!geometryData.geometry || geometryData.geometry.type !== 'LineString') {
+                log(`❌ Invalid geometry format`);
+                return;
+            }
+            
+            // Clear existing routes
+            clearMap();
+            
+            try {
+                const coordinates = geometryData.geometry.coordinates;
+                // Convert GeoJSON [lng, lat] to Leaflet [lat, lng]
+                const latlngs = coordinates.map(coord => [coord[1], coord[0]]);
+                
+                log(`🔄 Converted ${coordinates.length} coordinates`);
+                log(`📍 First coordinate: [${latlngs[0][0]}, ${latlngs[0][1]}]`);
+                log(`📍 Last coordinate: [${latlngs[latlngs.length-1][0]}, ${latlngs[latlngs.length-1][1]}]`);
+                
+                // Create route line
+                const routeLine = L.polyline(latlngs, {
+                    color: '#4ecdc4',
+                    weight: 4,
+                    opacity: 0.8,
+                    className: 'saved-route'
+                }).addTo(map);
+                
+                // Add popup
+                const distance = geometryData.total_distance ? `${geometryData.total_distance.toFixed(1)} km` : 'Unknown';
+                const duration = geometryData.estimated_duration ? `${geometryData.estimated_duration} min` : 'Unknown';
+                
+                routeLine.bindPopup(`
+                    <div style="text-align: center;">
+                        <strong>📍 Saved Route</strong><br>
+                        <small>Distance: ${distance}</small><br>
+                        <small>Duration: ${duration}</small><br>
+                        <small>Points: ${coordinates.length}</small>
+                    </div>
+                `);
+                
+                // Fit map to route
+                map.fitBounds(routeLine.getBounds());
+                
+                log(`✅ Route displayed successfully with ${coordinates.length} points`);
+                
+            } catch (error) {
+                log(`❌ Error displaying geometry: ${error.message}`);
+            }
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', function() {
+            initMap();
+            log('🚀 Test page loaded');
+        });
+    </script>
+</body>
+</html>
