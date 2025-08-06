@@ -5564,12 +5564,15 @@
                     }
                 });
 
+                // Response body can only be read once; create a clone for error handling
+                const responseClone = response.clone();
+
                 let result;
                 try {
                     result = await response.json();
                 } catch (jsonError) {
                     // JSON parse hatası - muhtemelen HTML error sayfası döndü
-                    const textResponse = await response.text();
+                    const textResponse = await responseClone.text();
                     console.error('API Response (not JSON):', textResponse);
                     throw new Error(`API hatası (${response.status}): JSON parse edilemedi`);
                 }
