@@ -1558,37 +1558,59 @@
                                     console.log('Route data structure:', Object.keys(routeData));
                                     console.log('Route.route structure:', routeData.route ? Object.keys(routeData.route) : 'no route key');
                                     
-                                    // Check different possible response structures
-                                    const segments = routeData.segments || (routeData.route && routeData.route.segments) || (routeData.route && routeData.route.geometry);
-                                    console.log('Found segments:', segments);
+                                    // Check ALL possible response structures
+                                    let allCoords = [];
                                     
-                                    if (segments && Array.isArray(segments)) {
-                                                        // Create polyline from route segments
-                                                        const allCoords = [];
-                                                        segments.forEach(segment => {
-                                                            if (Array.isArray(segment)) {
-                                                                allCoords.push(...segment);
-                                                            }
-                                                        });
-                                                        console.log('Extracted coordinates from segments:', allCoords.length);
-                                                        
-                                                        if (allCoords.length >= 2) {
-                                                            layer = L.polyline(allCoords, { color, weight: 4, opacity: 0.8 });
-                                                            layer.bindPopup(`
-                                                                <strong>${escapeHtml(route.name)}</strong><br>
-                                                                ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
-                                                                ${Math.round(routeData.total_distance || 0)} km<br>
-                                                                ${Math.round(routeData.estimated_time || 0)} dakika<br>
-                                                                <small>Yol ağından hesaplandı</small>
-                                                            `);
-                                                            routeLayers[rid] = layer;
-                                                            layer.addTo(map);
-                                                            console.log('Smart route added for:', route.name);
-                                                        }
-                                                    }
-                                                } else {
-                                                    throw new Error('Smart route API failed');
-                                                }
+                                    // Prefer route.segments[].coordinates [{lat,lng}, ...]
+                                    if (routeData.route && Array.isArray(routeData.route.segments) && routeData.route.segments.length > 0) {
+                                        routeData.route.segments.forEach(seg => {
+                                            if (Array.isArray(seg?.coordinates) && seg.coordinates.length > 0) {
+                                                seg.coordinates.forEach(pt => {
+                                                    const lat = Number(pt.lat);
+                                                    const lng = Number(pt.lng);
+                                                    if (Number.isFinite(lat) && Number.isFinite(lng)) allCoords.push([lat, lng]);
+                                                });
+                                            }
+                                        });
+                                        console.log('Using route.segments.coordinates:', allCoords.length);
+                                    } else if (routeData.route && routeData.route.geometry && Array.isArray(routeData.route.geometry)) {
+                                        allCoords = routeData.route.geometry;
+                                        console.log('Using route.geometry:', allCoords.length);
+                                    } else if (routeData.route && routeData.route.coordinates && Array.isArray(routeData.route.coordinates)) {
+                                        allCoords = routeData.route.coordinates;
+                                        console.log('Using route.coordinates:', allCoords.length);
+                                    } else if (routeData.segments && Array.isArray(routeData.segments)) {
+                                        routeData.segments.forEach(segment => {
+                                            if (Array.isArray(segment)) allCoords.push(...segment);
+                                        });
+                                        console.log('Using segments:', allCoords.length);
+                                    } else if (routeData.route && routeData.route.segments && Array.isArray(routeData.route.segments)) {
+                                        routeData.route.segments.forEach(segment => {
+                                            if (Array.isArray(segment)) allCoords.push(...segment);
+                                        });
+                                        console.log('Using route.segments (array arrays):', allCoords.length);
+                                    } else {
+                                        console.log('No recognized route format found, trying fallback to waypoints');
+                                        // Fallback: use original waypoints
+                                        allCoords = waypoints.map(wp => [wp.lat, wp.lng]);
+                                    }
+                                    
+                                    if (allCoords.length >= 2) {
+                                        layer = L.polyline(allCoords, { color, weight: 4, opacity: 0.8 });
+                                        layer.bindPopup(`
+                                            <strong>${escapeHtml(route.name)}</strong><br>
+                                            ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
+                                            ${Math.round(routeData.total_distance || 0)} km<br>
+                                            ${Math.round(routeData.estimated_time || 0)} dakika<br>
+                                            <small>Yol ağından hesaplandı</small>
+                                        `);
+                                        routeLayers[rid] = layer;
+                                        layer.addTo(map);
+                                        console.log('Smart route added for:', route.name);
+                                    }
+                                } else {
+                                    throw new Error('Smart route API failed');
+                                }
                                             } catch (smartRouteError) {
                                                 console.warn('Smart route failed, falling back to simple polyline:', smartRouteError);
                                                 // Fallback to simple polyline
@@ -2486,36 +2508,54 @@
                                 console.log('Smart route API response:', routeApiData);
                                 console.log('Live route API structure:', Object.keys(routeApiData));
                                 
-                                const segments = routeApiData.segments || (routeApiData.route && routeApiData.route.segments) || (routeApiData.route && routeApiData.route.geometry);
-                                console.log('Live route segments found:', segments);
+                                // Try ALL possible formats for live route
+                                let allCoords = [];
                                 
-                                if (segments && Array.isArray(segments)) {
-                                    // Create polyline from route segments
-                                    const allCoords = [];
-                                    segments.forEach(segment => {
-                                        if (Array.isArray(segment)) {
-                                            allCoords.push(...segment);
+                                // Prefer route.segments[].coordinates [{lat,lng}, ...]
+                                if (routeApiData.route && Array.isArray(routeApiData.route.segments) && routeApiData.route.segments.length > 0) {
+                                    routeApiData.route.segments.forEach(seg => {
+                                        if (Array.isArray(seg?.coordinates) && seg.coordinates.length > 0) {
+                                            seg.coordinates.forEach(pt => {
+                                                const lat = Number(pt.lat);
+                                                const lng = Number(pt.lng);
+                                                if (Number.isFinite(lat) && Number.isFinite(lng)) allCoords.push([lat, lng]);
+                                            });
                                         }
                                     });
+                                    console.log('Live route using route.segments.coordinates:', allCoords.length);
+                                } else if (routeApiData.route && routeApiData.route.geometry && Array.isArray(routeApiData.route.geometry)) {
+                                    allCoords = routeApiData.route.geometry;
+                                    console.log('Live route using route.geometry:', allCoords.length);
+                                } else if (routeApiData.route && routeApiData.route.coordinates && Array.isArray(routeApiData.route.coordinates)) {
+                                    allCoords = routeApiData.route.coordinates;
+                                    console.log('Live route using route.coordinates:', allCoords.length);
+                                } else if (routeApiData.segments && Array.isArray(routeApiData.segments)) {
+                                    routeApiData.segments.forEach(segment => {
+                                        if (Array.isArray(segment)) allCoords.push(...segment);
+                                    });
+                                    console.log('Live route using segments:', allCoords.length);
+                                } else {
+                                    console.log('Live route fallback to waypoints');
+                                    allCoords = waypoints.map(wp => [wp.lat, wp.lng]);
+                                }
+                                
+                                if (allCoords.length >= 2) {
+                                    const color = ROUTE_TYPES[routeData.route_type]?.color || '#2563eb';
+                                    const layer = L.polyline(allCoords, { color, weight: 4, opacity: 0.8 });
+                                    layer.bindPopup(`
+                                        <strong>${escapeHtml(routeData.name)}</strong><br>
+                                        ${ROUTE_TYPES[routeData.route_type]?.name || routeData.route_type}<br>
+                                        ${Math.round(routeApiData.total_distance || 0)} km<br>
+                                        ${Math.round(routeApiData.estimated_time || 0)} dakika<br>
+                                        <small>Canlı rota - ${pois.length} POI</small>
+                                    `);
+                                    routeLayers[routeId] = layer;
+                                    layer.addTo(map);
+                                    console.log('Live route visualization updated!');
                                     
-                                    if (allCoords.length >= 2) {
-                                        const color = ROUTE_TYPES[routeData.route_type]?.color || '#2563eb';
-                                        const layer = L.polyline(allCoords, { color, weight: 4, opacity: 0.8 });
-                                        layer.bindPopup(`
-                                            <strong>${escapeHtml(routeData.name)}</strong><br>
-                                            ${ROUTE_TYPES[routeData.route_type]?.name || routeData.route_type}<br>
-                                            ${Math.round(routeApiData.total_distance || 0)} km<br>
-                                            ${Math.round(routeApiData.estimated_time || 0)} dakika<br>
-                                            <small>Canlı rota - ${pois.length} POI</small>
-                                        `);
-                                        routeLayers[routeId] = layer;
-                                        layer.addTo(map);
-                                        console.log('Live route visualization updated!');
-                                        
-                                        // Fit map to new route
-                                        const group = new L.featureGroup([layer]);
-                                        map.fitBounds(group.getBounds(), { padding: [20, 20] });
-                                    }
+                                    // Fit map to new route
+                                    const group = new L.featureGroup([layer]);
+                                    map.fitBounds(group.getBounds(), { padding: [20, 20] });
                                 }
                             } else {
                                 throw new Error('Smart routing failed');
