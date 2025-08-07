@@ -1,0 +1,2217 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rota Yönetimi - Gelişmiş Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --route-primary: #2563eb;
+            --route-secondary: #64748b;
+            --route-success: #059669;
+            --route-danger: #dc2626;
+            --route-warning: #d97706;
+            --route-info: #0891b2;
+            --route-light: #f8fafc;
+            --route-dark: #0f172a;
+            --route-border: #e2e8f0;
+            --route-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --route-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.15);
+            --route-radius: 12px;
+            --route-radius-lg: 16px;
+            --route-transition: all 0.3s ease;
+        }
+
+        body {
+            background: var(--route-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Main Layout */
+        .route-management-container {
+            display: grid;
+            grid-template-areas: 
+                "header header header"
+                "sidebar workspace map";
+            grid-template-columns: 380px 1fr 520px;
+            grid-template-rows: auto 1fr;
+            height: 100vh;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        /* Header */
+        .route-header {
+            grid-area: header;
+            background: white;
+            border-radius: var(--route-radius-lg);
+            box-shadow: var(--route-shadow);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .route-header h1 {
+            margin: 0;
+            color: var(--route-dark);
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .main-navigation {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .main-navigation a {
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            text-decoration: none;
+            color: var(--route-secondary);
+            font-weight: 500;
+            transition: var(--route-transition);
+            border: 2px solid transparent;
+        }
+
+        .main-navigation a.active {
+            background: var(--route-primary);
+            color: white;
+            box-shadow: var(--route-shadow);
+        }
+
+        .main-navigation a:hover:not(.active) {
+            background: var(--route-light);
+            border-color: var(--route-border);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .btn-primary {
+            background: var(--route-primary);
+            border: none;
+            border-radius: 25px;
+            padding: 0.5rem 1.25rem;
+            font-weight: 600;
+            transition: var(--route-transition);
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: var(--route-shadow-hover);
+        }
+
+        /* Sidebar */
+        .route-sidebar {
+            grid-area: sidebar;
+            background: white;
+            border-radius: var(--route-radius-lg);
+            box-shadow: var(--route-shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            background: linear-gradient(135deg, var(--route-primary) 0%, #1e40af 100%);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .sidebar-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .sidebar-controls {
+            padding: 1rem;
+            border-bottom: 1px solid var(--route-border);
+            background: var(--route-light);
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid var(--route-border);
+            border-radius: 25px;
+            font-size: 0.9rem;
+            transition: var(--route-transition);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--route-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--route-secondary);
+        }
+
+        .filter-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--route-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-select {
+            padding: 0.5rem;
+            border: 2px solid var(--route-border);
+            border-radius: var(--route-radius);
+            font-size: 0.85rem;
+            transition: var(--route-transition);
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--route-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .bulk-actions {
+            padding: 1rem;
+            border-bottom: 1px solid var(--route-border);
+            background: #fef3c7;
+            display: none;
+        }
+
+        .bulk-actions.show {
+            display: block;
+        }
+
+        .bulk-actions-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .bulk-count {
+            font-weight: 600;
+            color: var(--route-warning);
+        }
+
+        .bulk-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-bulk {
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            border: none;
+            cursor: pointer;
+            transition: var(--route-transition);
+        }
+
+        .btn-bulk-export {
+            background: var(--route-info);
+            color: white;
+        }
+
+        .btn-bulk-delete {
+            background: var(--route-danger);
+            color: white;
+        }
+
+        .btn-bulk-edit {
+            background: var(--route-warning);
+            color: white;
+        }
+
+        /* Route List */
+        .route-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .route-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .route-list-container::-webkit-scrollbar-track {
+            background: var(--route-light);
+            border-radius: 3px;
+        }
+
+        .route-list-container::-webkit-scrollbar-thumb {
+            background: var(--route-border);
+            border-radius: 3px;
+        }
+
+        .route-list-container::-webkit-scrollbar-thumb:hover {
+            background: var(--route-secondary);
+        }
+
+        .route-item {
+            background: white;
+            border: 2px solid var(--route-border);
+            border-radius: var(--route-radius);
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: var(--route-transition);
+            position: relative;
+        }
+
+        .route-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--route-primary);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+            border-radius: 2px 0 0 2px;
+        }
+
+        .route-item:hover {
+            border-color: var(--route-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--route-shadow-hover);
+        }
+
+        .route-item:hover::before {
+            transform: scaleY(1);
+        }
+
+        .route-item.selected {
+            border-color: var(--route-primary);
+            background: rgba(37, 99, 235, 0.05);
+            box-shadow: var(--route-shadow-hover);
+        }
+
+        .route-item.selected::before {
+            transform: scaleY(1);
+        }
+
+        .route-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .route-checkbox {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .route-item-title {
+            font-weight: 700;
+            color: var(--route-dark);
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.3;
+            padding-right: 2rem;
+        }
+
+        .route-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .route-type-walking { background: #dcfce7; color: #166534; }
+        .route-type-hiking { background: #fef3c7; color: #92400e; }
+        .route-type-cycling { background: #dbeafe; color: #1e40af; }
+        .route-type-driving { background: #fce7f3; color: #be185d; }
+
+        .route-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin: 0.75rem 0;
+        }
+
+        .route-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--route-secondary);
+        }
+
+        .route-stat-icon {
+            width: 16px;
+            text-align: center;
+            color: var(--route-primary);
+        }
+
+        .difficulty-stars {
+            color: #fbbf24;
+            font-size: 0.9rem;
+        }
+
+        .route-description {
+            font-size: 0.85rem;
+            color: var(--route-secondary);
+            line-height: 1.4;
+            margin-bottom: 0.75rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* Workspace */
+        .route-workspace {
+            grid-area: workspace;
+            background: white;
+            border-radius: var(--route-radius-lg);
+            box-shadow: var(--route-shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .workspace-header {
+            background: linear-gradient(135deg, var(--route-secondary) 0%, #475569 100%);
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .workspace-title {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .workspace-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-workspace {
+            padding: 0.5rem 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: transparent;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--route-transition);
+        }
+
+        .btn-workspace:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .workspace-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .empty-workspace {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--route-secondary);
+            text-align: center;
+        }
+
+        .empty-workspace i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Map View */
+        .route-map-view {
+            grid-area: map;
+            background: white;
+            border-radius: var(--route-radius-lg);
+            box-shadow: var(--route-shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .map-header {
+            background: linear-gradient(135deg, var(--route-success) 0%, #047857 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .map-title {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .map-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-map {
+            padding: 0.25rem 0.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: transparent;
+            color: white;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: var(--route-transition);
+        }
+
+        .btn-map:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #routeMap {
+            flex: 1;
+            min-height: 400px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .route-management-container {
+                grid-template-areas: 
+                    "header header"
+                    "sidebar workspace"
+                    "map map";
+                grid-template-columns: 350px 1fr;
+                grid-template-rows: auto 1fr 400px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .route-management-container {
+                grid-template-areas: 
+                    "header"
+                    "sidebar"
+                    "workspace"
+                    "map";
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto 1fr 300px;
+                padding: 0.5rem;
+                gap: 0.5rem;
+            }
+
+            .route-header {
+                padding: 1rem;
+            }
+
+            .route-header h1 {
+                font-size: 1.2rem;
+            }
+
+            .main-navigation {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Loading States */
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--route-border);
+            border-top: 4px solid var(--route-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            padding: 1rem;
+            border-radius: var(--route-radius);
+            box-shadow: var(--route-shadow-hover);
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification-success {
+            background: var(--route-success);
+            color: white;
+        }
+
+        .notification-error {
+            background: var(--route-danger);
+            color: white;
+        }
+
+        .notification-info {
+            background: var(--route-info);
+            color: white;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="route-management-container">
+        <!-- Header -->
+        <header class="route-header">
+            <h1>
+                <i class="fas fa-route"></i>
+                Rota Yönetimi
+            </h1>
+            <nav class="main-navigation">
+                <a href="poi_manager_enhanced.html">
+                    <i class="fas fa-map-marker-alt me-1"></i>
+                    POI Yönetimi
+                </a>
+                <a href="route_manager_enhanced.html" class="active">
+                    <i class="fas fa-route me-1"></i>
+                    Rota Yönetimi
+                </a>
+                <a href="file_import_manager.html">
+                    <i class="fas fa-file-import me-1"></i>
+                    Dosya Import
+                </a>
+            </nav>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="showCreateRouteModal()">
+                    <i class="fas fa-plus me-1"></i>
+                    Yeni Rota
+                </button>
+                <button class="btn btn-outline-secondary" onclick="refreshRoutes()">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Yenile
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="route-sidebar">
+            <div class="sidebar-header">
+                <h3>
+                    <i class="fas fa-list me-2"></i>
+                    Rota Listesi
+                </h3>
+            </div>
+
+            <!-- Search and Filters -->
+            <div class="sidebar-controls">
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" id="routeSearch" 
+                           placeholder="Rota ara..." oninput="handleSearch()">
+                </div>
+
+                <div class="filter-controls">
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-filter"></i>
+                            Rota Türü
+                        </label>
+                        <select class="filter-select" id="typeFilter" onchange="applyFilters()">
+                            <option value="">Tüm Türler</option>
+                            <option value="walking">🚶 Yürüyüş</option>
+                            <option value="hiking">🥾 Doğa Yürüyüşü</option>
+                            <option value="cycling">🚴 Bisiklet</option>
+                            <option value="driving">🚗 Araba</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-star"></i>
+                            Zorluk Seviyesi
+                        </label>
+                        <select class="filter-select" id="difficultyFilter" onchange="applyFilters()">
+                            <option value="">Tüm Seviyeler</option>
+                            <option value="1">⭐ Çok Kolay</option>
+                            <option value="2">⭐⭐ Kolay</option>
+                            <option value="3">⭐⭐⭐ Orta</option>
+                            <option value="4">⭐⭐⭐⭐ Zor</option>
+                            <option value="5">⭐⭐⭐⭐⭐ Çok Zor</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-clock"></i>
+                            Maksimum Süre
+                        </label>
+                        <select class="filter-select" id="durationFilter" onchange="applyFilters()">
+                            <option value="">Süre Sınırı Yok</option>
+                            <option value="30">30 dakika</option>
+                            <option value="60">1 saat</option>
+                            <option value="120">2 saat</option>
+                            <option value="240">4 saat</option>
+                            <option value="480">8 saat</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-sort"></i>
+                            Sıralama
+                        </label>
+                        <select class="filter-select" id="sortFilter" onchange="applyFilters()">
+                            <option value="name_asc">İsim (A-Z)</option>
+                            <option value="name_desc">İsim (Z-A)</option>
+                            <option value="created_desc">En Yeni</option>
+                            <option value="created_asc">En Eski</option>
+                            <option value="difficulty_asc">Kolay → Zor</option>
+                            <option value="difficulty_desc">Zor → Kolay</option>
+                            <option value="duration_asc">Kısa → Uzun</option>
+                            <option value="duration_desc">Uzun → Kısa</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bulk Actions -->
+            <div class="bulk-actions" id="bulkActions">
+                <div class="bulk-actions-header">
+                    <span class="bulk-count" id="bulkCount">0 rota seçildi</span>
+                    <button class="btn-bulk btn-bulk-clear" onclick="clearSelection()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="bulk-buttons">
+                    <button class="btn-bulk btn-bulk-export" onclick="exportSelected()">
+                        <i class="fas fa-download me-1"></i>
+                        Dışa Aktar
+                    </button>
+                    <button class="btn-bulk btn-bulk-edit" onclick="bulkEdit()">
+                        <i class="fas fa-edit me-1"></i>
+                        Toplu Düzenle
+                    </button>
+                    <button class="btn-bulk btn-bulk-delete" onclick="deleteSelected()">
+                        <i class="fas fa-trash me-1"></i>
+                        Sil
+                    </button>
+                </div>
+            </div>
+
+            <!-- Route List -->
+            <div class="route-list-container" id="routeListContainer">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Workspace -->
+        <main class="route-workspace">
+            <div class="workspace-header">
+                <h3 class="workspace-title" id="workspaceTitle">Rota Detayları</h3>
+                <div class="workspace-actions" id="workspaceActions" style="display: none;">
+                    <button class="btn-workspace" onclick="editCurrentRoute()">
+                        <i class="fas fa-edit me-1"></i>
+                        Düzenle
+                    </button>
+                    <button class="btn-workspace" onclick="duplicateCurrentRoute()">
+                        <i class="fas fa-copy me-1"></i>
+                        Kopyala
+                    </button>
+                    <button class="btn-workspace" onclick="exportCurrentRoute()">
+                        <i class="fas fa-download me-1"></i>
+                        Dışa Aktar
+                    </button>
+                </div>
+            </div>
+            <div class="workspace-content" id="workspaceContent">
+                <div class="empty-workspace">
+                    <i class="fas fa-route"></i>
+                    <h4>Rota Seçin</h4>
+                    <p>Detayları görüntülemek için sol taraftan bir rota seçin</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Map View -->
+        <section class="route-map-view">
+            <div class="map-header">
+                <h3 class="map-title">
+                    <i class="fas fa-map me-2"></i>
+                    Harita Görünümü
+                </h3>
+                <div class="map-controls">
+                    <button class="btn-map" onclick="toggleMapLayer('satellite')">
+                        <i class="fas fa-satellite"></i>
+                    </button>
+                    <button class="btn-map" onclick="toggleMapLayer('terrain')">
+                        <i class="fas fa-mountain"></i>
+                    </button>
+                    <button class="btn-map" onclick="fitMapToRoutes()">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="routeMap"></div>
+        </section>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>  
+  <script>
+        // Global variables
+        const apiBase = '/api';
+        let allRoutes = [];
+        let filteredRoutes = [];
+        let selectedRoutes = new Set();
+        let currentRoute = null;
+        let map = null;
+        let routeLayers = {};
+        let searchTimeout = null;
+
+        // Route type configurations
+        const ROUTE_TYPES = {
+            'walking': { name: 'Yürüyüş', icon: '🚶', color: '#059669' },
+            'hiking': { name: 'Doğa Yürüyüşü', icon: '🥾', color: '#d97706' },
+            'cycling': { name: 'Bisiklet', icon: '🚴', color: '#2563eb' },
+            'driving': { name: 'Araba', icon: '🚗', color: '#dc2626' }
+        };
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMap();
+            loadRoutes();
+            setupEventListeners();
+        });
+
+        // Initialize Leaflet map
+        function initializeMap() {
+            map = L.map('routeMap').setView([38.7312, 34.4547], 10);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Add map click handler
+            map.on('click', function(e) {
+                // Handle map interactions
+            });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Search input with debouncing
+            document.getElementById('routeSearch').addEventListener('input', handleSearch);
+            
+            // Filter change handlers
+            document.getElementById('typeFilter').addEventListener('change', applyFilters);
+            document.getElementById('difficultyFilter').addEventListener('change', applyFilters);
+            document.getElementById('durationFilter').addEventListener('change', applyFilters);
+            document.getElementById('sortFilter').addEventListener('change', applyFilters);
+        }
+
+        // Load routes from API
+        async function loadRoutes() {
+            try {
+                showLoading();
+                const response = await fetch(`${apiBase}/routes`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    allRoutes = data.routes || [];
+                    filteredRoutes = [...allRoutes];
+                    displayRoutes();
+                    updateMapRoutes();
+                } else {
+                    throw new Error(data.error || 'Rotalar yüklenemedi');
+                }
+            } catch (error) {
+                console.error('Routes load error:', error);
+                showError('Rotalar yüklenirken hata oluştu: ' + error.message);
+            }
+        }
+
+        // Display routes in sidebar
+        function displayRoutes() {
+            const container = document.getElementById('routeListContainer');
+            
+            if (filteredRoutes.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-workspace">
+                        <i class="fas fa-route"></i>
+                        <h5>Rota bulunamadı</h5>
+                        <p>Arama kriterlerinizi değiştirin veya yeni rota oluşturun</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredRoutes.map(route => `
+                <div class="route-item ${selectedRoutes.has(route.id) ? 'selected' : ''}" 
+                     onclick="selectRoute(${route.id})" data-route-id="${route.id}">
+                    <input type="checkbox" class="route-checkbox" 
+                           ${selectedRoutes.has(route.id) ? 'checked' : ''}
+                           onclick="toggleRouteSelection(event, ${route.id})">
+                    
+                    <div class="route-item-header">
+                        <h4 class="route-item-title">${escapeHtml(route.name)}</h4>
+                    </div>
+                    
+                    <div class="route-type-badge route-type-${route.route_type}">
+                        ${ROUTE_TYPES[route.route_type]?.icon || '🗺️'} 
+                        ${ROUTE_TYPES[route.route_type]?.name || route.route_type}
+                    </div>
+                    
+                    <div class="route-description">
+                        ${escapeHtml(route.description || 'Açıklama bulunmuyor')}
+                    </div>
+                    
+                    <div class="route-stats">
+                        <div class="route-stat">
+                            <i class="fas fa-clock route-stat-icon"></i>
+                            <span>${route.estimated_duration || 0} dk</span>
+                        </div>
+                        <div class="route-stat">
+                            <i class="fas fa-route route-stat-icon"></i>
+                            <span>${route.total_distance || 0} km</span>
+                        </div>
+                        <div class="route-stat">
+                            <i class="fas fa-mountain route-stat-icon"></i>
+                            <span>${route.elevation_gain || 0} m</span>
+                        </div>
+                        <div class="route-stat">
+                            <i class="fas fa-star route-stat-icon"></i>
+                            <span class="difficulty-stars">${getDifficultyStars(route.difficulty_level)}</span>
+                        </div>
+                    </div>
+                    
+                    ${route.is_circular ? '<div class="badge bg-info">Dairesel</div>' : ''}
+                    ${route.tags ? `<div class="route-tags">${route.tags}</div>` : ''}
+                </div>
+            `).join('');
+
+            updateBulkActions();
+        }
+
+        // Handle search with debouncing
+        function handleSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                applyFilters();
+            }, 300);
+        }
+
+        // Apply all filters
+        function applyFilters() {
+            const searchTerm = document.getElementById('routeSearch').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value;
+            const difficultyFilter = document.getElementById('difficultyFilter').value;
+            const durationFilter = document.getElementById('durationFilter').value;
+            const sortFilter = document.getElementById('sortFilter').value;
+
+            // Filter routes
+            filteredRoutes = allRoutes.filter(route => {
+                // Search filter
+                if (searchTerm && !route.name.toLowerCase().includes(searchTerm) && 
+                    !route.description?.toLowerCase().includes(searchTerm) &&
+                    !route.tags?.toLowerCase().includes(searchTerm)) {
+                    return false;
+                }
+
+                // Type filter
+                if (typeFilter && route.route_type !== typeFilter) {
+                    return false;
+                }
+
+                // Difficulty filter
+                if (difficultyFilter && route.difficulty_level != difficultyFilter) {
+                    return false;
+                }
+
+                // Duration filter
+                if (durationFilter && route.estimated_duration > parseInt(durationFilter)) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            // Sort routes
+            filteredRoutes.sort((a, b) => {
+                switch (sortFilter) {
+                    case 'name_asc':
+                        return a.name.localeCompare(b.name);
+                    case 'name_desc':
+                        return b.name.localeCompare(a.name);
+                    case 'created_desc':
+                        return new Date(b.created_at) - new Date(a.created_at);
+                    case 'created_asc':
+                        return new Date(a.created_at) - new Date(b.created_at);
+                    case 'difficulty_asc':
+                        return a.difficulty_level - b.difficulty_level;
+                    case 'difficulty_desc':
+                        return b.difficulty_level - a.difficulty_level;
+                    case 'duration_asc':
+                        return (a.estimated_duration || 0) - (b.estimated_duration || 0);
+                    case 'duration_desc':
+                        return (b.estimated_duration || 0) - (a.estimated_duration || 0);
+                    default:
+                        return 0;
+                }
+            });
+
+            displayRoutes();
+            updateMapRoutes();
+        }
+
+        // Select a route
+        function selectRoute(routeId) {
+            currentRoute = allRoutes.find(r => r.id === routeId);
+            if (currentRoute) {
+                // Update UI selection
+                document.querySelectorAll('.route-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                document.querySelector(`[data-route-id="${routeId}"]`).classList.add('selected');
+
+                // Display route details in workspace
+                displayRouteDetails(currentRoute);
+                
+                // Highlight route on map
+                highlightRouteOnMap(currentRoute);
+            }
+        }
+
+        // Toggle route selection for bulk operations
+        function toggleRouteSelection(event, routeId) {
+            event.stopPropagation();
+            
+            if (selectedRoutes.has(routeId)) {
+                selectedRoutes.delete(routeId);
+            } else {
+                selectedRoutes.add(routeId);
+            }
+            
+            updateBulkActions();
+            displayRoutes();
+        }
+
+        // Update bulk actions visibility and count
+        function updateBulkActions() {
+            const bulkActions = document.getElementById('bulkActions');
+            const bulkCount = document.getElementById('bulkCount');
+            
+            if (selectedRoutes.size > 0) {
+                bulkActions.classList.add('show');
+                bulkCount.textContent = `${selectedRoutes.size} rota seçildi`;
+            } else {
+                bulkActions.classList.remove('show');
+            }
+        }
+
+        // Clear selection
+        function clearSelection() {
+            selectedRoutes.clear();
+            updateBulkActions();
+            displayRoutes();
+        }
+
+        // Display route details in workspace
+        function displayRouteDetails(route) {
+            const workspaceTitle = document.getElementById('workspaceTitle');
+            const workspaceActions = document.getElementById('workspaceActions');
+            const workspaceContent = document.getElementById('workspaceContent');
+
+            workspaceTitle.textContent = route.name;
+            workspaceActions.style.display = 'flex';
+
+            workspaceContent.innerHTML = `
+                <div class="route-detail-view">
+                    <div class="route-detail-header">
+                        <div class="route-type-badge route-type-${route.route_type}">
+                            ${ROUTE_TYPES[route.route_type]?.icon || '🗺️'} 
+                            ${ROUTE_TYPES[route.route_type]?.name || route.route_type}
+                        </div>
+                        <div class="difficulty-display">
+                            <span class="difficulty-stars">${getDifficultyStars(route.difficulty_level)}</span>
+                            <span class="difficulty-text">Zorluk: ${route.difficulty_level}/5</span>
+                        </div>
+                    </div>
+
+                    <div class="route-description-full">
+                        <h5><i class="fas fa-info-circle me-2"></i>Açıklama</h5>
+                        <p>${escapeHtml(route.description || 'Açıklama bulunmuyor')}</p>
+                    </div>
+
+                    <div class="route-statistics">
+                        <h5><i class="fas fa-chart-bar me-2"></i>İstatistikler</h5>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value">${route.estimated_duration || 0}</div>
+                                    <div class="stat-label">Dakika</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-route"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value">${route.total_distance || 0}</div>
+                                    <div class="stat-label">Kilometre</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-mountain"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value">${route.elevation_gain || 0}</div>
+                                    <div class="stat-label">Yükselti (m)</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value">${route.poi_count || 0}</div>
+                                    <div class="stat-label">POI Sayısı</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${route.tags ? `
+                        <div class="route-tags-section">
+                            <h5><i class="fas fa-tags me-2"></i>Etiketler</h5>
+                            <div class="tags-container">
+                                ${route.tags.split(',').map(tag => 
+                                    `<span class="tag-chip">${escapeHtml(tag.trim())}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="route-metadata">
+                        <h5><i class="fas fa-info me-2"></i>Metadata</h5>
+                        <div class="metadata-grid">
+                            <div class="metadata-item">
+                                <strong>Oluşturulma:</strong>
+                                <span>${formatDate(route.created_at)}</span>
+                            </div>
+                            <div class="metadata-item">
+                                <strong>Güncellenme:</strong>
+                                <span>${formatDate(route.updated_at)}</span>
+                            </div>
+                            <div class="metadata-item">
+                                <strong>Dairesel Rota:</strong>
+                                <span>${route.is_circular ? 'Evet' : 'Hayır'}</span>
+                            </div>
+                            ${route.import_source ? `
+                                <div class="metadata-item">
+                                    <strong>Import Kaynağı:</strong>
+                                    <span>${escapeHtml(route.import_source)}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add CSS for route detail view
+            addRouteDetailStyles();
+        }
+
+        // Add styles for route detail view
+        function addRouteDetailStyles() {
+            if (document.getElementById('routeDetailStyles')) return;
+
+            const style = document.createElement('style');
+            style.id = 'routeDetailStyles';
+            style.textContent = `
+                .route-detail-view {
+                    padding: 0;
+                }
+
+                .route-detail-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 1.5rem;
+                    padding-bottom: 1rem;
+                    border-bottom: 2px solid var(--route-border);
+                }
+
+                .difficulty-display {
+                    text-align: right;
+                }
+
+                .difficulty-text {
+                    display: block;
+                    font-size: 0.85rem;
+                    color: var(--route-secondary);
+                    margin-top: 0.25rem;
+                }
+
+                .route-description-full {
+                    margin-bottom: 1.5rem;
+                }
+
+                .route-description-full h5 {
+                    color: var(--route-dark);
+                    margin-bottom: 0.75rem;
+                }
+
+                .route-description-full p {
+                    color: var(--route-secondary);
+                    line-height: 1.6;
+                }
+
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 1rem;
+                    margin-bottom: 1.5rem;
+                }
+
+                .stat-card {
+                    background: var(--route-light);
+                    border-radius: var(--route-radius);
+                    padding: 1rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    border: 2px solid var(--route-border);
+                    transition: var(--route-transition);
+                }
+
+                .stat-card:hover {
+                    border-color: var(--route-primary);
+                    transform: translateY(-2px);
+                }
+
+                .stat-icon {
+                    width: 40px;
+                    height: 40px;
+                    background: var(--route-primary);
+                    color: white;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.1rem;
+                }
+
+                .stat-value {
+                    font-size: 1.25rem;
+                    font-weight: 700;
+                    color: var(--route-dark);
+                }
+
+                .stat-label {
+                    font-size: 0.8rem;
+                    color: var(--route-secondary);
+                }
+
+                .route-tags-section {
+                    margin-bottom: 1.5rem;
+                }
+
+                .route-tags-section h5 {
+                    color: var(--route-dark);
+                    margin-bottom: 0.75rem;
+                }
+
+                .tags-container {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.5rem;
+                }
+
+                .tag-chip {
+                    background: var(--route-primary);
+                    color: white;
+                    padding: 0.25rem 0.75rem;
+                    border-radius: 15px;
+                    font-size: 0.8rem;
+                    font-weight: 500;
+                }
+
+                .route-metadata h5 {
+                    color: var(--route-dark);
+                    margin-bottom: 0.75rem;
+                }
+
+                .metadata-grid {
+                    display: grid;
+                    gap: 0.5rem;
+                }
+
+                .metadata-item {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 0.5rem;
+                    background: var(--route-light);
+                    border-radius: var(--route-radius);
+                    border: 1px solid var(--route-border);
+                }
+
+                .metadata-item strong {
+                    color: var(--route-dark);
+                }
+
+                .metadata-item span {
+                    color: var(--route-secondary);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Update map with filtered routes
+        function updateMapRoutes() {
+            // Clear existing route layers
+            Object.values(routeLayers).forEach(layer => {
+                map.removeLayer(layer);
+            });
+            routeLayers = {};
+
+            // Add filtered routes to map
+            filteredRoutes.forEach(route => {
+                if (route.geometry) {
+                    try {
+                        const routeLayer = L.geoJSON(JSON.parse(route.geometry), {
+                            style: {
+                                color: ROUTE_TYPES[route.route_type]?.color || '#2563eb',
+                                weight: 3,
+                                opacity: 0.7
+                            }
+                        }).bindPopup(`
+                            <strong>${escapeHtml(route.name)}</strong><br>
+                            ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
+                            ${route.estimated_duration || 0} dakika
+                        `);
+                        
+                        routeLayers[route.id] = routeLayer;
+                        routeLayer.addTo(map);
+                    } catch (error) {
+                        console.warn('Route geometry parse error:', error);
+                    }
+                }
+            });
+
+            // Fit map to show all routes
+            if (Object.keys(routeLayers).length > 0) {
+                const group = new L.featureGroup(Object.values(routeLayers));
+                map.fitBounds(group.getBounds(), { padding: [20, 20] });
+            }
+        }
+
+        // Highlight specific route on map
+        function highlightRouteOnMap(route) {
+            // Reset all route styles
+            Object.entries(routeLayers).forEach(([id, layer]) => {
+                const routeData = allRoutes.find(r => r.id == id);
+                layer.setStyle({
+                    color: ROUTE_TYPES[routeData?.route_type]?.color || '#2563eb',
+                    weight: 3,
+                    opacity: 0.7
+                });
+            });
+
+            // Highlight selected route
+            if (routeLayers[route.id]) {
+                routeLayers[route.id].setStyle({
+                    color: '#dc2626',
+                    weight: 5,
+                    opacity: 1
+                });
+                
+                // Fit map to route bounds
+                map.fitBounds(routeLayers[route.id].getBounds(), { padding: [50, 50] });
+            }
+        }
+
+        // Utility functions
+        function getDifficultyStars(level) {
+            return '⭐'.repeat(level || 0) + '☆'.repeat(5 - (level || 0));
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Bilinmiyor';
+            return new Date(dateString).toLocaleDateString('tr-TR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function showLoading() {
+            document.getElementById('routeListContainer').innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            showNotification(message, 'error');
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>${message}</span>
+                    <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Action handlers
+        function refreshRoutes() {
+            loadRoutes();
+        }
+
+        function showCreateRouteModal() {
+            // TODO: Implement create route modal
+            showNotification('Rota oluşturma özelliği yakında eklenecek', 'info');
+        }
+
+        function editCurrentRoute() {
+            if (currentRoute) {
+                displayRouteEditForm(currentRoute);
+            }
+        }
+
+        // Display route editing form in workspace
+        function displayRouteEditForm(route) {
+            const workspaceTitle = document.getElementById('workspaceTitle');
+            const workspaceActions = document.getElementById('workspaceActions');
+            const workspaceContent = document.getElementById('workspaceContent');
+
+            workspaceTitle.textContent = `${route.name} - Düzenleme`;
+            workspaceActions.innerHTML = `
+                <button class="btn-workspace" onclick="saveRouteChanges()">
+                    <i class="fas fa-save me-1"></i>
+                    Kaydet
+                </button>
+                <button class="btn-workspace" onclick="cancelRouteEdit()">
+                    <i class="fas fa-times me-1"></i>
+                    İptal
+                </button>
+            `;
+
+            workspaceContent.innerHTML = `
+                <div class="route-edit-form">
+                    <form id="routeEditForm">
+                        <div class="form-section">
+                            <h5><i class="fas fa-info-circle me-2"></i>Temel Bilgiler</h5>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="editRouteName">Rota Adı *</label>
+                                    <input type="text" id="editRouteName" class="form-control" 
+                                           value="${escapeHtml(route.name)}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="editRouteType">Rota Türü *</label>
+                                    <select id="editRouteType" class="form-control" required>
+                                        <option value="walking" ${route.route_type === 'walking' ? 'selected' : ''}>🚶 Yürüyüş</option>
+                                        <option value="hiking" ${route.route_type === 'hiking' ? 'selected' : ''}>🥾 Doğa Yürüyüşü</option>
+                                        <option value="cycling" ${route.route_type === 'cycling' ? 'selected' : ''}>🚴 Bisiklet</option>
+                                        <option value="driving" ${route.route_type === 'driving' ? 'selected' : ''}>🚗 Araba</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="editRouteDescription">Açıklama</label>
+                                <textarea id="editRouteDescription" class="form-control" rows="3">${escapeHtml(route.description || '')}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h5><i class="fas fa-chart-bar me-2"></i>Rota Özellikleri</h5>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="editDifficulty">Zorluk Seviyesi</label>
+                                    <select id="editDifficulty" class="form-control">
+                                        <option value="1" ${route.difficulty_level === 1 ? 'selected' : ''}>⭐ Çok Kolay</option>
+                                        <option value="2" ${route.difficulty_level === 2 ? 'selected' : ''}>⭐⭐ Kolay</option>
+                                        <option value="3" ${route.difficulty_level === 3 ? 'selected' : ''}>⭐⭐⭐ Orta</option>
+                                        <option value="4" ${route.difficulty_level === 4 ? 'selected' : ''}>⭐⭐⭐⭐ Zor</option>
+                                        <option value="5" ${route.difficulty_level === 5 ? 'selected' : ''}>⭐⭐⭐⭐⭐ Çok Zor</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="editDuration">Tahmini Süre (dakika)</label>
+                                    <input type="number" id="editDuration" class="form-control" 
+                                           value="${route.estimated_duration || ''}" min="1">
+                                </div>
+                                <div class="form-group">
+                                    <label for="editDistance">Mesafe (km)</label>
+                                    <input type="number" id="editDistance" class="form-control" 
+                                           value="${route.total_distance || ''}" step="0.1" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="editElevation">Yükselti Kazancı (m)</label>
+                                    <input type="number" id="editElevation" class="form-control" 
+                                           value="${route.elevation_gain || ''}" min="0">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="editTags">Etiketler (virgülle ayırın)</label>
+                                <input type="text" id="editTags" class="form-control" 
+                                       value="${escapeHtml(route.tags || '')}" 
+                                       placeholder="tarihi, doğa, macera">
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input type="checkbox" id="editIsCircular" class="form-check-input" 
+                                           ${route.is_circular ? 'checked' : ''}>
+                                    <label for="editIsCircular" class="form-check-label">
+                                        Dairesel Rota (Başlangıç = Bitiş)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h5><i class="fas fa-map-marker-alt me-2"></i>POI İlişkilendirme</h5>
+                            <div class="poi-association-container">
+                                <div class="poi-search-section">
+                                    <div class="search-container">
+                                        <i class="fas fa-search search-icon"></i>
+                                        <input type="text" class="search-input" id="poiSearchInput" 
+                                               placeholder="POI ara..." oninput="searchPOIs()">
+                                    </div>
+                                    <button type="button" class="btn btn-outline-primary" onclick="suggestNearbyPOIs()">
+                                        <i class="fas fa-magic me-1"></i>
+                                        Yakın POI'leri Öner
+                                    </button>
+                                </div>
+                                
+                                <div class="poi-lists-container">
+                                    <div class="available-pois">
+                                        <h6>Mevcut POI'ler</h6>
+                                        <div id="availablePOIsList" class="poi-list">
+                                            <div class="loading-spinner">
+                                                <div class="spinner"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="associated-pois">
+                                        <h6>İlişkilendirilmiş POI'ler</h6>
+                                        <div id="associatedPOIsList" class="poi-list">
+                                            <!-- Associated POIs will be loaded here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h5><i class="fas fa-download me-2"></i>Dışa Aktarma Seçenekleri</h5>
+                            <div class="export-options">
+                                <button type="button" class="btn btn-outline-info" onclick="exportRouteAsGPX(${route.id})">
+                                    <i class="fas fa-file-code me-1"></i>
+                                    GPX Olarak İndir
+                                </button>
+                                <button type="button" class="btn btn-outline-info" onclick="exportRouteAsKML(${route.id})">
+                                    <i class="fas fa-globe me-1"></i>
+                                    KML Olarak İndir
+                                </button>
+                                <button type="button" class="btn btn-outline-info" onclick="exportRouteAsJSON(${route.id})">
+                                    <i class="fas fa-code me-1"></i>
+                                    JSON Olarak İndir
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="printRouteDetails(${route.id})">
+                                    <i class="fas fa-print me-1"></i>
+                                    Yazdır
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            `;
+
+            // Add CSS for edit form
+            addRouteEditFormStyles();
+            
+            // Load POIs for association
+            loadPOIsForAssociation(route.id);
+        }
+
+        // Add styles for route edit form
+        function addRouteEditFormStyles() {
+            if (document.getElementById('routeEditFormStyles')) return;
+
+            const style = document.createElement('style');
+            style.id = 'routeEditFormStyles';
+            style.textContent = `
+                .route-edit-form {
+                    padding: 0;
+                }
+
+                .form-section {
+                    margin-bottom: 2rem;
+                    padding-bottom: 1.5rem;
+                    border-bottom: 2px solid var(--route-border);
+                }
+
+                .form-section:last-child {
+                    border-bottom: none;
+                }
+
+                .form-section h5 {
+                    color: var(--route-dark);
+                    margin-bottom: 1rem;
+                    font-weight: 600;
+                }
+
+                .form-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 1rem;
+                    margin-bottom: 1rem;
+                }
+
+                .form-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+
+                .form-group label {
+                    font-weight: 600;
+                    color: var(--route-dark);
+                    font-size: 0.9rem;
+                }
+
+                .form-control {
+                    padding: 0.75rem;
+                    border: 2px solid var(--route-border);
+                    border-radius: var(--route-radius);
+                    font-size: 0.9rem;
+                    transition: var(--route-transition);
+                }
+
+                .form-control:focus {
+                    outline: none;
+                    border-color: var(--route-primary);
+                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+                }
+
+                .form-check {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    margin-top: 0.5rem;
+                }
+
+                .form-check-input {
+                    width: 18px;
+                    height: 18px;
+                }
+
+                .poi-association-container {
+                    background: var(--route-light);
+                    border-radius: var(--route-radius);
+                    padding: 1rem;
+                    border: 2px solid var(--route-border);
+                }
+
+                .poi-search-section {
+                    display: flex;
+                    gap: 1rem;
+                    align-items: center;
+                    margin-bottom: 1rem;
+                }
+
+                .poi-search-section .search-container {
+                    flex: 1;
+                }
+
+                .poi-lists-container {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 1rem;
+                }
+
+                .available-pois, .associated-pois {
+                    background: white;
+                    border-radius: var(--route-radius);
+                    padding: 1rem;
+                    border: 2px solid var(--route-border);
+                }
+
+                .available-pois h6, .associated-pois h6 {
+                    margin-bottom: 0.75rem;
+                    color: var(--route-dark);
+                    font-weight: 600;
+                }
+
+                .poi-list {
+                    max-height: 200px;
+                    overflow-y: auto;
+                }
+
+                .poi-item-small {
+                    background: var(--route-light);
+                    border: 1px solid var(--route-border);
+                    border-radius: var(--route-radius);
+                    padding: 0.75rem;
+                    margin-bottom: 0.5rem;
+                    cursor: pointer;
+                    transition: var(--route-transition);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .poi-item-small:hover {
+                    border-color: var(--route-primary);
+                    background: white;
+                }
+
+                .poi-item-info {
+                    flex: 1;
+                }
+
+                .poi-item-name {
+                    font-weight: 600;
+                    color: var(--route-dark);
+                    font-size: 0.9rem;
+                }
+
+                .poi-item-category {
+                    font-size: 0.8rem;
+                    color: var(--route-secondary);
+                }
+
+                .poi-item-actions {
+                    display: flex;
+                    gap: 0.25rem;
+                }
+
+                .btn-poi-action {
+                    padding: 0.25rem 0.5rem;
+                    border: none;
+                    border-radius: 15px;
+                    font-size: 0.75rem;
+                    cursor: pointer;
+                    transition: var(--route-transition);
+                }
+
+                .btn-add-poi {
+                    background: var(--route-success);
+                    color: white;
+                }
+
+                .btn-remove-poi {
+                    background: var(--route-danger);
+                    color: white;
+                }
+
+                .export-options {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.75rem;
+                }
+
+                .export-options .btn {
+                    padding: 0.5rem 1rem;
+                    border-radius: 20px;
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                }
+
+                @media (max-width: 768px) {
+                    .form-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .poi-lists-container {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .poi-search-section {
+                        flex-direction: column;
+                        align-items: stretch;
+                    }
+
+                    .export-options {
+                        flex-direction: column;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Load POIs for association
+        async function loadPOIsForAssociation(routeId) {
+            try {
+                // Load all POIs
+                const poisResponse = await fetch(`${apiBase}/pois`);
+                const poisData = await poisResponse.json();
+                
+                // Load route-POI associations
+                const associationsResponse = await fetch(`${apiBase}/routes/${routeId}/pois`);
+                const associationsData = await associationsResponse.json();
+                
+                if (poisResponse.ok && associationsResponse.ok) {
+                    const allPOIs = poisData.pois || [];
+                    const associatedPOIIds = new Set((associationsData.pois || []).map(p => p.id));
+                    
+                    displayAvailablePOIs(allPOIs.filter(poi => !associatedPOIIds.has(poi.id)));
+                    displayAssociatedPOIs(allPOIs.filter(poi => associatedPOIIds.has(poi.id)));
+                }
+            } catch (error) {
+                console.error('Error loading POIs:', error);
+                showError('POI'ler yüklenirken hata oluştu');
+            }
+        }
+
+        // Display available POIs
+        function displayAvailablePOIs(pois) {
+            const container = document.getElementById('availablePOIsList');
+            
+            if (pois.length === 0) {
+                container.innerHTML = '<p class="text-muted">İlişkilendirilecek POI bulunamadı</p>';
+                return;
+            }
+
+            container.innerHTML = pois.map(poi => `
+                <div class="poi-item-small">
+                    <div class="poi-item-info">
+                        <div class="poi-item-name">${escapeHtml(poi.name)}</div>
+                        <div class="poi-item-category">${escapeHtml(poi.category || 'Kategori yok')}</div>
+                    </div>
+                    <div class="poi-item-actions">
+                        <button class="btn-poi-action btn-add-poi" onclick="associatePOI(${poi.id})">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Display associated POIs
+        function displayAssociatedPOIs(pois) {
+            const container = document.getElementById('associatedPOIsList');
+            
+            if (pois.length === 0) {
+                container.innerHTML = '<p class="text-muted">İlişkilendirilmiş POI bulunmuyor</p>';
+                return;
+            }
+
+            container.innerHTML = pois.map(poi => `
+                <div class="poi-item-small">
+                    <div class="poi-item-info">
+                        <div class="poi-item-name">${escapeHtml(poi.name)}</div>
+                        <div class="poi-item-category">${escapeHtml(poi.category || 'Kategori yok')}</div>
+                    </div>
+                    <div class="poi-item-actions">
+                        <button class="btn-poi-action btn-remove-poi" onclick="disassociatePOI(${poi.id})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Search POIs
+        function searchPOIs() {
+            const searchTerm = document.getElementById('poiSearchInput').value.toLowerCase();
+            const availableItems = document.querySelectorAll('#availablePOIsList .poi-item-small');
+            const associatedItems = document.querySelectorAll('#associatedPOIsList .poi-item-small');
+            
+            [...availableItems, ...associatedItems].forEach(item => {
+                const name = item.querySelector('.poi-item-name').textContent.toLowerCase();
+                const category = item.querySelector('.poi-item-category').textContent.toLowerCase();
+                
+                if (name.includes(searchTerm) || category.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // Associate POI with route
+        async function associatePOI(poiId) {
+            if (!currentRoute) return;
+            
+            try {
+                const response = await fetch(`${apiBase}/routes/${currentRoute.id}/pois`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ poi_id: poiId })
+                });
+                
+                if (response.ok) {
+                    showNotification('POI başarıyla ilişkilendirildi', 'success');
+                    loadPOIsForAssociation(currentRoute.id);
+                } else {
+                    throw new Error('POI ilişkilendirilemedi');
+                }
+            } catch (error) {
+                console.error('POI association error:', error);
+                showError('POI ilişkilendirilirken hata oluştu');
+            }
+        }
+
+        // Disassociate POI from route
+        async function disassociatePOI(poiId) {
+            if (!currentRoute) return;
+            
+            try {
+                const response = await fetch(`${apiBase}/routes/${currentRoute.id}/pois/${poiId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showNotification('POI ilişkisi kaldırıldı', 'success');
+                    loadPOIsForAssociation(currentRoute.id);
+                } else {
+                    throw new Error('POI ilişkisi kaldırılamadı');
+                }
+            } catch (error) {
+                console.error('POI disassociation error:', error);
+                showError('POI ilişkisi kaldırılırken hata oluştu');
+            }
+        }
+
+        // Suggest nearby POIs
+        async function suggestNearbyPOIs() {
+            if (!currentRoute) return;
+            
+            try {
+                const response = await fetch(`${apiBase}/routes/${currentRoute.id}/suggest-pois`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const suggestions = data.suggestions || [];
+                    if (suggestions.length > 0) {
+                        showNotification(`${suggestions.length} yakın POI önerisi bulundu`, 'success');
+                        // TODO: Display suggestions in a modal or special section
+                    } else {
+                        showNotification('Yakın POI bulunamadı', 'info');
+                    }
+                } else {
+                    throw new Error('POI önerileri alınamadı');
+                }
+            } catch (error) {
+                console.error('POI suggestion error:', error);
+                showError('POI önerileri alınırken hata oluştu');
+            }
+        }
+
+        // Save route changes
+        async function saveRouteChanges() {
+            if (!currentRoute) return;
+            
+            try {
+                const formData = {
+                    name: document.getElementById('editRouteName').value,
+                    description: document.getElementById('editRouteDescription').value,
+                    route_type: document.getElementById('editRouteType').value,
+                    difficulty_level: parseInt(document.getElementById('editDifficulty').value),
+                    estimated_duration: parseInt(document.getElementById('editDuration').value) || null,
+                    total_distance: parseFloat(document.getElementById('editDistance').value) || null,
+                    elevation_gain: parseInt(document.getElementById('editElevation').value) || null,
+                    tags: document.getElementById('editTags').value,
+                    is_circular: document.getElementById('editIsCircular').checked
+                };
+                
+                const response = await fetch(`${apiBase}/routes/${currentRoute.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    showNotification('Rota başarıyla güncellendi', 'success');
+                    
+                    // Update current route data
+                    Object.assign(currentRoute, formData);
+                    
+                    // Refresh routes list
+                    await loadRoutes();
+                    
+                    // Return to detail view
+                    displayRouteDetails(currentRoute);
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Rota güncellenemedi');
+                }
+            } catch (error) {
+                console.error('Route update error:', error);
+                showError('Rota güncellenirken hata oluştu: ' + error.message);
+            }
+        }
+
+        // Cancel route edit
+        function cancelRouteEdit() {
+            if (currentRoute) {
+                displayRouteDetails(currentRoute);
+            }
+        }
+
+        // Export functions
+        async function exportRouteAsGPX(routeId) {
+            try {
+                const response = await fetch(`${apiBase}/routes/${routeId}/export/gpx`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadFile(blob, `route_${routeId}.gpx`, 'application/gpx+xml');
+                } else {
+                    throw new Error('GPX export failed');
+                }
+            } catch (error) {
+                console.error('GPX export error:', error);
+                showError('GPX dışa aktarımında hata oluştu');
+            }
+        }
+
+        async function exportRouteAsKML(routeId) {
+            try {
+                const response = await fetch(`${apiBase}/routes/${routeId}/export/kml`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadFile(blob, `route_${routeId}.kml`, 'application/vnd.google-earth.kml+xml');
+                } else {
+                    throw new Error('KML export failed');
+                }
+            } catch (error) {
+                console.error('KML export error:', error);
+                showError('KML dışa aktarımında hata oluştu');
+            }
+        }
+
+        async function exportRouteAsJSON(routeId) {
+            try {
+                const response = await fetch(`${apiBase}/routes/${routeId}/export/json`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadFile(blob, `route_${routeId}.json`, 'application/json');
+                } else {
+                    throw new Error('JSON export failed');
+                }
+            } catch (error) {
+                console.error('JSON export error:', error);
+                showError('JSON dışa aktarımında hata oluştu');
+            }
+        }
+
+        function printRouteDetails(routeId) {
+            const route = allRoutes.find(r => r.id === routeId);
+            if (!route) return;
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>${escapeHtml(route.name)} - Rota Detayları</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        h1 { color: #2563eb; }
+                        .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 20px 0; }
+                        .stat { padding: 10px; background: #f8fafc; border-radius: 8px; }
+                        .stat-label { font-weight: bold; }
+                    </style>
+                </head>
+                <body>
+                    <h1>${escapeHtml(route.name)}</h1>
+                    <p><strong>Tür:</strong> ${ROUTE_TYPES[route.route_type]?.name || route.route_type}</p>
+                    <p><strong>Açıklama:</strong> ${escapeHtml(route.description || 'Açıklama bulunmuyor')}</p>
+                    
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-label">Süre</div>
+                            <div>${route.estimated_duration || 0} dakika</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Mesafe</div>
+                            <div>${route.total_distance || 0} km</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Yükselti</div>
+                            <div>${route.elevation_gain || 0} m</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Zorluk</div>
+                            <div>${getDifficultyStars(route.difficulty_level)} (${route.difficulty_level}/5)</div>
+                        </div>
+                    </div>
+                    
+                    ${route.tags ? `<p><strong>Etiketler:</strong> ${escapeHtml(route.tags)}</p>` : ''}
+                    <p><strong>Dairesel Rota:</strong> ${route.is_circular ? 'Evet' : 'Hayır'}</p>
+                    <p><strong>Oluşturulma:</strong> ${formatDate(route.created_at)}</p>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // Utility function to download files
+        function downloadFile(blob, filename, mimeType) {
+            const url = window.URL.createObjectURL(new Blob([blob], { type: mimeType }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function duplicateCurrentRoute() {
+            if (currentRoute) {
+                // TODO: Implement route duplication
+                showNotification(`${currentRoute.name} rotası kopyalama özelliği yakında eklenecek`, 'info');
+            }
+        }
+
+        function exportCurrentRoute() {
+            if (currentRoute) {
+                // TODO: Implement route export
+                showNotification(`${currentRoute.name} rotası dışa aktarma özelliği yakında eklenecek`, 'info');
+            }
+        }
+
+        function exportSelected() {
+            if (selectedRoutes.size > 0) {
+                // TODO: Implement bulk export
+                showNotification(`${selectedRoutes.size} rota dışa aktarma özelliği yakında eklenecek`, 'info');
+            }
+        }
+
+        function bulkEdit() {
+            if (selectedRoutes.size > 0) {
+                // TODO: Implement bulk edit
+                showNotification(`${selectedRoutes.size} rota toplu düzenleme özelliği yakında eklenecek`, 'info');
+            }
+        }
+
+        function deleteSelected() {
+            if (selectedRoutes.size > 0) {
+                if (confirm(`${selectedRoutes.size} rotayı silmek istediğinizden emin misiniz?`)) {
+                    // TODO: Implement bulk delete
+                    showNotification(`${selectedRoutes.size} rota silme özelliği yakında eklenecek`, 'info');
+                }
+            }
+        }
+
+        function toggleMapLayer(layerType) {
+            // TODO: Implement map layer switching
+            showNotification(`${layerType} katmanı özelliği yakında eklenecek`, 'info');
+        }
+
+        function fitMapToRoutes() {
+            if (Object.keys(routeLayers).length > 0) {
+                const group = new L.featureGroup(Object.values(routeLayers));
+                map.fitBounds(group.getBounds(), { padding: [20, 20] });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -3,6 +3,7 @@ from flask_cors import CORS
 from poi_database_adapter import POIDatabaseFactory
 from poi_media_manager import POIMediaManager
 from route_service import RouteService
+from route_file_parser import RouteFileParser, RouteParserError
 from psycopg2.extras import RealDictCursor
 import os
 import json
@@ -17,6 +18,13 @@ from auth_config import auth_config
 from session_config import configure_session
 import time
 from functools import wraps
+import tempfile
+import hashlib
+from werkzeug.datastructures import FileStorage
+import threading
+import queue
+import math
+from typing import List, Tuple, Set, Dict, Any
 
 app = Flask(__name__)
 CORS(app, origins=["*"], supports_credentials=True)
@@ -3880,6 +3888,1079 @@ def search_routes():
         }), 500
 
 
+
+# ===== FILE UPLOAD AND VALIDATION API ENDPOINTS =====
+
+# Global variables for progress tracking
+upload_progress = {}
+upload_progress_lock = threading.Lock()
+
+class SecureFileUploader:
+    """Secure file upload handler with validation and security checks"""
+    
+    ALLOWED_EXTENSIONS = {'gpx', 'kml', 'kmz'}
+    MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+    UPLOAD_FOLDER = 'temp_uploads'
+    
+    def __init__(self):
+        # Create upload folder if it doesn't exist
+        os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)
+        self.route_parser = RouteFileParser()
+    
+    def validate_file(self, file: FileStorage) -> dict:
+        """
+        Comprehensive file validation
+        
+        Returns:
+            dict: Validation result with success status and details
+        """
+        validation_result = {
+            'is_valid': True,
+            'errors': [],
+            'warnings': [],
+            'file_info': {}
+        }
+        
+        # Check if file exists
+        if not file or not file.filename:
+            validation_result['is_valid'] = False
+            validation_result['errors'].append('Dosya seçilmedi')
+            return validation_result
+        
+        # Get file info
+        filename = file.filename
+        file_size = 0
+        
+        # Calculate file size
+        file.seek(0, 2)  # Seek to end
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+        
+        validation_result['file_info'] = {
+            'filename': filename,
+            'size': file_size,
+            'size_mb': round(file_size / (1024 * 1024), 2)
+        }
+        
+        # Check file size
+        if file_size > self.MAX_FILE_SIZE:
+            validation_result['is_valid'] = False
+            validation_result['errors'].append(
+                f'Dosya çok büyük: {validation_result["file_info"]["size_mb"]}MB (maksimum: 50MB)'
+            )
+        
+        if file_size == 0:
+            validation_result['is_valid'] = False
+            validation_result['errors'].append('Dosya boş')
+            return validation_result
+        
+        # Check file extension
+        file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+        if file_ext not in self.ALLOWED_EXTENSIONS:
+            validation_result['is_valid'] = False
+            validation_result['errors'].append(
+                f'Desteklenmeyen dosya formatı: .{file_ext}. '
+                f'Desteklenen formatlar: {", ".join(self.ALLOWED_EXTENSIONS)}'
+            )
+        
+        validation_result['file_info']['extension'] = file_ext
+        
+        # Check filename for security
+        secure_name = self.sanitize_filename(filename)
+        if secure_name != filename:
+            validation_result['warnings'].append('Dosya adı güvenlik için değiştirildi')
+            validation_result['file_info']['sanitized_filename'] = secure_name
+        
+        return validation_result
+    
+    def sanitize_filename(self, filename: str) -> str:
+        """
+        Sanitize filename for security
+        
+        Args:
+            filename: Original filename
+            
+        Returns:
+            str: Sanitized filename
+        """
+        # Remove path components
+        filename = os.path.basename(filename)
+        
+        # Remove or replace dangerous characters
+        filename = re.sub(r'[^\w\s.-]', '', filename)
+        filename = re.sub(r'[-\s]+', '-', filename)
+        
+        # Limit length
+        name, ext = os.path.splitext(filename)
+        if len(name) > 100:
+            name = name[:100]
+        
+        return f"{name}{ext}"
+    
+    def scan_file_content(self, file_path: str) -> dict:
+        """
+        Scan file content for security issues
+        
+        Args:
+            file_path: Path to uploaded file
+            
+        Returns:
+            dict: Scan results
+        """
+        scan_result = {
+            'is_safe': True,
+            'issues': [],
+            'file_hash': None
+        }
+        
+        try:
+            # Calculate file hash
+            hash_sha256 = hashlib.sha256()
+            with open(file_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_sha256.update(chunk)
+            scan_result['file_hash'] = hash_sha256.hexdigest()
+            
+            # Basic content validation - check if it's actually XML/ZIP
+            with open(file_path, 'rb') as f:
+                header = f.read(1024)
+                
+                # Check for XML files (GPX, KML)
+                if file_path.lower().endswith(('.gpx', '.kml')):
+                    try:
+                        header_text = header.decode('utf-8', errors='ignore')
+                        if not header_text.strip().startswith('<?xml'):
+                            scan_result['issues'].append('Dosya XML formatında değil')
+                        if '<script' in header_text.lower():
+                            scan_result['is_safe'] = False
+                            scan_result['issues'].append('Güvenlik riski: Script içeriği tespit edildi')
+                    except:
+                        scan_result['issues'].append('Dosya içeriği okunamadı')
+                
+                # Check for ZIP files (KMZ)
+                elif file_path.lower().endswith('.kmz'):
+                    if not header.startswith(b'PK'):
+                        scan_result['issues'].append('Dosya ZIP formatında değil')
+            
+        except Exception as e:
+            scan_result['is_safe'] = False
+            scan_result['issues'].append(f'Dosya tarama hatası: {str(e)}')
+        
+        return scan_result
+    
+    def save_uploaded_file(self, file: FileStorage, upload_id: str) -> str:
+        """
+        Save uploaded file to temporary location
+        
+        Args:
+            file: Uploaded file
+            upload_id: Unique upload identifier
+            
+        Returns:
+            str: Path to saved file
+        """
+        filename = self.sanitize_filename(file.filename)
+        file_path = os.path.join(self.UPLOAD_FOLDER, f"{upload_id}_{filename}")
+        
+        file.save(file_path)
+        return file_path
+
+
+@app.route('/api/routes/import', methods=['POST'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=10, window_seconds=300)  # 10 uploads per 5 minutes
+def upload_route_file():
+    """
+    Upload and validate route file (GPX, KML, KMZ)
+    
+    Returns:
+        JSON response with upload status and validation results
+    """
+    try:
+        # Check if file is present
+        if 'file' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'Dosya bulunamadı',
+                'error_code': 'NO_FILE'
+            }), 400
+        
+        file = request.files['file']
+        uploader = SecureFileUploader()
+        
+        # Generate unique upload ID
+        upload_id = str(uuid.uuid4())
+        
+        # Initialize progress tracking
+        with upload_progress_lock:
+            upload_progress[upload_id] = {
+                'status': 'validating',
+                'progress': 10,
+                'message': 'Dosya doğrulanıyor...',
+                'started_at': datetime.now().isoformat()
+            }
+        
+        # Validate file
+        validation_result = uploader.validate_file(file)
+        
+        if not validation_result['is_valid']:
+            with upload_progress_lock:
+                upload_progress[upload_id] = {
+                    'status': 'failed',
+                    'progress': 0,
+                    'message': 'Dosya doğrulama başarısız',
+                    'errors': validation_result['errors']
+                }
+            
+            return jsonify({
+                'success': False,
+                'upload_id': upload_id,
+                'error': 'Dosya doğrulama başarısız',
+                'error_code': 'VALIDATION_FAILED',
+                'validation_errors': validation_result['errors'],
+                'warnings': validation_result.get('warnings', [])
+            }), 400
+        
+        # Update progress
+        with upload_progress_lock:
+            upload_progress[upload_id]['status'] = 'uploading'
+            upload_progress[upload_id]['progress'] = 30
+            upload_progress[upload_id]['message'] = 'Dosya yükleniyor...'
+        
+        # Save file temporarily
+        try:
+            file_path = uploader.save_uploaded_file(file, upload_id)
+        except Exception as e:
+            with upload_progress_lock:
+                upload_progress[upload_id] = {
+                    'status': 'failed',
+                    'progress': 0,
+                    'message': f'Dosya kaydetme hatası: {str(e)}'
+                }
+            
+            return jsonify({
+                'success': False,
+                'upload_id': upload_id,
+                'error': f'Dosya kaydetme hatası: {str(e)}',
+                'error_code': 'SAVE_FAILED'
+            }), 500
+        
+        # Update progress
+        with upload_progress_lock:
+            upload_progress[upload_id]['status'] = 'scanning'
+            upload_progress[upload_id]['progress'] = 50
+            upload_progress[upload_id]['message'] = 'Dosya güvenlik taraması...'
+        
+        # Scan file content
+        scan_result = uploader.scan_file_content(file_path)
+        
+        if not scan_result['is_safe']:
+            # Clean up file
+            try:
+                os.unlink(file_path)
+            except:
+                pass
+            
+            with upload_progress_lock:
+                upload_progress[upload_id] = {
+                    'status': 'failed',
+                    'progress': 0,
+                    'message': 'Güvenlik taraması başarısız',
+                    'errors': scan_result['issues']
+                }
+            
+            return jsonify({
+                'success': False,
+                'upload_id': upload_id,
+                'error': 'Güvenlik taraması başarısız',
+                'error_code': 'SECURITY_SCAN_FAILED',
+                'security_issues': scan_result['issues']
+            }), 400
+        
+        # Update progress
+        with upload_progress_lock:
+            upload_progress[upload_id]['status'] = 'parsing'
+            upload_progress[upload_id]['progress'] = 70
+            upload_progress[upload_id]['message'] = 'Rota dosyası parse ediliyor...'
+        
+        # Parse route file
+        try:
+            parsed_route = uploader.route_parser.parse_file(file_path)
+            metadata = uploader.route_parser.extract_metadata(parsed_route)
+        except RouteParserError as e:
+            # Clean up file
+            try:
+                os.unlink(file_path)
+            except:
+                pass
+            
+            with upload_progress_lock:
+                upload_progress[upload_id] = {
+                    'status': 'failed',
+                    'progress': 0,
+                    'message': f'Parse hatası: {e.message}',
+                    'error_code': e.error_code
+                }
+            
+            return jsonify({
+                'success': False,
+                'upload_id': upload_id,
+                'error': f'Rota dosyası parse edilemedi: {e.message}',
+                'error_code': e.error_code,
+                'error_details': e.details
+            }), 400
+        except Exception as e:
+            # Clean up file
+            try:
+                os.unlink(file_path)
+            except:
+                pass
+            
+            with upload_progress_lock:
+                upload_progress[upload_id] = {
+                    'status': 'failed',
+                    'progress': 0,
+                    'message': f'Beklenmeyen hata: {str(e)}'
+                }
+            
+            return jsonify({
+                'success': False,
+                'upload_id': upload_id,
+                'error': f'Beklenmeyen hata: {str(e)}',
+                'error_code': 'UNEXPECTED_ERROR'
+            }), 500
+        
+        # Update progress
+        with upload_progress_lock:
+            upload_progress[upload_id]['status'] = 'completed'
+            upload_progress[upload_id]['progress'] = 100
+            upload_progress[upload_id]['message'] = 'Dosya başarıyla işlendi'
+        
+        # Prepare response
+        response_data = {
+            'success': True,
+            'upload_id': upload_id,
+            'message': 'Dosya başarıyla yüklendi ve parse edildi',
+            'file_info': {
+                **validation_result['file_info'],
+                'file_hash': scan_result['file_hash'],
+                'temp_path': file_path
+            },
+            'route_data': {
+                'metadata': metadata,
+                'points_count': len(parsed_route.points),
+                'waypoints_count': len(parsed_route.waypoints),
+                'coordinates_preview': [
+                    {'lat': p.latitude, 'lng': p.longitude} 
+                    for p in parsed_route.points[:10]  # First 10 points for preview
+                ]
+            },
+            'validation_warnings': validation_result.get('warnings', []),
+            'security_issues': scan_result.get('issues', [])
+        }
+        
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Sunucu hatası: {str(e)}',
+            'error_code': 'SERVER_ERROR'
+        }), 500
+
+
+@app.route('/api/routes/import/progress/<upload_id>', methods=['GET'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=100, window_seconds=60)
+def get_upload_progress(upload_id):
+    """
+    Get upload progress for a specific upload ID
+    
+    Args:
+        upload_id: Unique upload identifier
+        
+    Returns:
+        JSON response with progress information
+    """
+    try:
+        with upload_progress_lock:
+            progress_info = upload_progress.get(upload_id)
+        
+        if not progress_info:
+            return jsonify({
+                'success': False,
+                'error': 'Upload ID bulunamadı',
+                'error_code': 'UPLOAD_NOT_FOUND'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'upload_id': upload_id,
+            'progress': progress_info
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Progress bilgisi alınamadı: {str(e)}',
+            'error_code': 'PROGRESS_ERROR'
+        }), 500
+
+
+@app.route('/api/routes/import/confirm', methods=['POST'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=20, window_seconds=300)
+def confirm_route_import():
+    """
+    Confirm and save imported route to database
+    
+    Expected JSON payload:
+    {
+        "upload_id": "uuid",
+        "route_name": "string",
+        "route_description": "string",
+        "route_type": "string",
+        "associate_pois": [poi_ids]
+    }
+    
+    Returns:
+        JSON response with import confirmation
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'upload_id' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Upload ID gerekli',
+                'error_code': 'MISSING_UPLOAD_ID'
+            }), 400
+        
+        upload_id = data['upload_id']
+        
+        # Check if upload exists and is completed
+        with upload_progress_lock:
+            progress_info = upload_progress.get(upload_id)
+        
+        if not progress_info:
+            return jsonify({
+                'success': False,
+                'error': 'Upload ID bulunamadı',
+                'error_code': 'UPLOAD_NOT_FOUND'
+            }), 404
+        
+        if progress_info['status'] != 'completed':
+            return jsonify({
+                'success': False,
+                'error': 'Upload henüz tamamlanmadı',
+                'error_code': 'UPLOAD_NOT_COMPLETED'
+            }), 400
+        
+        # Get file path from temp storage
+        uploader = SecureFileUploader()
+        temp_files = [f for f in os.listdir(uploader.UPLOAD_FOLDER) if f.startswith(upload_id)]
+        
+        if not temp_files:
+            return jsonify({
+                'success': False,
+                'error': 'Geçici dosya bulunamadı',
+                'error_code': 'TEMP_FILE_NOT_FOUND'
+            }), 404
+        
+        file_path = os.path.join(uploader.UPLOAD_FOLDER, temp_files[0])
+        
+        # Re-parse the file to get complete data
+        try:
+            parsed_route = uploader.route_parser.parse_file(file_path)
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'Dosya tekrar parse edilemedi: {str(e)}',
+                'error_code': 'REPARSE_FAILED'
+            }), 500
+        
+        # Prepare route data for database
+        route_data = {
+            'name': data.get('route_name', parsed_route.metadata.name or 'İsimsiz Rota'),
+            'description': data.get('route_description', parsed_route.metadata.description or ''),
+            'route_type': data.get('route_type', parsed_route.metadata.route_type or 'imported'),
+            'difficulty': 'medium',  # Default difficulty
+            'duration': parsed_route.metadata.duration or 0,
+            'distance': parsed_route.metadata.distance or 0,
+            'elevation_gain': parsed_route.metadata.elevation_gain or 0,
+            'import_source': parsed_route.original_format,
+            'original_filename': temp_files[0].split('_', 1)[1],  # Remove upload_id prefix
+            'import_metadata': {
+                'file_hash': parsed_route.file_hash,
+                'points_count': len(parsed_route.points),
+                'waypoints_count': len(parsed_route.waypoints),
+                'imported_at': datetime.now().isoformat(),
+                'imported_by': session.get('user_id', 'unknown')
+            }
+        }
+        
+        # Get database connection
+        db_factory = POIDatabaseFactory()
+        db_adapter = db_factory.get_adapter()
+        
+        try:
+            # Save route to database
+            with db_adapter.get_connection() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                    # Insert route
+                    cursor.execute("""
+                        INSERT INTO routes (
+                            name, description, route_type, difficulty, duration, 
+                            distance, elevation_gain, import_source, original_filename, 
+                            import_metadata, created_at, updated_at
+                        ) VALUES (
+                            %(name)s, %(description)s, %(route_type)s, %(difficulty)s, 
+                            %(duration)s, %(distance)s, %(elevation_gain)s, %(import_source)s, 
+                            %(original_filename)s, %(import_metadata)s, NOW(), NOW()
+                        ) RETURNING id
+                    """, route_data)
+                    
+                    route_id = cursor.fetchone()['id']
+                    
+                    # Save route geometry (coordinates)
+                    coordinates = [
+                        {'lat': p.latitude, 'lng': p.longitude, 'elevation': p.elevation}
+                        for p in parsed_route.points
+                    ]
+                    
+                    cursor.execute("""
+                        UPDATE routes 
+                        SET coordinates = %s 
+                        WHERE id = %s
+                    """, (json.dumps(coordinates), route_id))
+                    
+                    # Save waypoints if any
+                    if parsed_route.waypoints:
+                        waypoints_data = [
+                            {
+                                'name': wp.name or f'Waypoint {i+1}',
+                                'description': wp.description or '',
+                                'latitude': wp.latitude,
+                                'longitude': wp.longitude,
+                                'elevation': wp.elevation
+                            }
+                            for i, wp in enumerate(parsed_route.waypoints)
+                        ]
+                        
+                        cursor.execute("""
+                            UPDATE routes 
+                            SET waypoints = %s 
+                            WHERE id = %s
+                        """, (json.dumps(waypoints_data), route_id))
+                    
+                    # Record import operation
+                    cursor.execute("""
+                        INSERT INTO route_imports (
+                            filename, original_filename, file_type, file_size, 
+                            file_hash, import_status, imported_route_id, 
+                            created_by, created_at
+                        ) VALUES (
+                            %s, %s, %s, %s, %s, 'completed', %s, %s, NOW()
+                        )
+                    """, (
+                        temp_files[0],
+                        route_data['original_filename'],
+                        parsed_route.original_format,
+                        os.path.getsize(file_path),
+                        parsed_route.file_hash,
+                        route_id,
+                        session.get('user_id', 'unknown')
+                    ))
+                    
+                    # Associate POIs if requested
+                    poi_ids = data.get('associate_pois', [])
+                    if poi_ids:
+                        for poi_id in poi_ids:
+                            cursor.execute("""
+                                INSERT INTO route_poi_associations (route_id, poi_id, created_at)
+                                VALUES (%s, %s, NOW())
+                                ON CONFLICT (route_id, poi_id) DO NOTHING
+                            """, (route_id, poi_id))
+                    
+                    conn.commit()
+                    
+                    # Clean up temporary file
+                    try:
+                        os.unlink(file_path)
+                    except:
+                        pass
+                    
+                    # Clean up progress tracking
+                    with upload_progress_lock:
+                        if upload_id in upload_progress:
+                            del upload_progress[upload_id]
+                    
+                    return jsonify({
+                        'success': True,
+                        'message': 'Rota başarıyla import edildi',
+                        'route_id': route_id,
+                        'route_data': {
+                            'id': route_id,
+                            'name': route_data['name'],
+                            'description': route_data['description'],
+                            'points_count': len(parsed_route.points),
+                            'waypoints_count': len(parsed_route.waypoints),
+                            'distance': route_data['distance'],
+                            'associated_pois': len(poi_ids)
+                        }
+                    }), 200
+                    
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'Veritabanı hatası: {str(e)}',
+                'error_code': 'DATABASE_ERROR'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Import onaylama hatası: {str(e)}',
+            'error_code': 'CONFIRM_ERROR'
+        }), 500
+
+
+@app.route('/api/routes/import/cancel', methods=['POST'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=50, window_seconds=60)
+def cancel_route_import():
+    """
+    Cancel route import and clean up temporary files
+    
+    Expected JSON payload:
+    {
+        "upload_id": "uuid"
+    }
+    
+    Returns:
+        JSON response with cancellation confirmation
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'upload_id' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Upload ID gerekli',
+                'error_code': 'MISSING_UPLOAD_ID'
+            }), 400
+        
+        upload_id = data['upload_id']
+        
+        # Clean up temporary files
+        uploader = SecureFileUploader()
+        temp_files = [f for f in os.listdir(uploader.UPLOAD_FOLDER) if f.startswith(upload_id)]
+        
+        for temp_file in temp_files:
+            try:
+                os.unlink(os.path.join(uploader.UPLOAD_FOLDER, temp_file))
+            except:
+                pass
+        
+        # Clean up progress tracking
+        with upload_progress_lock:
+            if upload_id in upload_progress:
+                del upload_progress[upload_id]
+        
+        return jsonify({
+            'success': True,
+            'message': 'Import işlemi iptal edildi',
+            'upload_id': upload_id
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Import iptal hatası: {str(e)}',
+            'error_code': 'CANCEL_ERROR'
+        }), 500
+
+
+# ===== END FILE UPLOAD ENDPOINTS =====
+
+# ===== POI SUGGESTION ALGORITHM =====
+
+import math
+from typing import Set
+
+class POISuggestionEngine:
+    """POI suggestion algorithm for routes"""
+    
+    def __init__(self, db_connection):
+        self.db = db_connection
+        
+        # Scoring weights for different factors
+        self.DISTANCE_WEIGHT = 0.4
+        self.CATEGORY_COMPATIBILITY_WEIGHT = 0.3
+        self.POPULARITY_WEIGHT = 0.2
+        self.ROUTE_POSITION_WEIGHT = 0.1
+        
+        # Maximum distance for POI suggestions (in meters)
+        self.MAX_SUGGESTION_DISTANCE = 2000  # 2km
+        
+        # Category compatibility matrix
+        self.CATEGORY_COMPATIBILITY = {
+            'gastronomik': {
+                'kulturel': 0.8,
+                'sanatsal': 0.7,
+                'doga_macera': 0.6,
+                'konaklama': 0.9,
+                'gastronomik': 1.0
+            },
+            'kulturel': {
+                'gastronomik': 0.8,
+                'sanatsal': 0.9,
+                'doga_macera': 0.5,
+                'konaklama': 0.7,
+                'kulturel': 1.0
+            },
+            'sanatsal': {
+                'gastronomik': 0.7,
+                'kulturel': 0.9,
+                'doga_macera': 0.4,
+                'konaklama': 0.6,
+                'sanatsal': 1.0
+            },
+            'doga_macera': {
+                'gastronomik': 0.6,
+                'kulturel': 0.5,
+                'sanatsal': 0.4,
+                'konaklama': 0.8,
+                'doga_macera': 1.0
+            },
+            'konaklama': {
+                'gastronomik': 0.9,
+                'kulturel': 0.7,
+                'sanatsal': 0.6,
+                'doga_macera': 0.8,
+                'konaklama': 1.0
+            }
+        }
+    
+    def calculate_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """Calculate distance between two points using Haversine formula"""
+        R = 6371000  # Earth's radius in meters
+        
+        lat1_rad = math.radians(lat1)
+        lat2_rad = math.radians(lat2)
+        delta_lat = math.radians(lat2 - lat1)
+        delta_lon = math.radians(lon2 - lon1)
+        
+        a = (math.sin(delta_lat / 2) ** 2 + 
+             math.cos(lat1_rad) * math.cos(lat2_rad) * 
+             math.sin(delta_lon / 2) ** 2)
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        
+        return R * c
+    
+    def get_route_coordinates(self, route_id: int) -> List[Tuple[float, float]]:
+        """Get route coordinates from database"""
+        query = """
+            SELECT ST_AsText(route_geometry) as geometry_text
+            FROM routes 
+            WHERE id = %s AND is_active = true
+        """
+        
+        with self.db.cursor() as cur:
+            cur.execute(query, (route_id,))
+            result = cur.fetchone()
+            
+            if not result or not result[0]:
+                return []
+            
+            # Parse WKT LINESTRING format
+            geometry_text = result[0]
+            if geometry_text.startswith('LINESTRING('):
+                coords_str = geometry_text[11:-1]  # Remove 'LINESTRING(' and ')'
+                coordinates = []
+                for coord_pair in coords_str.split(','):
+                    lon, lat = map(float, coord_pair.strip().split())
+                    coordinates.append((lat, lon))
+                return coordinates
+            
+            return []
+    
+    def find_nearby_pois(self, route_coordinates: List[Tuple[float, float]]) -> List[Dict[str, Any]]:
+        """Find POIs near route coordinates"""
+        if not route_coordinates:
+            return []
+        
+        # Create a buffer around the route to find nearby POIs
+        nearby_pois = []
+        processed_poi_ids: Set[int] = set()
+        
+        for lat, lon in route_coordinates:
+            query = """
+                SELECT 
+                    p.id,
+                    p.name,
+                    p.category,
+                    p.description,
+                    ST_Y(p.location::geometry) as latitude,
+                    ST_X(p.location::geometry) as longitude,
+                    ST_Distance(p.location, ST_GeogFromText('POINT(%s %s)')) as distance,
+                    COALESCE(
+                        (SELECT AVG(rating) FROM poi_ratings WHERE poi_id = p.id), 
+                        0
+                    ) as avg_rating
+                FROM pois p
+                WHERE 
+                    p.is_active = true
+                    AND ST_DWithin(p.location, ST_GeogFromText('POINT(%s %s)'), %s)
+                ORDER BY distance
+            """
+            
+            with self.db.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(query, (lon, lat, lon, lat, self.MAX_SUGGESTION_DISTANCE))
+                results = cur.fetchall()
+                
+                for poi in results:
+                    if poi['id'] not in processed_poi_ids:
+                        nearby_pois.append(dict(poi))
+                        processed_poi_ids.add(poi['id'])
+        
+        return nearby_pois
+    
+    def calculate_compatibility_score(self, poi_category: str, route_categories: List[str]) -> float:
+        """Calculate compatibility score between POI and route categories"""
+        if not route_categories:
+            return 0.5  # Default compatibility
+        
+        max_compatibility = 0.0
+        for route_category in route_categories:
+            compatibility = self.CATEGORY_COMPATIBILITY.get(poi_category, {}).get(route_category, 0.3)
+            max_compatibility = max(max_compatibility, compatibility)
+        
+        return max_compatibility
+    
+    def get_route_categories(self, route_id: int) -> List[str]:
+        """Get categories of POIs already associated with the route"""
+        query = """
+            SELECT DISTINCT p.category
+            FROM route_pois rp
+            JOIN pois p ON rp.poi_id = p.id
+            WHERE rp.route_id = %s
+        """
+        
+        with self.db.cursor() as cur:
+            cur.execute(query, (route_id,))
+            results = cur.fetchall()
+            return [row[0] for row in results]
+    
+    def calculate_route_position_score(self, poi_lat: float, poi_lon: float, 
+                                     route_coordinates: List[Tuple[float, float]]) -> float:
+        """Calculate score based on POI position relative to route"""
+        if not route_coordinates:
+            return 0.0
+        
+        min_distance = float('inf')
+        total_route_length = len(route_coordinates)
+        best_position_index = 0
+        
+        for i, (route_lat, route_lon) in enumerate(route_coordinates):
+            distance = self.calculate_distance(poi_lat, poi_lon, route_lat, route_lon)
+            if distance < min_distance:
+                min_distance = distance
+                best_position_index = i
+        
+        # Prefer POIs that are not at the very beginning or end of the route
+        position_ratio = best_position_index / max(1, total_route_length - 1)
+        if 0.2 <= position_ratio <= 0.8:
+            return 1.0  # Optimal position
+        elif 0.1 <= position_ratio <= 0.9:
+            return 0.7  # Good position
+        else:
+            return 0.4  # Suboptimal position (too close to start/end)
+    
+    def calculate_overall_score(self, poi: Dict[str, Any], route_id: int, 
+                              route_coordinates: List[Tuple[float, float]]) -> float:
+        """Calculate overall suggestion score for a POI"""
+        # Distance score (closer is better)
+        distance_score = max(0, 1 - (poi['distance'] / self.MAX_SUGGESTION_DISTANCE))
+        
+        # Category compatibility score
+        route_categories = self.get_route_categories(route_id)
+        compatibility_score = self.calculate_compatibility_score(poi['category'], route_categories)
+        
+        # Popularity score (based on average rating)
+        avg_rating = float(poi['avg_rating']) if poi['avg_rating'] is not None else 0.0
+        popularity_score = min(1.0, avg_rating / 100.0)  # Normalize to 0-1
+        
+        # Route position score
+        position_score = self.calculate_route_position_score(
+            poi['latitude'], poi['longitude'], route_coordinates
+        )
+        
+        # Calculate weighted overall score
+        overall_score = (
+            distance_score * self.DISTANCE_WEIGHT +
+            compatibility_score * self.CATEGORY_COMPATIBILITY_WEIGHT +
+            popularity_score * self.POPULARITY_WEIGHT +
+            position_score * self.ROUTE_POSITION_WEIGHT
+        )
+        
+        return overall_score
+    
+    def suggest_pois_for_route(self, route_id: int, limit: int = 10) -> List[Dict[str, Any]]:
+        """Main method to suggest POIs for a route"""
+        try:
+            # Get route coordinates
+            route_coordinates = self.get_route_coordinates(route_id)
+            if not route_coordinates:
+                return []
+            
+            # Find nearby POIs
+            nearby_pois = self.find_nearby_pois(route_coordinates)
+            if not nearby_pois:
+                return []
+            
+            # Get already associated POIs to exclude them
+            query = "SELECT poi_id FROM route_pois WHERE route_id = %s"
+            with self.db.cursor() as cur:
+                cur.execute(query, (route_id,))
+                associated_poi_ids = {row[0] for row in cur.fetchall()}
+            
+            # Calculate scores and filter
+            suggestions = []
+            for poi in nearby_pois:
+                # Skip already associated POIs
+                if poi['id'] in associated_poi_ids:
+                    continue
+                
+                # Calculate overall score
+                score = self.calculate_overall_score(poi, route_id, route_coordinates)
+                
+                # Add suggestion data
+                suggestion = {
+                    'poi_id': poi['id'],
+                    'name': poi['name'],
+                    'category': poi['category'],
+                    'description': poi['description'],
+                    'latitude': poi['latitude'],
+                    'longitude': poi['longitude'],
+                    'distance_from_route': round(poi['distance'], 2),
+                    'compatibility_score': round(score * 100, 1),
+                    'avg_rating': round(poi['avg_rating'], 1),
+                    'suggestion_reason': self._generate_suggestion_reason(poi, score)
+                }
+                
+                suggestions.append(suggestion)
+            
+            # Sort by score (highest first) and limit results
+            suggestions.sort(key=lambda x: x['compatibility_score'], reverse=True)
+            return suggestions[:limit]
+            
+        except Exception as e:
+            print(f"Error suggesting POIs for route {route_id}: {e}")
+            return []
+    
+    def _generate_suggestion_reason(self, poi: Dict[str, Any], score: float) -> str:
+        """Generate human-readable reason for POI suggestion"""
+        distance = poi['distance']
+        category = poi['category']
+        rating = poi['avg_rating']
+        
+        if score > 0.8:
+            return f"Rotaya çok yakın ({int(distance)}m) ve {category} kategorisinde yüksek puanlı"
+        elif score > 0.6:
+            return f"Rotaya yakın ({int(distance)}m) ve uyumlu kategori ({category})"
+        elif score > 0.4:
+            return f"Rota üzerinde ({int(distance)}m mesafede) ilginç bir nokta"
+        else:
+            return f"Rota yakınında ({int(distance)}m) alternatif seçenek"
+
+
+@app.route('/api/routes/<int:route_id>/suggest-pois', methods=['GET'])
+@auth_middleware.require_auth
+@admin_rate_limit(max_requests=100, window_seconds=60)
+def suggest_pois_for_route(route_id):
+    """
+    Suggest POIs for a specific route
+    
+    Query parameters:
+    - limit: Maximum number of suggestions (default: 10, max: 50)
+    - min_score: Minimum compatibility score (0-100, default: 30)
+    
+    Returns:
+        JSON response with POI suggestions
+    """
+    try:
+        # Get query parameters
+        limit = min(50, max(1, int(request.args.get('limit', 10))))
+        min_score = max(0, min(100, float(request.args.get('min_score', 30))))
+        
+        # Check if route exists
+        db = get_db()
+        if not db:
+            return jsonify({
+                'success': False,
+                'error': 'Veritabanı bağlantısı yok',
+                'error_code': 'DATABASE_CONNECTION_ERROR'
+            }), 500
+        
+        # Verify route exists and is active
+        with db.conn.cursor() as cur:
+            cur.execute("SELECT id, name FROM routes WHERE id = %s AND is_active = true", (route_id,))
+            route = cur.fetchone()
+            
+            if not route:
+                return jsonify({
+                    'success': False,
+                    'error': 'Rota bulunamadı veya aktif değil',
+                    'error_code': 'ROUTE_NOT_FOUND'
+                }), 404
+        
+        # Initialize suggestion engine
+        suggestion_engine = POISuggestionEngine(db.conn)
+        
+        # Get POI suggestions
+        suggestions = suggestion_engine.suggest_pois_for_route(route_id, limit)
+        
+        # Filter by minimum score
+        filtered_suggestions = [
+            suggestion for suggestion in suggestions 
+            if suggestion['compatibility_score'] >= min_score
+        ]
+        
+        # Get route info for response
+        route_info = {
+            'id': route[0],
+            'name': route[1]
+        }
+        
+        return jsonify({
+            'success': True,
+            'route': route_info,
+            'suggestions': filtered_suggestions,
+            'total_suggestions': len(filtered_suggestions),
+            'parameters': {
+                'limit': limit,
+                'min_score': min_score
+            }
+        }), 200
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': 'Geçersiz parametre değeri',
+            'error_code': 'INVALID_PARAMETER'
+        }), 400
+        
+    except Exception as e:
+        logger.error(f"Error in suggest_pois_for_route: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'POI önerisi hatası: {str(e)}',
+            'error_code': 'SUGGESTION_ERROR'
+        }), 500
+
+
+# ===== END POI SUGGESTION ALGORITHM =====
 
 if __name__ == '__main__':
     print("🚀 POI Yönetim Sistemi başlatılıyor...")
