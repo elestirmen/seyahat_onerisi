@@ -83,6 +83,15 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 def login_page():
     """Serve the login page."""
     if auth_middleware.is_authenticated():
+        # Respect optional next parameter for post-login redirect
+        next_url = request.args.get('next')
+        try:
+            if next_url and isinstance(next_url, str):
+                # Basic safety check: only allow same-origin relative paths without scheme
+                if next_url.startswith('/') and '://' not in next_url and '\\' not in next_url:
+                    return redirect(next_url)
+        except Exception:
+            pass
         return redirect('/')
     
     # Serve embedded login page
@@ -795,11 +804,17 @@ def get_db():
 @app.route('/')
 def index():
     """Ana sayfa - POI öneri sistemi."""
+    # Prefer enhanced POI management as default admin landing if available
     try:
-        with open('poi_recommendation_system.html', 'r', encoding='utf-8') as f:
-            return f.read()
+        if os.path.exists('poi_manager_enhanced.html'):
+            return send_from_directory('.', 'poi_manager_enhanced.html')
+        elif os.path.exists('poi_manager_ui.html'):
+            return send_from_directory('.', 'poi_manager_ui.html')
+        else:
+            with open('poi_recommendation_system.html', 'r', encoding='utf-8') as f:
+                return f.read()
     except FileNotFoundError:
-        return '<h1>❌ Hata</h1><p>poi_recommendation_system.html dosyası bulunamadı!</p>', 404
+        return '<h1>❌ Hata</h1><p>Giriş sayfası bulunamadı!</p>', 404
 
 @app.route('/admin')
 @auth_middleware.require_auth

@@ -1459,6 +1459,20 @@
             width: 100%;
         }
 
+        /* Map fullscreen support (parity with poi_manager_ui) */
+        #map.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1050;
+        }
+
+        body.map-fullscreen {
+            overflow: hidden;
+        }
+
         /* Responsive Design */
         @media (max-width: 1200px) {
             .poi-management-container {
@@ -1554,6 +1568,9 @@
                 <a href="file_import_manager.html">Dosya Import</a>
             </nav>
             <div class="header-actions">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleFullscreenBtn" onclick="toggleMapFullscreen()">
+                    <i class="fas fa-expand"></i>
+                </button>
                 <button type="button" class="btn btn-primary btn-sm" onclick="showCreatePOIModal()">
                     <i class="fas fa-plus"></i>
                     Yeni POI
@@ -1986,6 +2003,7 @@
                 await this.initializeMap();
                 await this.loadCategories();
                 await this.loadPOIs();
+                await this.loadRoutesForMap();
                 this.setupEventListeners();
             }
 
@@ -2286,7 +2304,12 @@
                     poiElement.classList.add('selected');
                 }
 
-                this.selectedPOI = poi;
+                // Normalize POI id to 'id' for downstream operations
+                const normalizedPOI = { ...poi };
+                if (!normalizedPOI.id) {
+                    normalizedPOI.id = normalizedPOI._id || normalizedPOI.poi_id || null;
+                }
+                this.selectedPOI = normalizedPOI;
 
                 // Focus on map
                 if (this.map && poi.latitude && poi.longitude) {
@@ -2303,7 +2326,7 @@
                 }
 
                 // Update workspace
-                this.showPOIDetails(poi);
+                this.showPOIDetails(this.selectedPOI);
             }
 
             updateMapMarkers() {
@@ -2363,6 +2386,77 @@
                         this.markers[poi.id || poi._id] = marker;
                     }
                 });
+            }
+
+            // --- Routes on Map (display routes like in route manager) ---
+            async loadRoutesForMap() {
+                try {
+                    const response = await this.authenticatedFetch('/api/routes');
+                    if (!response.ok) {
+                        throw new Error('Rotalar yüklenemedi');
+                    }
+                    const data = await response.json();
+                    this.routes = Array.isArray(data) ? data : (data.pois ? data.pois : []);
+                    this.updateRouteLayersOnMap();
+                } catch (error) {
+                    console.warn('Rotalar yüklenemedi:', error);
+                }
+            }
+
+            updateRouteLayersOnMap() {
+                if (!this.map || !Array.isArray(this.routes)) return;
+
+                if (!this.routeLayers) {
+                    this.routeLayers = {};
+                }
+
+                // Clear existing
+                Object.values(this.routeLayers).forEach(layer => {
+                    try { this.map.removeLayer(layer); } catch (_) { /* noop */ }
+                });
+                this.routeLayers = {};
+
+                const ROUTE_TYPES = {
+                    walking: { name: 'Yürüyüş', color: '#10b981' },
+                    hiking: { name: 'Doğa Yürüyüşü', color: '#f59e0b' },
+                    cycling: { name: 'Bisiklet', color: '#3b82f6' },
+                    driving: { name: 'Araç', color: '#ef4444' }
+                };
+
+                const addedLayers = [];
+
+                this.routes.forEach(route => {
+                    if (!route || !route.geometry) return;
+                    try {
+                        const geojson = typeof route.geometry === 'string' ? JSON.parse(route.geometry) : route.geometry;
+                        const layer = L.geoJSON(geojson, {
+                            style: {
+                                color: ROUTE_TYPES[route.route_type]?.color || '#2563eb',
+                                weight: 3,
+                                opacity: 0.8
+                            }
+                        }).bindPopup(`
+                            <strong>${this.escapeHtml(route.name || 'Rota')}</strong><br>
+                            ${(ROUTE_TYPES[route.route_type]?.name || route.route_type || '')}
+                        `);
+                        layer.addTo(this.map);
+                        this.routeLayers[route.id || route._id] = layer;
+                        addedLayers.push(layer);
+                    } catch (err) {
+                        console.warn('Rota geometry parse hatası:', err);
+                    }
+                });
+
+                if (addedLayers.length > 0) {
+                    const group = new L.featureGroup(addedLayers);
+                    try { this.map.fitBounds(group.getBounds(), { padding: [20, 20] }); } catch (_) { /* noop */ }
+                }
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = String(text ?? '');
+                return div.innerHTML;
             }
 
             renderPagination() {
@@ -2636,7 +2730,12 @@
 
             renderPOIRatings(ratings) {
                 const ratingsSection = document.getElementById('poiRatingsSection');
-                const ratingsGrid = document.getElementById('poiRatingsGrid');
+                const ratingsContainer = document.getElementById('poiRatingsContainer');
+
+                if (!ratingsSection || !ratingsContainer) {
+                    console.warn('Ratings container elements not found');
+                    return;
+                }
 
                 if (ratings && Object.keys(ratings).length > 0) {
                     ratingsSection.style.display = 'block';
@@ -2652,7 +2751,7 @@
                         rahatlatici: { icon: 'fas fa-spa', label: 'Rahatlatıcı', color: '#16A085' }
                     };
 
-                    ratingsGrid.innerHTML = Object.entries(ratings)
+                    ratingsContainer.innerHTML = Object.entries(ratings)
                         .filter(([key, value]) => value > 0)
                         .map(([key, value]) => {
                             const category = ratingCategories[key];
@@ -2829,7 +2928,11 @@
             }
 
             async savePOI() {
-                if (!this.selectedPOI) return;
+                if (!this.selectedPOI || !this.selectedPOI.id) {
+                    console.error('savePOI called without a valid selectedPOI.id', this.selectedPOI);
+                    this.showToast('Geçersiz POI seçimi. Lütfen listeden bir POI seçin.', 'error');
+                    return;
+                }
 
                 const formData = {
                     name: document.getElementById('editName').value,
@@ -3640,19 +3743,59 @@
                         console.log('🔐 Auth status request failed');
                     }
 
-                    // If not authenticated, redirect to login
-                    console.log('🔐 Redirecting to login...');
-                    window.location.href = '/auth/login';
+                    // If not authenticated, redirect to login with return URL (avoid redirect loop)
+                    const currentPath = window.location.pathname + window.location.search;
+                    const loginUrl = `/auth/login?next=${encodeURIComponent(currentPath)}`;
+                    const lastRedirectAt = Number(sessionStorage.getItem('authRedirectAt') || 0);
+                    const now = Date.now();
+                    if (now - lastRedirectAt > 10000) { // at most once per 10s
+                        console.log('🔐 Redirecting to login...', loginUrl);
+                        sessionStorage.setItem('authRedirectAt', String(now));
+                        window.location.href = loginUrl;
+                    } else {
+                        console.warn('⏳ Suppressing repeated login redirect to avoid loop.');
+                        this.showError('Oturum doğrulaması başarısız. Lütfen tekrar giriş yapın.');
+                    }
                     return false;
                 } catch (error) {
                     console.error('🔐 Auth status check failed:', error);
-                    window.location.href = '/auth/login';
+                    const currentPath = window.location.pathname + window.location.search;
+                    const loginUrl = `/auth/login?next=${encodeURIComponent(currentPath)}`;
+                    const lastRedirectAt = Number(sessionStorage.getItem('authRedirectAt') || 0);
+                    const now = Date.now();
+                    if (now - lastRedirectAt > 10000) {
+                        sessionStorage.setItem('authRedirectAt', String(now));
+                        window.location.href = loginUrl;
+                    } else {
+                        this.showError('Oturum kontrolü başarısız. Lütfen daha sonra tekrar deneyin.');
+                    }
                     return false;
                 }
             }
 
             updateSessionStatus(sessionInfo) {
-                const statusElement = document.getElementById('sessionStatus');
+                let statusElement = document.getElementById('sessionStatus');
+                // Create the session status element if it's missing to avoid null access
+                if (!statusElement) {
+                    try {
+                        const container = document.querySelector('.session-info') || document.querySelector('.header-actions');
+                        if (container) {
+                            const wrapper = document.createElement('span');
+                            wrapper.id = 'sessionStatus';
+                            wrapper.className = 'badge bg-secondary';
+                            wrapper.textContent = 'Bilinmiyor';
+                            container.appendChild(wrapper);
+                            statusElement = wrapper;
+                        }
+                    } catch (e) {
+                        console.warn('Session status container not found, skipping status update');
+                    }
+                }
+
+                if (!statusElement) {
+                    return; // No place to render; do not throw
+                }
+
                 if (sessionInfo) {
                     statusElement.textContent = 'Aktif';
                     statusElement.className = 'badge bg-success';
@@ -3666,9 +3809,16 @@
                         if (timeLeft <= 0) {
                             statusElement.textContent = 'Süresi Doldu';
                             statusElement.className = 'badge bg-danger';
-                            // Redirect to login
+                            // Redirect to login (guard against loops)
                             setTimeout(() => {
-                                window.location.href = '/auth/login';
+                                const currentPath = window.location.pathname + window.location.search;
+                                const loginUrl = `/auth/login?next=${encodeURIComponent(currentPath)}`;
+                                const lastRedirectAt = Number(sessionStorage.getItem('authRedirectAt') || 0);
+                                const now = Date.now();
+                                if (now - lastRedirectAt > 10000) {
+                                    sessionStorage.setItem('authRedirectAt', String(now));
+                                    window.location.href = loginUrl;
+                                }
                             }, 1000);
                         } else if (timeLeft < 5 * 60 * 1000) { // Less than 5 minutes
                             statusElement.textContent = 'Yakında Dolacak';
@@ -3748,7 +3898,14 @@
                 if (response.status === 401) {
                     this.showToast('Oturum süresi doldu, yeniden giriş yapılıyor...', 'warning');
                     setTimeout(() => {
-                        window.location.href = '/auth/login';
+                        const currentPath = window.location.pathname + window.location.search;
+                        const loginUrl = `/auth/login?next=${encodeURIComponent(currentPath)}`;
+                        const lastRedirectAt = Number(sessionStorage.getItem('authRedirectAt') || 0);
+                        const now = Date.now();
+                        if (now - lastRedirectAt > 10000) {
+                            sessionStorage.setItem('authRedirectAt', String(now));
+                            window.location.href = loginUrl;
+                        }
                     }, 2000);
                     throw new Error('Authentication required');
                 }
@@ -3765,9 +3922,167 @@
         }
 
         function showPasswordChangeModal() {
-            // TODO: Implement password change modal
-            if (window.poiManager) {
-                window.poiManager.showToast('Şifre değiştirme özelliği yakında eklenecek', 'info');
+            const existing = document.getElementById('passwordChangeModal');
+            if (existing) {
+                const modal = new bootstrap.Modal(existing);
+                modal.show();
+                return;
+            }
+
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.id = 'passwordChangeModal';
+            modal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fas fa-key me-2"></i>Şifre Değiştir</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="passwordChangeForm">
+                                <div class="mb-3">
+                                    <label for="currentPassword" class="form-label"><i class="fas fa-lock me-1"></i>Mevcut Şifre</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="currentPassword" name="current_password" required>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('currentPassword', this)"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="newPassword" class="form-label"><i class="fas fa-key me-1"></i>Yeni Şifre</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="newPassword" name="new_password" required>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('newPassword', this)"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">Şifre en az 8 karakter olmalı ve büyük/küçük harf, rakam ve özel karakter içermelidir.</small>
+                                    <div id="passwordStrength" class="mt-2"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirmPassword" class="form-label"><i class="fas fa-check me-1"></i>Yeni Şifre Tekrar</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('confirmPassword', this)"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                    <div id="passwordMatch" class="mt-1"></div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                            <button type="button" id="changePasswordSubmitBtn" class="btn btn-primary" onclick="changePassword()"><i class="fas fa-save me-1"></i>Değiştir</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+
+            const newPasswordInput = modal.querySelector('#newPassword');
+            const confirmPasswordInput = modal.querySelector('#confirmPassword');
+            if (newPasswordInput) newPasswordInput.addEventListener('input', () => validatePasswordStrength(newPasswordInput.value));
+            if (confirmPasswordInput) confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+        }
+
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            const icon = button.querySelector('i');
+            if (!input || !icon) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        function validatePasswordStrength(password) {
+            const strengthDiv = document.getElementById('passwordStrength');
+            if (!strengthDiv) return;
+            let score = 0;
+            const feedback = [];
+            if (password.length >= 8) score += 1; else feedback.push('En az 8 karakter');
+            if (/[A-Z]/.test(password)) score += 1; else feedback.push('Büyük harf');
+            if (/[a-z]/.test(password)) score += 1; else feedback.push('Küçük harf');
+            if (/\d/.test(password)) score += 1; else feedback.push('Rakam');
+            if (/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(password)) score += 1; else feedback.push('Özel karakter');
+            let strengthText = '';
+            let strengthClass = '';
+            if (score === 5) { strengthText = '<i class="fas fa-check-circle text-success me-1"></i>Güçlü şifre'; strengthClass = 'text-success'; }
+            else if (score >= 3) { strengthText = '<i class="fas fa-exclamation-circle text-warning me-1"></i>Orta güçlükte'; strengthClass = 'text-warning'; }
+            else { strengthText = '<i class="fas fa-times-circle text-danger me-1"></i>Zayıf şifre'; strengthClass = 'text-danger'; }
+            strengthDiv.className = strengthClass;
+            strengthDiv.innerHTML = strengthText + (feedback.length ? ` <small class="text-muted">(${feedback.join(', ')})</small>` : '');
+            checkPasswordMatch();
+        }
+
+        function checkPasswordMatch() {
+            const newPassword = document.getElementById('newPassword')?.value;
+            const confirmPassword = document.getElementById('confirmPassword')?.value;
+            const matchDiv = document.getElementById('passwordMatch');
+            if (!matchDiv || confirmPassword === undefined) return;
+            if (!confirmPassword) { matchDiv.innerHTML = ''; return; }
+            if (newPassword === confirmPassword) {
+                matchDiv.className = 'text-success';
+                matchDiv.innerHTML = '<i class="fas fa-check-circle me-1"></i>Eşleşti';
+            } else {
+                matchDiv.className = 'text-danger';
+                matchDiv.innerHTML = '<i class="fas fa-times-circle me-1"></i>Eşleşmiyor';
+            }
+        }
+
+        async function changePassword() {
+            const form = document.getElementById('passwordChangeForm');
+            const submitBtn = document.getElementById('changePasswordSubmitBtn');
+            if (!form) return;
+            const formData = new FormData(form);
+            const currentPassword = formData.get('current_password');
+            const newPassword = formData.get('new_password');
+            const confirmPassword = formData.get('confirm_password');
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                window.poiManager?.showToast('Lütfen tüm alanları doldurun', 'error');
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                window.poiManager?.showToast('Yeni şifre ve tekrarı eşleşmiyor', 'error');
+                return;
+            }
+            if (newPassword.length < 8) {
+                window.poiManager?.showToast('Yeni şifre en az 8 karakter olmalıdır', 'error');
+                return;
+            }
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Değiştiriliyor...';
+            try {
+                const response = await fetch('/auth/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.poiManager?.csrfToken || ''
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword,
+                        confirm_password: confirmPassword
+                    })
+                });
+                if (response.ok) {
+                    window.poiManager?.showToast('Şifre başarıyla değiştirildi. Yeniden giriş yapılıyor...', 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('passwordChangeModal'));
+                    if (modal) modal.hide();
+                    setTimeout(() => { window.location.href = '/auth/login'; }, 1200);
+                } else {
+                    const data = await response.json().catch(() => ({}));
+                    window.poiManager?.showToast('Şifre değiştirilemedi: ' + (data.error || response.statusText), 'error');
+                }
+            } catch (err) {
+                window.poiManager?.showToast('İstek hatası: ' + err.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save me-1"></i>Değiştir';
             }
         }
 
@@ -3804,8 +4119,35 @@
         // Initialize the application
         document.addEventListener('DOMContentLoaded', () => {
             window.poiManager = new POIManager();
+            // Mark current page for NavigationManager active detection
+            if (window.navigationManager) {
+                window.navigationManager.currentPage = 'poi-management';
+                window.navigationManager.refresh();
+            }
         });
+
+        // Map fullscreen toggle (parity with poi_manager_ui)
+        function toggleMapFullscreen() {
+            const mapEl = document.getElementById('map');
+            const btn = document.getElementById('toggleFullscreenBtn');
+            mapEl.classList.toggle('fullscreen');
+            document.body.classList.toggle('map-fullscreen');
+            if (window.poiManager?.map) {
+                setTimeout(() => {
+                    window.poiManager.map.invalidateSize();
+                }, 200);
+            }
+            if (btn) {
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('fa-expand');
+                    icon.classList.toggle('fa-compress');
+                }
+            }
+        }
     </script>
+    <script src="static/js/api-client.js"></script>
+    <script src="static/js/navigation-manager.js"></script>
 </body>
 
 </html>

@@ -1,0 +1,507 @@
+/**
+ * Enhanced Map Component Styles
+ * Comprehensive styling for POI and Route map management
+ */
+
+/* Map Container */
+.map-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.map-container.fullscreen-map {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    border-radius: 0 !important;
+}
+
+.touch-optimized {
+    touch-action: pan-x pan-y;
+}
+
+/* Map Controls */
+.map-control-btn {
+    background: white;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 16px;
+    color: #333;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+    margin-bottom: 5px;
+}
+
+.map-control-btn:hover {
+    background: #f8f9fa;
+    border-color: rgba(0, 0, 0, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.map-control-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Touch optimizations for controls */
+@media (max-width: 768px) {
+    .map-control-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+    }
+}
+
+/* Layer Control */
+.map-layer-control {
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+    padding: 0;
+    min-width: 150px;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+}
+
+.layer-control-header {
+    background: #007bff;
+    color: white;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 4px 4px 0 0;
+}
+
+.layer-control-content {
+    padding: 10px;
+}
+
+.layer-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    user-select: none;
+}
+
+.layer-toggle:last-child {
+    margin-bottom: 0;
+}
+
+.layer-toggle input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.layer-toggle:hover {
+    color: #007bff;
+}
+
+/* POI Markers */
+.poi-marker {
+    background: transparent;
+    border: none;
+}
+
+.poi-marker-inner {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    border: 2px solid white;
+    transition: transform 0.2s ease;
+}
+
+.poi-marker-inner:hover {
+    transform: scale(1.1);
+}
+
+/* Route Markers */
+.route-marker {
+    background: transparent;
+    border: none;
+}
+
+.route-marker-inner {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    border: 2px solid white;
+}
+
+/* Preview Markers */
+.preview-marker {
+    background: transparent;
+    border: none;
+}
+
+.preview-marker-inner {
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    border: 3px solid white;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* User Location Marker */
+.user-location-marker {
+    background: transparent;
+    border: none;
+}
+
+.user-location-inner {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #007bff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 10px;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
+    animation: locationPulse 1.5s infinite;
+}
+
+@keyframes locationPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(0, 123, 255, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+    }
+}
+
+/* Popups */
+.poi-popup .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.poi-popup-content {
+    margin: 0;
+    padding: 0;
+}
+
+.poi-popup-header {
+    margin-bottom: 10px;
+}
+
+.poi-category {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.poi-title {
+    margin: 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.poi-description {
+    margin: 8px 0;
+    font-size: 14px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.poi-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.poi-actions .btn {
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+/* Route Popups */
+.route-popup .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.route-popup-content {
+    margin: 0;
+    padding: 0;
+}
+
+.route-title {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.route-description {
+    margin: 8px 0;
+    font-size: 14px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.route-info {
+    margin: 10px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.route-info span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #555;
+}
+
+.route-info i {
+    color: #007bff;
+}
+
+.route-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.route-actions .btn {
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+/* Preview Popups */
+.preview-popup .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border: 2px solid #ff6b35;
+}
+
+.preview-popup-content {
+    margin: 0;
+    padding: 0;
+}
+
+.preview-popup-content h4 {
+    margin: 0 0 10px 0;
+    color: #ff6b35;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-popup-content p {
+    margin: 6px 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.preview-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.preview-actions .btn {
+    font-size: 12px;
+    padding: 6px 12px;
+}
+
+/* Waypoint Preview Popups */
+.waypoint-preview-popup h5 {
+    margin: 0 0 8px 0;
+    color: #ffc107;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.waypoint-preview-popup p {
+    margin: 4px 0;
+    font-size: 13px;
+}
+
+.waypoint-preview-popup small {
+    color: #666;
+    font-style: italic;
+}
+
+/* Route Preview Styling */
+.route-preview {
+    animation: dashAnimation 2s linear infinite;
+}
+
+@keyframes dashAnimation {
+    0% {
+        stroke-dashoffset: 0;
+    }
+    100% {
+        stroke-dashoffset: 30;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .map-layer-control {
+        min-width: 120px;
+    }
+    
+    .layer-control-header {
+        font-size: 13px;
+        padding: 6px 10px;
+    }
+    
+    .layer-toggle {
+        font-size: 13px;
+    }
+    
+    .poi-popup .leaflet-popup-content-wrapper,
+    .route-popup .leaflet-popup-content-wrapper,
+    .preview-popup .leaflet-popup-content-wrapper {
+        max-width: 280px !important;
+    }
+    
+    .poi-actions,
+    .route-actions,
+    .preview-actions {
+        flex-direction: column;
+    }
+    
+    .poi-actions .btn,
+    .route-actions .btn,
+    .preview-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .poi-popup .leaflet-popup-content-wrapper,
+    .route-popup .leaflet-popup-content-wrapper,
+    .preview-popup .leaflet-popup-content-wrapper {
+        max-width: 250px !important;
+    }
+    
+    .route-info {
+        flex-direction: column;
+        gap: 6px;
+    }
+}
+
+/* Accessibility Improvements */
+.map-control-btn:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+.layer-toggle:focus-within {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .poi-marker-inner,
+    .route-marker-inner,
+    .preview-marker-inner {
+        border-width: 3px;
+        border-color: #000;
+    }
+    
+    .map-control-btn {
+        border-width: 3px;
+        border-color: #000;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .poi-marker-inner,
+    .preview-marker-inner,
+    .user-location-inner,
+    .route-preview {
+        animation: none;
+    }
+    
+    .map-control-btn {
+        transition: none;
+    }
+}
+
+/* Print styles */
+@media print {
+    .map-layer-control,
+    .map-fullscreen-control,
+    .map-location-control,
+    .leaflet-control-zoom {
+        display: none !important;
+    }
+    
+    .map-container {
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+}
