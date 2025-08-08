@@ -293,7 +293,8 @@ class KMLParser:
         self.namespaces = {
             'kml': 'http://www.opengis.net/kml/2.2',
             'kml21': 'http://earth.google.com/kml/2.1',
-            'kml20': 'http://earth.google.com/kml/2.0'
+            'kml20': 'http://earth.google.com/kml/2.0',
+            'gx': 'http://www.google.com/kml/ext/2.2'
         }
     
     def parse(self, file_path: str) -> ParsedRoute:
@@ -308,8 +309,12 @@ class KMLParser:
             # Extract metadata
             metadata = self._extract_metadata(root, namespace)
             
-            # Extract route points from LineString elements
+            # Extract route points from LineString and gx:Track elements
             points = self._extract_linestring_points(root, namespace)
+            
+            # Also extract points from gx:Track elements (Google Earth tracks)
+            track_points = self._extract_gx_track_points(root, namespace)
+            points.extend(track_points)
             
             # Extract waypoints from Placemark elements
             waypoints = self._extract_placemarks(root, namespace)
@@ -406,13 +411,58 @@ class KMLParser:
         
         return points
     
+    def _extract_gx_track_points(self, root, namespace: str) -> List[RoutePoint]:
+        """Extract points from gx:Track elements (Google Earth tracks)"""
+        points = []
+        
+        # Find all gx:Track elements
+        for track in root.findall(f'.//{{{self.namespaces["gx"]}}}Track'):
+            # Get all when (time) elements
+            when_elements = track.findall(f'{{{self.namespaces["kml"]}}}when')
+            # Get all gx:coord elements
+            coord_elements = track.findall(f'{{{self.namespaces["gx"]}}}coord')
+            
+            # Match coordinates with timestamps
+            for i, coord_elem in enumerate(coord_elements):
+                if coord_elem.text:
+                    coords = coord_elem.text.strip().split()
+                    if len(coords) >= 2:
+                        try:
+                            longitude = float(coords[0])
+                            latitude = float(coords[1])
+                            elevation = float(coords[2]) if len(coords) > 2 else None
+                            
+                            # Get timestamp if available
+                            time_elem = when_elements[i] if i < len(when_elements) else None
+                            timestamp = None
+                            if time_elem is not None and time_elem.text:
+                                try:
+                                    from datetime import datetime
+                                    timestamp = datetime.fromisoformat(time_elem.text.replace('Z', '+00:00'))
+                                except:
+                                    pass
+                            
+                            point = RoutePoint(
+                                latitude=latitude,
+                                longitude=longitude,
+                                elevation=elevation,
+                                time=timestamp
+                            )
+                            points.append(point)
+                        except (ValueError, IndexError):
+                            continue
+        
+        return points
+    
     def _extract_placemarks(self, root, namespace: str) -> List[RoutePoint]:
         """Extract waypoints from Placemark elements with Point geometry"""
         waypoints = []
         
         for placemark in root.findall(f'.//{{{self.namespaces[namespace]}}}Placemark'):
-            # Skip placemarks that contain LineString (these are routes, not waypoints)
+            # Skip placemarks that contain LineString or gx:Track (these are routes, not waypoints)
             if placemark.find(f'.//{{{self.namespaces[namespace]}}}LineString') is not None:
+                continue
+            if placemark.find(f'.//{{{self.namespaces["gx"]}}}Track') is not None:
                 continue
             
             # Look for Point geometry

@@ -4092,6 +4092,32 @@ class SecureFileUploader:
         
         file.save(file_path)
         return file_path
+    
+    def create_route_preview(self, parsed_route):
+        """Create optimized route preview coordinates"""
+        if parsed_route.points:
+            # If we have track points, create a smart sample
+            points = parsed_route.points
+            total_points = len(points)
+            
+            if total_points <= 50:
+                # If few points, use all
+                return [{'lat': p.latitude, 'lng': p.longitude} for p in points]
+            else:
+                # Smart sampling: take every nth point to get ~100 points
+                step = max(1, total_points // 100)
+                sampled_points = points[::step]
+                
+                # Always include first and last point
+                if points[0] not in sampled_points:
+                    sampled_points.insert(0, points[0])
+                if points[-1] not in sampled_points:
+                    sampled_points.append(points[-1])
+                
+                return [{'lat': p.latitude, 'lng': p.longitude} for p in sampled_points]
+        else:
+            # Use waypoints if no track points
+            return [{'lat': wp.latitude, 'lng': wp.longitude} for wp in parsed_route.waypoints]
 
 
 @app.route('/api/routes/import', methods=['POST'])
@@ -4287,13 +4313,7 @@ def upload_route_file():
                 'metadata': metadata,
                 'points_count': len(parsed_route.points),
                 'waypoints_count': len(parsed_route.waypoints),
-                'coordinates_preview': [
-                    {'lat': p.latitude, 'lng': p.longitude} 
-                    for p in parsed_route.points[:10]  # First 10 points for preview
-                ] if parsed_route.points else [
-                    {'lat': wp.latitude, 'lng': wp.longitude} 
-                    for wp in parsed_route.waypoints  # Use waypoints if no track points
-                ]
+                'coordinates_preview': uploader.create_route_preview(parsed_route)
             },
             'validation_warnings': validation_result.get('warnings', []),
             'security_issues': scan_result.get('issues', [])
@@ -4490,15 +4510,17 @@ def confirm_route_import():
                     # Create route geometry from points if available
                     if parsed_route.points:
                         # Create LINESTRING geometry from points
-                        linestring_coords = ' '.join([
+                        linestring_coords = ','.join([
                             f"{p.longitude} {p.latitude}" for p in parsed_route.points
                         ])
                         
+                        linestring_wkt = f"LINESTRING({linestring_coords})"
+                        
                         cursor.execute("""
                             UPDATE routes 
-                            SET route_geometry = ST_GeogFromText('LINESTRING(%s)')
+                            SET route_geometry = ST_GeogFromText(%s)
                             WHERE id = %s
-                        """, (linestring_coords, route_id))
+                        """, (linestring_wkt, route_id))
                     
                     # Note: route_imports table not created yet, skipping import record
                     
