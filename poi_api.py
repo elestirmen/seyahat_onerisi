@@ -291,6 +291,7 @@ def login_page():
                             if (parsed.origin === window.location.origin) {
                                 redirectUrl = parsed.pathname + parsed.search + parsed.hash;
                             }
+
                         }
                     } catch (err) {}
 
