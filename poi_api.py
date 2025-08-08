@@ -210,7 +210,7 @@ def login_page():
             <p>Devam etmek için giriş yapın</p>
         </div>
         
-        <form id="loginForm">
+        <form id="loginForm" method="POST" action="/auth/login">
             <div class="form-group">
                 <label for="password">Şifre</label>
                 <input type="password" id="password" name="password" required placeholder="Şifrenizi girin">
@@ -232,6 +232,9 @@ def login_page():
         const btnText = document.getElementById('btnText');
         const btnLoading = document.getElementById('btnLoading');
         const messageDiv = document.getElementById('message');
+
+        const params = new URLSearchParams(window.location.search);
+        const nextUrl = params.get('next');
         
         function showMessage(text, type = 'info') {
             messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
@@ -273,15 +276,26 @@ def login_page():
                         remember_me: false,
                         csrf_token: null
                     }),
-                    credentials: 'same-origin'
+                    credentials: 'include'
                 });
                 
                 const data = await response.json();
                 
                 if (response.ok && data.success) {
                     showMessage('✅ Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
+
+                    let redirectUrl = '/';
+                    try {
+                        if (nextUrl) {
+                            const parsed = new URL(nextUrl, window.location.origin);
+                            if (parsed.origin === window.location.origin) {
+                                redirectUrl = parsed.pathname + parsed.search + parsed.hash;
+                            }
+                        }
+                    } catch (err) {}
+
                     setTimeout(() => {
-                        window.location.href = '/';
+                        window.location.href = redirectUrl;
                     }, 1500);
                 } else {
                     let errorMessage = data.error || data.message || 'Giriş başarısız';
@@ -331,7 +345,6 @@ def login():
     # Handle preflight OPTIONS request
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
         response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response
@@ -398,14 +411,9 @@ def login():
                 'session_info': auth_middleware.get_session_info()
             }
             
-            response = jsonify(response_data)
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-            return response
+            return jsonify(response_data)
         else:
-            error_response = jsonify({'error': 'Failed to create session'})
-            error_response.headers.add('Access-Control-Allow-Origin', '*')
-            return error_response, 500
+            return jsonify({'error': 'Failed to create session'}), 500
             
     except Exception as e:
         print(f"Login error: {e}")
@@ -452,7 +460,9 @@ def auth_status():
                 'csrf_token': None
             }
         
-        return jsonify(response_data)
+        response = jsonify(response_data)
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return response
         
     except Exception as e:
         print(f"Auth status error: {e}")
@@ -1394,9 +1404,15 @@ def serve_ui():
         )
         
         return html_content
-        
+
     except FileNotFoundError:
         return '<h1>❌ Hata</h1><p>poi_manager_ui.html dosyası bulunamadı!</p><p>Dosyanın API ile aynı klasörde olduğundan emin olun.</p>', 404
+
+@app.route('/poi_manager_enhanced.html')
+@auth_middleware.require_auth
+def serve_poi_manager_enhanced():
+    """Serve enhanced POI manager interface with authentication"""
+    return send_from_directory('.', 'poi_manager_enhanced.html')
 
 @app.route('/api/pois', methods=['GET'])
 def list_pois():
@@ -2443,7 +2459,8 @@ def serve_static_html(filename):
     """Statik HTML dosyalarını serve et"""
     try:
         # Güvenlik kontrolü - sadece HTML dosyalarına izin ver
-        if not filename.endswith('.html') or filename == 'poi_manager_ui.html':
+        if (not filename.endswith('.html') or
+                filename in {'poi_manager_ui.html', 'poi_manager_enhanced.html'}):
             return jsonify({'error': 'File not found'}), 404
         
         # Dosya var mı kontrol et

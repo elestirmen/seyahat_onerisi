@@ -75,7 +75,10 @@ class AuthMiddleware:
             if not self.is_authenticated():
                 if request.is_json:
                     return jsonify({'error': 'Authentication required'}), 401
-                return redirect(url_for('auth.login'))
+                next_url = request.path
+                if request.query_string:
+                    next_url += '?' + request.query_string.decode()
+                return redirect(url_for('auth.login_page', next=next_url))
             return f(*args, **kwargs)
         return decorated_function
     
