@@ -66,7 +66,15 @@ class AuthConfig:
             self.PASSWORD_HASH = self._get_password_hash()
             
             # Session security settings
-            self.SESSION_COOKIE_SECURE = self._get_bool_config('POI_SESSION_SECURE', True)
+            debug_flags = [
+                os.getenv('DEBUG', ''),
+                os.getenv('FLASK_DEBUG', ''),
+            ]
+            debug_env = os.getenv('FLASK_ENV', '')
+            debug_mode = any(flag.lower() in ['true', '1', 'yes', 'on'] for flag in debug_flags)
+            debug_mode = debug_mode or debug_env.lower() in ['development', 'dev']
+
+            self.SESSION_COOKIE_SECURE = self._get_bool_config('POI_SESSION_SECURE', not debug_mode)
             self.SESSION_COOKIE_HTTPONLY = True
             self.SESSION_COOKIE_SAMESITE = 'Strict'
             
