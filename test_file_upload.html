@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload Test</title>
+</head>
+<body>
+    <h1>File Upload Test</h1>
+    
+    <form id="uploadForm">
+        <input type="file" id="fileInput" accept=".kmz,.kml,.gpx">
+        <button type="submit">Upload</button>
+    </form>
+    
+    <div id="result"></div>
+    
+    <script src="static/js/api-client.js"></script>
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                console.log('Uploading file:', file.name);
+                
+                // Test direct fetch first
+                const response = await fetch('/api/routes/import', {
+                    method: 'POST',
+                    credentials: 'include',
+                    redirect: 'manual',
+                    body: formData
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response type:', response.type);
+                console.log('Response redirected:', response.redirected);
+                
+                if (response.status === 0 && response.type === 'opaqueredirect') {
+                    document.getElementById('result').innerHTML = `
+                        <h2>Redirect Detected!</h2>
+                        <p>Server is redirecting to login page. Authentication required.</p>
+                        <a href="/auth/login">Go to Login</a>
+                    `;
+                    return;
+                }
+                
+                const result = await apiClient.upload('/routes/import', formData);
+                
+                document.getElementById('result').innerHTML = `
+                    <h2>Success!</h2>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                document.getElementById('result').innerHTML = `
+                    <h2>Error!</h2>
+                    <p>${error.message}</p>
+                    <p>Status: ${error.status}</p>
+                    <p>Is Login Required: ${error.isLoginRequired}</p>
+                    <pre>${JSON.stringify(error, null, 2)}</pre>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -330,8 +330,55 @@
                 this.init();
             }
 
-            init() {
+            async init() {
+                // Check authentication first
+                await this.checkAuthentication();
                 this.setupEventListeners();
+            }
+
+            async checkAuthentication() {
+                try {
+                    // Try to make a simple authenticated request
+                    const response = await fetch('/auth/status', {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.status === 404) {
+                        // Auth status endpoint not found, skip auth check
+                        console.warn('Auth status endpoint not found, skipping authentication check');
+                        return true;
+                    }
+                    
+                    if (response.status === 401) {
+                        // Not authenticated, redirect to login
+                        showNotification('Oturum süreniz dolmuş. Giriş sayfasına yönlendiriliyorsunuz...', 'warning');
+                        setTimeout(() => {
+                            window.location.href = '/auth/login?next=' + encodeURIComponent(window.location.pathname);
+                        }, 2000);
+                        return false;
+                    }
+                    
+                    if (!response.ok) {
+                        console.warn('Authentication check failed:', response.status);
+                        return false;
+                    }
+                    
+                    // Check if actually authenticated
+                    const data = await response.json();
+                    if (!data.authenticated) {
+                        showNotification('Giriş yapmanız gerekiyor. Giriş sayfasına yönlendiriliyorsunuz...', 'warning');
+                        setTimeout(() => {
+                            window.location.href = '/auth/login?next=' + encodeURIComponent(window.location.pathname);
+                        }, 2000);
+                        return false;
+                    }
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Authentication check error:', error);
+                    // Continue anyway, let the API calls handle auth errors
+                    return true;
+                }
             }
 
             setupEventListeners() {
@@ -413,7 +460,14 @@
 
             async uploadAndPreview() {
                 if (!this.selectedFile) return;
+                
                 try {
+                    // Check authentication first
+                    const isAuthenticated = await this.checkAuthentication();
+                    if (!isAuthenticated) {
+                        return;
+                    }
+                    
                     // Reset state
                     this.currentUploadId = null;
                     this.currentUploadData = null;
@@ -439,7 +493,24 @@
 
                 } catch (error) {
                     this.updateProgress(0);
-                    showNotification('Yükleme/önizleme hatası: ' + (error.message || 'Bilinmeyen hata'), 'error');
+                    console.error('Upload error:', error);
+                    
+                    let errorMessage = 'Yükleme/önizleme hatası: ';
+                    
+                    if (error.status === 401) {
+                        errorMessage = 'Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.';
+                        setTimeout(() => {
+                            window.location.href = '/auth/login?next=' + encodeURIComponent(window.location.pathname);
+                        }, 2000);
+                    } else if (error.status === 500) {
+                        errorMessage = 'Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.';
+                    } else if (error.message) {
+                        errorMessage += error.message;
+                    } else {
+                        errorMessage += 'Bilinmeyen hata';
+                    }
+                    
+                    showNotification(errorMessage, 'error');
                 }
             }
 
@@ -626,7 +697,40 @@
         }
 
         // Initialize when DOM is ready
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check authentication first
+            try {
+                const response = await fetch('/auth/status', {
+                    credentials: 'include'
+                });
+                
+                if (response.status === 404) {
+                    // Auth status endpoint not found, skip auth check
+                    console.warn('Auth status endpoint not found, skipping authentication check');
+                } else if (response.status === 401) {
+                    // Not authenticated, redirect to login
+                    showNotification('Giriş yapmanız gerekiyor. Giriş sayfasına yönlendiriliyorsunuz...', 'warning');
+                    setTimeout(() => {
+                        window.location.href = '/auth/login?next=' + encodeURIComponent(window.location.pathname);
+                    }, 2000);
+                    return;
+                } else if (response.ok) {
+                    // Check if actually authenticated
+                    const data = await response.json();
+                    if (!data.authenticated) {
+                        showNotification('Giriş yapmanız gerekiyor. Giriş sayfasına yönlendiriliyorsunuz...', 'warning');
+                        setTimeout(() => {
+                            window.location.href = '/auth/login?next=' + encodeURIComponent(window.location.pathname);
+                        }, 2000);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error('Authentication check failed:', error);
+                // Continue anyway, let individual API calls handle auth
+            }
+            
+            // Initialize the file import manager
             window.fileImportManager = new FileImportManager();
         });
     </script>

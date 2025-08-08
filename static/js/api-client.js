@@ -66,7 +66,28 @@ class APIClient {
         // Server errors
         this.addErrorHandler(500, (error) => {
             console.error('🔥 Server error:', error);
-            this.showNotification('Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
+            
+            // Try to extract more detailed error information
+            let errorMessage = 'Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.';
+            
+            if (error.data) {
+                if (typeof error.data === 'string') {
+                    // If response is HTML (login page), user needs to authenticate
+                    if (error.data.includes('<title>') && error.data.includes('Giriş')) {
+                        errorMessage = 'Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.';
+                        setTimeout(() => {
+                            window.location.href = '/auth/login?next=' + encodeURIComponent(window.location.pathname);
+                        }, 2000);
+                        return { retry: false };
+                    }
+                } else if (error.data.error) {
+                    errorMessage = error.data.error;
+                } else if (error.data.message) {
+                    errorMessage = error.data.message;
+                }
+            }
+            
+            this.showNotification(errorMessage, 'error');
             return { retry: true };
         });
 
@@ -152,6 +173,7 @@ class APIClient {
                 'X-Requested-With': 'XMLHttpRequest'
             },
             credentials: 'include',
+            redirect: 'manual', // Handle redirects manually
             timeout: this.defaultTimeout
         };
 
@@ -260,12 +282,49 @@ class APIClient {
             data = await response.text();
         }
 
+        // Handle opaque redirects (when redirect: 'manual' is used)
+        if (response.status === 0 && response.type === 'opaqueredirect') {
+            const error = new Error('Authentication required - opaque redirect detected');
+            error.status = 401; // Treat as authentication error
+            error.statusText = 'Unauthorized';
+            error.data = 'Opaque redirect';
+            error.response = response;
+            error.isLoginRequired = true;
+            throw error;
+        }
+
+        // Handle redirects to login page (302 status)
+        if (response.status === 302) {
+            const location = response.headers.get('location');
+            if (location && location.includes('/auth/login')) {
+                const error = new Error('Authentication required - redirected to login');
+                error.status = 401; // Treat as authentication error
+                error.statusText = 'Unauthorized';
+                error.data = data;
+                error.response = response;
+                error.isLoginRequired = true;
+                throw error;
+            }
+        }
+
         if (!response.ok) {
             const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
             error.status = response.status;
             error.statusText = response.statusText;
             error.data = data;
             error.response = response;
+            
+            // Special handling for HTML responses (usually login pages or redirects)
+            if (typeof data === 'string') {
+                if (data.includes('<html>') && (data.includes('Giriş') || data.includes('login'))) {
+                    error.isLoginRequired = true;
+                    error.message = 'Authentication required';
+                } else if (data.includes('Redirecting') && data.includes('/auth/login')) {
+                    error.isLoginRequired = true;
+                    error.message = 'Authentication required - redirected to login';
+                }
+            }
+            
             throw error;
         }
 
@@ -280,7 +339,9 @@ class APIClient {
         // Determine error type
         let errorType = 'UnknownError';
         
-        if (error.status) {
+        if (error.isLoginRequired) {
+            errorType = 401; // Treat as authentication error
+        } else if (error.status) {
             errorType = error.status;
         } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
             errorType = 'NetworkError';

@@ -4397,55 +4397,49 @@ def confirm_route_import():
             'name': data.get('route_name', parsed_route.metadata.name or 'İsimsiz Rota'),
             'description': data.get('route_description', parsed_route.metadata.description or ''),
             'route_type': data.get('route_type', parsed_route.metadata.route_type or 'imported'),
-            'difficulty': 'medium',  # Default difficulty
-            'duration': parsed_route.metadata.duration or 0,
-            'distance': parsed_route.metadata.distance or 0,
-            'elevation_gain': parsed_route.metadata.elevation_gain or 0,
-            'import_source': parsed_route.original_format,
-            'original_filename': temp_files[0].split('_', 1)[1],  # Remove upload_id prefix
+            'difficulty_level': 3,  # Default difficulty (1-5 scale)
+            'estimated_duration': int(parsed_route.metadata.duration or 0),  # minutes
+            'total_distance': parsed_route.metadata.distance or 0,  # km
+            'elevation_gain': int(parsed_route.metadata.elevation_gain or 0),  # meters
+            'tags': f'imported,{parsed_route.original_format}',
             'import_metadata': {
                 'file_hash': parsed_route.file_hash,
                 'points_count': len(parsed_route.points),
                 'waypoints_count': len(parsed_route.waypoints),
                 'imported_at': datetime.now().isoformat(),
-                'imported_by': session.get('user_id', 'unknown')
+                'imported_by': session.get('user_id', 'unknown'),
+                'original_filename': temp_files[0].split('_', 1)[1],  # Remove upload_id prefix
+                'import_source': parsed_route.original_format
             }
         }
         
         # Get database connection
-        db_factory = POIDatabaseFactory()
-        db_adapter = db_factory.get_adapter()
+        db_type = os.environ.get('POI_DB_TYPE', 'postgresql')
+        connection_string = os.environ.get('POI_DB_CONNECTION', 'postgresql://poi_user:poi_password@localhost/poi_db')
+        db_adapter = POIDatabaseFactory.create_database(db_type, connection_string=connection_string)
+        db_adapter.connect()
         
         try:
             # Save route to database
-            with db_adapter.get_connection() as conn:
-                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            with db_adapter.conn.cursor(cursor_factory=RealDictCursor) as cursor:
                     # Insert route
+                    # Convert dict fields to JSON strings
+                    route_data_for_db = route_data.copy()
+                    route_data_for_db['import_metadata'] = json.dumps(route_data['import_metadata'])
+                    
                     cursor.execute("""
                         INSERT INTO routes (
-                            name, description, route_type, difficulty, duration, 
-                            distance, elevation_gain, import_source, original_filename, 
-                            import_metadata, created_at, updated_at
+                            name, description, route_type, difficulty_level, 
+                            estimated_duration, total_distance, elevation_gain, 
+                            tags, created_at, updated_at
                         ) VALUES (
-                            %(name)s, %(description)s, %(route_type)s, %(difficulty)s, 
-                            %(duration)s, %(distance)s, %(elevation_gain)s, %(import_source)s, 
-                            %(original_filename)s, %(import_metadata)s, NOW(), NOW()
+                            %(name)s, %(description)s, %(route_type)s, %(difficulty_level)s, 
+                            %(estimated_duration)s, %(total_distance)s, %(elevation_gain)s, 
+                            %(tags)s, NOW(), NOW()
                         ) RETURNING id
-                    """, route_data)
+                    """, route_data_for_db)
                     
                     route_id = cursor.fetchone()['id']
-                    
-                    # Save route geometry (coordinates)
-                    coordinates = [
-                        {'lat': p.latitude, 'lng': p.longitude, 'elevation': p.elevation}
-                        for p in parsed_route.points
-                    ]
-                    
-                    cursor.execute("""
-                        UPDATE routes 
-                        SET coordinates = %s 
-                        WHERE id = %s
-                    """, (json.dumps(coordinates), route_id))
                     
                     # Save waypoints if any
                     if parsed_route.waypoints:
@@ -4466,36 +4460,32 @@ def confirm_route_import():
                             WHERE id = %s
                         """, (json.dumps(waypoints_data), route_id))
                     
-                    # Record import operation
-                    cursor.execute("""
-                        INSERT INTO route_imports (
-                            filename, original_filename, file_type, file_size, 
-                            file_hash, import_status, imported_route_id, 
-                            created_by, created_at
-                        ) VALUES (
-                            %s, %s, %s, %s, %s, 'completed', %s, %s, NOW()
-                        )
-                    """, (
-                        temp_files[0],
-                        route_data['original_filename'],
-                        parsed_route.original_format,
-                        os.path.getsize(file_path),
-                        parsed_route.file_hash,
-                        route_id,
-                        session.get('user_id', 'unknown')
-                    ))
+                    # Create route geometry from points if available
+                    if parsed_route.points:
+                        # Create LINESTRING geometry from points
+                        linestring_coords = ' '.join([
+                            f"{p.longitude} {p.latitude}" for p in parsed_route.points
+                        ])
+                        
+                        cursor.execute("""
+                            UPDATE routes 
+                            SET route_geometry = ST_GeogFromText('LINESTRING(%s)')
+                            WHERE id = %s
+                        """, (linestring_coords, route_id))
                     
-                    # Associate POIs if requested
+                    # Note: route_imports table not created yet, skipping import record
+                    
+                    # Associate POIs if requested (using existing route_pois table)
                     poi_ids = data.get('associate_pois', [])
                     if poi_ids:
-                        for poi_id in poi_ids:
+                        for i, poi_id in enumerate(poi_ids):
                             cursor.execute("""
-                                INSERT INTO route_poi_associations (route_id, poi_id, created_at)
-                                VALUES (%s, %s, NOW())
+                                INSERT INTO route_pois (route_id, poi_id, order_in_route, is_mandatory)
+                                VALUES (%s, %s, %s, false)
                                 ON CONFLICT (route_id, poi_id) DO NOTHING
-                            """, (route_id, poi_id))
+                            """, (route_id, poi_id, i + 1))
                     
-                    conn.commit()
+                    db_adapter.conn.commit()
                     
                     # Clean up temporary file
                     try:
@@ -4518,7 +4508,7 @@ def confirm_route_import():
                             'description': route_data['description'],
                             'points_count': len(parsed_route.points),
                             'waypoints_count': len(parsed_route.waypoints),
-                            'distance': route_data['distance'],
+                            'distance': route_data['total_distance'],
                             'associated_pois': len(poi_ids)
                         }
                     }), 200
