@@ -43,7 +43,9 @@ class EnhancedMapManager {
             preview: true
         };
         
-        this.init();
+        // Initialization state
+        this.initialized = false;
+        this.initPromise = this.init();
     }
 
     /**
@@ -60,6 +62,7 @@ class EnhancedMapManager {
             }
             
             this.setupEventListeners();
+            this.initialized = true;
             console.log('EnhancedMapManager initialized successfully');
         } catch (error) {
             console.error('Error initializing EnhancedMapManager:', error);
@@ -673,6 +676,11 @@ class EnhancedMapManager {
      * Show route preview for import
      */
     showRoutePreview(routeData, options = {}) {
+        if (!this.initialized) {
+            console.warn('Map manager not yet initialized, skipping showRoutePreview');
+            return;
+        }
+        
         // Clear existing preview
         this.clearPreview();
         
@@ -802,11 +810,29 @@ class EnhancedMapManager {
     }
 
     /**
+     * Wait for initialization to complete
+     */
+    async waitForInitialization() {
+        if (this.initPromise) {
+            await this.initPromise;
+        }
+    }
+
+    /**
      * Clear preview layer
      */
     clearPreview() {
-        this.layers.preview.clearLayers();
-        this.markers.preview = [];
+        if (!this.initialized) {
+            console.warn('Map manager not yet initialized, skipping clearPreview');
+            return;
+        }
+        
+        if (this.layers && this.layers.preview && typeof this.layers.preview.clearLayers === 'function') {
+            this.layers.preview.clearLayers();
+        }
+        if (this.markers && Array.isArray(this.markers.preview)) {
+            this.markers.preview = [];
+        }
         this.emit('previewCleared');
     }
 

@@ -597,11 +597,18 @@
                 // Initialize map and draw preview
                 if (!this.mapManager) {
                     this.mapManager = new EnhancedMapManager('importMap', { enableClustering: false });
+                    // Wait for initialization to complete
+                    await this.mapManager.waitForInitialization();
                 } else {
                     this.mapManager.clearPreview();
                 }
-                if (previewGeometry) {
-                    this.mapManager.showRoutePreview({ geometry: previewGeometry, filename: data?.file_info?.original_filename || this.selectedFile?.name, name: data?.route_data?.metadata?.name, distance: data?.route_data?.metadata?.distance });
+                if (previewGeometry && this.mapManager) {
+                    this.mapManager.showRoutePreview({ 
+                        geometry: previewGeometry, 
+                        filename: data?.file_info?.original_filename || this.selectedFile?.name, 
+                        name: data?.route_data?.metadata?.name, 
+                        distance: data?.route_data?.metadata?.distance 
+                    });
                 }
 
                 // Load POIs

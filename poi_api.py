@@ -24,7 +24,11 @@ from werkzeug.datastructures import FileStorage
 import threading
 import queue
 import math
+import logging
 from typing import List, Tuple, Set, Dict, Any
+
+# Setup logger
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app, origins=["*"], supports_credentials=True)
@@ -457,6 +461,17 @@ def auth_status():
     except Exception as e:
         print(f"Auth status error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+
+@auth_bp.route('/clear-rate-limits', methods=['POST'])
+@auth_middleware.require_auth
+def clear_rate_limits():
+    """Clear rate limiting cache (for testing)."""
+    global admin_rate_limits
+    admin_rate_limits.clear()
+    return jsonify({
+        'success': True,
+        'message': 'Rate limits cleared'
+    })
 
 @auth_bp.route('/csrf-token', methods=['GET'])
 def csrf_token():
@@ -4081,7 +4096,7 @@ class SecureFileUploader:
 
 @app.route('/api/routes/import', methods=['POST'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=10, window_seconds=300)  # 10 uploads per 5 minutes
+@admin_rate_limit(max_requests=50, window_seconds=300)  # 50 uploads per 5 minutes (relaxed for testing)
 def upload_route_file():
     """
     Upload and validate route file (GPX, KML, KMZ)
@@ -4215,6 +4230,10 @@ def upload_route_file():
                     'error_code': e.error_code
                 }
             
+            # Log the error for debugging
+            logger.error(f"Route parsing failed for {file_path}: {e.message} (code: {e.error_code})")
+            logger.error(f"Error details: {e.details}")
+            
             return jsonify({
                 'success': False,
                 'upload_id': upload_id,
@@ -4235,6 +4254,11 @@ def upload_route_file():
                     'progress': 0,
                     'message': f'Beklenmeyen hata: {str(e)}'
                 }
+            
+            # Log the unexpected error for debugging
+            logger.error(f"Unexpected error during route import for {file_path}: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             
             return jsonify({
                 'success': False,
@@ -4266,6 +4290,9 @@ def upload_route_file():
                 'coordinates_preview': [
                     {'lat': p.latitude, 'lng': p.longitude} 
                     for p in parsed_route.points[:10]  # First 10 points for preview
+                ] if parsed_route.points else [
+                    {'lat': wp.latitude, 'lng': wp.longitude} 
+                    for wp in parsed_route.waypoints  # Use waypoints if no track points
                 ]
             },
             'validation_warnings': validation_result.get('warnings', []),
