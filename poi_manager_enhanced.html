@@ -3632,7 +3632,9 @@
 
                 try {
                     const response = await fetch('/auth/status', {
-                        credentials: 'include'
+                        credentials: 'include',
+                        cache: 'no-store'
+
                     });
                     console.log('🔐 Auth status response:', response.status, response.ok);
 

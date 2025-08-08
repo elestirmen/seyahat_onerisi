@@ -461,7 +461,9 @@ def auth_status():
                 'csrf_token': None
             }
         
-        return jsonify(response_data)
+        response = jsonify(response_data)
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return response
         
     except Exception as e:
         print(f"Auth status error: {e}")

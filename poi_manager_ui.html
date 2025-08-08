@@ -1179,7 +1179,10 @@
         async function checkAuthStatus() {
             console.log('🔐 Checking auth status...');
             try {
-                const response = await fetch('/auth/status');
+                const response = await fetch('/auth/status', {
+                    credentials: 'include',
+                    cache: 'no-store'
+                });
                 console.log('🔐 Auth status response:', response.status, response.ok);
 
                 if (response.ok) {
@@ -3176,7 +3179,10 @@
             // Check session status every 30 seconds for better responsiveness
             setInterval(async () => {
                 try {
-                    const response = await fetch('/auth/status');
+                    const response = await fetch('/auth/status', {
+                        credentials: 'include',
+                        cache: 'no-store'
+                    });
                     if (response.ok) {
                         const data = await response.json();
                         if (data.authenticated && data.session_info) {
@@ -3270,7 +3276,8 @@
                 // Make a simple authenticated request to extend session
                 const response = await fetch('/auth/status', {
                     method: 'GET',
-                    credentials: 'same-origin'
+                    credentials: 'include',
+                    cache: 'no-store'
                 });
 
                 if (response.ok) {

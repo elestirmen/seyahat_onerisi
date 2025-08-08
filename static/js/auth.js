@@ -469,7 +469,8 @@ class AuthManager {
         try {
             const response = await fetch('/auth/status', {
                 method: 'GET',
-                credentials: 'same-origin'
+                credentials: 'include',
+                cache: 'no-store'
             });
             
             if (!response.ok) {
@@ -567,7 +568,8 @@ class AuthManager {
             // Make a simple authenticated request to extend session
             const response = await fetch('/auth/status', {
                 method: 'GET',
-                credentials: 'same-origin'
+                credentials: 'include',
+                cache: 'no-store'
             });
             
             if (response.ok) {
