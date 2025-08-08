@@ -36,11 +36,60 @@
             grid-template-areas: 
                 "header header header"
                 "sidebar workspace map";
-            grid-template-columns: 380px 1fr 520px;
+            grid-template-columns: 380px 1fr 600px;
             grid-template-rows: auto 1fr;
             height: 100vh;
             gap: 1rem;
             padding: 1rem;
+            position: relative;
+        }
+
+        /* Resizable Splitter */
+        .resize-handle {
+            position: absolute;
+            top: 80px; /* Header yüksekliği + padding */
+            right: 620px; /* Map genişliği + gap */
+            width: 8px;
+            height: calc(100vh - 100px);
+            background: linear-gradient(90deg, transparent 2px, var(--route-border) 2px, var(--route-border) 6px, transparent 6px);
+            cursor: col-resize;
+            z-index: 1000;
+            transition: all 0.2s ease;
+            border-radius: 4px;
+        }
+
+        .resize-handle:hover {
+            background: linear-gradient(90deg, transparent 1px, var(--route-primary) 1px, var(--route-primary) 7px, transparent 7px);
+            box-shadow: 0 0 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .resize-handle.dragging {
+            background: linear-gradient(90deg, transparent 1px, var(--route-primary) 1px, var(--route-primary) 7px, transparent 7px);
+            box-shadow: 0 0 12px rgba(37, 99, 235, 0.5);
+        }
+
+        .resize-handle::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 3px;
+            height: 30px;
+            background: repeating-linear-gradient(
+                to bottom,
+                var(--route-secondary) 0px,
+                var(--route-secondary) 3px,
+                transparent 3px,
+                transparent 6px
+            );
+            opacity: 0.5;
+            transition: opacity 0.2s ease;
+        }
+
+        .resize-handle:hover::before,
+        .resize-handle.dragging::before {
+            opacity: 1;
         }
 
         /* Header */
@@ -525,6 +574,25 @@
             min-height: 400px;
         }
 
+        /* Map Fullscreen */
+        .route-map-view.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            border-radius: 0;
+        }
+
+        body.map-fullscreen {
+            overflow: hidden;
+        }
+
+        .route-map-view.fullscreen #routeMap {
+            min-height: calc(100vh - 60px); /* Header yüksekliği çıkarılmış */
+        }
+
         /* Custom POI Map Markers */
         .custom-poi-marker {
             background: transparent !important;
@@ -633,7 +701,11 @@
                     "sidebar workspace"
                     "map map";
                 grid-template-columns: 350px 1fr;
-                grid-template-rows: auto 1fr 400px;
+                grid-template-rows: auto 1fr 450px;
+            }
+            
+            .resize-handle {
+                display: none; /* Hide splitter on smaller screens */
             }
         }
 
@@ -732,7 +804,10 @@
     </style>
 </head>
 <body>
-    <div class="route-management-container">
+    <div class="route-management-container" id="routeContainer">
+        <!-- Resizable Splitter -->
+        <div class="resize-handle" id="resizeHandle"></div>
+        
         <!-- Header -->
         <header class="route-header">
             <h1>
@@ -914,14 +989,17 @@
                     Harita Görünümü
                 </h3>
                 <div class="map-controls">
-                    <button class="btn-map" onclick="toggleMapLayer('satellite')">
+                    <button class="btn-map" onclick="toggleMapLayer('satellite')" title="Uydu Görünümü">
                         <i class="fas fa-satellite"></i>
                     </button>
-                    <button class="btn-map" onclick="toggleMapLayer('terrain')">
+                    <button class="btn-map" onclick="toggleMapLayer('terrain')" title="Arazi Görünümü">
                         <i class="fas fa-mountain"></i>
                     </button>
-                    <button class="btn-map" onclick="fitMapToRoutes()">
+                    <button class="btn-map" onclick="fitMapToRoutes()" title="Rotalara Odaklan">
                         <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                    <button class="btn-map" onclick="toggleMapFullscreen()" title="Tam Ekran" id="fullscreenBtn">
+                        <i class="fas fa-expand"></i>
                     </button>
                 </div>
             </div>
@@ -983,6 +1061,7 @@
             initializeMap();
             loadRoutes();
             setupEventListeners();
+            setupResizableMap();
             // Fetch CSRF token for admin POSTs
             fetch('/auth/csrf-token', { credentials: 'include' })
                 .then(r => r.ok ? r.json() : null)
@@ -1258,8 +1337,8 @@
                 // Display route details in workspace
                 displayRouteDetails(currentRoute);
 
-                // Show the selected route on map and focus on it
-                showSelectedRouteOnMap(currentRoute);
+                // Highlight and focus on the selected route
+                highlightAndFocusRoute(currentRoute);
             }
         }
 
@@ -1865,8 +1944,61 @@
             }
         }
 
-        // Show selected route on map with focus
-        async function showSelectedRouteOnMap(route) {
+        // Highlight and focus on selected route while keeping others visible
+        async function highlightAndFocusRoute(route) {
+            console.log('Highlighting and focusing on route:', route.name);
+            
+            const rid = getRouteId(route);
+            if (!rid) {
+                console.warn('No route ID found');
+                return;
+            }
+
+            // First ensure all filtered routes are displayed on map
+            await updateMapRoutes();
+            
+            // Wait a bit for routes to be rendered
+            setTimeout(async () => {
+                // Reset all route styles to normal
+                Object.entries(routeLayers).forEach(([id, layer]) => {
+                    const routeData = allRoutes.find(r => String(getRouteId(r)) === String(id));
+                    if (routeData) {
+                        const color = ROUTE_TYPES[routeData.route_type]?.color || '#2563eb';
+                        layer.setStyle({
+                            color: color,
+                            weight: 3,
+                            opacity: 0.6
+                        });
+                    }
+                });
+
+                // Highlight the selected route
+                if (routeLayers[rid]) {
+                    const selectedColor = ROUTE_TYPES[route.route_type]?.color || '#2563eb';
+                    routeLayers[rid].setStyle({
+                        color: selectedColor,
+                        weight: 5,
+                        opacity: 1
+                    });
+                    
+                    // Bring selected route to front
+                    routeLayers[rid].bringToFront();
+                    
+                    // Focus map on selected route with smooth animation
+                    try {
+                        const bounds = routeLayers[rid].getBounds();
+                        map.fitBounds(bounds, { 
+                            padding: [30, 30],
+                            maxZoom: 14,
+                            animate: true,
+                            duration: 0.8
+                        });
+                        console.log('Map focused on selected route with animation');
+                    } catch (e) {
+                        console.warn('Failed to focus on route:', e);
+                    }
+                } else {
+           
             console.log('=== showSelectedRouteOnMap called ===');
             console.log('Selected route:', route.name, 'ID:', getRouteId(route));
             
@@ -2153,6 +2285,65 @@
             }, 5000);
         }
 
+        // Resizable Map Functionality
+        function setupResizableMap() {
+            const resizeHandle = document.getElementById('resizeHandle');
+            const container = document.getElementById('routeContainer');
+            let isResizing = false;
+            let startX = 0;
+            let startMapWidth = 600;
+
+            resizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startX = e.clientX;
+                startMapWidth = getCurrentMapWidth();
+                resizeHandle.classList.add('dragging');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+
+                const deltaX = startX - e.clientX; // Reversed because we're moving from right
+                const newMapWidth = Math.max(400, Math.min(800, startMapWidth + deltaX));
+                
+                // Update grid template columns
+                container.style.gridTemplateColumns = `380px 1fr ${newMapWidth}px`;
+                
+                // Update resize handle position
+                resizeHandle.style.right = `${newMapWidth + 20}px`;
+                
+                // Invalidate map size
+                if (map) {
+                    setTimeout(() => map.invalidateSize(), 10);
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    resizeHandle.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    
+                    // Final map size invalidation
+                    if (map) {
+                        setTimeout(() => map.invalidateSize(), 100);
+                    }
+                }
+            });
+
+            // Get current map width from computed styles
+            function getCurrentMapWidth() {
+                const computedStyle = window.getComputedStyle(container);
+                const columns = computedStyle.gridTemplateColumns.split(' ');
+                const mapColumn = columns[2];
+                return parseInt(mapColumn) || 600;
+            }
+        }
+
         // Action handlers
         function refreshRoutes() {
             loadRoutes();
@@ -2161,6 +2352,46 @@
         function showCreateRouteModal() {
             // TODO: Implement create route modal
             showNotification('Rota oluşturma özelliği yakında eklenecek', 'info');
+        }
+
+        // Map fullscreen functionality
+        function toggleMapFullscreen() {
+            const mapView = document.querySelector('.route-map-view');
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            const icon = fullscreenBtn.querySelector('i');
+            
+            if (mapView.classList.contains('fullscreen')) {
+                // Exit fullscreen
+                mapView.classList.remove('fullscreen');
+                document.body.classList.remove('map-fullscreen');
+                icon.className = 'fas fa-expand';
+                fullscreenBtn.title = 'Tam Ekran';
+            } else {
+                // Enter fullscreen
+                mapView.classList.add('fullscreen');
+                document.body.classList.add('map-fullscreen');
+                icon.className = 'fas fa-compress';
+                fullscreenBtn.title = 'Tam Ekrandan Çık';
+            }
+            
+            // Invalidate map size after transition
+            setTimeout(() => {
+                if (map) map.invalidateSize();
+            }, 300);
+        }
+
+        // Map layer toggle functions
+        function toggleMapLayer(layerType) {
+            showNotification(`${layerType} katmanı özelliği yakında eklenecek`, 'info');
+        }
+
+        function fitMapToRoutes() {
+            if (map && Object.keys(routeLayers).length > 0) {
+                const group = new L.featureGroup(Object.values(routeLayers));
+                map.fitBounds(group.getBounds(), { padding: [20, 20] });
+            } else {
+                showNotification('Görüntülenecek rota bulunamadı', 'warning');
+            }
         }
 
         function editCurrentRoute() {
