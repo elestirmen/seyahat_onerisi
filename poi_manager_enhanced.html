@@ -3631,7 +3631,9 @@
                 console.log('🔐 Checking auth status...');
 
                 try {
-                    const response = await fetch('/auth/status');
+                    const response = await fetch('/auth/status', {
+                        credentials: 'include'
+                    });
                     console.log('🔐 Auth status response:', response.status, response.ok);
 
                     if (response.ok) {

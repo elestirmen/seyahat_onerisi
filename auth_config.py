@@ -67,7 +67,10 @@ class AuthConfig:
             
             # Session security settings
             debug_mode = os.getenv('DEBUG', 'False').lower() in ['true', '1', 'yes', 'on']
-            self.SESSION_COOKIE_SECURE = self._get_bool_config('POI_SESSION_SECURE', not debug_mode)
+            host = os.getenv('API_HOST', '').lower()
+            is_localhost = host in ['localhost', '127.0.0.1', '0.0.0.0']
+            default_secure = False if debug_mode or is_localhost else True
+            self.SESSION_COOKIE_SECURE = self._get_bool_config('POI_SESSION_SECURE', default_secure)
             self.SESSION_COOKIE_HTTPONLY = True
             self.SESSION_COOKIE_SAMESITE = 'Strict'
             
