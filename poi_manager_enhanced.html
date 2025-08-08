@@ -1970,6 +1970,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="static/js/enhanced-map-manager.js"></script>
     <script>
         // POI Management Application
         class POIManager {
@@ -1987,8 +1988,9 @@
                 this.pois = [];
                 this.categories = [];
                 this.selectedPOI = null;
+                this.routes = [];
                 this.map = null;
-                this.markers = {};
+                this.mapManager = null;
                 this.csrfToken = null;
 
                 this.init();
@@ -2009,14 +2011,11 @@
             }
 
             async initializeMap() {
-                this.map = L.map('map').setView([38.6431, 34.8331], 11);
-
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(this.map);
+                this.mapManager = new EnhancedMapManager('map');
+                this.map = this.mapManager.map;
 
                 // Add double-click handler for creating new POIs
-                this.map.on('dblclick', (e) => {
+                this.mapManager.on('mapDoubleClick', (e) => {
                     const { lat, lng } = e.latlng;
                     this.showCreatePOIModalWithCoordinates(lat, lng);
                 });
@@ -2316,13 +2315,12 @@
                 if (this.map && poi.latitude && poi.longitude) {
                     this.map.setView([poi.latitude, poi.longitude], 15);
 
-                    // Highlight marker
-                    Object.values(this.markers).forEach(marker => {
-                        marker.setOpacity(0.6);
-                    });
-
-                    if (this.markers[poi.id]) {
-                        this.markers[poi.id].setOpacity(1);
+                    if (this.mapManager) {
+                        this.mapManager.markers.pois.forEach(marker => marker.setOpacity(0.6));
+                        const marker = this.mapManager.markers.pois.get(poi.id || poi._id);
+                        if (marker) {
+                            marker.setOpacity(1);
+                        }
                     }
                 }
 
@@ -2331,62 +2329,12 @@
             }
 
             updateMapMarkers() {
-                if (!this.map) return;
-
-                // Clear existing markers
-                Object.values(this.markers).forEach(marker => {
-                    this.map.removeLayer(marker);
-                });
-                this.markers = {};
-
-                // Ensure pois is an array
-                if (!Array.isArray(this.pois)) {
-                    console.warn('POIs is not an array in updateMapMarkers:', this.pois);
-                    return;
+                if (!this.mapManager) return;
+                const pois = Array.isArray(this.pois) ? this.pois : [];
+                this.mapManager.addPOILayer(pois);
+                if (pois.length > 0) {
+                    this.mapManager.fitToPOIs();
                 }
-
-                // Add new markers
-                this.pois.forEach(poi => {
-                    if (poi && poi.latitude && poi.longitude) {
-                        // Get category info for custom icon
-                        const category = this.categories.find(cat =>
-                            (cat.id && cat.id === poi.category) || cat.name === poi.category
-                        );
-
-                        const categoryIcon = category ? category.icon : 'map-marker-alt';
-                        const categoryColor = category ? category.color : '#2563eb';
-
-                        // Create custom icon
-                        const customIcon = L.divIcon({
-                            className: 'custom-poi-marker',
-                            html: `
-                                <div class="poi-marker-container" style="background-color: ${categoryColor}">
-                                    <i class="fas fa-${categoryIcon}"></i>
-                                </div>
-                            `,
-                            iconSize: [30, 30],
-                            iconAnchor: [15, 15],
-                            popupAnchor: [0, -15]
-                        });
-
-                        const marker = L.marker([poi.latitude, poi.longitude], { icon: customIcon })
-                            .bindPopup(`
-                                <div class="poi-popup">
-                                    <div class="poi-popup-header">
-                                        <i class="fas fa-${categoryIcon}" style="color: ${categoryColor}"></i>
-                                        <strong>${poi.name || 'İsimsiz POI'}</strong>
-                                    </div>
-                                    <div class="poi-popup-category">${category ? category.display_name : poi.category || 'Kategori yok'}</div>
-                                    ${poi.description ? `<div class="poi-popup-description">${poi.description.substring(0, 100)}${poi.description.length > 100 ? '...' : ''}</div>` : ''}
-                                    ${this.generatePopupRating(poi)}
-                                </div>
-                            `)
-                            .addTo(this.map);
-
-                        marker.on('click', () => this.selectPOI(poi));
-                        this.markers[poi.id || poi._id] = marker;
-                    }
-                });
             }
 
             // --- Routes on Map (display routes like in route manager) ---
@@ -2405,52 +2353,10 @@
             }
 
             updateRouteLayersOnMap() {
-                if (!this.map || !Array.isArray(this.routes)) return;
-
-                if (!this.routeLayers) {
-                    this.routeLayers = {};
-                }
-
-                // Clear existing
-                Object.values(this.routeLayers).forEach(layer => {
-                    try { this.map.removeLayer(layer); } catch (_) { /* noop */ }
-                });
-                this.routeLayers = {};
-
-                const ROUTE_TYPES = {
-                    walking: { name: 'Yürüyüş', color: '#10b981' },
-                    hiking: { name: 'Doğa Yürüyüşü', color: '#f59e0b' },
-                    cycling: { name: 'Bisiklet', color: '#3b82f6' },
-                    driving: { name: 'Araç', color: '#ef4444' }
-                };
-
-                const addedLayers = [];
-
-                this.routes.forEach(route => {
-                    if (!route || !route.geometry) return;
-                    try {
-                        const geojson = typeof route.geometry === 'string' ? JSON.parse(route.geometry) : route.geometry;
-                        const layer = L.geoJSON(geojson, {
-                            style: {
-                                color: ROUTE_TYPES[route.route_type]?.color || '#2563eb',
-                                weight: 3,
-                                opacity: 0.8
-                            }
-                        }).bindPopup(`
-                            <strong>${this.escapeHtml(route.name || 'Rota')}</strong><br>
-                            ${(ROUTE_TYPES[route.route_type]?.name || route.route_type || '')}
-                        `);
-                        layer.addTo(this.map);
-                        this.routeLayers[route.id || route._id] = layer;
-                        addedLayers.push(layer);
-                    } catch (err) {
-                        console.warn('Rota geometry parse hatası:', err);
-                    }
-                });
-
-                if (addedLayers.length > 0) {
-                    const group = new L.featureGroup(addedLayers);
-                    try { this.map.fitBounds(group.getBounds(), { padding: [20, 20] }); } catch (_) { /* noop */ }
+                if (!this.mapManager || !Array.isArray(this.routes)) return;
+                this.mapManager.addRouteLayer(this.routes);
+                if (this.routes.length > 0) {
+                    this.mapManager.fitToRoutes();
                 }
             }
 
