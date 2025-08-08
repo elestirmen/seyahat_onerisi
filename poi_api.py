@@ -1407,11 +1407,18 @@ def list_pois():
     if JSON_FALLBACK:
         test_data = load_test_data()
         
-        # Sadece aktif POI'leri filtrele
+        # Sadece aktif POI'leri filtrele ve integer ID'ler ata
         filtered_data = {}
         for cat, pois in test_data.items():
             if isinstance(pois, list):
-                active_pois = [poi for poi in pois if poi.get('isActive', True)]
+                active_pois = []
+                for poi in pois:
+                    if poi.get('isActive', True):
+                        # String _id'yi integer ID'ye çevir
+                        if '_id' in poi and isinstance(poi['_id'], str):
+                            # String ID'yi hash'leyerek integer ID oluştur
+                            poi['id'] = abs(hash(poi['_id'])) % (10**9)  # 9 haneli pozitif integer
+                        active_pois.append(poi)
                 if active_pois:  # Sadece aktif POI'si olan kategorileri ekle
                     filtered_data[cat] = active_pois
         
