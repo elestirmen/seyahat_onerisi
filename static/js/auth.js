@@ -156,7 +156,7 @@ class AuthManager {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(loginData),
-                credentials: 'same-origin'
+                credentials: 'include'
             });
             
             const data = await response.json();
@@ -189,9 +189,23 @@ class AuthManager {
         // Start session monitoring for authenticated users
         this.startSessionMonitoring();
         
+        // Determine redirect target
+        const params = new URLSearchParams(window.location.search);
+        const nextParam = params.get('next');
+        let redirectUrl = data.redirect_url || '/';
+
+        if (nextParam) {
+            try {
+                const parsed = new URL(nextParam, window.location.origin);
+                if (parsed.origin === window.location.origin) {
+                    redirectUrl = parsed.pathname + parsed.search + parsed.hash;
+                }
+            } catch (e) {}
+        }
+
         // Redirect after short delay
         setTimeout(() => {
-            window.location.href = data.redirect_url || '/';
+            window.location.href = redirectUrl;
         }, 1500);
     }
     
@@ -454,7 +468,8 @@ class AuthManager {
         try {
             const response = await fetch('/auth/status', {
                 method: 'GET',
-                credentials: 'same-origin'
+                credentials: 'include',
+                cache: 'no-store'
             });
             
             if (!response.ok) {
@@ -552,7 +567,8 @@ class AuthManager {
             // Make a simple authenticated request to extend session
             const response = await fetch('/auth/status', {
                 method: 'GET',
-                credentials: 'same-origin'
+                credentials: 'include',
+                cache: 'no-store'
             });
             
             if (response.ok) {
