@@ -525,6 +525,106 @@
             min-height: 400px;
         }
 
+        /* Custom POI Map Markers */
+        .custom-poi-marker {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .poi-marker-container {
+            width: 35px;
+            height: 35px;
+            border-radius: 50% 50% 50% 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+            border: 3px solid white;
+            transition: transform 0.2s ease;
+            position: relative;
+            transform: rotate(-45deg);
+        }
+
+        .poi-marker-container i {
+            transform: rotate(45deg);
+            z-index: 2;
+        }
+
+        .poi-order-number {
+            position: absolute;
+            bottom: -8px;
+            right: -8px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            transform: rotate(45deg);
+            border: 2px solid white;
+        }
+
+        .poi-marker-container:hover {
+            transform: rotate(-45deg) scale(1.1);
+            z-index: 1000;
+        }
+
+        /* POI Popup Styles */
+        .poi-popup {
+            min-width: 200px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .poi-popup-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .poi-popup-category {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            font-style: italic;
+        }
+
+        .poi-popup-description {
+            color: #444;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 0.5rem;
+        }
+
+        .poi-popup-order {
+            color: #666;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* POI Order Badge */
+        .poi-order-badge {
+            display: inline-block;
+            background: var(--route-primary);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            text-align: center;
+            line-height: 20px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
         /* Responsive Design */
         @media (max-width: 1200px) {
             .route-management-container {
@@ -865,6 +965,17 @@
             'hiking': { name: 'Doğa Yürüyüşü', icon: '🥾', color: '#d97706' },
             'cycling': { name: 'Bisiklet', icon: '🚴', color: '#2563eb' },
             'driving': { name: 'Araba', icon: '🚗', color: '#dc2626' }
+        };
+
+        // POI Category configurations
+        const POI_CATEGORIES = {
+            'kulturel_miras': { name: '🏛️ Kültürel Miras', icon: 'landmark', color: '#8B4513' },
+            'dogal_miras': { name: '🌿 Doğal Miras', icon: 'mountain', color: '#228B22' },
+            'yasayan_kultur': { name: '🎨 Yaşayan Kültür', icon: 'palette', color: '#9932CC' },
+            'gastronomi': { name: '🍽️ Gastronomi', icon: 'utensils', color: '#DC143C' },
+            'konaklama_hizmet': { name: '🏨 Konaklama & Hizmetler', icon: 'bed', color: '#4169E1' },
+            'macera_spor': { name: '🏃 Macera & Spor', icon: 'hiking', color: '#FF6347' },
+            'seyir_noktalari': { name: '📷 Seyir Noktaları', icon: 'camera', color: '#ff9500' }
         };
 
         // Initialize application
@@ -1872,20 +1983,48 @@
                                 }
                             }
 
-                            // Add POI markers
+                            // Add POI markers with category icons
                             sortedPois.forEach((poi, index) => {
                                 const lat = Number(poi.lat || poi.latitude);
                                 const lng = Number(poi.lon || poi.longitude);
                                 
                                 if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                                    // Get category info for custom icon
+                                    const category = POI_CATEGORIES[poi.category] || { 
+                                        icon: 'map-marker-alt', 
+                                        color: '#2563eb',
+                                        name: poi.category || 'Kategori yok'
+                                    };
+
+                                    // Create custom POI icon
+                                    const customIcon = L.divIcon({
+                                        className: 'custom-poi-marker',
+                                        html: `
+                                            <div class="poi-marker-container" style="background-color: ${category.color}">
+                                                <i class="fas fa-${category.icon}"></i>
+                                                <div class="poi-order-number">${poi.order_in_route || index + 1}</div>
+                                            </div>
+                                        `,
+                                        iconSize: [35, 35],
+                                        iconAnchor: [17, 35],
+                                        popupAnchor: [0, -35]
+                                    });
+
                                     const marker = L.marker([lat, lng], {
+                                        icon: customIcon,
                                         title: poi.name || `POI ${index + 1}`
                                     });
                                     
                                     marker.bindPopup(`
-                                        <strong>${escapeHtml(poi.name || 'POI')}</strong><br/>
-                                        ${poi.category ? escapeHtml(poi.category) : ''}<br/>
-                                        <small>Sıra: ${poi.order_in_route || index + 1}</small>
+                                        <div class="poi-popup">
+                                            <div class="poi-popup-header">
+                                                <i class="fas fa-${category.icon}" style="color: ${category.color}"></i>
+                                                <strong>${escapeHtml(poi.name || 'POI')}</strong>
+                                            </div>
+                                            <div class="poi-popup-category">${category.name}</div>
+                                            ${poi.description ? `<div class="poi-popup-description">${escapeHtml(poi.description.substring(0, 100))}${poi.description.length > 100 ? '...' : ''}</div>` : ''}
+                                            <div class="poi-popup-order">Sıra: ${poi.order_in_route || index + 1}</div>
+                                        </div>
                                     `);
                                     
                                     poiMarkersLayer.addLayer(marker);
@@ -2548,11 +2687,21 @@
                     return '';
                 }
                 
+                // Get category info for icon
+                const category = POI_CATEGORIES[poi.category] || { 
+                    icon: 'map-marker-alt', 
+                    color: '#2563eb',
+                    name: poi.category || 'Kategori yok'
+                };
+
                 return `
                     <div class="poi-item-small" data-poi-id="${poiId}">
                         <div class="poi-item-info">
-                            <div class="poi-item-name">${escapeHtml(poi.name || 'İsimsiz POI')}</div>
-                            <div class="poi-item-category">${escapeHtml(poi.category || 'Kategori yok')}</div>
+                            <div class="poi-item-name">
+                                <i class="fas fa-${category.icon}" style="color: ${category.color}; margin-right: 0.5rem;"></i>
+                                ${escapeHtml(poi.name || 'İsimsiz POI')}
+                            </div>
+                            <div class="poi-item-category">${category.name}</div>
                         </div>
                         <div class="poi-item-actions">
                             <button type="button" class="btn-poi-action btn-add-poi" onclick="associatePOI(${poiId})" title="POI'yi rotaya ekle">
@@ -2592,14 +2741,22 @@
                     return '';
                 }
                 
+                // Get category info for icon
+                const category = POI_CATEGORIES[poi.category] || { 
+                    icon: 'map-marker-alt', 
+                    color: '#2563eb',
+                    name: poi.category || 'Kategori yok'
+                };
+
                 return `
                     <div class="poi-item-small" data-poi-id="${poiId}">
                         <div class="poi-item-info">
                             <div class="poi-item-name">
-                                <span class="poi-order-badge">${idx + 1}.</span>
+                                <span class="poi-order-badge">${idx + 1}</span>
+                                <i class="fas fa-${category.icon}" style="color: ${category.color}; margin-right: 0.5rem;"></i>
                                 ${escapeHtml(poi.name || 'İsimsiz POI')}
                             </div>
-                            <div class="poi-item-category">${escapeHtml(poi.category || 'Kategori yok')}</div>
+                            <div class="poi-item-category">${category.name}</div>
                         </div>
                         <div class="poi-item-actions">
                             <button type="button" class="btn-poi-action btn-remove-poi" onclick="disassociatePOI(${poiId})" title="POI'yi rotadan çıkar">

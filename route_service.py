@@ -606,6 +606,18 @@ class RouteService:
                 logger.debug(f"Insert result: {result}")
             
             logger.info(f"Successfully associated {len(poi_associations)} POIs with route {route_id}")
+            
+            # Cache'i temizle
+            try:
+                cache_key = f"get_route_by_id_{route_id}"
+                if hasattr(_route_cache, 'delete'):
+                    _route_cache.delete(cache_key)
+                elif hasattr(_route_cache, 'clear'):
+                    _route_cache.clear()  # Tüm cache'i temizle
+                logger.debug(f"Cache cleared for route {route_id}")
+            except Exception as cache_error:
+                logger.warning(f"Failed to clear cache for route {route_id}: {cache_error}")
+            
             return True
             
         except Exception as e:
