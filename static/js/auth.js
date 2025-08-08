@@ -201,6 +201,7 @@ class AuthManager {
                     redirectUrl = parsed.pathname + parsed.search + parsed.hash;
                 }
             } catch (e) {}
+
         }
 
         // Redirect after short delay
