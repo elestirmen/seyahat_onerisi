@@ -970,6 +970,10 @@
                         <i class="fas fa-download me-1"></i>
                         Dışa Aktar
                     </button>
+                    <button class="btn-workspace" onclick="clearRouteSelection()" title="Rota seçimini temizle">
+                        <i class="fas fa-times me-1"></i>
+                        Seçimi Temizle
+                    </button>
                 </div>
             </div>
             <div class="workspace-content" id="workspaceContent">
@@ -984,7 +988,7 @@
         <!-- Map View -->
         <section class="route-map-view">
             <div class="map-header">
-                <h3 class="map-title">
+                <h3 class="map-title" id="mapTitle">
                     <i class="fas fa-map me-2"></i>
                     Harita Görünümü
                 </h3>
@@ -1162,6 +1166,13 @@
                     displayRoutes();
                     await attachGeometriesToRoutes(filteredRoutes);
                     updateMapRoutes();
+                    
+                    // Auto-focus on all routes after loading
+                    setTimeout(() => {
+                        if (Object.keys(routeLayers).length > 0) {
+                            fitMapToRoutes();
+                        }
+                    }, 1000);
                 } else {
                     throw new Error(data.error || 'Rotalar yüklenemedi');
                 }
@@ -1376,6 +1387,52 @@
             selectedRoutes.clear();
             updateBulkActions();
             displayRoutes();
+        }
+
+        // Clear route selection and show all routes
+        function clearRouteSelection() {
+            currentRoute = null;
+            
+            // Update map title
+            updateMapTitle();
+            
+            // Remove UI selection
+            document.querySelectorAll('.route-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Reset all route styles to normal
+            Object.entries(routeLayers).forEach(([id, layer]) => {
+                const routeData = allRoutes.find(r => String(getRouteId(r)) === String(id));
+                if (routeData) {
+                    const color = ROUTE_TYPES[routeData.route_type]?.color || '#2563eb';
+                    layer.setStyle({
+                        color: color,
+                        weight: 3,
+                        opacity: 0.7
+                    });
+                }
+            });
+            
+            // Clear POI markers
+            if (poiMarkersLayer) {
+                poiMarkersLayer.clearLayers();
+            }
+            
+            // Show empty workspace
+            document.getElementById('workspaceContent').innerHTML = `
+                <div class="empty-workspace">
+                    <i class="fas fa-route"></i>
+                    <h4>Rota Seçin</h4>
+                    <p>Detayları görüntülemek için sol taraftan bir rota seçin</p>
+                </div>
+            `;
+            
+            // Hide workspace actions
+            document.getElementById('workspaceActions').style.display = 'none';
+            
+            // Fit map to all routes
+            fitMapToRoutes();
         }
 
         // Display route details in workspace
@@ -1944,6 +2001,24 @@
             }
         }
 
+        // Update map title based on selected route
+        function updateMapTitle(route = null) {
+            const mapTitle = document.getElementById('mapTitle');
+            if (route) {
+                mapTitle.innerHTML = `
+                    <i class="fas fa-map me-2"></i>
+                    <span style="color: ${ROUTE_TYPES[route.route_type]?.color || '#2563eb'}">
+                        ${escapeHtml(route.name)}
+                    </span>
+                `;
+            } else {
+                mapTitle.innerHTML = `
+                    <i class="fas fa-map me-2"></i>
+                    Harita Görünümü
+                `;
+            }
+        }
+
         // Highlight and focus on selected route while keeping others visible
         async function highlightAndFocusRoute(route) {
             console.log('Highlighting and focusing on route:', route.name);
@@ -1953,6 +2028,9 @@
                 console.warn('No route ID found');
                 return;
             }
+
+            // Update map title
+            updateMapTitle(route);
 
             // First ensure all filtered routes are displayed on map
             await updateMapRoutes();
@@ -1998,7 +2076,93 @@
                         console.warn('Failed to focus on route:', e);
                     }
                 } else {
-           
+                    // If route layer doesn't exist, try to create it
+                    console.log('Route layer not found, trying to create it');
+                    await showSelectedRouteOnMap(route);
+                }
+                
+                // Load and display POI markers for the selected route
+                await loadAndDisplayRoutePOIs(rid);
+                
+            }, 100);
+        }
+
+        // Load and display POI markers for a specific route
+        async function loadAndDisplayRoutePOIs(routeId) {
+            if (!poiMarkersLayer) return;
+            
+            // Clear existing POI markers
+            poiMarkersLayer.clearLayers();
+            
+            try {
+                const routeDetailResp = await fetch(`${apiBase}/admin/routes/${routeId}`, { credentials: 'include' });
+                
+                if (routeDetailResp.ok) {
+                    const routeDetail = await routeDetailResp.json();
+                    const pois = Array.isArray(routeDetail?.pois) ? routeDetail.pois : [];
+                    
+                    if (pois.length > 0) {
+                        console.log('Adding POI markers for route:', pois.length);
+                        
+                        // Sort POIs by order
+                        const sortedPois = pois.sort((a, b) => (a.order_in_route || 0) - (b.order_in_route || 0));
+                        
+                        // Add POI markers with category icons
+                        sortedPois.forEach((poi, index) => {
+                            const lat = Number(poi.lat || poi.latitude);
+                            const lng = Number(poi.lon || poi.longitude);
+                            
+                            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                                // Get category info for custom icon
+                                const category = POI_CATEGORIES[poi.category] || { 
+                                    icon: 'map-marker-alt', 
+                                    color: '#2563eb',
+                                    name: poi.category || 'Kategori yok'
+                                };
+
+                                // Create custom POI icon
+                                const customIcon = L.divIcon({
+                                    className: 'custom-poi-marker',
+                                    html: `
+                                        <div class="poi-marker-container" style="background-color: ${category.color}">
+                                            <i class="fas fa-${category.icon}"></i>
+                                            <div class="poi-order-number">${poi.order_in_route || index + 1}</div>
+                                        </div>
+                                    `,
+                                    iconSize: [35, 35],
+                                    iconAnchor: [17, 35],
+                                    popupAnchor: [0, -35]
+                                });
+
+                                const marker = L.marker([lat, lng], {
+                                    icon: customIcon,
+                                    title: poi.name || `POI ${index + 1}`
+                                });
+                                
+                                marker.bindPopup(`
+                                    <div class="poi-popup">
+                                        <div class="poi-popup-header">
+                                            <i class="fas fa-${category.icon}" style="color: ${category.color}"></i>
+                                            <strong>${escapeHtml(poi.name || 'POI')}</strong>
+                                        </div>
+                                        <div class="poi-popup-category">${category.name}</div>
+                                        ${poi.description ? `<div class="poi-popup-description">${escapeHtml(poi.description.substring(0, 100))}${poi.description.length > 100 ? '...' : ''}</div>` : ''}
+                                        <div class="poi-popup-order">Sıra: ${poi.order_in_route || index + 1}</div>
+                                    </div>
+                                `);
+                                
+                                poiMarkersLayer.addLayer(marker);
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading route POIs:', error);
+            }
+        }
+
+        // Show selected route on map with focus
+        async function showSelectedRouteOnMap(route) {
             console.log('=== showSelectedRouteOnMap called ===');
             console.log('Selected route:', route.name, 'ID:', getRouteId(route));
             
@@ -2387,8 +2551,34 @@
 
         function fitMapToRoutes() {
             if (map && Object.keys(routeLayers).length > 0) {
-                const group = new L.featureGroup(Object.values(routeLayers));
-                map.fitBounds(group.getBounds(), { padding: [20, 20] });
+                // If there's a selected route, focus on it; otherwise show all routes
+                if (currentRoute && routeLayers[getRouteId(currentRoute)]) {
+                    const selectedLayer = routeLayers[getRouteId(currentRoute)];
+                    const layers = [selectedLayer];
+                    
+                    // Include POI markers if they exist
+                    if (poiMarkersLayer && poiMarkersLayer.getLayers().length > 0) {
+                        layers.push(poiMarkersLayer);
+                    }
+                    
+                    const group = new L.featureGroup(layers);
+                    map.fitBounds(group.getBounds(), { 
+                        padding: [30, 30],
+                        maxZoom: 14,
+                        animate: true,
+                        duration: 0.8
+                    });
+                    showNotification(`${currentRoute.name} rotasına odaklanıldı`, 'info');
+                } else {
+                    // Show all routes
+                    const group = new L.featureGroup(Object.values(routeLayers));
+                    map.fitBounds(group.getBounds(), { 
+                        padding: [20, 20],
+                        animate: true,
+                        duration: 0.8
+                    });
+                    showNotification('Tüm rotalara odaklanıldı', 'info');
+                }
             } else {
                 showNotification('Görüntülenecek rota bulunamadı', 'warning');
             }
