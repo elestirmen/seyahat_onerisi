@@ -194,8 +194,14 @@ class AuthManager {
         const nextParam = params.get('next');
         let redirectUrl = data.redirect_url || '/';
 
-        if (nextParam && nextParam.startsWith('/') && !nextParam.includes('://') && !nextParam.includes('\\')) {
-            redirectUrl = nextParam;
+        if (nextParam) {
+            try {
+                const parsed = new URL(nextParam, window.location.origin);
+                if (parsed.origin === window.location.origin) {
+                    redirectUrl = parsed.pathname + parsed.search + parsed.hash;
+                }
+            } catch (e) {}
+
         }
 
         // Redirect after short delay

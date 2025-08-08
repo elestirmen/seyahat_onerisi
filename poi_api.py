@@ -286,8 +286,12 @@ def login_page():
 
                     let redirectUrl = '/';
                     try {
-                        if (nextUrl && nextUrl.startsWith('/') && !nextUrl.includes('://') && !nextUrl.includes('\\')) {
-                            redirectUrl = nextUrl;
+                        if (nextUrl) {
+                            const parsed = new URL(nextUrl, window.location.origin);
+                            if (parsed.origin === window.location.origin) {
+                                redirectUrl = parsed.pathname + parsed.search + parsed.hash;
+                            }
+
                         }
                     } catch (err) {}
 
@@ -342,7 +346,6 @@ def login():
     # Handle preflight OPTIONS request
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
         response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response
@@ -409,14 +412,9 @@ def login():
                 'session_info': auth_middleware.get_session_info()
             }
             
-            response = jsonify(response_data)
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-            return response
+            return jsonify(response_data)
         else:
-            error_response = jsonify({'error': 'Failed to create session'})
-            error_response.headers.add('Access-Control-Allow-Origin', '*')
-            return error_response, 500
+            return jsonify({'error': 'Failed to create session'}), 500
             
     except Exception as e:
         print(f"Login error: {e}")
