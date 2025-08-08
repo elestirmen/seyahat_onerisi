@@ -232,6 +232,9 @@ def login_page():
         const btnText = document.getElementById('btnText');
         const btnLoading = document.getElementById('btnLoading');
         const messageDiv = document.getElementById('message');
+
+        const params = new URLSearchParams(window.location.search);
+        const nextUrl = params.get('next');
         
         function showMessage(text, type = 'info') {
             messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
@@ -280,8 +283,16 @@ def login_page():
                 
                 if (response.ok && data.success) {
                     showMessage('✅ Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
+
+                    let redirectUrl = '/';
+                    try {
+                        if (nextUrl && nextUrl.startsWith('/') && !nextUrl.includes('://') && !nextUrl.includes('\\')) {
+                            redirectUrl = nextUrl;
+                        }
+                    } catch (err) {}
+
                     setTimeout(() => {
-                        window.location.href = '/';
+                        window.location.href = redirectUrl;
                     }, 1500);
                 } else {
                     let errorMessage = data.error || data.message || 'Giriş başarısız';
