@@ -156,7 +156,7 @@ class AuthManager {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(loginData),
-                credentials: 'same-origin'
+                credentials: 'include'
             });
             
             const data = await response.json();

@@ -210,7 +210,7 @@ def login_page():
             <p>Devam etmek için giriş yapın</p>
         </div>
         
-        <form id="loginForm">
+        <form id="loginForm" method="POST" action="/auth/login">
             <div class="form-group">
                 <label for="password">Şifre</label>
                 <input type="password" id="password" name="password" required placeholder="Şifrenizi girin">
@@ -276,7 +276,7 @@ def login_page():
                         remember_me: false,
                         csrf_token: null
                     }),
-                    credentials: 'same-origin'
+                    credentials: 'include'
                 });
                 
                 const data = await response.json();
