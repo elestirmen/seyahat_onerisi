@@ -803,18 +803,9 @@ def get_db():
 
 @app.route('/')
 def index():
-    """Ana sayfa - POI öneri sistemi."""
-    # Prefer enhanced POI management as default admin landing if available
-    try:
-        if os.path.exists('poi_manager_enhanced.html'):
-            return send_from_directory('.', 'poi_manager_enhanced.html')
-        elif os.path.exists('poi_manager_ui.html'):
-            return send_from_directory('.', 'poi_manager_ui.html')
-        else:
-            with open('poi_recommendation_system.html', 'r', encoding='utf-8') as f:
-                return f.read()
-    except FileNotFoundError:
-        return '<h1>❌ Hata</h1><p>Giriş sayfası bulunamadı!</p>', 404
+    """Genel kullanıcılar için ana sayfa → öneri sistemi sayfasına yönlendir."""
+    # Son kullanıcı için giriş istemeden öneri sistemi sayfasına yönlendir
+    return redirect('/poi_recommendation_system.html')
 
 @app.route('/admin')
 @auth_middleware.require_auth

@@ -843,8 +843,10 @@
         let currentRoute = null;
         let map = null;
         let routeLayers = {};
+        let poiMarkersLayer = null;
         let searchTimeout = null;
         let associatedPoiIdSet = new Set();
+        let associatedPoiOrderedIds = [];
         let csrfToken = null;
 
         // --- Helpers: ID and parsing ---
@@ -915,22 +917,14 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
+            // Layer for POI markers of the selected route
+            poiMarkersLayer = L.layerGroup().addTo(map);
             
             // Force map size invalidation after a short delay
             setTimeout(() => {
                 if (map) {
                     map.invalidateSize();
                     console.log('Map size invalidated');
-                    
-                    // Add a test route to verify map is working
-                    const testRoute = L.polyline([
-                        [38.7312, 34.4547],
-                        [38.7412, 34.4647],
-                        [38.7512, 34.4747]
-                    ], { color: 'magenta', weight: 8, opacity: 1.0 });
-                    testRoute.addTo(map);
-                    testRoute.bindPopup('TEST ROUTE - If you see this, map is working!');
-                    console.log('Magenta test route added to map');
                 }
             }, 100);
 
@@ -1143,9 +1137,9 @@
 
                 // Display route details in workspace
                 displayRouteDetails(currentRoute);
-                
-                // Highlight route on map
-                highlightRouteOnMap(currentRoute);
+
+                // Just highlight the selected route on map; do not alter checkbox selections or redraw all
+                try { highlightRouteOnMap(currentRoute); } catch (e) {}
             }
         }
 
@@ -1161,6 +1155,8 @@
             
             updateBulkActions();
             displayRoutes();
+            // When checkboxes change, redraw map for selected set
+            updateMapRoutes();
         }
 
         // Update bulk actions visibility and count
@@ -1452,8 +1448,12 @@
             routeLayers = {};
             console.log('Route layers cleared');
 
-            // Add filtered routes to map
-            for (const route of filteredRoutes) {
+            // Determine which routes to draw (reverted to drawing all filtered routes)
+            const drawingRoutes = filteredRoutes;
+            console.log('Drawing filteredRoutes:', drawingRoutes.map(r => getRouteId(r)));
+
+            // Add chosen routes to map
+            for (const route of drawingRoutes) {
                 console.log('Processing route:', route.name, 'ID:', getRouteId(route));
                 const color = ROUTE_TYPES[route.route_type]?.color || '#2563eb';
                 let layer = null;
@@ -1473,11 +1473,9 @@
                             // Assume array of [lng, lat] or [lat, lng]
                             const latlngs = geo.map(p => {
                                 if (Array.isArray(p)) {
-                                    // Heuristic: if numbers and within ranges
                                     const a = Number(p[0]);
                                     const b = Number(p[1]);
                                     if (!isNaN(a) && !isNaN(b)) {
-                                        // If looks like [lng, lat] (lng between -180..180, lat between -90..90), swap to [lat,lng]
                                         if (a >= -180 && a <= 180 && b >= -90 && b <= 90) {
                                             return [b, a];
                                         }
@@ -1488,31 +1486,6 @@
                             });
                             layer = L.polyline(latlngs, { color, weight: 3, opacity: 0.7 });
                         }
-                    } else if (Array.isArray(route.coordinates)) {
-                        const latlngs = route.coordinates.map(p => Array.isArray(p) ? [p[1], p[0]] : [p.lat || p.latitude, p.lng || p.longitude]);
-                        layer = L.polyline(latlngs, { color, weight: 3, opacity: 0.7 });
-                    } else if (Array.isArray(route.points)) {
-                        const latlngs = route.points.map(p => [p.latitude || p.lat, p.longitude || p.lng]);
-                        layer = L.polyline(latlngs, { color, weight: 3, opacity: 0.7 });
-                    } else if (route.geojson || route.geo_json) {
-                        let gj = route.geojson || route.geo_json;
-                        if (typeof gj === 'string') {
-                            try { gj = JSON.parse(gj); } catch (e) { gj = null; }
-                        }
-                        if (gj) {
-                            layer = L.geoJSON(gj, { style: { color, weight: 3, opacity: 0.7 } });
-                        }
-                    }
-
-                    if (layer) {
-                        layer.bindPopup(`
-                            <strong>${escapeHtml(route.name)}</strong><br>
-                            ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
-                            ${route.estimated_duration || 0} dakika
-                        `);
-                        const rid = getRouteId(route);
-                        routeLayers[rid] = layer;
-                        layer.addTo(map);
                     } else {
                         console.log('No geometry found for route:', route.name, 'trying POI fallback directly...');
                         // Try POI fallback immediately for routes without geometry
@@ -1552,7 +1525,7 @@
                                                     body: JSON.stringify({ waypoints })
                                                 });
                                                 
-                                                                                if (routeResponse.ok) {
+                                                if (routeResponse.ok) {
                                     const routeData = await routeResponse.json();
                                     console.log('Smart route response:', routeData);
                                     console.log('Route data structure:', Object.keys(routeData));
@@ -1659,90 +1632,10 @@
                                                 ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
                                                 ${route.estimated_duration || 0} dakika
                                             `);
-                                            routeLayers[rid] = layer;
+                                            const rid2 = getRouteId(route);
+                                            routeLayers[rid2] = layer;
                                             layer.addTo(map);
-                                            console.log('Added geometry layer for route:', route.name);
                                         }
-                                    }
-                                } else {
-                                    console.log('Geometry fetch failed with status:', res.status);
-                                }
-                                // Fallback: build simple polyline from associated POIs if geometry still missing
-                                if (!layer) {
-                                    console.log('Trying POI fallback for route:', route.name);
-                                    const rd = await fetch(`${apiBase}/admin/routes/${rid}`, { credentials: 'include' });
-                                    if (rd.ok) {
-                                        const rj = await rd.json();
-                                        console.log('Route detail response:', rj);
-                                        const pois = Array.isArray(rj?.pois) ? rj.pois : [];
-                                        console.log('Found POIs for route:', pois.length);
-                                        const latlngs = pois
-                                            .map(p => [Number(p.lat || p.latitude), Number(p.lon || p.longitude)])
-                                            .filter(arr => Number.isFinite(arr[0]) && Number.isFinite(arr[1]))
-                                            .map(([lat, lon]) => [lat, lon]);
-                                        console.log('Valid coordinates:', latlngs);
-                                        if (latlngs.length >= 2) {
-                                            // Use smart routing API
-                                            try {
-                                                const waypoints = pois
-                                                    .sort((a, b) => (a.order_in_route || 0) - (b.order_in_route || 0))
-                                                    .map(p => ({
-                                                        lat: Number(p.lat || p.latitude),
-                                                        lng: Number(p.lon || p.longitude),
-                                                        name: p.name
-                                                    }))
-                                                    .filter(wp => Number.isFinite(wp.lat) && Number.isFinite(wp.lng));
-                                                    
-                                                const routeResponse = await fetch('/api/route/smart', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    credentials: 'include',
-                                                    body: JSON.stringify({ waypoints })
-                                                });
-                                                
-                                                                                if (routeResponse.ok) {
-                                    const routeData = await routeResponse.json();
-                                    console.log('Smart route response (2nd location):', routeData);
-                                    const segments = routeData.segments || (routeData.route && routeData.route.segments) || (routeData.route && routeData.route.geometry);
-                                    if (segments && Array.isArray(segments)) {
-                                        const allCoords = [];
-                                        segments.forEach(segment => {
-                                                            if (Array.isArray(segment)) {
-                                                                allCoords.push(...segment);
-                                                            }
-                                                        });
-                                                        
-                                                        if (allCoords.length >= 2) {
-                                                            layer = L.polyline(allCoords, { color, weight: 4, opacity: 0.8 });
-                                                            layer.bindPopup(`
-                                                                <strong>${escapeHtml(route.name)}</strong><br>
-                                                                ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
-                                                                ${Math.round(routeData.total_distance || 0)} km<br>
-                                                                ${Math.round(routeData.estimated_time || 0)} dakika<br>
-                                                                <small>Yol ağından hesaplandı</small>
-                                                            `);
-                                                            const rid2 = getRouteId(route);
-                                                            routeLayers[rid2] = layer;
-                                                            layer.addTo(map);
-                                                            console.log('Smart route added for:', route.name);
-                                                        }
-                                                    }
-                                                } else {
-                                                    throw new Error('Smart route failed');
-                                                }
-                                            } catch (smartError) {
-                                                console.warn('Smart routing failed, using simple polyline:', smartError);
-                                                layer = L.polyline(latlngs, { color, weight: 3, opacity: 0.8 });
-                                                const rid2 = getRouteId(route);
-                                                routeLayers[rid2] = layer;
-                                                layer.addTo(map);
-                                                console.log('Fallback polyline for route:', route.name);
-                                            }
-                                        } else {
-                                            console.log('Not enough valid coordinates for polyline');
-                                        }
-                                    } else {
-                                        console.log('Route detail fetch failed with status:', rd.status);
                                     }
                                 }
                             }
@@ -1753,7 +1646,6 @@
                 } catch (error) {
                     console.warn('Route geometry parse error:', error);
                     console.log('ERROR CAUGHT! Now trying POI fallback for route:', route.name);
-                    // If geometry parsing failed, try POI fallback immediately
                     const rid = getRouteId(route);
                     console.log('Route ID for POI fallback:', rid);
                     if (rid) {
@@ -1772,16 +1664,65 @@
                                         .filter(arr => Number.isFinite(arr[0]) && Number.isFinite(arr[1]));
                                     console.log('Valid coordinates:', latlngs);
                                     if (latlngs.length >= 2) {
-                                        layer = L.polyline(latlngs, { color, weight: 4, opacity: 0.8 });
-                                        layer.bindPopup(`
-                                            <strong>${escapeHtml(route.name)}</strong><br>
-                                            ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
-                                            ${route.estimated_duration || 0} dakika<br>
-                                            <small>POI'lerden oluşturuldu</small>
-                                        `);
-                                        routeLayers[rid] = layer;
-                                        layer.addTo(map);
-                                        console.log('Added POI polyline for route:', route.name);
+                                        // Smart routing for error fallback
+                                        try {
+                                            const waypoints = pois
+                                                .sort((a, b) => (a.order_in_route || 0) - (b.order_in_route || 0))
+                                                .map(p => ({
+                                                    lat: Number(p.lat || p.latitude),
+                                                    lng: Number(p.lon || p.longitude),
+                                                    name: p.name
+                                                }))
+                                                .filter(wp => Number.isFinite(wp.lat) && Number.isFinite(wp.lng));
+                                                
+                                            const routeResponse = await fetch('/api/route/smart', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                credentials: 'include',
+                                                body: JSON.stringify({ waypoints })
+                                            });
+                                            
+                                            if (routeResponse.ok) {
+                                                const routeData = await routeResponse.json();
+                                                if (routeData.route && Array.isArray(routeData.route.segments)) {
+                                                    const coords = [];
+                                                    routeData.route.segments.forEach(seg => {
+                                                        if (Array.isArray(seg?.coordinates)) {
+                                                            seg.coordinates.forEach(pt => {
+                                                                const lat = Number(pt.lat);
+                                                                const lng = Number(pt.lng);
+                                                                if (Number.isFinite(lat) && Number.isFinite(lng)) coords.push([lat, lng]);
+                                                            });
+                                                        }
+                                                    });
+                                                    if (coords.length >= 2) {
+                                                        layer = L.polyline(coords, { color, weight: 4, opacity: 0.8 });
+                                                        layer.bindPopup(`
+                                                            <strong>${escapeHtml(route.name)}</strong><br>
+                                                            ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
+                                                            <small>Yol ağından hesaplandı</small>
+                                                        `);
+                                                        routeLayers[rid] = layer;
+                                                        layer.addTo(map);
+                                                        console.log('Smart route added from error fallback:', route.name);
+                                                    }
+                                                }
+                                            } else {
+                                                throw new Error('Smart route failed');
+                                            }
+                                        } catch (smartError) {
+                                            console.warn('Smart routing failed in error fallback, using simple polyline:', smartError);
+                                            layer = L.polyline(latlngs, { color, weight: 4, opacity: 0.8 });
+                                            layer.bindPopup(`
+                                                <strong>${escapeHtml(route.name)}</strong><br>
+                                                ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
+                                                ${route.estimated_duration || 0} dakika<br>
+                                                <small>Düz çizgi (yol ağı bulunamadı)</small>
+                                            `);
+                                            routeLayers[rid] = layer;
+                                            layer.addTo(map);
+                                            console.log('Final fallback polyline for route:', route.name);
+                                        }
                                     }
                                 }
                             }
@@ -1792,7 +1733,7 @@
                 }
             }
 
-            // Fit map to show all routes
+            // Fit map to show all drawn routes
             console.log('Total route layers added:', Object.keys(routeLayers).length);
             if (Object.keys(routeLayers).length > 0) {
                 const group = new L.featureGroup(Object.values(routeLayers));
@@ -1800,7 +1741,6 @@
                 console.log('Map fitted to route bounds');
             } else {
                 console.log('No route layers to display, invalidating map size');
-                // Invalidate size in case of layout shifts
                 setTimeout(() => { try { map.invalidateSize(); } catch(e) {} }, 100);
             }
         }
@@ -1827,8 +1767,60 @@
                 filteredRoutes = prevFiltered;
             }
             if (routeLayers[rid]) {
-                routeLayers[rid].setStyle({ color: '#dc2626', weight: 5, opacity: 1 });
-                map.fitBounds(routeLayers[rid].getBounds(), { padding: [50, 50] });
+                // Hide other routes from map for focused view
+                Object.entries(routeLayers).forEach(([otherId, layer]) => {
+                    if (String(otherId) !== String(rid)) {
+                        try { map.removeLayer(layer); } catch (e) {}
+                    }
+                });
+
+                // Emphasize selected route
+                try { routeLayers[rid].setStyle({ color: '#dc2626', weight: 5, opacity: 1 }); } catch (e) {}
+                // Ensure layer is on map
+                if (!map.hasLayer(routeLayers[rid])) {
+                    try { routeLayers[rid].addTo(map); } catch (e) {}
+                }
+
+                // Render associated POIs as markers
+                renderRoutePoisOnMap(rid).then(() => {
+                    try {
+                        const group = new L.featureGroup([routeLayers[rid], poiMarkersLayer]);
+                        map.fitBounds(group.getBounds(), { padding: [50, 50] });
+                    } catch (e) {
+                        map.fitBounds(routeLayers[rid].getBounds(), { padding: [50, 50] });
+                    }
+                });
+            }
+        }
+
+        // Render POI markers for a route on the map
+        async function renderRoutePoisOnMap(routeId) {
+            if (!poiMarkersLayer) return;
+            try { poiMarkersLayer.clearLayers(); } catch (e) {}
+
+            try {
+                const resp = await fetch(`${apiBase}/admin/routes/${routeId}/pois`, { credentials: 'include' });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const pois = Array.isArray(data?.pois) ? data.pois : (Array.isArray(data) ? data : []);
+                // Sort by order_in_route if available
+                pois.sort((a, b) => (a.order_in_route || 0) - (b.order_in_route || 0));
+                pois.forEach((p, idx) => {
+                    const lat = Number(p.lat || p.latitude);
+                    const lng = Number(p.lon || p.longitude);
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+                    const marker = L.marker([lat, lng], {
+                        title: p.name || `POI ${idx + 1}`
+                    });
+                    marker.bindPopup(`
+                        <strong>${escapeHtml(p.name || 'POI')}</strong><br/>
+                        ${p.category ? escapeHtml(p.category) : ''}<br/>
+                        <small>Sıra: ${p.order_in_route || idx + 1}</small>
+                    `);
+                    poiMarkersLayer.addLayer(marker);
+                });
+            } catch (e) {
+                console.warn('renderRoutePoisOnMap failed:', e);
             }
         }
 
@@ -2289,28 +2281,26 @@
                     }
                 }
                 
-                // Load route-POI associations
-                const associationsResponse = await fetch(`${apiBase}/admin/routes/${routeId}/pois`, { credentials: 'include' });
+                // Load route detail with associated POIs (more reliable)
+                const routeDetailResp = await fetch(`${apiBase}/admin/routes/${routeId}`, { credentials: 'include' });
                 let associationsData = { pois: [] };
-                if (associationsResponse.ok) {
-                    const rawAssoc = await associationsResponse.json();
-                    if (Array.isArray(rawAssoc)) {
-                        associationsData = { pois: rawAssoc };
-                    } else if (Array.isArray(rawAssoc.pois)) {
-                        associationsData = { pois: rawAssoc.pois };
-                    } else if (Array.isArray(rawAssoc.results)) {
-                        associationsData = { pois: rawAssoc.results };
-                    } else {
-                        let arr = [];
-                        Object.values(rawAssoc || {}).forEach(v => { if (Array.isArray(v)) arr = arr.concat(v); });
-                        associationsData = { pois: arr };
+                if (routeDetailResp.ok) {
+                    const routeDetail = await routeDetailResp.json();
+                    if (Array.isArray(routeDetail?.pois)) {
+                        associationsData = { pois: routeDetail.pois };
                     }
                 }
                 
-                if (poisResponse.ok && associationsResponse.ok) {
-            const allPOIs = poisData.pois || [];
-            const associatedPOIIds = new Set((associationsData.pois || []).map(p => getPoiId(p)));
-                    associatedPoiIdSet = new Set(Array.from(associatedPOIIds));
+                if (poisResponse.ok && routeDetailResp.ok) {
+                    const allPOIs = poisData.pois || [];
+                    // Normalize associated POIs → ordered id list and membership set
+                    const assocList = (associationsData.pois || []).slice();
+                    assocList.sort((a, b) => (a.order_in_route || 0) - (b.order_in_route || 0));
+                    associatedPoiOrderedIds = assocList
+                        .map(p => getPoiId(p) || (p.poi ? getPoiId(p.poi) : null))
+                        .filter(id => id != null);
+                    associatedPoiIdSet = new Set(associatedPoiOrderedIds);
+                    const associatedPOIIds = new Set(associatedPoiOrderedIds);
                     
                     displayAvailablePOIs(allPOIs.filter(poi => !associatedPOIIds.has(getPoiId(poi))));
                     displayAssociatedPOIs(allPOIs.filter(poi => associatedPOIIds.has(getPoiId(poi))));
@@ -2399,11 +2389,12 @@
                 // Add to current set and send full set to backend to avoid clearing issue
                 const idInt = parseInt(poiId);
                 if (!Number.isFinite(idInt)) return;
-                // Preserve order: append to end if not exists
+                // Preserve order reliably using associatedPoiOrderedIds (list)
                 if (!associatedPoiIdSet.has(idInt)) {
+                    associatedPoiOrderedIds.push(idInt);
                     associatedPoiIdSet.add(idInt);
                 }
-                const payloadPois = Array.from(associatedPoiIdSet).map((id, idx) => ({ poi_id: id, order_in_route: idx + 1 }));
+                const payloadPois = associatedPoiOrderedIds.map((id, idx) => ({ poi_id: id, order_in_route: idx + 1 }));
                 const response = await fetch(`${apiBase}/admin/routes/${currentRoute.id}/pois`, {
                     method: 'POST',
                     headers,
@@ -2434,8 +2425,10 @@
                 if (csrfToken) headers['X-CSRFToken'] = csrfToken;
                 const idInt = parseInt(poiId);
                 if (!Number.isFinite(idInt)) return;
+                // Remove from both ordered list and set
+                associatedPoiOrderedIds = associatedPoiOrderedIds.filter(id => id !== idInt);
                 associatedPoiIdSet.delete(idInt);
-                const payloadPois = Array.from(associatedPoiIdSet).map((id, idx) => ({ poi_id: id, order_in_route: idx + 1 }));
+                const payloadPois = associatedPoiOrderedIds.map((id, idx) => ({ poi_id: id, order_in_route: idx + 1 }));
                 const response = await fetch(`${apiBase}/admin/routes/${currentRoute.id}/pois`, {
                     method: 'POST',
                     headers,
@@ -2593,13 +2586,14 @@
         // Reorder associated POI
         async function reorderAssociatedPOI(poiId, delta) {
             if (!currentRoute) return;
-            const ids = Array.from(associatedPoiIdSet);
+            const ids = associatedPoiOrderedIds.slice();
             const idx = ids.indexOf(poiId);
             if (idx < 0) return;
             const swapIdx = idx + delta;
             if (swapIdx < 0 || swapIdx >= ids.length) return;
             // swap
             [ids[idx], ids[swapIdx]] = [ids[swapIdx], ids[idx]];
+            associatedPoiOrderedIds = ids;
             associatedPoiIdSet = new Set(ids);
             // Persist new order
             const headers = { 'Content-Type': 'application/json' };
