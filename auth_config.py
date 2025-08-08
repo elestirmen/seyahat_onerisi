@@ -66,7 +66,8 @@ class AuthConfig:
             self.PASSWORD_HASH = self._get_password_hash()
             
             # Session security settings
-            self.SESSION_COOKIE_SECURE = self._get_bool_config('POI_SESSION_SECURE', True)
+            debug_mode = os.getenv('DEBUG', 'False').lower() in ['true', '1', 'yes', 'on']
+            self.SESSION_COOKIE_SECURE = self._get_bool_config('POI_SESSION_SECURE', not debug_mode)
             self.SESSION_COOKIE_HTTPONLY = True
             self.SESSION_COOKIE_SAMESITE = 'Strict'
             

@@ -34,9 +34,9 @@ Bu belge, POI yönetim sisteminin kimlik doğrulama özelliklerini yapılandırm
 
 #### `POI_SESSION_SECURE` (İsteğe Bağlı)
 - **Açıklama**: Güvenli çerezler kullanılsın mı (HTTPS gerektirir)
-- **Varsayılan**: `True`
+- **Varsayılan**: `True` (Üretim) / `False` (`DEBUG=True` iken)
 - **Değerler**: `True` veya `False`
-- **Not**: Üretim ortamında `True` olmalı
+- **Not**: Geliştirme ortamında `DEBUG=True` veya `POI_SESSION_SECURE=False` ayarlanmalıdır. Üretimde `True` olmalı.
 
 ### Güvenlik Ayarları
 
@@ -116,7 +116,8 @@ python setup_authentication.py --validate
 - Üretim ortamında çevre değişkenleri sistem seviyesinde tanımlanmalı
 
 ### Oturum Güvenliği
-- HTTPS kullanılmalı (`POI_SESSION_SECURE=True`)
+- HTTPS kullanılmalı (`POI_SESSION_SECURE=True` üretimde)
+- Geliştirmede HTTP kullanıyorsanız `POI_SESSION_SECURE=False` veya `DEBUG=True` ayarlayın
 - Oturum süreleri ihtiyaca göre ayarlanmalı
 - Paylaşılan bilgisayarlarda "Beni Hatırla" seçeneği kullanılmamalı
 
