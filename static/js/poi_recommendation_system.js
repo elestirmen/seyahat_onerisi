@@ -1,3 +1,28 @@
+// Rate limiting bilgilendirme mesajı
+if (window.rateLimiter) {
+    console.log('✅ Rate limiting aktif - POI recommendation system API çağrıları sınırlandırılacak');
+}
+
+// Debug: Test geometry API endpoint
+window.testGeometryAPI = async function(routeId) {
+    console.log('🧪 Testing geometry API for route:', routeId);
+    try {
+        const response = await fetch(`${apiBase}/routes/${routeId}/geometry`);
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response headers:', [...response.headers.entries()]);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('📡 Response data:', JSON.stringify(data, null, 2));
+        } else {
+            const text = await response.text();
+            console.log('📡 Error response:', text);
+        }
+    } catch (error) {
+        console.error('📡 API test error:', error);
+    }
+};
+
 // Global variables
 let map = null;
 let markers = [];
@@ -3694,7 +3719,6 @@ function displayRouteDetails(routeData, container) {
                 </div>
             </div>
             
-            ${poiCount > 0 ? `
             <div class="route-preview-section">
                 <h4><i class="fas fa-map"></i> Rota Ön İzlemesi</h4>
                 <div class="route-preview-map-container" onclick="expandRoutePreview('${route.id}', '${route.name}')" style="cursor: pointer;" title="Büyük haritada görüntülemek için tıklayın">
@@ -3711,7 +3735,6 @@ function displayRouteDetails(routeData, container) {
                     </div>
                 </div>
             </div>
-            ` : ''}
             
             <div class="route-detail-description">
                 <h4><i class="fas fa-info-circle"></i> Açıklama</h4>
@@ -3725,23 +3748,38 @@ function displayRouteDetails(routeData, container) {
         </div>
     `;
     
-    // Initialize preview map if POIs exist
-    if (poiCount > 0) {
-        // Show loading state initially
-        const previewMapContainer = document.getElementById(previewMapId);
-        if (previewMapContainer) {
-            previewMapContainer.innerHTML = `
-                <div class="route-preview-loading">
-                    <i class="fas fa-spinner"></i>
-                    Harita yükleniyor...
-                </div>
-            `;
-        }
-        
-        setTimeout(() => {
-            initializeRoutePreviewMap(previewMapId, route.id, pois);
-        }, 200);
+    // Initialize preview map - POI'ler olsun olmasın her zaman oluştur
+    const previewMapContainer = document.getElementById(previewMapId);
+    if (previewMapContainer) {
+        previewMapContainer.innerHTML = `
+            <div class="route-preview-loading">
+                <i class="fas fa-spinner"></i>
+                Harita yükleniyor...
+            </div>
+        `;
     }
+    
+    // DOM'un hazır olduğundan emin olmak için daha uzun bekleme
+    setTimeout(() => {
+        // Container'ın varlığını kontrol et
+        const mapContainer = document.getElementById(previewMapId);
+        if (mapContainer) {
+            console.log('✅ Preview map container found, initializing map');
+            initializeRoutePreviewMap(previewMapId, route.id, pois);
+        } else {
+            console.error('❌ Preview map container still not found after timeout:', previewMapId);
+            // Biraz daha bekle ve tekrar dene
+            setTimeout(() => {
+                const retryContainer = document.getElementById(previewMapId);
+                if (retryContainer) {
+                    console.log('✅ Preview map container found on retry, initializing map');
+                    initializeRoutePreviewMap(previewMapId, route.id, pois);
+                } else {
+                    console.error('❌ Preview map container not found even after retry:', previewMapId);
+                }
+            }, 300);
+        }
+    }, 300);
 }
 
 function createPOIList(pois) {
@@ -3830,26 +3868,35 @@ async function selectPredefinedRoute(route) {
             const routePOIs = routeData.route?.pois || [];
             console.log('📍 Route POIs:', routePOIs);
             
-            if (routePOIs.length > 0) {
-                // Display route info and POIs
-                displaySelectedRoute(route, routePOIs);
+            // Her durumda geometri yüklemeyi dene
+            setTimeout(async () => {
+                console.log('🗺️ Attempting to load route geometry...');
+                const geometryLoaded = await loadAndDisplayRouteGeometry(route.id);
                 
-                // Show POIs on map with a small delay to ensure everything is ready
-                setTimeout(async () => {
+                if (routePOIs.length > 0) {
+                    // Display route info and POIs
+                    displaySelectedRoute(route, routePOIs);
+                    
+                    // Show POIs on map
                     await displayRoutePOIsOnMap(routePOIs);
                     
-                    // Try to load and display saved route geometry
-                    await loadAndDisplayRouteGeometry(route.id);
+                    // Fit map to show all POIs if geometry wasn't loaded
+                    if (!geometryLoaded) {
+                        setTimeout(() => {
+                            fitMapToRoutePOIs(routePOIs);
+                        }, 300);
+                    }
+                } else {
+                    // No POIs found, show message but still try to show route geometry
+                    displayRouteWithoutPOIs(route);
                     
-                    // Fit map to show all POIs
-                    setTimeout(() => {
-                        fitMapToRoutePOIs(routePOIs);
-                    }, 300);
-                }, 200);
-            } else {
-                // No POIs found, show message
-                displayRouteWithoutPOIs(route);
-            }
+                    // If no geometry was loaded and no POIs, show a message
+                    if (!geometryLoaded) {
+                        console.log('⚠️ No POIs and no geometry found for route');
+                        showNotification('Bu rotada POI ve geometri bilgisi bulunamadı', 'warning');
+                    }
+                }
+            }, 200);
         } else {
             console.error('❌ Failed to load route data:', response.status);
             showNotification('Rota detayları yüklenirken hata oluştu', 'error');
@@ -4380,64 +4427,100 @@ async function initializeRoutePreviewMap(mapId, routeId, pois) {
         });
         
         if (validPOIs.length === 0) {
-            console.warn('No valid POIs for preview map');
-            return;
+            console.log('ℹ️ No valid POIs for preview map, will try to load route geometry');
         }
         
         const routeCoordinates = [];
         
-        validPOIs.forEach((poi, index) => {
-            const lat = parseFloat(poi.lat);
-            const lon = parseFloat(poi.lon);
-            const coordinates = [lat, lon];
-            routeCoordinates.push(coordinates);
-            
-            // Create small marker for preview
-            const markerIcon = L.divIcon({
-                className: 'route-preview-marker',
-                html: `
-                    <div style="
-                        background: ${poi.is_mandatory ? '#dc3545' : '#28a745'};
-                        color: white;
-                        border-radius: 50%;
-                        width: 16px;
-                        height: 16px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-weight: bold;
-                        font-size: 10px;
-                        border: 2px solid white;
-                        box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-                    ">
-                        ${poi.order_in_route || index + 1}
-                    </div>
-                `,
-                iconSize: [16, 16],
-                iconAnchor: [8, 8]
+        // POI marker'larını sadece POI'ler varsa ekle
+        if (validPOIs.length > 0) {
+            validPOIs.forEach((poi, index) => {
+                const lat = parseFloat(poi.lat);
+                const lon = parseFloat(poi.lon);
+                const coordinates = [lat, lon];
+                routeCoordinates.push(coordinates);
+                
+                // Create small marker for preview
+                const markerIcon = L.divIcon({
+                    className: 'route-preview-marker',
+                    html: `
+                        <div style="
+                            background: ${poi.is_mandatory ? '#dc3545' : '#28a745'};
+                            color: white;
+                            border-radius: 50%;
+                            width: 16px;
+                            height: 16px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-weight: bold;
+                            font-size: 10px;
+                            border: 2px solid white;
+                            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                        ">
+                            ${poi.order_in_route || index + 1}
+                        </div>
+                    `,
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+                
+                L.marker(coordinates, { icon: markerIcon }).addTo(previewMap);
             });
-            
-            L.marker(coordinates, { icon: markerIcon }).addTo(previewMap);
-        });
+        }
         
-        // Try to load actual route geometry
+        // Try to load actual route geometry - Hibrit yaklaşım
         let geometryLatLngs = null;
         if (routeId) {
             try {
-                const response = await fetch(`${apiBase}/routes/${routeId}/geometry`);
+                console.log('🗺️ Loading preview route geometry for route:', routeId);
+                const response = await (window.rateLimitedFetch || fetch)(`${apiBase}/routes/${routeId}/geometry`);
                 if (response.ok) {
                     const geometryData = await response.json();
-                    if (geometryData.success && geometryData.geometry &&
-                        geometryData.geometry.type === 'LineString' &&
-                        geometryData.geometry.coordinates) {
-                        geometryLatLngs = geometryData.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                    console.log('📍 Preview geometry data:', geometryData);
+                    
+                    let geometry = geometryData.geometry || geometryData;
+                    
+                    // String ise parse et
+                    if (typeof geometry === 'string') {
+                        try {
+                            geometry = JSON.parse(geometry);
+                        } catch (e) {
+                            console.warn('Preview geometry parse error:', e);
+                        }
+                    }
+                    
+                    // Hibrit geometri işleme
+                    if (geometry && geometry.type === 'LineString' && geometry.coordinates) {
+                        // Statik LineString
+                        geometryLatLngs = geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                        console.log('✅ Preview using static LineString geometry');
+                    } else if (geometry && geometry.geometry && geometry.geometry.type === 'LineString') {
+                        // Nested geometry
+                        geometryLatLngs = geometry.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                        console.log('✅ Preview using nested geometry');
+                    } else if (geometryData.success && geometryData.geometry) {
+                        // Standard API response
+                        const geo = geometryData.geometry;
+                        if (geo.type === 'LineString' && geo.coordinates) {
+                            geometryLatLngs = geo.coordinates.map(coord => [coord[1], coord[0]]);
+                            console.log('✅ Preview using standard API geometry');
+                        }
+                    }
+                    
+                    if (geometryLatLngs && geometryLatLngs.length > 0) {
                         L.polyline(geometryLatLngs, {
                             color: '#4ecdc4',
-                            weight: 4,
+                            weight: 3,
                             opacity: 0.8,
                             className: 'saved-route'
                         }).addTo(previewMap);
+                        console.log('✅ Preview route geometry added to map');
+                    } else {
+                        console.log('⚠️ No valid geometry found for preview');
                     }
+                } else {
+                    console.log('ℹ️ No geometry response for preview:', response.status);
                 }
             } catch (error) {
                 console.error('❌ Error loading preview route geometry:', error);
@@ -4499,12 +4582,19 @@ async function initializeRoutePreviewMap(mapId, routeId, pois) {
         if (geometryLatLngs && geometryLatLngs.length > 0) {
             const bounds = L.latLngBounds(geometryLatLngs);
             previewMap.fitBounds(bounds, { padding: [10, 10] });
+            console.log('✅ Preview map fitted to geometry bounds');
         } else if (validPOIs.length === 1) {
             const poi = validPOIs[0];
             previewMap.setView([parseFloat(poi.lat), parseFloat(poi.lon)], 14);
-        } else {
+            console.log('✅ Preview map centered on single POI');
+        } else if (routeCoordinates.length > 0) {
             const bounds = L.latLngBounds(routeCoordinates);
             previewMap.fitBounds(bounds, { padding: [10, 10] });
+            console.log('✅ Preview map fitted to POI bounds');
+        } else {
+            // POI'ler de geometri de yoksa varsayılan konum (Ürgüp)
+            previewMap.setView([38.6322, 34.9115], 12);
+            console.log('ℹ️ Preview map set to default location (no POIs or geometry)');
         }
         
         // Force map to resize
@@ -4542,35 +4632,84 @@ async function loadAndDisplayRouteGeometry(routeId) {
     try {
         console.log('🗺️ Loading saved route geometry for route:', routeId);
         
-        const response = await fetch(`${apiBase}/routes/${routeId}/geometry`);
+        const response = await (window.rateLimitedFetch || fetch)(`${apiBase}/routes/${routeId}/geometry`);
         
         if (response.ok) {
             const geometryData = await response.json();
-            console.log('✅ Route geometry loaded:', geometryData);
+            console.log('✅ Route geometry API response (RAW):', JSON.stringify(geometryData, null, 2));
+            console.log('✅ Response keys:', Object.keys(geometryData));
+            console.log('✅ Success field:', geometryData.success);
+            console.log('✅ Geometry field:', geometryData.geometry);
 
+            // Hibrit yaklaşım - farklı response formatlarını destekle
+            let processed = false;
+            
             if (geometryData.success && geometryData.geometry) {
-                displaySavedRouteGeometry(geometryData.geometry);
-                return true;
+                console.log('📍 Using standard API response format');
+                displaySavedRouteGeometry(geometryData);
+                processed = true;
+            } else if (geometryData.geometry) {
+                console.log('📍 Using direct geometry response');
+                displaySavedRouteGeometry(geometryData);
+                processed = true;
+            } else if (geometryData.type === 'LineString') {
+                console.log('📍 Using direct GeoJSON response');
+                displaySavedRouteGeometry({ geometry: geometryData });
+                processed = true;
             } else {
-                showNotification('⚠️ Rota geometrisi bulunamadı. Ön izleme için yalnızca düz çizgiler gösteriliyor.', 'warning');
+                console.log('ℹ️ Geometri formatı tanınmadı, tüm alanları kontrol ediliyor...');
+                
+                // Tüm olası alanları kontrol et
+                for (const [key, value] of Object.entries(geometryData)) {
+                    console.log(`🔍 Checking field "${key}":`, value);
+                    
+                    if (value && typeof value === 'object') {
+                        if (value.type === 'LineString' && value.coordinates) {
+                            console.log(`📍 Found LineString in field "${key}"`);
+                            displaySavedRouteGeometry({ geometry: value });
+                            processed = true;
+                            break;
+                        } else if (value.geometry && value.geometry.type === 'LineString') {
+                            console.log(`📍 Found nested geometry in field "${key}"`);
+                            displaySavedRouteGeometry(value);
+                            processed = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!processed) {
+                    console.log('❌ Hiçbir geometri formatı bulunamadı');
+                    showNotification('⚠️ Rota geometrisi bulunamadı. POI\'ler arası düz çizgiler gösteriliyor.', 'warning');
+                }
             }
+            
+            return processed;
         } else {
-            console.log('ℹ️ No saved geometry found for route:', routeId);
-            showNotification('⚠️ Rota geometrisi bulunamadı. Ön izleme için yalnızca düz çizgiler gösteriliyor.', 'warning');
+            console.log('ℹ️ No saved geometry found for route:', routeId, 'Status:', response.status);
+            const errorText = await response.text();
+            console.log('❌ Error response:', errorText);
+            showNotification('⚠️ Rota geometrisi bulunamadı. POI\'ler arası düz çizgiler gösteriliyor.', 'warning');
         }
     } catch (error) {
         console.error('❌ Error loading route geometry:', error);
-        showNotification('⚠️ Rota geometrisi bulunamadı. Ön izleme için yalnızca düz çizgiler gösteriliyor.', 'warning');
+        showNotification('⚠️ Rota geometrisi yüklenirken hata oluştu. POI\'ler arası düz çizgiler gösteriliyor.', 'warning');
     }
     
     return false;
 }
 
-// Display saved route geometry on map
+// Display saved route geometry on map - Hibrit yaklaşım
 function displaySavedRouteGeometry(geometryData) {
-    if (!map || !geometryData.geometry) return;
+    if (!map) {
+        console.error('❌ Map not initialized!');
+        return;
+    }
     
-    console.log('🎨 Displaying saved route geometry');
+    console.log('🎨 Displaying saved route geometry - Hibrit yaklaşım');
+    console.log('📍 Ham geometri verisi (FULL):', JSON.stringify(geometryData, null, 2));
+    console.log('📍 geometryData keys:', Object.keys(geometryData));
+    console.log('📍 geometryData.geometry:', geometryData.geometry);
     
     // Remove existing route layers
     map.eachLayer(function(layer) {
@@ -4586,40 +4725,130 @@ function displaySavedRouteGeometry(geometryData) {
     }
     
     try {
-        const geometry = geometryData.geometry;
+        let geometry = geometryData.geometry || geometryData;
+        console.log('🔍 Extracted geometry:', geometry);
+        console.log('🔍 Geometry type:', typeof geometry);
         
-        if (geometry.type === 'LineString' && geometry.coordinates) {
-            // Convert GeoJSON coordinates to Leaflet format
-            const latlngs = geometry.coordinates.map(coord => [coord[1], coord[0]]); // [lng, lat] to [lat, lng]
+        // String ise parse et
+        if (typeof geometry === 'string') {
+            console.log('🔍 Parsing string geometry:', geometry);
+            try {
+                geometry = JSON.parse(geometry);
+                console.log('✅ Parsed geometry:', geometry);
+            } catch (e) {
+                console.warn('❌ Geometry JSON parse hatası:', e);
+                return;
+            }
+        }
+        
+        let latlngs = null;
+        let routeType = 'unknown';
+        
+        console.log('🔍 Final geometry for processing:', geometry);
+        console.log('🔍 Geometry keys:', geometry ? Object.keys(geometry) : 'null');
+        console.log('🔍 Geometry.type:', geometry?.type);
+        console.log('🔍 Geometry.coordinates:', geometry?.coordinates);
+        
+        // YAKLAŞIM 1: Statik LineString geometrisi (klasik)
+        if (geometry && geometry.type === 'LineString' && geometry.coordinates && geometry.coordinates.length > 0) {
+            console.log('✅ Statik LineString geometrisi kullanılıyor');
+            console.log('📍 Coordinates count:', geometry.coordinates.length);
+            console.log('📍 First coordinate:', geometry.coordinates[0]);
+            latlngs = geometry.coordinates.map(coord => [coord[1], coord[0]]);
+            routeType = 'static';
+            console.log('📍 Converted latlngs:', latlngs.slice(0, 3), '...');
+        }
+        // YAKLAŞIM 2: API response formatı (nested geometry)
+        else if (geometry && geometry.geometry && geometry.geometry.type === 'LineString') {
+            console.log('✅ Nested LineString geometrisi kullanılıyor');
+            const coords = geometry.geometry.coordinates;
+            if (coords && coords.length > 0) {
+                console.log('📍 Nested coordinates count:', coords.length);
+                latlngs = coords.map(coord => [coord[1], coord[0]]);
+                routeType = 'nested';
+            }
+        }
+        // YAKLAŞIM 3: POI-based dinamik rota (waypoints)
+        else if (geometry && geometry.waypoints && Array.isArray(geometry.waypoints) && geometry.waypoints.length > 0) {
+            console.log('✅ POI-based waypoints kullanılıyor');
+            latlngs = geometry.waypoints.map(wp => [wp.lat || wp.latitude, wp.lng || wp.longitude]);
+            routeType = 'waypoints';
+        }
+        // YAKLAŞIM 4: Koordinat dizisi (basit format)
+        else if (Array.isArray(geometry) && geometry.length > 0 && geometry[0] && geometry[0].length === 2) {
+            console.log('📍 Basit koordinat dizisi kullanılıyor');
+            latlngs = geometry;
+            routeType = 'simple';
+        }
+        
+        // Rota çizgisini oluştur
+        if (latlngs && latlngs.length > 1) {
+            console.log('✅ Creating route line with', latlngs.length, 'points');
+            console.log('📍 Route type:', routeType);
+            console.log('📍 Sample coordinates:', latlngs.slice(0, 3));
+            
+            // Rota tipine göre stil belirle
+            const routeStyles = {
+                'static': { color: '#4ecdc4', weight: 4, opacity: 0.8, dashArray: null },
+                'nested': { color: '#4ecdc4', weight: 4, opacity: 0.8, dashArray: null },
+                'waypoints': { color: '#ff6b6b', weight: 4, opacity: 0.8, dashArray: '8,4' },
+                'simple': { color: '#95a5a6', weight: 3, opacity: 0.7, dashArray: '5,5' }
+            };
+            
+            const style = routeStyles[routeType] || routeStyles['simple'];
+            console.log('🎨 Using style:', style);
             
             // Create route line
-            const routeLine = L.polyline(latlngs, {
-                color: '#4ecdc4',
-                weight: 4,
-                opacity: 0.8,
-                className: 'saved-route'
-            }).addTo(map);
-            
-            // Add popup with route info
-            const distance = geometryData.total_distance ? `${geometryData.total_distance.toFixed(1)} km` : 'Bilinmiyor';
-            const duration = geometryData.estimated_duration ? `${geometryData.estimated_duration} dk` : 'Bilinmiyor';
-            
-            routeLine.bindPopup(`
-                <div style="text-align: center;">
-                    <strong>📍 Kaydedilmiş Rota</strong><br>
-                    <small>Mesafe: ${distance}</small><br>
-                    <small>Süre: ${duration}</small><br>
-                    <small style="color: #4ecdc4;">✅ Gerçek yol ağı</small>
-                </div>
-            `);
-            
-            console.log('✅ Saved route geometry displayed successfully');
-            
-            // Show success notification
-            showNotification('✅ Kaydedilmiş rota yolu gösteriliyor', 'success');
+            let routeLine = null;
+            try {
+                routeLine = L.polyline(latlngs, {
+                    ...style,
+                    className: 'saved-route'
+                }).addTo(map);
+                
+                console.log('✅ Route line added to map successfully');
+                
+                // Add popup with route info
+                const distance = geometryData.total_distance ? `${geometryData.total_distance.toFixed(1)} km` : 'Bilinmiyor';
+                const duration = geometryData.estimated_duration ? `${geometryData.estimated_duration} dk` : 'Bilinmiyor';
+                
+                // Rota tipine göre popup mesajı
+                const routeTypeMessages = {
+                    'static': '✅ Statik rota geometrisi',
+                    'nested': '✅ API rota geometrisi', 
+                    'waypoints': '🔗 POI-based dinamik rota',
+                    'simple': '📍 Basit koordinat rotası'
+                };
+                
+                routeLine.bindPopup(`
+                    <div style="text-align: center;">
+                        <strong>📍 Kaydedilmiş Rota (${routeType})</strong><br>
+                        <small>Mesafe: ${distance}</small><br>
+                        <small>Süre: ${duration}</small><br>
+                        <small style="color: ${style.color};">${routeTypeMessages[routeType]}</small>
+                    </div>
+                `);
+                
+                console.log(`✅ ${routeType} rota geometrisi başarıyla gösterildi`);
+                
+                // Show success notification
+                showNotification(`✅ ${routeTypeMessages[routeType]} gösteriliyor`, 'success');
+                
+                // Haritayı rotaya odakla
+                setTimeout(() => {
+                    if (routeLine) {
+                        map.fitBounds(routeLine.getBounds(), { padding: [20, 20] });
+                    }
+                }, 100);
+                
+            } catch (error) {
+                console.error('❌ Error creating route line:', error);
+                return;
+            }
             
         } else {
-            console.warn('⚠️ Invalid geometry format:', geometry);
+            console.warn('⚠️ Hiçbir geometri formatı işlenemedi:', geometry);
+            showNotification('⚠️ Rota geometrisi işlenemedi', 'warning');
         }
         
     } catch (error) {
