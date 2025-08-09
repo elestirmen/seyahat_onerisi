@@ -810,6 +810,151 @@ class RouteService:
             return [dict(route) for route in routes]
         return []
     
+    def find_nearby_pois(self, route_id: int, max_distance_meters: int = 500) -> List[Dict[str, Any]]:
+        """
+        Rota yakınındaki POI'leri bul
+        
+        Args:
+            route_id: Rota ID'si
+            max_distance_meters: Maksimum mesafe (metre)
+            
+        Returns:
+            Yakındaki POI'ler ve mesafe bilgileri
+        """
+        query = """
+            SELECT 
+                p.id,
+                p.name,
+                p.category,
+                p.description,
+                ST_Y(p.location::geometry) as lat,
+                ST_X(p.location::geometry) as lon,
+                ST_Distance(r.route_geometry, p.location) as distance_meters,
+                ST_AsText(ST_ClosestPoint(r.route_geometry::geometry, p.location::geometry)) as closest_point_on_route
+            FROM pois p
+            CROSS JOIN routes r
+            WHERE r.id = %s 
+            AND r.route_geometry IS NOT NULL
+            AND p.is_active = true
+            AND ST_DWithin(r.route_geometry, p.location, %s)
+            AND p.id NOT IN (
+                SELECT poi_id FROM route_pois WHERE route_id = %s
+            )
+            ORDER BY distance_meters ASC;
+        """
+        
+        pois = self._execute_query(query, (route_id, max_distance_meters, route_id))
+        if pois:
+            result = []
+            for poi in pois:
+                poi_dict = dict(poi)
+                # Closest point koordinatlarını parse et
+                if poi_dict.get('closest_point_on_route'):
+                    # PostGIS POINT formatından koordinatları çıkar
+                    point_str = poi_dict['closest_point_on_route']
+                    # POINT(lng lat) formatından koordinatları çıkar
+                    if 'POINT(' in point_str:
+                        coords = point_str.replace('POINT(', '').replace(')', '').split()
+                        if len(coords) == 2:
+                            poi_dict['closest_route_point'] = {
+                                'lng': float(coords[0]),
+                                'lat': float(coords[1])
+                            }
+                
+                result.append(poi_dict)
+            return result
+        return []
+    
+    def auto_associate_nearby_pois(self, route_id: int, max_distance_meters: int = 500, 
+                                 auto_confirm: bool = False) -> Dict[str, Any]:
+        """
+        Rota yakınındaki POI'leri otomatik olarak ilişkilendir
+        
+        Args:
+            route_id: Rota ID'si
+            max_distance_meters: Maksimum mesafe (metre)
+            auto_confirm: Otomatik onay (True ise direkt ekler)
+            
+        Returns:
+            İşlem sonucu ve bulunan POI'ler
+        """
+        try:
+            # Yakındaki POI'leri bul
+            nearby_pois = self.find_nearby_pois(route_id, max_distance_meters)
+            
+            if not nearby_pois:
+                return {
+                    'success': True,
+                    'message': 'Rota yakınında POI bulunamadı',
+                    'found_pois': [],
+                    'associated_count': 0
+                }
+            
+            if not auto_confirm:
+                # Sadece bulunan POI'leri döndür, ekleme yapma
+                return {
+                    'success': True,
+                    'message': f'{len(nearby_pois)} POI bulundu',
+                    'found_pois': nearby_pois,
+                    'associated_count': 0,
+                    'requires_confirmation': True
+                }
+            
+            # Mevcut POI'leri al
+            existing_pois = self.get_route_pois(route_id)
+            max_order = max([poi.get('order_in_route', 0) for poi in existing_pois], default=0)
+            
+            # Yeni POI ilişkilendirmelerini hazırla
+            new_associations = []
+            for i, poi in enumerate(nearby_pois):
+                association = {
+                    'poi_id': poi['id'],
+                    'order_in_route': max_order + i + 1,
+                    'is_mandatory': False,  # Otomatik eklenenler opsiyonel
+                    'estimated_time_at_poi': 10,  # Kısa süre
+                    'notes': f'Otomatik eklendi - {int(poi["distance_meters"])}m mesafede'
+                }
+                new_associations.append(association)
+            
+            # Mevcut ilişkilendirmeleri koru, yenilerini ekle
+            all_associations = []
+            for existing in existing_pois:
+                all_associations.append({
+                    'poi_id': existing['poi_id'],
+                    'order_in_route': existing['order_in_route'],
+                    'is_mandatory': existing.get('is_mandatory', True),
+                    'estimated_time_at_poi': existing.get('estimated_time_at_poi', 15),
+                    'notes': existing.get('notes', '')
+                })
+            
+            all_associations.extend(new_associations)
+            
+            # İlişkilendirmeleri kaydet
+            if self.associate_pois(route_id, all_associations):
+                logger.info(f"Auto-associated {len(new_associations)} POIs to route {route_id}")
+                return {
+                    'success': True,
+                    'message': f'{len(new_associations)} POI otomatik olarak rotaya eklendi',
+                    'found_pois': nearby_pois,
+                    'associated_count': len(new_associations)
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': 'POI ilişkilendirme işlemi başarısız',
+                    'found_pois': nearby_pois,
+                    'associated_count': 0
+                }
+                
+        except Exception as e:
+            logger.error(f"Auto-association failed for route {route_id}: {e}")
+            return {
+                'success': False,
+                'message': f'Otomatik POI ekleme hatası: {str(e)}',
+                'found_pois': [],
+                'associated_count': 0
+            }
+    
     def get_route_statistics(self) -> Dict[str, Any]:
         """Rota istatistiklerini getir"""
         stats_query = """

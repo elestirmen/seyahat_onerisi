@@ -2630,7 +2630,7 @@ def admin_get_route_details(route_id):
 
 @app.route('/api/admin/routes', methods=['POST'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=20, window_seconds=60)
+# @admin_rate_limit(max_requests=20, window_seconds=60)  # Geliştirme için devre dışı
 def admin_create_route():
     """Yeni rota oluştur (admin)"""
     try:
@@ -2668,7 +2668,7 @@ def admin_create_route():
 
 @app.route('/api/admin/routes/<int:route_id>', methods=['PUT'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=30, window_seconds=60)
+# @admin_rate_limit(max_requests=30, window_seconds=60)  # Geliştirme için devre dışı
 def admin_update_route(route_id):
     """Rotayı güncelle (admin)"""
     try:
@@ -2731,7 +2731,7 @@ def admin_get_route_pois(route_id):
 
 @app.route('/api/admin/routes/<int:route_id>/pois', methods=['POST'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=30, window_seconds=60)
+# @admin_rate_limit(max_requests=30, window_seconds=60)  # Geliştirme için devre dışı
 def admin_associate_route_pois(route_id):
     """Rotaya POI'leri ilişkilendir (admin)"""
     try:
@@ -2765,7 +2765,7 @@ def admin_associate_route_pois(route_id):
 
 @app.route('/api/admin/routes/<int:route_id>/geometry', methods=['POST'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=20, window_seconds=60)
+# @admin_rate_limit(max_requests=20, window_seconds=60)  # Geliştirme için devre dışı
 def save_route_geometry(route_id):
     """Rota geometrisini kaydet"""
     try:
@@ -5010,6 +5010,168 @@ def suggest_pois_for_route(route_id):
             'success': False,
             'error': f'POI önerisi hatası: {str(e)}',
             'error_code': 'SUGGESTION_ERROR'
+        }), 500
+
+
+# ===== NEARBY POI AUTO-ASSOCIATION =====
+
+@app.route('/api/routes/<int:route_id>/nearby-pois', methods=['GET'])
+@auth_middleware.require_auth
+# @admin_rate_limit(max_requests=100, window_seconds=60)  # Geliştirme için devre dışı
+def find_nearby_pois_for_route(route_id):
+    """
+    Rota yakınındaki POI'leri bul
+    
+    Query parameters:
+    - max_distance: Maksimum mesafe (metre, default: 500, max: 2000)
+    
+    Returns:
+        JSON response with nearby POIs
+    """
+    try:
+        # Get query parameters
+        max_distance = min(2000, max(50, int(request.args.get('max_distance', 500))))
+        
+        # Initialize route service
+        route_service = RouteService()
+        if not route_service.connect():
+            return jsonify({
+                'success': False,
+                'error': 'Veritabanı bağlantısı başarısız',
+                'error_code': 'DATABASE_CONNECTION_ERROR'
+            }), 500
+        
+        # Check if route exists and has geometry
+        route = route_service.get_route_by_id(route_id)
+        if not route:
+            return jsonify({
+                'success': False,
+                'error': 'Rota bulunamadı',
+                'error_code': 'ROUTE_NOT_FOUND'
+            }), 404
+        
+        # Find nearby POIs
+        nearby_pois = route_service.find_nearby_pois(route_id, max_distance)
+        
+        route_service.disconnect()
+        
+        return jsonify({
+            'success': True,
+            'route': {
+                'id': route['id'],
+                'name': route['name']
+            },
+            'nearby_pois': nearby_pois,
+            'total_found': len(nearby_pois),
+            'parameters': {
+                'max_distance_meters': max_distance
+            }
+        }), 200
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': 'Geçersiz parametre değeri',
+            'error_code': 'INVALID_PARAMETER'
+        }), 400
+        
+    except Exception as e:
+        logger.error(f"Error in find_nearby_pois_for_route: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Yakın POI arama hatası: {str(e)}',
+            'error_code': 'NEARBY_POI_ERROR'
+        }), 500
+
+
+@app.route('/api/routes/<int:route_id>/auto-associate-pois', methods=['POST'])
+@auth_middleware.require_auth
+# @admin_rate_limit(max_requests=30, window_seconds=60)  # Geliştirme için devre dışı
+def auto_associate_nearby_pois(route_id):
+    """
+    Rota yakınındaki POI'leri otomatik olarak ilişkilendir
+    
+    Request body:
+    {
+        "max_distance": 500,  // Maksimum mesafe (metre)
+        "auto_confirm": false,  // Otomatik onay
+        "categories": ["tarihi", "doga"]  // Sadece belirli kategoriler (opsiyonel)
+    }
+    
+    Returns:
+        JSON response with association results
+    """
+    try:
+        data = request.get_json() or {}
+        
+        # Get parameters
+        max_distance = min(2000, max(50, int(data.get('max_distance', 500))))
+        auto_confirm = bool(data.get('auto_confirm', False))
+        categories = data.get('categories', [])
+        
+        # Initialize route service
+        route_service = RouteService()
+        if not route_service.connect():
+            return jsonify({
+                'success': False,
+                'error': 'Veritabanı bağlantısı başarısız',
+                'error_code': 'DATABASE_CONNECTION_ERROR'
+            }), 500
+        
+        # Check if route exists
+        route = route_service.get_route_by_id(route_id)
+        if not route:
+            route_service.disconnect()
+            return jsonify({
+                'success': False,
+                'error': 'Rota bulunamadı',
+                'error_code': 'ROUTE_NOT_FOUND'
+            }), 404
+        
+        # Auto-associate nearby POIs
+        result = route_service.auto_associate_nearby_pois(
+            route_id, 
+            max_distance, 
+            auto_confirm
+        )
+        
+        # Filter by categories if specified
+        if categories and result.get('found_pois'):
+            filtered_pois = [
+                poi for poi in result['found_pois'] 
+                if poi.get('category') in categories
+            ]
+            result['found_pois'] = filtered_pois
+            result['total_found'] = len(filtered_pois)
+        
+        route_service.disconnect()
+        
+        # Add route info to response
+        result['route'] = {
+            'id': route['id'],
+            'name': route['name']
+        }
+        result['parameters'] = {
+            'max_distance_meters': max_distance,
+            'auto_confirm': auto_confirm,
+            'categories': categories
+        }
+        
+        return jsonify(result), 200
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': 'Geçersiz parametre değeri',
+            'error_code': 'INVALID_PARAMETER'
+        }), 400
+        
+    except Exception as e:
+        logger.error(f"Error in auto_associate_nearby_pois: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Otomatik POI ekleme hatası: {str(e)}',
+            'error_code': 'AUTO_ASSOCIATION_ERROR'
         }), 500
 
 

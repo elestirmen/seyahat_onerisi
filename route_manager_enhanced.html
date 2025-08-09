@@ -1380,15 +1380,15 @@
 
         // Load routes from API
         async function loadRoutes() {
-            // Rate limiting kontrolü
-            const now = Date.now();
-            if (loadingInProgress || (now - lastLoadTime) < minLoadInterval) {
-                console.log('Rota yükleme rate limit nedeniyle atlandı');
-                return;
-            }
+            // Rate limiting kontrolü - Geliştirme için devre dışı
+            // const now = Date.now();
+            // if (loadingInProgress || (now - lastLoadTime) < minLoadInterval) {
+            //     console.log('Rota yükleme rate limit nedeniyle atlandı');
+            //     return;
+            // }
             
-            loadingInProgress = true;
-            lastLoadTime = now;
+            // loadingInProgress = true;  // Geliştirme için devre dışı
+            // lastLoadTime = now;
             
             try {
                 showLoading();
@@ -2748,12 +2748,12 @@
 
         // Action handlers
         function refreshRoutes() {
-            // Rate limiting kontrolü
-            const now = Date.now();
-            if ((now - lastLoadTime) < minLoadInterval) {
-                showNotification('Çok sık yenileme yapıyorsunuz, lütfen bekleyin', 'warning');
-                return;
-            }
+            // Rate limiting kontrolü - Geliştirme için devre dışı
+            // const now = Date.now();
+            // if ((now - lastLoadTime) < minLoadInterval) {
+            //     showNotification('Çok sık yenileme yapıyorsunuz, lütfen bekleyin', 'warning');
+            //     return;
+            // }
             loadRoutes();
         }
 
@@ -2954,10 +2954,20 @@
                                         <input type="text" class="search-input" id="poiSearchInput" 
                                                placeholder="POI ara..." oninput="searchPOIs()">
                                     </div>
-                                    <button type="button" class="btn btn-outline-primary" onclick="suggestNearbyPOIs()">
-                                        <i class="fas fa-magic me-1"></i>
-                                        Yakın POI'leri Öner
-                                    </button>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-primary" onclick="findNearbyPOIs()">
+                                            <i class="fas fa-search-location me-1"></i>
+                                            Yakın POI'leri Bul
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success" onclick="autoAssociateNearbyPOIs()">
+                                            <i class="fas fa-magic me-1"></i>
+                                            Otomatik Ekle
+                                        </button>
+                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="testNearbyFeature()">
+                                            <i class="fas fa-bug me-1"></i>
+                                            Test
+                                        </button>
+                                    </div>
                                 </div>
                                 
                                 <div class="poi-lists-container">
@@ -3783,37 +3793,247 @@
             map.fitBounds(layer.getBounds(), { padding: [30, 30] });
         }
 
-        // Suggest nearby POIs
-        async function suggestNearbyPOIs() {
-            if (!currentRoute) return;
+        // Find nearby POIs for route
+        async function findNearbyPOIs() {
+            console.log('🔍 findNearbyPOIs çağrıldı');
+            console.log('currentRoute:', currentRoute);
             
-            // Rate limiting kontrolü
-            const now = Date.now();
-            if ((now - lastLoadTime) < minLoadInterval) {
-                console.log('POI önerisi rate limit nedeniyle atlandı');
-                showNotification('Çok sık istek gönderiyorsunuz, lütfen bekleyin', 'warning');
+            if (!currentRoute) {
+                console.warn('❌ currentRoute null');
+                showNotification('Önce bir rota seçin', 'warning');
                 return;
             }
             
+            console.log('✅ currentRoute mevcut, ID:', currentRoute.id);
+            
+            // Rate limiting kontrolü - Geliştirme için devre dışı
+            // const now = Date.now();
+            // if ((now - lastLoadTime) < minLoadInterval) {
+            //     console.log('POI arama rate limit nedeniyle atlandı');
+            //     showNotification('Çok sık istek gönderiyorsunuz, lütfen bekleyin', 'warning');
+            //     return;
+            // }
+            
             try {
-                const response = await fetch(`${apiBase}/routes/${currentRoute.id}/suggest-pois`);
+                showNotification('Yakın POI\'ler aranıyor...', 'info');
+                
+                const maxDistance = 500; // 500 metre
+                const response = await fetch(`${apiBase}/routes/${currentRoute.id}/nearby-pois?max_distance=${maxDistance}`, {
+                    credentials: 'include'
+                });
+                
                 const data = await response.json();
                 
-                if (response.ok) {
-                    const suggestions = data.suggestions || [];
-                    if (suggestions.length > 0) {
-                        showNotification(`${suggestions.length} yakın POI önerisi bulundu`, 'success');
-                        // TODO: Display suggestions in a modal or special section
+                if (response.ok && data.success) {
+                    const nearbyPois = data.nearby_pois || [];
+                    if (nearbyPois.length > 0) {
+                        showNotification(`${nearbyPois.length} yakın POI bulundu`, 'success');
+                        displayNearbyPOIsModal(nearbyPois, maxDistance);
                     } else {
-                        showNotification('Yakın POI bulunamadı', 'info');
+                        showNotification('Rota yakınında POI bulunamadı', 'info');
                     }
                 } else {
-                    throw new Error('POI önerileri alınamadı');
+                    throw new Error(data.error || 'Yakın POI\'ler bulunamadı');
                 }
             } catch (error) {
-                console.error('POI suggestion error:', error);
-                showError('POI önerileri alınırken hata oluştu');
+                console.error('Nearby POI search error:', error);
+                showError('Yakın POI\'ler aranırken hata oluştu: ' + error.message);
             }
+        }
+
+        // Auto-associate nearby POIs
+        async function autoAssociateNearbyPOIs() {
+            console.log('🚀 autoAssociateNearbyPOIs çağrıldı');
+            console.log('currentRoute:', currentRoute);
+            
+            if (!currentRoute) {
+                console.warn('❌ currentRoute null');
+                showNotification('Önce bir rota seçin', 'warning');
+                return;
+            }
+            
+            console.log('✅ currentRoute mevcut, ID:', currentRoute.id);
+            
+            // Rate limiting kontrolü - Geliştirme için devre dışı
+            // const now = Date.now();
+            // if ((now - lastLoadTime) < minLoadInterval) {
+            //     console.log('Otomatik POI ekleme rate limit nedeniyle atlandı');
+            //     showNotification('Çok sık istek gönderiyorsunuz, lütfen bekleyin', 'warning');
+            //     return;
+            // }
+            
+            try {
+                showNotification('Yakın POI\'ler otomatik ekleniyor...', 'info');
+                
+                const requestData = {
+                    max_distance: 500,
+                    auto_confirm: true
+                };
+                
+                const response = await fetch(`${apiBase}/routes/${currentRoute.id}/auto-associate-pois`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(requestData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const associatedCount = data.associated_count || 0;
+                    if (associatedCount > 0) {
+                        showNotification(`${associatedCount} POI otomatik olarak rotaya eklendi`, 'success');
+                        // Refresh POI lists
+                        await loadPOIsForAssociation(currentRoute.id);
+                        // Refresh route display
+                        await loadAndDisplayRoutePOIs(currentRoute.id);
+                    } else {
+                        showNotification('Eklenecek yakın POI bulunamadı', 'info');
+                    }
+                } else {
+                    throw new Error(data.error || 'Otomatik POI ekleme başarısız');
+                }
+            } catch (error) {
+                console.error('Auto-associate POI error:', error);
+                showError('Otomatik POI ekleme hatası: ' + error.message);
+            }
+        }
+
+        // Display nearby POIs in a modal
+        function displayNearbyPOIsModal(nearbyPois, maxDistance) {
+            const modalHtml = `
+                <div class="modal fade" id="nearbyPoisModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    Yakın POI'ler (${maxDistance}m içinde)
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    ${nearbyPois.map(poi => `
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">
+                                                        <i class="fas fa-map-pin me-1"></i>
+                                                        ${poi.name}
+                                                    </h6>
+                                                    <p class="card-text small text-muted mb-2">
+                                                        ${poi.description || 'Açıklama yok'}
+                                                    </p>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="badge bg-primary">${poi.category}</span>
+                                                        <span class="text-muted small">
+                                                            ${Math.round(poi.distance_meters)}m
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div class="card-footer">
+                                                    <button class="btn btn-success btn-sm w-100" 
+                                                            onclick="associatePOI(${poi.id}); bootstrap.Modal.getInstance(document.getElementById('nearbyPoisModal')).hide();">
+                                                        <i class="fas fa-plus me-1"></i>
+                                                        Rotaya Ekle
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                                <button type="button" class="btn btn-success" onclick="addAllNearbyPOIs([${nearbyPois.map(p => p.id).join(',')}])">
+                                    <i class="fas fa-plus-circle me-1"></i>
+                                    Tümünü Ekle
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('nearbyPoisModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('nearbyPoisModal'));
+            modal.show();
+        }
+
+        // Add all nearby POIs to route
+        async function addAllNearbyPOIs(poiIds) {
+            if (!currentRoute || !poiIds.length) return;
+            
+            try {
+                showNotification(`${poiIds.length} POI rotaya ekleniyor...`, 'info');
+                
+                let addedCount = 0;
+                for (const poiId of poiIds) {
+                    try {
+                        await associatePOI(poiId);
+                        addedCount++;
+                    } catch (error) {
+                        console.warn(`POI ${poiId} eklenemedi:`, error);
+                    }
+                }
+                
+                if (addedCount > 0) {
+                    showNotification(`${addedCount} POI başarıyla eklendi`, 'success');
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('nearbyPoisModal'));
+                    if (modal) modal.hide();
+                } else {
+                    showNotification('Hiçbir POI eklenemedi', 'warning');
+                }
+                
+            } catch (error) {
+                console.error('Bulk POI add error:', error);
+                showError('POI\'ler eklenirken hata oluştu');
+            }
+        }
+
+        // Test function for debugging
+        function testNearbyFeature() {
+            console.log('🧪 TEST: Yakın POI özelliği test ediliyor');
+            console.log('currentRoute:', currentRoute);
+            console.log('apiBase:', apiBase);
+            
+            if (!currentRoute) {
+                alert('❌ currentRoute null! Önce bir rota seçin.');
+                return;
+            }
+            
+            alert(`✅ Test başarılı!\nSeçili rota: ${currentRoute.name}\nID: ${currentRoute.id}\nAPI Base: ${apiBase}`);
+            
+            // Test API call
+            fetch(`${apiBase}/routes/${currentRoute.id}/nearby-pois?max_distance=500`, {
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('🔍 API Test Sonucu:', data);
+                if (data.success) {
+                    alert(`🎉 API Test Başarılı!\n${data.total_found} POI bulundu.`);
+                } else {
+                    alert(`❌ API Test Başarısız!\nHata: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                console.error('API Test Hatası:', error);
+                alert(`❌ API Test Hatası!\n${error.message}`);
+            });
         }
 
         // Save route changes (with CSRF)
