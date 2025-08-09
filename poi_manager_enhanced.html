@@ -1970,7 +1970,13 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="static/js/rate-limiter.js"></script>
     <script>
+        // Rate limiting bilgilendirme mesajı
+        if (window.rateLimiter) {
+            console.log('✅ Rate limiting aktif - API çağrıları sınırlandırılacak');
+        }
+
         // POI Management Application
         class POIManager {
             constructor() {
@@ -1991,6 +1997,11 @@
                 this.markers = {};
                 this.csrfToken = null;
 
+                // Rate limiting için
+                this.lastLoadTime = 0;
+                this.minLoadInterval = 2000; // 2 saniye minimum aralık
+                this.loadingInProgress = false;
+
                 this.init();
             }
 
@@ -2004,7 +2015,8 @@
                 await this.initializeMap();
                 await this.loadCategories();
                 await this.loadPOIs();
-                await this.loadRoutesForMap();
+                // Rotaları otomatik yükleme devre dışı - sadece ihtiyaç duyulduğunda yüklenecek
+                // await this.loadRoutesForMap();
                 this.setupEventListeners();
             }
 
@@ -2074,6 +2086,15 @@
             }
 
             async loadPOIs() {
+                // Rate limiting kontrolü
+                const now = Date.now();
+                if (this.loadingInProgress || (now - this.lastLoadTime) < this.minLoadInterval) {
+                    console.log('POI yükleme rate limit nedeniyle atlandı');
+                    return;
+                }
+
+                this.loadingInProgress = true;
+                this.lastLoadTime = now;
                 this.showLoading(true);
 
                 try {
@@ -2090,7 +2111,9 @@
                         params.set('categories', Array.from(this.selectedCategories).join(','));
                     }
 
-                    const response = await this.authenticatedFetch(`/api/pois?${params}`);
+                    const response = await rateLimitedFetch(`/api/pois?${params}`, {
+                        credentials: 'include'
+                    });
                     if (response.ok) {
                         const data = await response.json();
                         console.log('API Response:', data); // Debug log
@@ -2142,6 +2165,7 @@
                     this.showError('POI\'ler yüklenirken hata oluştu');
                 } finally {
                     this.showLoading(false);
+                    this.loadingInProgress = false;
                 }
             }
 
@@ -2531,7 +2555,7 @@
                         this.currentFilters.search = e.target.value;
                         this.currentPage = 1;
                         this.loadPOIs();
-                    }, 300);
+                    }, 800); // Arama için daha uzun bekleme süresi
                 });
 
                 // Category filter

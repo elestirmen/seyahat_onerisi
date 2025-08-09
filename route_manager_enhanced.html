@@ -501,6 +501,16 @@
             border-color: rgba(255, 255, 255, 0.5);
         }
 
+        .btn-workspace.btn-danger {
+            border-color: rgba(220, 38, 38, 0.5);
+            color: #dc2626;
+        }
+
+        .btn-workspace.btn-danger:hover {
+            background: rgba(220, 38, 38, 0.1);
+            border-color: #dc2626;
+        }
+
         .workspace-content {
             flex: 1;
             overflow-y: auto;
@@ -837,6 +847,10 @@
                     <i class="fas fa-sync-alt me-1"></i>
                     Yenile
                 </button>
+                <button class="btn btn-outline-warning" onclick="clearMapRoutes()" title="Haritadaki tüm rotaları temizle">
+                    <i class="fas fa-eraser me-1"></i>
+                    Haritayı Temizle
+                </button>
             </div>
         </header>
 
@@ -970,6 +984,10 @@
                         <i class="fas fa-download me-1"></i>
                         Dışa Aktar
                     </button>
+                    <button class="btn-workspace btn-danger" onclick="deleteCurrentRoute()">
+                        <i class="fas fa-trash me-1"></i>
+                        Sil
+                    </button>
                     <button class="btn-workspace" onclick="clearRouteSelection()" title="Rota seçimini temizle">
                         <i class="fas fa-times me-1"></i>
                         Seçimi Temizle
@@ -1014,9 +1032,216 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>  
+    <script src="static/js/rate-limiter.js"></script>
     <script src="static/js/api-client.js"></script>
     <script src="static/js/navigation-manager.js"></script>
   <script>
+        // Rate limiting bilgilendirme mesajı
+        if (window.rateLimiter) {
+            console.log('✅ Rate limiting aktif - API çağrıları sınırlandırılacak');
+        }
+
+        // Tüm rotaları haritadan kaldır
+        function clearAllRoutesFromMap() {
+            Object.values(routeLayers).forEach(layer => {
+                try {
+                    map.removeLayer(layer);
+                } catch (e) {
+                    console.warn('Layer removal error:', e);
+                }
+            });
+            routeLayers = {};
+            console.log('Tüm rotalar haritadan kaldırıldı');
+        }
+
+        // POI'lerden dinamik rota oluştur
+        async function createRouteFromPOIs(route, color) {
+            const rid = getRouteId(route);
+            console.log('POI\'lerden rota oluşturuluyor:', route.name);
+            
+            try {
+                // Rotanın POI'lerini al
+                const response = await rateLimitedFetch(`${apiBase}/admin/routes/${rid}/pois`, {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const pois = data.pois || data.results || [];
+                    
+                    if (pois.length > 0) {
+                        // POI koordinatlarını al
+                        const latlngs = pois
+                            .filter(poi => poi.latitude && poi.longitude)
+                            .map(poi => [parseFloat(poi.latitude), parseFloat(poi.longitude)]);
+                        
+                        if (latlngs.length > 1) {
+                            // POI'ler arasında rota çiz
+                            const layer = L.polyline(latlngs, {
+                                color: color,
+                                weight: 4,
+                                opacity: 0.8,
+                                dashArray: '8,4' // POI-based rotayı ayırt etmek için
+                            }).addTo(map);
+                            
+                            routeLayers[rid] = layer;
+                            
+                            // POI marker'larını da ekle
+                            pois.forEach((poi, index) => {
+                                if (poi.latitude && poi.longitude) {
+                                    const marker = L.marker([parseFloat(poi.latitude), parseFloat(poi.longitude)])
+                                        .bindPopup(`
+                                            <strong>${poi.name || 'POI'}</strong><br>
+                                            <small>Sıra: ${index + 1}</small>
+                                        `);
+                                    poiMarkersLayer.addLayer(marker);
+                                }
+                            });
+                            
+                            // Haritayı rotaya odakla
+                            map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+                            
+                            console.log('✅ POI-based rota oluşturuldu:', pois.length, 'POI');
+                            showNotification(`${pois.length} POI ile dinamik rota oluşturuldu`, 'success');
+                        } else {
+                            console.warn('Yeterli POI koordinatı yok');
+                            showNotification('Bu rotada yeterli POI koordinatı bulunamadı', 'warning');
+                        }
+                    } else {
+                        console.warn('Rota POI\'si bulunamadı');
+                        showNotification('Bu rotaya ait POI bulunamadı', 'warning');
+                    }
+                } else {
+                    console.warn('POI\'ler alınamadı:', response.status);
+                }
+            } catch (error) {
+                console.error('POI-based rota oluşturma hatası:', error);
+                showNotification('Dinamik rota oluşturulamadı', 'error');
+            }
+        }
+
+        // Tek bir rotayı haritaya ekle
+        async function showSingleRouteOnMap(route) {
+            const rid = getRouteId(route);
+            if (!rid) {
+                console.warn('Route ID bulunamadı:', route);
+                return;
+            }
+
+            try {
+                // Önce mevcut geometriyi kontrol et
+                let geometry = route.geometry;
+                
+                // Geometri yoksa veya string ise API'den al
+                if (!geometry || typeof geometry === 'string') {
+                    console.log(`Rota ${rid} için geometri API'den alınıyor...`);
+                    
+                    try {
+                        const response = await rateLimitedFetch(`${apiBase}/routes/${rid}/geometry`, { 
+                            credentials: 'include' 
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.success && data.geometry) {
+                                geometry = data.geometry;
+                                console.log(`Geometri başarıyla alındı:`, geometry);
+                            } else {
+                                console.warn('API geometri döndürmedi:', data);
+                            }
+                        } else {
+                            console.warn(`Geometri API hatası: ${response.status} ${response.statusText}`);
+                        }
+                    } catch (apiError) {
+                        console.warn('Geometri API çağrısı başarısız:', apiError);
+                    }
+                }
+
+                // Hibrit geometri işleme - hem statik hem dinamik rota desteği
+                if (geometry) {
+                    console.log('Ham geometri verisi:', geometry);
+                    
+                    // String ise parse et
+                    if (typeof geometry === 'string') {
+                        try {
+                            geometry = JSON.parse(geometry);
+                        } catch (e) {
+                            console.warn('Geometry JSON parse hatası:', e);
+                            return;
+                        }
+                    }
+
+                    // Rota rengini belirle
+                    const color = ROUTE_TYPES[route.route_type]?.color || '#2563eb';
+                    let layer = null;
+                    
+                    // YAKLAŞIM 1: Statik LineString geometrisi (klasik)
+                    if (geometry.type === 'LineString' && geometry.coordinates && geometry.coordinates.length > 0) {
+                        console.log('📍 Statik LineString geometrisi kullanılıyor');
+                        const latlngs = geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                        layer = L.polyline(latlngs, {
+                            color: color,
+                            weight: 4,
+                            opacity: 0.8
+                        });
+                    }
+                    // YAKLAŞIM 2: API response formatı (nested geometry)
+                    else if (geometry.geometry && geometry.geometry.type === 'LineString') {
+                        console.log('📍 Nested LineString geometrisi kullanılıyor');
+                        const coords = geometry.geometry.coordinates;
+                        if (coords && coords.length > 0) {
+                            const latlngs = coords.map(coord => [coord[1], coord[0]]);
+                            layer = L.polyline(latlngs, {
+                                color: color,
+                                weight: 4,
+                                opacity: 0.8
+                            });
+                        }
+                    }
+                    // YAKLAŞIM 3: POI-based dinamik rota (waypoints)
+                    else if (geometry.waypoints && Array.isArray(geometry.waypoints) && geometry.waypoints.length > 0) {
+                        console.log('📍 POI-based waypoints kullanılıyor');
+                        const latlngs = geometry.waypoints.map(wp => [wp.lat || wp.latitude, wp.lng || wp.longitude]);
+                        if (latlngs.length > 1) {
+                            // Waypoints arasında düz çizgi çek (basit yaklaşım)
+                            layer = L.polyline(latlngs, {
+                                color: color,
+                                weight: 4,
+                                opacity: 0.8,
+                                dashArray: '5,5' // Dinamik rotayı ayırt etmek için kesikli çizgi
+                            });
+                        }
+                    }
+                    // YAKLAŞIM 4: Rota POI'lerinden dinamik rota oluştur
+                    else {
+                        console.log('📍 Rota POI\'lerinden dinamik rota oluşturuluyor');
+                        await createRouteFromPOIs(route, color);
+                        return; // createRouteFromPOIs kendi layer'ını oluşturacak
+                    }
+
+                    // Layer oluşturulduysa haritaya ekle
+                    if (layer) {
+                        layer.addTo(map);
+                        routeLayers[rid] = layer;
+                        
+                        // Haritayı rotaya odakla
+                        map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+                        
+                        console.log('✅ Rota haritaya eklendi:', route.name);
+                    } else {
+                        console.warn('Hiçbir geometri formatı işlenemedi:', geometry);
+                        showNotification('Rota geometrisi işlenemedi', 'warning');
+                    }
+                } else {
+                    console.warn('Rota geometrisi bulunamadı:', route.name);
+                    showNotification('Bu rotanın geometrisi bulunamadı', 'warning');
+                }
+            } catch (error) {
+                console.error('Rota yükleme hatası:', error);
+                showNotification('Rota yüklenirken hata oluştu: ' + error.message, 'error');
+            }
+        }
+
         // Global variables
         const apiBase = '/api';
         let allRoutes = [];
@@ -1030,6 +1255,11 @@
         let associatedPoiIdSet = new Set();
         let associatedPoiOrderedIds = [];
         let csrfToken = null;
+        
+        // Rate limiting için
+        let lastLoadTime = 0;
+        const minLoadInterval = 2000; // 2 saniye minimum aralık
+        let loadingInProgress = false;
 
         // --- Helpers: ID and parsing ---
         function getRouteId(route) {
@@ -1081,7 +1311,14 @@
                         const rid = getRouteId(r);
                         if (!rid || r.geometry) return;
                         const res = await fetch(`${apiBase}/routes/${rid}/geometry`, { credentials: 'include' });
-                        if (!res.ok) return;
+                        if (!res.ok) {
+                            if (res.status === 404) {
+                                // Silently ignore 404s for routes without geometry
+                                return;
+                            }
+                            console.warn(`Failed to fetch geometry for route ${rid}: ${res.status}`);
+                            return;
+                        }
                         const g = await res.json();
                         if (g && g.geometry) {
                             let geo = g.geometry;
@@ -1143,9 +1380,19 @@
 
         // Load routes from API
         async function loadRoutes() {
+            // Rate limiting kontrolü
+            const now = Date.now();
+            if (loadingInProgress || (now - lastLoadTime) < minLoadInterval) {
+                console.log('Rota yükleme rate limit nedeniyle atlandı');
+                return;
+            }
+            
+            loadingInProgress = true;
+            lastLoadTime = now;
+            
             try {
                 showLoading();
-                const response = await fetch(`${apiBase}/admin/routes`, { credentials: 'include' });
+                const response = await rateLimitedFetch(`${apiBase}/admin/routes`, { credentials: 'include' });
                 const data = await response.json();
                 
                 if (response.ok) {
@@ -1162,23 +1409,28 @@
                             if (Array.isArray(val)) allRoutes = allRoutes.concat(val);
                         });
                     }
+                    console.log('Loaded routes:', allRoutes.map(r => ({id: getRouteId(r), name: r.name})));
                     filteredRoutes = [...allRoutes];
+                    console.log('Filtered routes:', filteredRoutes.map(r => ({id: getRouteId(r), name: r.name})));
                     displayRoutes();
-                    await attachGeometriesToRoutes(filteredRoutes);
-                    updateMapRoutes();
+                    // Rotaları otomatik olarak haritaya yükleme - devre dışı bırakıldı
+                    // await attachGeometriesToRoutes(filteredRoutes);
+                    // updateMapRoutes();
                     
-                    // Auto-focus on all routes after loading
-                    setTimeout(() => {
-                        if (Object.keys(routeLayers).length > 0) {
-                            fitMapToRoutes();
-                        }
-                    }, 1000);
+                    // Auto-focus sadece seçili rota varsa
+                    // setTimeout(() => {
+                    //     if (Object.keys(routeLayers).length > 0) {
+                    //         fitMapToRoutes();
+                    //     }
+                    // }, 1000);
                 } else {
                     throw new Error(data.error || 'Rotalar yüklenemedi');
                 }
             } catch (error) {
                 console.error('Routes load error:', error);
                 showError('Rotalar yüklenirken hata oluştu: ' + error.message);
+            } finally {
+                loadingInProgress = false;
             }
         }
 
@@ -1208,6 +1460,7 @@
                     
                     <div class="route-item-header">
                         <h4 class="route-item-title">${escapeHtml(route.name)}</h4>
+                        ${(!route.geometry || (route.geometry && !route.geometry.geometry && !route.geometry.type)) ? '<span class="badge bg-warning" title="Harita geometrisi yok">Geometri Yok</span>' : ''}
                     </div>
                     
                     <div class="route-type-badge route-type-${route.route_type}">
@@ -1251,7 +1504,7 @@
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 applyFilters();
-            }, 300);
+            }, 800); // Arama için daha uzun bekleme süresi
         }
 
         // Apply all filters
@@ -1324,12 +1577,13 @@
             });
 
             displayRoutes();
-            await attachGeometriesToRoutes(filteredRoutes);
+            // Filtreleme sırasında da otomatik harita güncelleme devre dışı
+            // await attachGeometriesToRoutes(filteredRoutes);
             
-            // Only update map routes if no specific route is selected
-            if (!currentRoute) {
-                updateMapRoutes();
-            }
+            // Sadece seçili rota varsa haritayı güncelle
+            // if (!currentRoute) {
+            //     updateMapRoutes();
+            // }
         }
 
         // Select a route
@@ -1720,11 +1974,31 @@
                         if (typeof geo === 'string') {
                             try { geo = JSON.parse(geo); } catch (e) { console.warn('geometry not JSON string:', e); }
                         }
+                        
+                        // Handle nested geometry structure from API
+                        if (geo && geo.geometry && geo.geometry.type && geo.geometry.coordinates) {
+                            geo = geo.geometry; // Extract the actual GeoJSON
+                        }
+                        
                         console.log('Parsed geometry:', geo);
                         if (geo && typeof geo === 'object' && !Array.isArray(geo) && geo.type && geo.coordinates) {
                             // Valid GeoJSON object
                             console.log('Attempting L.geoJSON with valid GeoJSON:', geo);
                             layer = L.geoJSON(geo, { style: { color, weight: 3, opacity: 0.7 } });
+                            console.log('L.geoJSON layer created:', layer ? 'SUCCESS' : 'FAILED');
+                            
+                            if (layer) {
+                                layer.bindPopup(`
+                                    <strong>${escapeHtml(route.name)}</strong><br>
+                                    ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
+                                    ${route.estimated_duration || 0} dakika
+                                `);
+                                
+                                const rid = getRouteId(route);
+                                routeLayers[rid] = layer;
+                                layer.addTo(map);
+                                console.log('Static geometry layer added for route:', route.name, 'ID:', rid);
+                            }
                         } else if (Array.isArray(geo)) {
                             // Assume array of [lng, lat] or [lat, lng]
                             const latlngs = geo.map(p => {
@@ -1888,6 +2162,13 @@
                                                 ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
                                                 ${route.estimated_duration || 0} dakika
                                             `);
+                                } else if (res.status === 404) {
+                                    console.warn(`Route ${rid} geometry not found (404) - skipping map display`);
+                                    // Route has no geometry, skip adding to map but don't show error
+                                    continue;
+                                } else {
+                                    console.error(`Failed to fetch geometry for route ${rid}: ${res.status}`);
+                                    continue;
                                             const rid2 = getRouteId(route);
                                             routeLayers[rid2] = layer;
                                             layer.addTo(map);
@@ -2019,7 +2300,7 @@
             }
         }
 
-        // Highlight and focus on selected route while keeping others visible
+        // Highlight and focus on selected route - sadece seçili rotayı göster
         async function highlightAndFocusRoute(route) {
             console.log('Highlighting and focusing on route:', route.name);
             
@@ -2032,58 +2313,15 @@
             // Update map title
             updateMapTitle(route);
 
-            // First ensure all filtered routes are displayed on map
-            await updateMapRoutes();
+            // Önce tüm rotaları haritadan kaldır
+            clearAllRoutesFromMap();
             
-            // Wait a bit for routes to be rendered
+            // Sadece seçili rotayı haritaya ekle
+            await showSingleRouteOnMap(route);
+            
+            // Seçili rotanın POI'lerini yükle ve göster
             setTimeout(async () => {
-                // Reset all route styles to normal
-                Object.entries(routeLayers).forEach(([id, layer]) => {
-                    const routeData = allRoutes.find(r => String(getRouteId(r)) === String(id));
-                    if (routeData) {
-                        const color = ROUTE_TYPES[routeData.route_type]?.color || '#2563eb';
-                        layer.setStyle({
-                            color: color,
-                            weight: 3,
-                            opacity: 0.6
-                        });
-                    }
-                });
-
-                // Highlight the selected route
-                if (routeLayers[rid]) {
-                    const selectedColor = ROUTE_TYPES[route.route_type]?.color || '#2563eb';
-                    routeLayers[rid].setStyle({
-                        color: selectedColor,
-                        weight: 5,
-                        opacity: 1
-                    });
-                    
-                    // Bring selected route to front
-                    routeLayers[rid].bringToFront();
-                    
-                    // Focus map on selected route with smooth animation
-                    try {
-                        const bounds = routeLayers[rid].getBounds();
-                        map.fitBounds(bounds, { 
-                            padding: [30, 30],
-                            maxZoom: 14,
-                            animate: true,
-                            duration: 0.8
-                        });
-                        console.log('Map focused on selected route with animation');
-                    } catch (e) {
-                        console.warn('Failed to focus on route:', e);
-                    }
-                } else {
-                    // If route layer doesn't exist, try to create it
-                    console.log('Route layer not found, trying to create it');
-                    await showSelectedRouteOnMap(route);
-                }
-                
-                // Load and display POI markers for the selected route
                 await loadAndDisplayRoutePOIs(rid);
-                
             }, 100);
         }
 
@@ -2510,7 +2748,30 @@
 
         // Action handlers
         function refreshRoutes() {
+            // Rate limiting kontrolü
+            const now = Date.now();
+            if ((now - lastLoadTime) < minLoadInterval) {
+                showNotification('Çok sık yenileme yapıyorsunuz, lütfen bekleyin', 'warning');
+                return;
+            }
             loadRoutes();
+        }
+
+        function clearMapRoutes() {
+            clearAllRoutesFromMap();
+            // POI marker'larını da temizle
+            if (poiMarkersLayer) {
+                poiMarkersLayer.clearLayers();
+            }
+            // Seçili rotayı sıfırla
+            currentRoute = null;
+            // UI'dan seçimi kaldır
+            document.querySelectorAll('.route-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            // Workspace'i gizle
+            hideWorkspace();
+            showNotification('Harita temizlendi', 'success');
         }
 
         function showCreateRouteModal() {
@@ -3526,6 +3787,14 @@
         async function suggestNearbyPOIs() {
             if (!currentRoute) return;
             
+            // Rate limiting kontrolü
+            const now = Date.now();
+            if ((now - lastLoadTime) < minLoadInterval) {
+                console.log('POI önerisi rate limit nedeniyle atlandı');
+                showNotification('Çok sık istek gönderiyorsunuz, lütfen bekleyin', 'warning');
+                return;
+            }
+            
             try {
                 const response = await fetch(`${apiBase}/routes/${currentRoute.id}/suggest-pois`);
                 const data = await response.json();
@@ -3725,6 +3994,83 @@
             }
         }
 
+        async function deleteCurrentRoute() {
+            if (!currentRoute) return;
+            
+            const routeId = getRouteId(currentRoute);
+            const routeName = currentRoute.name;
+            
+            if (confirm(`"${routeName}" rotasını silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz!`)) {
+                try {
+                    showNotification('Rota siliniyor...', 'info');
+                    
+                    const response = await fetch(`${apiBase}/admin/routes/${routeId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            csrf_token: csrfToken
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            showNotification(`"${routeName}" rotası başarıyla silindi`, 'success');
+                            
+                            // Remove from UI
+                            allRoutes = allRoutes.filter(r => getRouteId(r) !== routeId);
+                            filteredRoutes = filteredRoutes.filter(r => getRouteId(r) !== routeId);
+                            
+                            // Remove from map
+                            if (routeLayers[routeId]) {
+                                map.removeLayer(routeLayers[routeId]);
+                                delete routeLayers[routeId];
+                            }
+                            
+                            // Clear selection
+                            clearSelection();
+                            
+                            // Update UI
+                            displayRoutes();
+                            updateBulkActions();
+                            
+                        } else {
+                            showNotification(`Rota silinemedi: ${data.error}`, 'error');
+                        }
+                    } else if (response.status === 404) {
+                        // Route already deleted
+                        showNotification(`"${routeName}" rotası zaten silinmiş`, 'warning');
+                        
+                        // Remove from UI anyway
+                        allRoutes = allRoutes.filter(r => getRouteId(r) !== routeId);
+                        filteredRoutes = filteredRoutes.filter(r => getRouteId(r) !== routeId);
+                        
+                        // Remove from map
+                        if (routeLayers[routeId]) {
+                            map.removeLayer(routeLayers[routeId]);
+                            delete routeLayers[routeId];
+                        }
+                        
+                        // Clear selection
+                        clearSelection();
+                        
+                        // Update UI
+                        displayRoutes();
+                        updateBulkActions();
+                    } else {
+                        showNotification(`HTTP hatası: ${response.status}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting route:', error);
+                    showNotification('Rota silinirken hata oluştu', 'error');
+                }
+            }
+        }
+
         function exportSelected() {
             if (selectedRoutes.size > 0) {
                 // TODO: Implement bulk export
@@ -3741,10 +4087,100 @@
 
         function deleteSelected() {
             if (selectedRoutes.size > 0) {
-                if (confirm(`${selectedRoutes.size} rotayı silmek istediğinizden emin misiniz?`)) {
-                    // TODO: Implement bulk delete
-                    showNotification(`${selectedRoutes.size} rota silme özelliği yakında eklenecek`, 'info');
+                if (confirm(`${selectedRoutes.size} rotayı silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz!`)) {
+                    deleteSelectedRoutes();
                 }
+            }
+        }
+
+        async function deleteSelectedRoutes() {
+            const routeIds = Array.from(selectedRoutes);
+            let successCount = 0;
+            let errorCount = 0;
+            
+            showNotification(`${routeIds.length} rota siliniyor...`, 'info');
+            
+            for (const routeId of routeIds) {
+                try {
+                    const response = await fetch(`${apiBase}/admin/routes/${routeId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            csrf_token: csrfToken
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.message && !data.error) {
+                            // Success response has 'message' field
+                            successCount++;
+                            
+                            // Remove from UI
+                            allRoutes = allRoutes.filter(r => getRouteId(r) !== routeId);
+                            filteredRoutes = filteredRoutes.filter(r => getRouteId(r) !== routeId);
+                            
+                            // Remove from map
+                            if (routeLayers[routeId]) {
+                                map.removeLayer(routeLayers[routeId]);
+                                delete routeLayers[routeId];
+                            }
+                            
+                            // Clear selection if this route was selected
+                            if (currentRoute && getRouteId(currentRoute) === routeId) {
+                                clearSelection();
+                            }
+                        } else {
+                            errorCount++;
+                            console.error(`Failed to delete route ${routeId}:`, data.error || 'Unknown error');
+                        }
+                    } else if (response.status === 404) {
+                        // Route already deleted, treat as success
+                        successCount++;
+                        console.warn(`Route ${routeId} already deleted (404)`);
+                        
+                        // Remove from UI anyway
+                        allRoutes = allRoutes.filter(r => getRouteId(r) !== routeId);
+                        filteredRoutes = filteredRoutes.filter(r => getRouteId(r) !== routeId);
+                        
+                        // Remove from map
+                        if (routeLayers[routeId]) {
+                            map.removeLayer(routeLayers[routeId]);
+                            delete routeLayers[routeId];
+                        }
+                        
+                        // Clear selection if this route was selected
+                        if (currentRoute && getRouteId(currentRoute) === routeId) {
+                            clearSelection();
+                        }
+                    } else {
+                        errorCount++;
+                        console.error(`HTTP error deleting route ${routeId}:`, response.status);
+                    }
+                } catch (error) {
+                    errorCount++;
+                    console.error(`Error deleting route ${routeId}:`, error);
+                }
+            }
+            
+            // Clear selection
+            selectedRoutes.clear();
+            
+            // Update UI
+            displayRoutes();
+            updateBulkActions();
+            
+            // Show result notification
+            if (successCount > 0 && errorCount === 0) {
+                showNotification(`${successCount} rota başarıyla silindi`, 'success');
+            } else if (successCount > 0 && errorCount > 0) {
+                showNotification(`${successCount} rota silindi, ${errorCount} rota silinemedi`, 'warning');
+            } else {
+                showNotification(`Rotalar silinemedi`, 'error');
             }
         }
 

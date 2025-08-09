@@ -2691,7 +2691,8 @@ def admin_update_route(route_id):
 
 @app.route('/api/admin/routes/<int:route_id>', methods=['DELETE'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=10, window_seconds=60)
+# Rate limiting removed for testing
+# @admin_rate_limit(max_requests=10, window_seconds=60)
 def admin_delete_route(route_id):
     """Rotayı sil (admin)"""
     try:
