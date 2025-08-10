@@ -5051,11 +5051,17 @@
 
                 if (routeData.success && routeData.route && routeData.route.total_distance) {
                     console.log('✅ Route data valid, total_distance:', routeData.route.total_distance);
+                    console.log('📋 Full route data:', JSON.stringify(routeData.route, null, 2));
 
                     // Mesafeyi km cinsinden göster (API'den km olarak geliyor)
                     const distanceKm = routeData.route.total_distance.toFixed(1);
                     console.log('📏 Setting distance to:', distanceKm, 'km');
+                    console.log('📏 Original API value:', routeData.route.total_distance);
+                    console.log('📏 Network type:', routeData.route.network_type);
                     distanceInput.value = distanceKm;
+                    
+                    // UI'da da gösterelim
+                    showToast(`🔢 API mesafe: ${routeData.route.total_distance} (tip: ${routeData.route.network_type})`, 'info');
 
                     // Süreyi de güncelle (eğer varsa)
                     const durationInput = document.getElementById('routeDuration');

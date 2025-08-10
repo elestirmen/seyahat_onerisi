@@ -2696,6 +2696,7 @@ def admin_update_route(route_id):
 def admin_delete_route(route_id):
     """Rotayı sil (admin)"""
     try:
+        logger.info(f"🗑️ Delete route request for ID: {route_id}")
         if not route_service.connect():
             return jsonify({'error': 'Database connection failed'}), 500
         
@@ -2703,8 +2704,10 @@ def admin_delete_route(route_id):
         route_service.disconnect()
         
         if success:
+            logger.info(f"✅ Route {route_id} deleted successfully")
             return jsonify({'message': 'Route deleted successfully'})
         else:
+            logger.warning(f"❌ Route {route_id} not found or already deleted")
             return jsonify({'error': 'Failed to delete route or route not found'}), 404
             
     except Exception as e:
@@ -2927,10 +2930,23 @@ URGUP_BOUNDS = {
 
 def is_within_urgup_center(lat, lon):
     """Check if coordinates are within 3000m radius of Ürgüp center"""
-    from geopy.distance import distance
-    urgup_center_point = URGUP_CENTER  # (38.6310, 34.9130)
-    poi_point = (lat, lon)
-    distance_meters = distance(urgup_center_point, poi_point).meters
+    import math
+    
+    # Ürgüp merkez koordinatları
+    center_lat, center_lon = URGUP_CENTER  # (38.6310, 34.9130)
+    
+    # Haversine formülü ile mesafe hesapla (metre cinsinden)
+    R = 6371000  # Dünya yarıçapı (metre)
+    
+    lat1 = math.radians(center_lat)
+    lat2 = math.radians(lat)
+    delta_lat = math.radians(lat - center_lat)
+    delta_lon = math.radians(lon - center_lon)
+    
+    a = math.sin(delta_lat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    distance_meters = R * c
+    
     return distance_meters <= 3000
 
 def _estimate_route_center_latlon(route: Dict[str, Any], geometry_data: Dict[str, Any] = None):
@@ -2951,9 +2967,20 @@ def _estimate_route_center_latlon(route: Dict[str, Any], geometry_data: Dict[str
                     if -90 <= lat_f <= 90 and -180 <= lon_f <= 180:
                         valid_coords.append((lat_f, lon_f))
                         # Debug: POI'nin merkez içinde mi dışında mı olduğunu logla
-                        is_center = is_within_urgup_center(lat_f, lon_f)
+                        import math
+                        center_lat, center_lon = URGUP_CENTER
+                        R = 6371000
+                        lat1 = math.radians(center_lat)
+                        lat2 = math.radians(lat_f)
+                        delta_lat = math.radians(lat_f - center_lat)
+                        delta_lon = math.radians(lon_f - center_lon)
+                        a = math.sin(delta_lat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon/2)**2
+                        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+                        distance_meters = R * c
+                        
+                        is_center = distance_meters <= 3000
                         poi_name = poi.get('name', 'Unnamed POI')
-                        logger.info(f"📍 POI: {poi_name} ({lat_f:.4f}, {lon_f:.4f}) -> {'MERKEZ' if is_center else 'DIŞ'}")
+                        logger.info(f"📍 POI: {poi_name} ({lat_f:.4f}, {lon_f:.4f}) -> {distance_meters:.0f}m -> {'MERKEZ' if is_center else 'DIŞ'}")
                 except Exception:
                     pass
         if valid_coords:
@@ -3115,17 +3142,18 @@ def create_walking_route():
                 except Exception as e:
                     print(f"Route segment error: {e}")
                     # Fallback to direct line
+                    fallback_distance_km = haversine_distance(start['lat'], start['lng'], end['lat'], end['lng'])
                     route_segments.append({
                         'coordinates': [
                             {'lat': start['lat'], 'lng': start['lng']},
                             {'lat': end['lat'], 'lng': end['lng']}
                         ],
-                        'distance': haversine_distance(start['lat'], start['lng'], end['lat'], end['lng']),
+                        'distance': fallback_distance_km,
                         'from': start.get('name', f'Point {i+1}'),
                         'to': end.get('name', f'Point {i+2}'),
                         'fallback': True
                     })
-                    total_distance += haversine_distance(start['lat'], start['lng'], end['lat'], end['lng'])
+                    total_distance += fallback_distance_km
 
             return jsonify({
                 'success': True,
@@ -3305,10 +3333,13 @@ def create_driving_route():
                 print(f"Error calculating driving route segment {i+1}: {e}")
                 return jsonify({'error': f'Route calculation error: {str(e)}'}), 500
 
+        distance_km = round(total_distance / 1000, 2)  # Convert meters to km
+        logger.info(f"🚗 Driving route calculated: {total_distance:.0f}m -> {distance_km}km")
+        
         return jsonify({
             'route': {
                 'coordinates': full_route,
-                'distance': round(total_distance, 2),  # meters
+                'distance': distance_km,  # km (fixed)
                 'duration': round(total_time, 1),      # minutes
                 'instructions': instructions,
                 'waypoints_count': len(waypoints),
@@ -3398,16 +3429,19 @@ def create_smart_route():
                 except nx.NetworkXNoPath:
                     return jsonify({'error': f'No walking path found between waypoints {i+1} and {i+2}'}), 400
 
+            distance_km = round(total_distance / 1000, 2)
+            logger.info(f"🚶 Smart route calculated: {total_distance:.0f}m -> {distance_km}km")
+            
             return jsonify({
                 'success': True,
                 'route': {
                     'segments': [{
                         'coordinates': full_route,
-                        'distance': round(total_distance / 1000, 2),
+                        'distance': distance_km,
                         'from': waypoints[0].get('name', 'Start'),
                         'to': waypoints[-1].get('name', 'End')
                     }],
-                    'total_distance': round(total_distance / 1000, 2),
+                    'total_distance': distance_km,
                     'estimated_time': round(total_distance / 1000 / 5 * 60, 1),  # 5 km/h walking speed
                     'waypoint_count': len(waypoints),
                     'network_type': 'walking'
@@ -3556,16 +3590,19 @@ def create_smart_route():
             # Convert coordinates to the format expected by JavaScript
             formatted_coordinates = [{'lat': coord[1], 'lng': coord[0]} for coord in full_route]
             
+            distance_km = round(total_distance / 1000, 2)
+            logger.info(f"🚗 Smart route calculated: {total_distance:.0f}m -> {distance_km}km")
+            
             return jsonify({
                 'success': True,
                 'route': {
                     'segments': [{
                         'coordinates': formatted_coordinates,
-                        'distance': round(total_distance / 1000, 2),  # convert to km
+                        'distance': distance_km,  # convert to km
                         'from': waypoints[0].get('name', 'Start'),
                         'to': waypoints[-1].get('name', 'End')
                     }],
-                    'total_distance': round(total_distance / 1000, 2),  # km
+                    'total_distance': distance_km,  # km
                     'estimated_time': round(total_time, 1),  # minutes
                     'waypoint_count': len(waypoints),
                     'network_type': 'driving',
@@ -4505,13 +4542,17 @@ def confirm_route_import():
             }), 500
         
         # Prepare route data for database
+        distance_meters = parsed_route.metadata.distance or 0
+        distance_km = distance_meters / 1000
+        logger.info(f"📁 Route import: {distance_meters:.0f}m -> {distance_km:.2f}km")
+        
         route_data = {
             'name': data.get('route_name', parsed_route.metadata.name or 'İsimsiz Rota'),
             'description': data.get('route_description', parsed_route.metadata.description or ''),
             'route_type': data.get('route_type', parsed_route.metadata.route_type or 'imported'),
             'difficulty_level': 3,  # Default difficulty (1-5 scale)
             'estimated_duration': int(parsed_route.metadata.duration or 0),  # minutes
-            'total_distance': parsed_route.metadata.distance or 0,  # km
+            'total_distance': distance_km,  # Convert meters to km
             'elevation_gain': int(parsed_route.metadata.elevation_gain or 0),  # meters
             'tags': f'imported,{parsed_route.original_format}',
             'import_metadata': {
