@@ -344,7 +344,7 @@ class RouteSelectionManager {
                     </div>
                     <div class="stat">
                         <i class="fas fa-route"></i>
-                        <span>${distance.toFixed(1)} km</span>
+                        <span>${distance.toFixed(2)} km</span>
                     </div>
                     <div class="stat">
                         <i class="fas fa-map-marker-alt"></i>
@@ -493,7 +493,7 @@ class RouteSelectionManager {
             <div class="stat-item">
                 <i class="fas fa-route"></i>
                 <div>
-                    <span class="stat-value">${distance.toFixed(1)} km</span>
+                    <span class="stat-value">${distance.toFixed(2)} km</span>
                     <span class="stat-label">Mesafe</span>
                 </div>
             </div>

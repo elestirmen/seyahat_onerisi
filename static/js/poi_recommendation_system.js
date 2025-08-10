@@ -3452,7 +3452,7 @@ function displayPredefinedRoutes(routes) {
 function createRouteCard(route) {
     const difficultyStars = createDifficultyStars(route.difficulty_level || 1);
     const duration = Math.round((route.estimated_duration || 0) / 60);
-    const distance = (route.total_distance || 0).toFixed(1);
+    const distance = (route.total_distance || 0).toFixed(2);
     const poiCount = route.poi_count || 0;
     
     console.log('🏷️ Creating route card:', {
@@ -3674,7 +3674,7 @@ function displayRouteDetails(routeData, container) {
     const route = routeData.success ? routeData.route : routeData;
     
     const duration = Math.round((route.estimated_duration || 0) / 60);
-    const distance = (route.total_distance || 0).toFixed(1);
+    const distance = (route.total_distance || 0).toFixed(2);
     const difficultyStars = createDifficultyStars(route.difficulty_level || 1);
     const pois = route.pois || [];
     const poiCount = pois.length;
@@ -3955,7 +3955,7 @@ function displaySelectedRoute(route, pois) {
                     <p style="color: #666; margin: 0 0 16px 0;">${route.description || 'Hazır rota'}</p>
                     <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
                         <span style="color: #666;"><i class="fas fa-clock"></i> ${Math.round((route.estimated_duration || 0) / 60)} saat</span>
-                        <span style="color: #666;"><i class="fas fa-map-marker-alt"></i> ${(route.total_distance || 0).toFixed(1)} km</span>
+                        <span style="color: #666;"><i class="fas fa-map-marker-alt"></i> ${(route.total_distance || 0).toFixed(2)} km</span>
                         <span style="color: #666;"><i class="fas fa-route"></i> ${getRouteTypeDisplayName(route.route_type)}</span>
                         <span style="color: #666;"><i class="fas fa-star"></i> Zorluk: ${getDifficultyStars(route.difficulty_level)}</span>
                     </div>
@@ -3985,7 +3985,7 @@ function displayRouteWithoutPOIs(route) {
             <p style="color: #666; margin: 0 0 20px 0;">${route.description || 'Seçilen rota'}</p>
             <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
                 <span style="color: #666;"><i class="fas fa-clock"></i> ${Math.round((route.estimated_duration || 0) / 60)} saat</span>
-                <span style="color: #666;"><i class="fas fa-map-marker-alt"></i> ${(route.total_distance || 0).toFixed(1)} km</span>
+                <span style="color: #666;"><i class="fas fa-map-marker-alt"></i> ${(route.total_distance || 0).toFixed(2)} km</span>
                 <span style="color: #666;"><i class="fas fa-route"></i> ${getRouteTypeDisplayName(route.route_type)}</span>
             </div>
             <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 16px; color: #856404;">
@@ -4851,7 +4851,7 @@ function displaySavedRouteGeometry(geometryData) {
                 console.log('✅ Route line added to map successfully');
                 
                 // Add popup with route info
-                const distance = geometryData.total_distance ? `${geometryData.total_distance.toFixed(1)} km` : 'Bilinmiyor';
+                const distance = geometryData.total_distance ? `${geometryData.total_distance.toFixed(2)} km` : 'Bilinmiyor';
                 const duration = geometryData.estimated_duration ? `${geometryData.estimated_duration} dk` : 'Bilinmiyor';
                 
                 // Rota tipine göre popup mesajı

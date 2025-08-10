@@ -652,7 +652,7 @@ class RouteAdminManager {
                     <span title="Zorluk: ${route.difficulty_level}/5">${difficultyStars}</span>
                 </td>
                 <td>${duration} saat</td>
-                <td>${distance.toFixed(1)} km</td>
+                <td>${distance.toFixed(2)} km</td>
                 <td>${poiCount}</td>
                 <td>
                     <span class="status-badge ${route.is_active ? 'active' : 'inactive'}">

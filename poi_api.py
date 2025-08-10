@@ -4543,7 +4543,7 @@ def confirm_route_import():
         
         # Prepare route data for database
         distance_meters = parsed_route.metadata.distance or 0
-        distance_km = distance_meters / 1000
+        distance_km = round(distance_meters / 1000, 2)  # Round to 2 decimal places
         logger.info(f"📁 Route import: {distance_meters:.0f}m -> {distance_km:.2f}km")
         
         route_data = {
