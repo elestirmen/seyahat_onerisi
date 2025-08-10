@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design System Test</title>
+    
+    <!-- Design System CSS -->
+    <link rel="stylesheet" href="static/css/design-tokens.css">
+    <link rel="stylesheet" href="static/css/layout-system.css">
+    <link rel="stylesheet" href="static/css/components.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container container-lg py-8">
+        <h1 class="mb-8">Design System Test</h1>
+        
+        <!-- Button Tests -->
+        <section class="mb-12">
+            <h2 class="mb-6">Buttons</h2>
+            <div class="flex flex-wrap gap-4 mb-6">
+                <button class="btn btn--primary">Primary Button</button>
+                <button class="btn btn--secondary">Secondary Button</button>
+                <button class="btn btn--success">Success Button</button>
+                <button class="btn btn--warning">Warning Button</button>
+                <button class="btn btn--error">Error Button</button>
+                <button class="btn btn--ghost">Ghost Button</button>
+            </div>
+            
+            <div class="flex flex-wrap gap-4 mb-6">
+                <button class="btn btn--primary btn--sm">Small</button>
+                <button class="btn btn--primary">Default</button>
+                <button class="btn btn--primary btn--lg">Large</button>
+                <button class="btn btn--primary btn--xl">Extra Large</button>
+            </div>
+            
+            <div class="flex flex-wrap gap-4">
+                <button class="btn btn--primary">
+                    <i class="fas fa-magic"></i>
+                    With Icon
+                </button>
+                <button class="btn btn--primary btn--loading">Loading Button</button>
+                <button class="btn btn--primary" disabled>Disabled Button</button>
+            </div>
+        </section>
+        
+        <!-- Card Tests -->
+        <section class="mb-12">
+            <h2 class="mb-6">Cards</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="card">
+                    <div class="card__header">
+                        <h3>Basic Card</h3>
+                    </div>
+                    <div class="card__content">
+                        <p>This is a basic card with header and content.</p>
+                    </div>
+                </div>
+                
+                <div class="card card--interactive">
+                    <div class="card__content">
+                        <h3 class="mb-3">Interactive Card</h3>
+                        <p>This card has hover effects and is clickable.</p>
+                    </div>
+                </div>
+                
+                <div class="card card--elevated">
+                    <div class="card__content">
+                        <h3 class="mb-3">Elevated Card</h3>
+                        <p>This card has enhanced shadow effects.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- POI Card Test -->
+        <section class="mb-12">
+            <h2 class="mb-6">POI Card</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="poi-card poi-card--interactive">
+                    <div class="poi-card__image-container">
+                        <div class="poi-card__image-placeholder">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        <div class="poi-card__image-overlay"></div>
+                        <span class="poi-card__category">
+                            <i class="fas fa-tree"></i>
+                            Doğa
+                        </span>
+                    </div>
+                    
+                    <div class="poi-card__content">
+                        <div class="poi-card__header">
+                            <h3 class="poi-card__title">Test POI Location</h3>
+                            <div class="poi-card__score">85% Uygun</div>
+                        </div>
+                        
+                        <p class="poi-card__description">
+                            Bu bir test POI kartıdır. Yeni tasarım sistemimizin nasıl çalıştığını göstermek için oluşturulmuştur.
+                        </p>
+                        
+                        <div class="poi-card__meta">
+                            <div class="poi-meta-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>38.6273, 34.9115</span>
+                            </div>
+                            <div class="poi-meta-item">
+                                <i class="fas fa-images"></i>
+                                <span>5 medya</span>
+                            </div>
+                        </div>
+                        
+                        <div class="poi-card__actions">
+                            <button class="btn btn--secondary btn--sm">
+                                <i class="fas fa-map-marker-alt"></i> Haritada Göster
+                            </button>
+                            <button class="btn btn--primary btn--sm">
+                                <i class="fab fa-google"></i> Google Maps
+                            </button>
+                            <button class="btn btn--success btn--sm">
+                                <i class="fas fa-plus"></i> Rotaya Ekle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Loading Components -->
+        <section class="mb-12">
+            <h2 class="mb-6">Loading Components</h2>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="card">
+                    <div class="card__content">
+                        <div class="loading">
+                            <div class="loading__spinner"></div>
+                            <p class="loading__text">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card__content">
+                        <div class="loading">
+                            <div class="loading__dots"></div>
+                            <p class="loading__text">Processing...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="skeleton-card">
+                    <div class="skeleton-card__image loading__skeleton"></div>
+                    <div class="skeleton-card__title loading__skeleton"></div>
+                    <div class="skeleton-card__text loading__skeleton"></div>
+                    <div class="skeleton-card__text loading__skeleton"></div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Grid System Test -->
+        <section class="mb-12">
+            <h2 class="mb-6">Grid System</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div class="card">
+                    <div class="card__content">
+                        <h4>Grid Item 1</h4>
+                        <p>Responsive grid system test.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card__content">
+                        <h4>Grid Item 2</h4>
+                        <p>Responsive grid system test.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card__content">
+                        <h4>Grid Item 3</h4>
+                        <p>Responsive grid system test.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card__content">
+                        <h4>Grid Item 4</h4>
+                        <p>Responsive grid system test.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

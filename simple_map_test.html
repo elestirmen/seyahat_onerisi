@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basit Harita Katmanları Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        .map-container { height: 400px; width: 100%; border: 1px solid #ccc; margin: 10px 0; }
+        .map-title { font-weight: bold; margin: 10px 0 5px 0; }
+        .status { padding: 5px; margin: 2px 0; border-radius: 3px; font-size: 12px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>🗺️ Basit Harita Katmanları Test</h1>
+    <p>Her katman ayrı haritada test ediliyor:</p>
+
+    <div class="map-title">1. 🗺️ OpenStreetMap (Varsayılan)</div>
+    <div id="status1" class="status">Test ediliyor...</div>
+    <div id="map1" class="map-container"></div>
+
+    <div class="map-title">2. 🛰️ Esri Satellite</div>
+    <div id="status2" class="status">Test ediliyor...</div>
+    <div id="map2" class="map-container"></div>
+
+    <div class="map-title">3. 🎨 CartoDB Positron</div>
+    <div id="status3" class="status">Test ediliyor...</div>
+    <div id="map3" class="map-container"></div>
+
+    <div class="map-title">4. 🌙 CartoDB Dark</div>
+    <div id="status4" class="status">Test ediliyor...</div>
+    <div id="map4" class="map-container"></div>
+
+    <div class="map-title">5. 🏔️ OpenTopoMap</div>
+    <div id="status5" class="status">Test ediliyor...</div>
+    <div id="map5" class="map-container"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const center = [38.632, 34.912]; // Ürgüp merkezi
+        const zoom = 13;
+
+        // Test edilecek katmanlar
+        const layers = [
+            {
+                name: "OpenStreetMap",
+                url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                options: {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19,
+                    subdomains: ['a', 'b', 'c']
+                }
+            },
+            {
+                name: "Esri Satellite",
+                url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                options: {
+                    attribution: '© Esri, Maxar, Earthstar Geographics',
+                    maxZoom: 19
+                }
+            },
+            {
+                name: "CartoDB Positron",
+                url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                options: {
+                    attribution: '© OpenStreetMap contributors © CARTO',
+                    maxZoom: 20,
+                    subdomains: 'abcd'
+                }
+            },
+            {
+                name: "CartoDB Dark",
+                url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+                options: {
+                    attribution: '© OpenStreetMap contributors © CARTO',
+                    maxZoom: 20,
+                    subdomains: 'abcd'
+                }
+            },
+            {
+                name: "OpenTopoMap",
+                url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+                options: {
+                    attribution: '© OpenTopoMap (CC-BY-SA)',
+                    maxZoom: 17,
+                    subdomains: ['a', 'b', 'c']
+                }
+            }
+        ];
+
+        function updateStatus(index, message, type) {
+            const statusEl = document.getElementById(`status${index + 1}`);
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        // Her katman için ayrı harita oluştur
+        layers.forEach((layerConfig, index) => {
+            try {
+                const mapId = `map${index + 1}`;
+                const map = L.map(mapId).setView(center, zoom);
+                
+                const layer = L.tileLayer(layerConfig.url, layerConfig.options);
+                
+                let tilesLoaded = 0;
+                let tilesTotal = 0;
+                let hasError = false;
+
+                layer.on('loading', function() {
+                    updateStatus(index, `${layerConfig.name} yükleniyor...`, 'status');
+                });
+
+                layer.on('load', function() {
+                    if (!hasError) {
+                        updateStatus(index, `${layerConfig.name} başarıyla yüklendi ✅`, 'success');
+                    }
+                });
+
+                layer.on('tileloadstart', function() {
+                    tilesTotal++;
+                });
+
+                layer.on('tileload', function() {
+                    tilesLoaded++;
+                    if (!hasError) {
+                        updateStatus(index, `${layerConfig.name} yükleniyor... (${tilesLoaded}/${tilesTotal})`, 'status');
+                    }
+                });
+
+                layer.on('tileerror', function(error) {
+                    hasError = true;
+                    console.error(`Tile error for ${layerConfig.name}:`, error);
+                    updateStatus(index, `${layerConfig.name} yükleme hatası ❌`, 'error');
+                });
+
+                layer.addTo(map);
+
+                // Test marker'ı ekle
+                L.marker(center)
+                    .addTo(map)
+                    .bindPopup(`${layerConfig.name}<br>Test marker'ı`);
+
+                // 10 saniye sonra hala yüklenmediyse timeout
+                setTimeout(() => {
+                    if (!hasError && tilesLoaded === 0) {
+                        updateStatus(index, `${layerConfig.name} zaman aşımı ⏰`, 'error');
+                    }
+                }, 10000);
+
+            } catch (error) {
+                console.error(`Error creating map for ${layerConfig.name}:`, error);
+                updateStatus(index, `${layerConfig.name} oluşturma hatası ❌`, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "route_cache": {
+    "max_size": 1000,
+    "ttl": 300,
+    "enabled": true
+  },
+  "image_cache": {
+    "max_size": 500,
+    "ttl": 3600,
+    "enabled": true
+  },
+  "api_cache": {
+    "max_size": 200,
+    "ttl": 180,
+    "enabled": true
+  }
+}

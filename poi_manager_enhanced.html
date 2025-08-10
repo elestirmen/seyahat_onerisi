@@ -1,0 +1,4178 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POI Yönetimi - Gelişmiş Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="static/css/route-admin.css">
+    <style>
+        :root {
+            --poi-primary: #2d3748;
+            --poi-secondary: #4a5568;
+            --poi-success: #38a169;
+            --poi-danger: #e53e3e;
+            --poi-warning: #d69e2e;
+            --poi-info: #3182ce;
+            --poi-light: #f7fafc;
+            --poi-dark: #1a202c;
+            --poi-border: #e2e8f0;
+            --poi-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --poi-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.15);
+            --poi-radius: 12px;
+            --poi-radius-lg: 16px;
+            --poi-transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--poi-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            /* Prevent body scroll */
+        }
+
+        /* Main Layout */
+        .poi-management-container {
+            display: grid;
+            grid-template-areas:
+                "header header header"
+                "sidebar workspace map";
+            grid-template-columns: 350px 1fr 500px;
+            grid-template-rows: auto 1fr;
+            height: calc(100vh - 2rem);
+            /* Subtract padding */
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        /* Header */
+        .poi-header {
+            grid-area: header;
+            background: white;
+            border-radius: var(--poi-radius-lg);
+            box-shadow: var(--poi-shadow);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .poi-header h1 {
+            margin: 0;
+            color: var(--poi-dark);
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .main-navigation {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .main-navigation a {
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            text-decoration: none;
+            color: var(--poi-secondary);
+            font-weight: 500;
+            transition: var(--poi-transition);
+            border: 2px solid transparent;
+        }
+
+        .main-navigation a.active {
+            background: var(--poi-primary);
+            color: white;
+            box-shadow: var(--poi-shadow);
+        }
+
+        .main-navigation a:hover:not(.active) {
+            background: var(--poi-light);
+            border-color: var(--poi-border);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .session-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .session-info .text-muted {
+            font-size: 0.85rem;
+            color: var(--poi-secondary);
+        }
+
+        .badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .bg-success {
+            background-color: var(--poi-success) !important;
+        }
+
+        .bg-warning {
+            background-color: var(--poi-warning) !important;
+        }
+
+        .bg-danger {
+            background-color: var(--poi-danger) !important;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-decoration: none;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: var(--poi-transition);
+        }
+
+        .btn-outline-warning {
+            color: var(--poi-warning);
+            border-color: var(--poi-warning);
+            background: transparent;
+        }
+
+        .btn-outline-warning:hover {
+            background: var(--poi-warning);
+            color: white;
+        }
+
+        .btn-outline-danger {
+            color: var(--poi-danger);
+            border-color: var(--poi-danger);
+            background: transparent;
+        }
+
+        .btn-outline-danger:hover {
+            background: var(--poi-danger);
+            color: white;
+        }
+
+        .btn-primary {
+            background: var(--poi-primary);
+            color: white;
+            border-color: var(--poi-primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--poi-secondary);
+            border-color: var(--poi-secondary);
+            transform: translateY(-2px);
+            box-shadow: var(--poi-shadow-hover);
+        }
+
+        .btn-sm {
+            padding: 0.35rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        /* Modal Styles */
+        .modal {
+            z-index: 9999;
+        }
+
+        .modal-content {
+            border-radius: var(--poi-radius-lg);
+            border: none;
+            box-shadow: var(--poi-shadow-hover);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--poi-primary) 0%, var(--poi-secondary) 100%);
+            color: white;
+            border-radius: var(--poi-radius-lg) var(--poi-radius-lg) 0 0;
+            border-bottom: none;
+        }
+
+        .modal-title {
+            font-weight: 700;
+        }
+
+        .btn-close {
+            filter: invert(1);
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .modal-footer {
+            border-top: 2px solid var(--poi-border);
+            padding: 1rem 2rem;
+        }
+
+        .btn-secondary {
+            background: var(--poi-secondary);
+            border-color: var(--poi-secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: var(--poi-dark);
+            border-color: var(--poi-dark);
+        }
+
+        /* Custom Map Markers */
+        .custom-poi-marker {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .poi-marker-container {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 3px solid white;
+            transition: transform 0.2s ease;
+        }
+
+        .poi-marker-container:hover {
+            transform: scale(1.1);
+        }
+
+        /* Custom Popup Styles */
+        .poi-popup {
+            min-width: 200px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .poi-popup-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .poi-popup-category {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            font-style: italic;
+        }
+
+        .poi-popup-description {
+            color: #444;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 0.5rem;
+        }
+
+        .poi-popup-rating {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .poi-popup-stars {
+            color: #fbbf24;
+        }
+
+        /* Media Management Styles */
+        .media-upload-container {
+            background: var(--poi-light);
+            border-radius: var(--poi-radius);
+            padding: 1.5rem;
+            border: 2px solid var(--poi-border);
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        .media-upload-form {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--poi-border);
+        }
+
+        .form-help {
+            color: var(--poi-secondary);
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+            display: block;
+        }
+
+        .form-check {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .form-check-input {
+            width: 18px;
+            height: 18px;
+        }
+
+        .form-check-label {
+            font-size: 0.9rem;
+            color: var(--poi-dark);
+        }
+
+        .current-media-container h5 {
+            color: var(--poi-dark);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .current-media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+            max-width: 100%;
+        }
+
+        .media-item-card {
+            background: white;
+            border-radius: var(--poi-radius);
+            border: 2px solid var(--poi-border);
+            overflow: hidden;
+            transition: var(--poi-transition);
+            position: relative;
+        }
+
+        .media-item-card:hover {
+            border-color: var(--poi-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--poi-shadow-hover);
+        }
+
+        .media-preview {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .media-placeholder {
+            width: 100%;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--poi-light);
+            color: var(--poi-secondary);
+            font-size: 2rem;
+            cursor: pointer;
+        }
+
+        .media-item-info {
+            padding: 0.75rem;
+        }
+
+        .media-item-name {
+            font-size: 0.8rem;
+            color: var(--poi-dark);
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            word-break: break-all;
+        }
+
+        .media-item-size {
+            font-size: 0.75rem;
+            color: var(--poi-secondary);
+        }
+
+        .media-delete-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--poi-danger);
+            color: white;
+            border: none;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--poi-transition);
+        }
+
+        .media-delete-btn:hover {
+            background: #c53030;
+            transform: scale(1.1);
+        }
+
+        .media-type-badge {
+            position: absolute;
+            bottom: 0.5rem;
+            left: 0.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* Media Gallery for Detail View */
+        .media-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+            max-width: 100%;
+        }
+
+        .media-gallery-item {
+            position: relative;
+            border-radius: var(--poi-radius);
+            overflow: hidden;
+            cursor: pointer;
+            transition: var(--poi-transition);
+        }
+
+        .media-gallery-item:hover {
+            transform: scale(1.05);
+            box-shadow: var(--poi-shadow-hover);
+        }
+
+        .media-gallery-preview {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+        }
+
+        .media-gallery-placeholder {
+            width: 100%;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--poi-light);
+            color: var(--poi-secondary);
+            font-size: 1.5rem;
+        }
+
+        .media-type-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .media-type-title {
+            color: var(--poi-primary);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--poi-border);
+        }
+
+        .media-format {
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+            color: var(--poi-secondary);
+        }
+
+        /* Sidebar */
+        .poi-sidebar {
+            grid-area: sidebar;
+            background: white;
+            border-radius: var(--poi-radius-lg);
+            box-shadow: var(--poi-shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            background: linear-gradient(135deg, var(--poi-primary) 0%, var(--poi-secondary) 100%);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .sidebar-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .sidebar-controls {
+            padding: 1rem;
+            border-bottom: 1px solid var(--poi-border);
+            background: var(--poi-light);
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid var(--poi-border);
+            border-radius: 25px;
+            font-size: 0.9rem;
+            transition: var(--poi-transition);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--poi-primary);
+            box-shadow: 0 0 0 3px rgba(45, 55, 72, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--poi-secondary);
+        }
+
+        .filter-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--poi-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-select {
+            padding: 0.5rem;
+            border: 2px solid var(--poi-border);
+            border-radius: var(--poi-radius);
+            font-size: 0.85rem;
+            transition: var(--poi-transition);
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--poi-primary);
+            box-shadow: 0 0 0 3px rgba(45, 55, 72, 0.1);
+        }
+
+        .category-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .category-chip {
+            padding: 0.25rem 0.75rem;
+            background: white;
+            border: 2px solid var(--poi-border);
+            border-radius: 15px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: var(--poi-transition);
+            user-select: none;
+        }
+
+        .category-chip:hover {
+            border-color: var(--poi-primary);
+        }
+
+        .category-chip.active {
+            background: var(--poi-primary);
+            color: white;
+            border-color: var(--poi-primary);
+        }
+
+        /* POI List */
+        .poi-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .poi-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .poi-list-container::-webkit-scrollbar-track {
+            background: var(--poi-light);
+            border-radius: 3px;
+        }
+
+        .poi-list-container::-webkit-scrollbar-thumb {
+            background: var(--poi-border);
+            border-radius: 3px;
+        }
+
+        .poi-list-container::-webkit-scrollbar-thumb:hover {
+            background: var(--poi-secondary);
+        }
+
+        .poi-item {
+            background: white;
+            border: 2px solid var(--poi-border);
+            border-radius: var(--poi-radius);
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: var(--poi-transition);
+            position: relative;
+        }
+
+        .poi-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--poi-primary);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+            border-radius: 2px 0 0 2px;
+        }
+
+        .poi-item:hover {
+            border-color: var(--poi-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--poi-shadow-hover);
+        }
+
+        .poi-item:hover::before {
+            transform: scaleY(1);
+        }
+
+        .poi-item.selected {
+            border-color: var(--poi-primary);
+            background: rgba(45, 55, 72, 0.05);
+            box-shadow: var(--poi-shadow-hover);
+        }
+
+        .poi-item.selected::before {
+            transform: scaleY(1);
+        }
+
+        .poi-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .poi-item-title-section {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .poi-category-icon {
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .poi-item-title {
+            font-weight: 700;
+            color: var(--poi-dark);
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.3;
+        }
+
+        .poi-item-category {
+            background: var(--poi-light);
+            color: var(--poi-secondary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .poi-item-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--poi-secondary);
+        }
+
+        .poi-item-rating {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--poi-secondary);
+        }
+
+        .poi-item-rating i {
+            color: #fbbf24;
+        }
+
+        .rating-bar {
+            flex: 1;
+            height: 4px;
+            background: var(--poi-border);
+            border-radius: 2px;
+            overflow: hidden;
+            max-width: 60px;
+        }
+
+        .rating-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%);
+            transition: width 0.3s ease;
+        }
+
+        .poi-item-location {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .poi-item-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .poi-tag {
+            background: rgba(45, 55, 72, 0.1);
+            color: var(--poi-dark);
+            padding: 0.125rem 0.375rem;
+            border-radius: 8px;
+            font-size: 0.7rem;
+        }
+
+        /* Pagination */
+        .pagination-container {
+            padding: 1rem;
+            border-top: 1px solid var(--poi-border);
+            background: var(--poi-light);
+        }
+
+        .pagination-info {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--poi-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .pagination-btn {
+            padding: 0.5rem 0.75rem;
+            border: 2px solid var(--poi-border);
+            background: white;
+            border-radius: var(--poi-radius);
+            cursor: pointer;
+            transition: var(--poi-transition);
+            font-size: 0.85rem;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            border-color: var(--poi-primary);
+            background: var(--poi-primary);
+            color: white;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-btn.active {
+            background: var(--poi-primary);
+            color: white;
+            border-color: var(--poi-primary);
+        }
+
+        /* Loading States */
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 1rem;
+            color: var(--poi-secondary);
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--poi-border);
+            border-top: 3px solid var(--poi-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--poi-secondary);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--poi-border);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .empty-state h4 {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--poi-dark);
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        /* Workspace */
+        .poi-workspace {
+            grid-area: workspace;
+            background: white;
+            border-radius: var(--poi-radius-lg);
+            box-shadow: var(--poi-shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+            /* Allow flex child to shrink */
+        }
+
+        .workspace-header {
+            background: linear-gradient(135deg, var(--poi-info) 0%, #2b6cb0 100%);
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .workspace-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .workspace-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .workspace-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--poi-transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .workspace-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .workspace-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1rem;
+            max-width: 100%;
+            min-height: 0;
+            /* Allow flex child to shrink */
+        }
+
+        .workspace-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .workspace-content::-webkit-scrollbar-track {
+            background: var(--poi-light);
+            border-radius: 3px;
+        }
+
+        .workspace-content::-webkit-scrollbar-thumb {
+            background: var(--poi-border);
+            border-radius: 3px;
+        }
+
+        .workspace-content::-webkit-scrollbar-thumb:hover {
+            background: var(--poi-secondary);
+        }
+
+        /* POI Detail View */
+        .poi-detail-view {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .poi-detail-view.active {
+            display: flex;
+        }
+
+        .poi-detail-header {
+            background: linear-gradient(135deg, var(--poi-primary) 0%, var(--poi-secondary) 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: var(--poi-radius);
+            margin-bottom: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .poi-detail-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .poi-detail-category {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .poi-detail-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-width: 100%;
+            overflow-x: hidden;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .poi-detail-section {
+            background: var(--poi-light);
+            border-radius: var(--poi-radius);
+            padding: 1.5rem;
+            border: 1px solid var(--poi-border);
+            max-width: 100%;
+            overflow-x: auto;
+            box-sizing: border-box;
+        }
+
+        .poi-detail-section h4 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--poi-dark);
+            margin: 0 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .poi-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            max-width: 100%;
+        }
+
+        .poi-info-item {
+            background: white;
+            padding: 1rem;
+            border-radius: var(--poi-radius);
+            border: 1px solid var(--poi-border);
+        }
+
+        .poi-info-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--poi-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .poi-info-value {
+            font-size: 1rem;
+            color: var(--poi-dark);
+            word-break: break-word;
+        }
+
+        .poi-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .poi-tag-large {
+            background: var(--poi-primary);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Rating System Styles */
+        .poi-ratings-container {
+            background: var(--poi-light);
+            border-radius: var(--poi-radius);
+            padding: 1rem;
+            border: 2px solid var(--poi-border);
+        }
+
+        .ratings-summary {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--poi-border);
+        }
+
+        .average-rating {
+            text-align: center;
+        }
+
+        .average-score {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--poi-primary);
+            line-height: 1;
+        }
+
+        .average-label {
+            font-size: 0.9rem;
+            color: var(--poi-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .rating-stars {
+            color: #fbbf24;
+            font-size: 1.2rem;
+        }
+
+        .rating-stars i {
+            margin: 0 0.1rem;
+        }
+
+        .ratings-breakdown {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .rating-item-display {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .rating-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            min-width: 140px;
+        }
+
+        .rating-bar-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .rating-bar-bg {
+            flex: 1;
+            height: 8px;
+            background: var(--poi-border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .rating-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .rating-value {
+            font-weight: 600;
+            color: var(--poi-dark);
+            min-width: 30px;
+            text-align: right;
+            font-size: 0.9rem;
+        }
+
+        /* Rating Grid for Edit Form */
+        .rating-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+            max-width: 100%;
+        }
+
+        .rating-item-edit {
+            background: white;
+            border: 2px solid var(--poi-border);
+            border-radius: var(--poi-radius);
+            padding: 1rem;
+            transition: var(--poi-transition);
+        }
+
+        .rating-item-edit:hover {
+            border-color: var(--poi-primary);
+        }
+
+        .rating-item-edit .rating-label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .rating-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .rating-slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--poi-border);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .rating-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--poi-primary);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .rating-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--poi-primary);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .rating-display {
+            background: var(--poi-primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        /* Media Gallery */
+        .media-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .media-item {
+            position: relative;
+            border-radius: var(--poi-radius);
+            overflow: hidden;
+            cursor: pointer;
+            transition: var(--poi-transition);
+            background: white;
+            border: 2px solid var(--poi-border);
+        }
+
+        .media-item:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--poi-shadow-hover);
+            border-color: var(--poi-primary);
+        }
+
+        .media-item img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+
+        .media-item-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            color: white;
+            padding: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .media-item-type {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+
+        /* Rating System */
+        .rating-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .rating-item {
+            background: white;
+            padding: 1rem;
+            border-radius: var(--poi-radius);
+            border: 1px solid var(--poi-border);
+            text-align: center;
+        }
+
+        .rating-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--poi-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .rating-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--poi-primary);
+        }
+
+        .rating-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--poi-border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .rating-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--poi-danger) 0%, var(--poi-warning) 50%, var(--poi-success) 100%);
+            transition: width 0.3s ease;
+        }
+
+        /* POI Edit Form */
+        .poi-edit-form {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .poi-edit-form.active {
+            display: flex;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            max-width: 100%;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--poi-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-input {
+            padding: 0.75rem;
+            border: 2px solid var(--poi-border);
+            border-radius: var(--poi-radius);
+            font-size: 0.9rem;
+            transition: var(--poi-transition);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--poi-primary);
+            box-shadow: 0 0 0 3px rgba(45, 55, 72, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--poi-border);
+        }
+
+        .form-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--poi-transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-btn-primary {
+            background: var(--poi-primary);
+            color: white;
+        }
+
+        .form-btn-primary:hover {
+            background: var(--poi-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--poi-shadow);
+        }
+
+        .form-btn-secondary {
+            background: var(--poi-secondary);
+            color: white;
+        }
+
+        .form-btn-secondary:hover {
+            background: #2d3748;
+            transform: translateY(-2px);
+            box-shadow: var(--poi-shadow);
+        }
+
+        .form-btn-danger {
+            background: var(--poi-danger);
+            color: white;
+        }
+
+        .form-btn-danger:hover {
+            background: #c53030;
+            transform: translateY(-2px);
+            box-shadow: var(--poi-shadow);
+        }
+
+        /* Map */
+        .poi-map-view {
+            grid-area: map;
+            background: white;
+            border-radius: var(--poi-radius-lg);
+            box-shadow: var(--poi-shadow);
+            overflow: hidden;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Map fullscreen support (parity with poi_manager_ui) */
+        #map.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1050;
+        }
+
+        body.map-fullscreen {
+            overflow: hidden;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .poi-management-container {
+                grid-template-columns: 300px 1fr 400px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .poi-management-container {
+                grid-template-areas:
+                    "header"
+                    "sidebar"
+                    "workspace"
+                    "map";
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto 1fr 300px;
+            }
+
+            .poi-header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .main-navigation {
+                justify-content: center;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: center;
+            }
+
+            .session-info {
+                justify-content: center;
+            }
+
+            .poi-sidebar {
+                max-height: 400px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .rating-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .current-media-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .media-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+        }
+
+        @media (max-width: 480px) {
+            .poi-management-container {
+                padding: 0.5rem;
+                gap: 0.5rem;
+            }
+
+            .poi-header {
+                padding: 1rem;
+            }
+
+            .poi-header h1 {
+                font-size: 1.25rem;
+            }
+
+            .main-navigation a {
+                padding: 0.375rem 0.75rem;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="poi-management-container">
+        <!-- Header -->
+        <header class="poi-header">
+            <h1>
+                <i class="fas fa-map-marker-alt"></i>
+                POI Yönetimi
+            </h1>
+            <nav class="main-navigation">
+                <a href="poi_manager_enhanced.html" class="active">POI Yönetimi</a>
+                <a href="route_manager_enhanced.html">Rota Yönetimi</a>
+                <a href="file_import_manager.html">Dosya Import</a>
+            </nav>
+            <div class="header-actions">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleFullscreenBtn"
+                    onclick="toggleMapFullscreen()">
+                    <i class="fas fa-expand"></i>
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="showCreatePOIModal()">
+                    <i class="fas fa-plus"></i>
+                    Yeni POI
+                </button>
+                <div class="session-info">
+                    <small class="text-muted">Oturum: </small>
+                    <span class="badge bg-success" id="sessionStatus">Kontrol Ediliyor...</span>
+                </div>
+                <button type="button" class="btn btn-outline-warning btn-sm" onclick="showPasswordChangeModal()">
+                    <i class="fas fa-key"></i>
+                    Şifre Değiştir
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Çıkış
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="poi-sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-list"></i> POI Listesi</h3>
+            </div>
+
+            <div class="sidebar-controls">
+                <!-- Search -->
+                <div class="search-container">
+                    <input type="text" class="search-input" id="poiSearch" placeholder="POI ara...">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+
+                <!-- Filters -->
+                <div class="filter-controls">
+                    <!-- Category Filter -->
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-tags"></i>
+                            Kategori
+                        </label>
+                        <select class="filter-select" id="categoryFilter">
+                            <option value="">Tüm Kategoriler</option>
+                        </select>
+                        <div class="category-filters" id="categoryChips"></div>
+                    </div>
+
+                    <!-- Sort Filter -->
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-sort"></i>
+                            Sıralama
+                        </label>
+                        <select class="filter-select" id="sortFilter">
+                            <option value="name_asc">İsim (A-Z)</option>
+                            <option value="name_desc">İsim (Z-A)</option>
+                            <option value="category_asc">Kategori (A-Z)</option>
+                            <option value="created_desc">En Yeni</option>
+                            <option value="created_asc">En Eski</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- POI List -->
+            <div class="poi-list-container" id="poiListContainer">
+                <div class="loading-state" id="loadingState">
+                    <div class="loading-spinner"></div>
+                    <p>POI'ler yükleniyor...</p>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination-container" id="paginationContainer" style="display: none;">
+                <div class="pagination-info" id="paginationInfo"></div>
+                <div class="pagination-controls" id="paginationControls"></div>
+            </div>
+        </aside>
+
+        <!-- Workspace -->
+        <section class="poi-workspace" id="poiWorkspace">
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState">
+                <i class="fas fa-mouse-pointer"></i>
+                <h4>POI Seçin</h4>
+                <p>Detayları görüntülemek için sol panelden bir POI seçin</p>
+            </div>
+
+            <!-- POI Detail View -->
+            <div class="poi-detail-view" id="poiDetailView">
+                <div class="workspace-header">
+                    <h3 id="workspaceTitle">
+                        <i class="fas fa-info-circle"></i>
+                        POI Detayları
+                    </h3>
+                    <div class="workspace-actions">
+                        <button class="workspace-btn" id="editPOIBtn">
+                            <i class="fas fa-edit"></i>
+                            Düzenle
+                        </button>
+                        <button class="workspace-btn" id="deletePOIBtn">
+                            <i class="fas fa-trash"></i>
+                            Sil
+                        </button>
+                    </div>
+                </div>
+
+                <div class="workspace-content">
+                    <div class="poi-detail-header">
+                        <h2 class="poi-detail-title" id="poiDetailTitle"></h2>
+                        <span class="poi-detail-category" id="poiDetailCategory"></span>
+                    </div>
+
+                    <div class="poi-detail-sections">
+                        <!-- Basic Information -->
+                        <div class="poi-detail-section">
+                            <h4><i class="fas fa-info-circle"></i> Temel Bilgiler</h4>
+                            <div class="poi-info-grid" id="poiBasicInfo"></div>
+                        </div>
+
+                        <!-- Tags -->
+                        <div class="poi-detail-section" id="poiTagsSection" style="display: none;">
+                            <h4><i class="fas fa-tags"></i> Etiketler</h4>
+                            <div class="poi-tags-container" id="poiTagsContainer"></div>
+                        </div>
+
+                        <!-- Ratings -->
+                        <div class="poi-detail-section" id="poiRatingsSection" style="display: none;">
+                            <h4><i class="fas fa-star"></i> Nitelik Puanları</h4>
+                            <div class="poi-ratings-container" id="poiRatingsContainer"></div>
+                        </div>
+
+                        <!-- Media Gallery -->
+                        <div class="poi-detail-section" id="poiMediaSection" style="display: none;">
+                            <h4><i class="fas fa-images"></i> Medya Galerisi</h4>
+                            <div class="media-gallery" id="poiMediaGallery"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- POI Edit Form -->
+            <div class="poi-edit-form" id="poiEditForm">
+                <div class="workspace-header">
+                    <h3>
+                        <i class="fas fa-edit"></i>
+                        POI Düzenle
+                    </h3>
+                    <div class="workspace-actions">
+                        <button class="workspace-btn" id="cancelEditBtn">
+                            <i class="fas fa-times"></i>
+                            İptal
+                        </button>
+                    </div>
+                </div>
+
+                <div class="workspace-content">
+                    <form id="editForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-tag"></i>
+                                    POI Adı *
+                                </label>
+                                <input type="text" class="form-input" id="editName" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-list"></i>
+                                    Kategori *
+                                </label>
+                                <select class="form-input" id="editCategory" required>
+                                    <option value="">Seçiniz</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    Enlem *
+                                </label>
+                                <input type="number" step="any" class="form-input" id="editLatitude" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    Boylam *
+                                </label>
+                                <input type="number" step="any" class="form-input" id="editLongitude" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-align-left"></i>
+                                Açıklama
+                            </label>
+                            <textarea class="form-input form-textarea" id="editDescription" rows="4"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-tags"></i>
+                                Etiketler
+                            </label>
+                            <input type="text" class="form-input" id="editTags"
+                                placeholder="etiket1, etiket2, etiket3...">
+                            <small style="color: var(--poi-secondary); font-size: 0.8rem;">Etiketleri virgülle
+                                ayırın</small>
+                        </div>
+
+                        <!-- Rating System -->
+                        <div class="poi-detail-section">
+                            <h4><i class="fas fa-star"></i> Değerlendirmeler (0-100)</h4>
+                            <div class="rating-grid" id="editRatingsGrid"></div>
+                        </div>
+
+                        <!-- Media Management -->
+                        <div class="poi-detail-section" id="mediaManagementSection">
+                            <h4><i class="fas fa-photo-video"></i> Medya Yönetimi</h4>
+                            <div class="media-upload-container">
+                                <div class="media-upload-form">
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="fas fa-file-upload"></i>
+                                            Medya Dosyası Seç
+                                        </label>
+                                        <input type="file" class="form-input" id="mediaFile"
+                                            accept="image/*,video/*,audio/*,.glb,.gltf,.obj,.fbx,.dae,.ply,.stl">
+                                        <small class="form-help">
+                                            Desteklenen formatlar: Görsel (JPG, PNG, GIF), Video (MP4, AVI, MOV),
+                                            Ses (MP3, WAV, OGG), 3D Model (GLB, GLTF, OBJ, FBX)
+                                        </small>
+                                    </div>
+
+                                    <div class="form-grid">
+                                        <div class="form-group">
+                                            <label class="form-label">Medya Türü</label>
+                                            <select class="form-input" id="mediaType">
+                                                <option value="auto">🔍 Otomatik Tespit</option>
+                                                <option value="image">📸 Görsel</option>
+                                                <option value="video">🎥 Video</option>
+                                                <option value="audio">🎵 Ses</option>
+                                                <option value="model_3d">🧊 3D Model</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="form-label">Açıklama</label>
+                                            <input type="text" class="form-input" id="mediaCaption"
+                                                placeholder="Medya açıklaması">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" id="isPrimaryMedia">
+                                            <label class="form-check-label" for="isPrimaryMedia">
+                                                Ana medya olarak ayarla
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" class="btn btn-primary" onclick="uploadPOIMedia()">
+                                        <i class="fas fa-upload"></i>
+                                        Medya Yükle
+                                    </button>
+                                </div>
+
+                                <!-- Current Media Files -->
+                                <div class="current-media-container">
+                                    <h5><i class="fas fa-folder-open"></i> Mevcut Medya Dosyaları</h5>
+                                    <div id="currentMedia" class="current-media-grid">
+                                        <div class="loading-spinner">
+                                            <div class="spinner"></div>
+                                            <p>Medya dosyaları yükleniyor...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="form-btn form-btn-danger" id="deleteFormBtn">
+                                <i class="fas fa-trash"></i>
+                                Sil
+                            </button>
+                            <button type="button" class="form-btn form-btn-secondary" id="cancelFormBtn">
+                                <i class="fas fa-times"></i>
+                                İptal
+                            </button>
+                            <button type="submit" class="form-btn form-btn-primary">
+                                <i class="fas fa-save"></i>
+                                Kaydet
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Map -->
+        <section class="poi-map-view">
+            <div id="map"></div>
+        </section>
+    </div>
+
+    <!-- Create POI Modal -->
+    <div class="modal fade" id="createPOIModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus-circle"></i>
+                        Yeni POI Oluştur
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createPOIForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-tag"></i>
+                                    POI Adı *
+                                </label>
+                                <input type="text" class="form-input" id="createName" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-list"></i>
+                                    Kategori *
+                                </label>
+                                <select class="form-input" id="createCategory" required>
+                                    <option value="">Seçiniz</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    Enlem *
+                                </label>
+                                <input type="number" step="any" class="form-input" id="createLatitude" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    Boylam *
+                                </label>
+                                <input type="number" step="any" class="form-input" id="createLongitude" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-align-left"></i>
+                                Açıklama
+                            </label>
+                            <textarea class="form-input form-textarea" id="createDescription" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-tags"></i>
+                                Etiketler
+                            </label>
+                            <input type="text" class="form-input" id="createTags"
+                                placeholder="etiket1, etiket2, etiket3...">
+                            <small style="color: var(--poi-secondary); font-size: 0.8rem;">Etiketleri virgülle
+                                ayırın</small>
+                        </div>
+
+                        <!-- Rating System -->
+                        <div class="poi-detail-section">
+                            <h4><i class="fas fa-star"></i> Nitelik Puanları (0-100)</h4>
+                            <div class="rating-grid" id="createRatingsGrid"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" onclick="createPOI()">
+                        <i class="fas fa-save"></i>
+                        POI Oluştur
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="static/js/rate-limiter.js"></script>
+    <script>
+        // Rate limiting bilgilendirme mesajı
+        if (window.rateLimiter) {
+            console.log('✅ Rate limiting aktif - API çağrıları sınırlandırılacak');
+        }
+
+        // POI Management Application
+        class POIManager {
+            constructor() {
+                this.currentPage = 1;
+                this.itemsPerPage = 20;
+                this.totalItems = 0;
+                this.totalPages = 0;
+                this.currentFilters = {
+                    search: '',
+                    category: '',
+                    sort: 'name_asc'
+                };
+                this.selectedCategories = new Set();
+                this.pois = [];
+                this.categories = [];
+                this.selectedPOI = null;
+                this.map = null;
+                this.markers = {};
+                this.csrfToken = null;
+
+                // Rate limiting için
+                this.lastLoadTime = 0;
+                this.minLoadInterval = 2000; // 2 saniye minimum aralık
+                this.loadingInProgress = false;
+
+                this.init();
+            }
+
+            async init() {
+                // Check authentication first
+                const isAuthenticated = await this.checkAuthStatus();
+                if (!isAuthenticated) {
+                    return; // Will redirect to login
+                }
+
+                await this.initializeMap();
+                await this.loadCategories();
+                await this.loadPOIs();
+                // Rotaları otomatik yükleme devre dışı - sadece ihtiyaç duyulduğunda yüklenecek
+                // await this.loadRoutesForMap();
+                this.setupEventListeners();
+            }
+
+            async initializeMap() {
+                this.map = L.map('map').setView([38.6431, 34.8331], 11);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(this.map);
+
+                // Add double-click handler for creating new POIs
+                this.map.on('dblclick', (e) => {
+                    const { lat, lng } = e.latlng;
+                    this.showCreatePOIModalWithCoordinates(lat, lng);
+                });
+            }
+
+            async loadCategories() {
+                try {
+                    const response = await this.authenticatedFetch('/api/categories');
+                    console.log('Categories API response status:', response.status); // Debug log
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('Categories API response:', data); // Debug log
+
+                        // Handle different response formats
+                        if (Array.isArray(data)) {
+                            this.categories = data;
+                        } else if (data.categories && Array.isArray(data.categories)) {
+                            this.categories = data.categories;
+                        } else {
+                            console.warn('Unexpected categories response format:', data);
+                            this.categories = [];
+                        }
+
+                        console.log('Processed categories:', this.categories); // Debug log
+                        this.renderCategoryFilter();
+                        this.renderCategoryChips();
+                    } else {
+                        // If auth fails, try to use fallback categories
+                        console.warn(`Categories API failed with status ${response.status}, using fallback`);
+                        this.categories = this.getFallbackCategories();
+                        this.renderCategoryFilter();
+                        this.renderCategoryChips();
+                    }
+                } catch (error) {
+                    console.error('Error loading categories:', error);
+                    // Use fallback categories
+                    this.categories = this.getFallbackCategories();
+                    this.renderCategoryFilter();
+                    this.renderCategoryChips();
+                }
+            }
+
+            getFallbackCategories() {
+                return [
+                    { "name": "gastronomik", "display_name": "🍽️ Gastronomik", "color": "#e74c3c", "icon": "utensils" },
+                    { "name": "kulturel", "display_name": "🏛️ Kültürel", "color": "#3498db", "icon": "landmark" },
+                    { "name": "sanatsal", "display_name": "🎨 Sanatsal", "color": "#2ecc71", "icon": "palette" },
+                    { "name": "doga_macera", "display_name": "🌿 Doğa & Macera", "color": "#f39c12", "icon": "hiking" },
+                    { "name": "konaklama", "display_name": "🏨 Konaklama", "color": "#9b59b6", "icon": "bed" },
+                    { "name": "alisveris", "display_name": "🛍️ Alışveriş", "color": "#f39c12", "icon": "shopping-cart" },
+                    { "name": "eglence", "display_name": "🎪 Eğlence", "color": "#e74c3c", "icon": "music" },
+                    { "name": "spor", "display_name": "⚽ Spor", "color": "#34495e", "icon": "dumbbell" }
+                ];
+            }
+
+            async loadPOIs() {
+                // Rate limiting kontrolü
+                const now = Date.now();
+                if (this.loadingInProgress || (now - this.lastLoadTime) < this.minLoadInterval) {
+                    console.log('POI yükleme rate limit nedeniyle atlandı');
+                    return;
+                }
+
+                this.loadingInProgress = true;
+                this.lastLoadTime = now;
+                this.showLoading(true);
+
+                try {
+                    const params = new URLSearchParams({
+                        page: this.currentPage,
+                        limit: this.itemsPerPage,
+                        search: this.currentFilters.search,
+                        category: this.currentFilters.category,
+                        sort: this.currentFilters.sort
+                    });
+
+                    // Add selected categories to filter
+                    if (this.selectedCategories.size > 0) {
+                        params.set('categories', Array.from(this.selectedCategories).join(','));
+                    }
+
+                    const response = await rateLimitedFetch(`/api/pois?${params}`, {
+                        credentials: 'include'
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('API Response:', data); // Debug log
+
+                        // Handle different API response formats
+                        this.pois = [];
+
+                        if (Array.isArray(data)) {
+                            // Direct array response
+                            this.pois = data;
+                        } else if (data && typeof data === 'object') {
+                            // Object response - could be categorized POIs or paginated response
+                            if (data.pois && Array.isArray(data.pois)) {
+                                // Paginated response with pois array
+                                this.pois = data.pois;
+                            } else if (data.results && Array.isArray(data.results)) {
+                                // Paginated response with results array
+                                this.pois = data.results;
+                            } else {
+                                // Categorized POIs - flatten all categories
+                                for (const [category, poisInCategory] of Object.entries(data)) {
+                                    if (Array.isArray(poisInCategory)) {
+                                        this.pois = this.pois.concat(poisInCategory);
+                                    }
+                                }
+                            }
+                        }
+
+                        console.log('Processed POIs:', this.pois); // Debug log
+
+                        // Ensure we have an array
+                        if (!Array.isArray(this.pois)) {
+                            console.warn('Could not process POIs into array format:', data);
+                            this.pois = [];
+                        }
+
+                        this.totalItems = (data && data.total) || this.pois.length;
+                        this.totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+
+                        this.renderPOIList();
+                        this.renderPagination();
+                        this.updateMapMarkers();
+                    } else {
+                        const errorText = await response.text();
+                        throw new Error(`Failed to load POIs: ${response.status} ${errorText}`);
+                    }
+                } catch (error) {
+                    console.error('Error loading POIs:', error);
+                    this.showError('POI\'ler yüklenirken hata oluştu');
+                } finally {
+                    this.showLoading(false);
+                    this.loadingInProgress = false;
+                }
+            }
+
+            renderCategoryFilter() {
+                const categoryFilter = document.getElementById('categoryFilter');
+                categoryFilter.innerHTML = '<option value="">Tüm Kategoriler</option>';
+
+                this.categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id || category.name;
+                    option.textContent = category.display_name || category.name;
+                    categoryFilter.appendChild(option);
+                });
+            }
+
+            renderCategoryChips() {
+                const categoryChips = document.getElementById('categoryChips');
+                categoryChips.innerHTML = '';
+
+                this.categories.forEach(category => {
+                    const chip = document.createElement('div');
+                    chip.className = 'category-chip';
+                    chip.textContent = category.display_name || category.name;
+                    chip.dataset.categoryId = category.id || category.name;
+
+                    if (this.selectedCategories.has(category.id || category.name)) {
+                        chip.classList.add('active');
+                    }
+
+                    chip.addEventListener('click', () => this.toggleCategoryChip(category.id || category.name, chip));
+                    categoryChips.appendChild(chip);
+                });
+            }
+
+            toggleCategoryChip(categoryId, chipElement) {
+                if (this.selectedCategories.has(categoryId)) {
+                    this.selectedCategories.delete(categoryId);
+                    chipElement.classList.remove('active');
+                } else {
+                    this.selectedCategories.add(categoryId);
+                    chipElement.classList.add('active');
+                }
+
+                this.currentPage = 1;
+                this.loadPOIs();
+            }
+
+            renderPOIList() {
+                const container = document.getElementById('poiListContainer');
+                if (!container) return;
+
+                // Ensure pois is an array
+                if (!Array.isArray(this.pois)) {
+                    console.warn('POIs is not an array:', this.pois);
+                    this.pois = [];
+                }
+
+                if (this.pois.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h4>POI Bulunamadı</h4>
+                            <p>Arama kriterlerinize uygun POI bulunamadı</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = '';
+
+                this.pois.forEach(poi => {
+                    const poiElement = this.createPOIElement(poi);
+                    container.appendChild(poiElement);
+                });
+            }
+
+            createPOIElement(poi) {
+                if (!poi) {
+                    console.warn('Invalid POI data:', poi);
+                    return document.createElement('div');
+                }
+
+                const element = document.createElement('div');
+                element.className = 'poi-item';
+                element.dataset.poiId = poi.id || poi._id || '';
+
+                const category = this.categories.find(cat =>
+                    (cat.id && cat.id === poi.category) || cat.name === poi.category
+                );
+                const categoryName = category ? (category.display_name || category.name) : (poi.category || 'Kategori yok');
+                const categoryIcon = category ? category.icon : 'map-marker-alt';
+                const categoryColor = category ? category.color : '#6c757d';
+
+                // Safe coordinate display
+                const lat = poi.latitude ? parseFloat(poi.latitude).toFixed(6) : '0.000000';
+                const lng = poi.longitude ? parseFloat(poi.longitude).toFixed(6) : '0.000000';
+
+                // Calculate total rating if ratings exist
+                let totalRating = 0;
+                let ratingCount = 0;
+                if (poi.ratings && typeof poi.ratings === 'object') {
+                    Object.values(poi.ratings).forEach(rating => {
+                        if (typeof rating === 'number') {
+                            totalRating += rating;
+                            ratingCount++;
+                        }
+                    });
+                }
+                const averageRating = ratingCount > 0 ? Math.round(totalRating / ratingCount) : 0;
+
+                element.innerHTML = `
+                    <div class="poi-item-header">
+                        <div class="poi-item-title-section">
+                            <i class="fas fa-${categoryIcon} poi-category-icon" style="color: ${categoryColor}"></i>
+                            <h4 class="poi-item-title">${poi.name || 'İsimsiz POI'}</h4>
+                        </div>
+                        <span class="poi-item-category" style="color: ${categoryColor}">${categoryName}</span>
+                    </div>
+                    <div class="poi-item-meta">
+                        <div class="poi-item-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>${lat}, ${lng}</span>
+                        </div>
+                        ${averageRating > 0 ? `
+                            <div class="poi-item-rating">
+                                <i class="fas fa-star"></i>
+                                <span>${averageRating}/100</span>
+                                <div class="rating-bar">
+                                    <div class="rating-fill" style="width: ${averageRating}%"></div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${poi.tags && Array.isArray(poi.tags) && poi.tags.length > 0 ? `
+                            <div class="poi-item-tags">
+                                ${poi.tags.slice(0, 3).map(tag => `<span class="poi-tag">${tag}</span>`).join('')}
+                                ${poi.tags.length > 3 ? `<span class="poi-tag">+${poi.tags.length - 3}</span>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                element.addEventListener('click', () => this.selectPOI(poi));
+
+                return element;
+            }
+
+            selectPOI(poi) {
+                if (!poi) return;
+
+                console.log('Selected POI:', poi); // Debug log
+
+                // Remove previous selection
+                document.querySelectorAll('.poi-item.selected').forEach(item => {
+                    item.classList.remove('selected');
+                });
+
+                // Add selection to current item
+                const poiId = poi.id || poi._id;
+                const poiElement = document.querySelector(`[data-poi-id="${poiId}"]`);
+                if (poiElement) {
+                    poiElement.classList.add('selected');
+                }
+
+                // Normalize POI id to 'id' for downstream operations
+                const normalizedPOI = { ...poi };
+                if (!normalizedPOI.id) {
+                    normalizedPOI.id = normalizedPOI._id || normalizedPOI.poi_id || null;
+                }
+                this.selectedPOI = normalizedPOI;
+
+                // Focus on map
+                if (this.map && poi.latitude && poi.longitude) {
+                    this.map.setView([poi.latitude, poi.longitude], 15);
+
+                    // Highlight marker
+                    Object.values(this.markers).forEach(marker => {
+                        marker.setOpacity(0.6);
+                    });
+
+                    if (this.markers[poi.id]) {
+                        this.markers[poi.id].setOpacity(1);
+                    }
+                }
+
+                // Update workspace
+                this.showPOIDetails(this.selectedPOI);
+            }
+
+            updateMapMarkers() {
+                if (!this.map) return;
+
+                // Clear existing markers
+                Object.values(this.markers).forEach(marker => {
+                    this.map.removeLayer(marker);
+                });
+                this.markers = {};
+
+                // Ensure pois is an array
+                if (!Array.isArray(this.pois)) {
+                    console.warn('POIs is not an array in updateMapMarkers:', this.pois);
+                    return;
+                }
+
+                // Add new markers
+                this.pois.forEach(poi => {
+                    if (poi && poi.latitude && poi.longitude) {
+                        // Get category info for custom icon
+                        const category = this.categories.find(cat =>
+                            (cat.id && cat.id === poi.category) || cat.name === poi.category
+                        );
+
+                        const categoryIcon = category ? category.icon : 'map-marker-alt';
+                        const categoryColor = category ? category.color : '#2563eb';
+
+                        // Create custom icon
+                        const customIcon = L.divIcon({
+                            className: 'custom-poi-marker',
+                            html: `
+                                <div class="poi-marker-container" style="background-color: ${categoryColor}">
+                                    <i class="fas fa-${categoryIcon}"></i>
+                                </div>
+                            `,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15],
+                            popupAnchor: [0, -15]
+                        });
+
+                        const marker = L.marker([poi.latitude, poi.longitude], { icon: customIcon })
+                            .bindPopup(`
+                                <div class="poi-popup">
+                                    <div class="poi-popup-header">
+                                        <i class="fas fa-${categoryIcon}" style="color: ${categoryColor}"></i>
+                                        <strong>${poi.name || 'İsimsiz POI'}</strong>
+                                    </div>
+                                    <div class="poi-popup-category">${category ? category.display_name : poi.category || 'Kategori yok'}</div>
+                                    ${poi.description ? `<div class="poi-popup-description">${poi.description.substring(0, 100)}${poi.description.length > 100 ? '...' : ''}</div>` : ''}
+                                    ${this.generatePopupRating(poi)}
+                                </div>
+                            `)
+                            .addTo(this.map);
+
+                        marker.on('click', () => this.selectPOI(poi));
+                        this.markers[poi.id || poi._id] = marker;
+                    }
+                });
+            }
+
+            // --- Routes on Map (display routes like in route manager) ---
+            async loadRoutesForMap() {
+                try {
+                    const response = await this.authenticatedFetch('/api/routes');
+                    if (!response.ok) {
+                        throw new Error('Rotalar yüklenemedi');
+                    }
+                    const data = await response.json();
+                    this.routes = Array.isArray(data) ? data : (data.pois ? data.pois : []);
+                    this.updateRouteLayersOnMap();
+                } catch (error) {
+                    console.warn('Rotalar yüklenemedi:', error);
+                }
+            }
+
+            updateRouteLayersOnMap() {
+                if (!this.map || !Array.isArray(this.routes)) return;
+
+                if (!this.routeLayers) {
+                    this.routeLayers = {};
+                }
+
+                // Clear existing
+                Object.values(this.routeLayers).forEach(layer => {
+                    try { this.map.removeLayer(layer); } catch (_) { /* noop */ }
+                });
+                this.routeLayers = {};
+
+                const ROUTE_TYPES = {
+                    walking: { name: 'Yürüyüş', color: '#10b981' },
+                    hiking: { name: 'Doğa Yürüyüşü', color: '#f59e0b' },
+                    cycling: { name: 'Bisiklet', color: '#3b82f6' },
+                    driving: { name: 'Araç', color: '#ef4444' }
+                };
+
+                const addedLayers = [];
+
+                this.routes.forEach(route => {
+                    if (!route || !route.geometry) return;
+                    try {
+                        const geojson = typeof route.geometry === 'string' ? JSON.parse(route.geometry) : route.geometry;
+                        const layer = L.geoJSON(geojson, {
+                            style: {
+                                color: ROUTE_TYPES[route.route_type]?.color || '#2563eb',
+                                weight: 3,
+                                opacity: 0.8
+                            }
+                        }).bindPopup(`
+                            <strong>${this.escapeHtml(route.name || 'Rota')}</strong><br>
+                            ${(ROUTE_TYPES[route.route_type]?.name || route.route_type || '')}
+                        `);
+                        layer.addTo(this.map);
+                        this.routeLayers[route.id || route._id] = layer;
+                        addedLayers.push(layer);
+                    } catch (err) {
+                        console.warn('Rota geometry parse hatası:', err);
+                    }
+                });
+
+                if (addedLayers.length > 0) {
+                    const group = new L.featureGroup(addedLayers);
+                    try { this.map.fitBounds(group.getBounds(), { padding: [20, 20] }); } catch (_) { /* noop */ }
+                }
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = String(text ?? '');
+                return div.innerHTML;
+            }
+
+            renderPagination() {
+                const paginationContainer = document.getElementById('paginationContainer');
+                const paginationInfo = document.getElementById('paginationInfo');
+                const paginationControls = document.getElementById('paginationControls');
+
+                if (this.totalPages <= 1) {
+                    paginationContainer.style.display = 'none';
+                    return;
+                }
+
+                paginationContainer.style.display = 'block';
+
+                // Update info
+                const startItem = (this.currentPage - 1) * this.itemsPerPage + 1;
+                const endItem = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                paginationInfo.textContent = `${startItem}-${endItem} / ${this.totalItems} POI`;
+
+                // Update controls
+                paginationControls.innerHTML = '';
+
+                // Previous button
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'pagination-btn';
+                prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                prevBtn.disabled = this.currentPage === 1;
+                prevBtn.addEventListener('click', () => this.goToPage(this.currentPage - 1));
+                paginationControls.appendChild(prevBtn);
+
+                // Page numbers
+                const startPage = Math.max(1, this.currentPage - 2);
+                const endPage = Math.min(this.totalPages, this.currentPage + 2);
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const pageBtn = document.createElement('button');
+                    pageBtn.className = 'pagination-btn';
+                    pageBtn.textContent = i;
+
+                    if (i === this.currentPage) {
+                        pageBtn.classList.add('active');
+                    }
+
+                    pageBtn.addEventListener('click', () => this.goToPage(i));
+                    paginationControls.appendChild(pageBtn);
+                }
+
+                // Next button
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'pagination-btn';
+                nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                nextBtn.disabled = this.currentPage === this.totalPages;
+                nextBtn.addEventListener('click', () => this.goToPage(this.currentPage + 1));
+                paginationControls.appendChild(nextBtn);
+            }
+
+            goToPage(page) {
+                if (page >= 1 && page <= this.totalPages && page !== this.currentPage) {
+                    this.currentPage = page;
+                    this.loadPOIs();
+                }
+            }
+
+            setupEventListeners() {
+                // Search input
+                const searchInput = document.getElementById('poiSearch');
+                let searchTimeout;
+                searchInput.addEventListener('input', (e) => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        this.currentFilters.search = e.target.value;
+                        this.currentPage = 1;
+                        this.loadPOIs();
+                    }, 800); // Arama için daha uzun bekleme süresi
+                });
+
+                // Category filter
+                document.getElementById('categoryFilter').addEventListener('change', (e) => {
+                    this.currentFilters.category = e.target.value;
+                    this.currentPage = 1;
+                    this.loadPOIs();
+                });
+
+                // Sort filter
+                document.getElementById('sortFilter').addEventListener('change', (e) => {
+                    this.currentFilters.sort = e.target.value;
+                    this.currentPage = 1;
+                    this.loadPOIs();
+                });
+
+                // Workspace event listeners
+                document.getElementById('editPOIBtn').addEventListener('click', async () => {
+                    if (this.selectedPOI) {
+                        await this.showEditForm(this.selectedPOI);
+                    }
+                });
+
+                document.getElementById('deletePOIBtn').addEventListener('click', () => {
+                    this.deletePOI();
+                });
+
+                document.getElementById('cancelEditBtn').addEventListener('click', () => {
+                    if (this.selectedPOI) {
+                        this.showPOIDetails(this.selectedPOI);
+                    } else {
+                        this.hideWorkspace();
+                    }
+                });
+
+                document.getElementById('cancelFormBtn').addEventListener('click', () => {
+                    if (this.selectedPOI) {
+                        this.showPOIDetails(this.selectedPOI);
+                    } else {
+                        this.hideWorkspace();
+                    }
+                });
+
+                document.getElementById('deleteFormBtn').addEventListener('click', () => {
+                    this.deletePOI();
+                });
+
+                document.getElementById('editForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.savePOI();
+                });
+            }
+
+            showLoading(show) {
+                const loadingState = document.getElementById('loadingState');
+                const poiListContainer = document.getElementById('poiListContainer');
+
+                if (!loadingState || !poiListContainer) return;
+
+                if (show) {
+                    loadingState.style.display = 'flex';
+                    // Hide other content
+                    Array.from(poiListContainer.children).forEach(child => {
+                        if (child !== loadingState) {
+                            child.style.display = 'none';
+                        }
+                    });
+                } else {
+                    loadingState.style.display = 'none';
+                    // Show other content
+                    Array.from(poiListContainer.children).forEach(child => {
+                        if (child !== loadingState) {
+                            child.style.display = '';
+                        }
+                    });
+                }
+            }
+
+            showError(message) {
+                const container = document.getElementById('poiListContainer');
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h4>Hata</h4>
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+
+            // Workspace Methods
+            showPOIDetails(poi) {
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('poiDetailView').classList.add('active');
+                document.getElementById('poiEditForm').classList.remove('active');
+
+                this.populatePOIDetails(poi);
+                this.loadPOIMedia(poi.id || poi._id);
+                this.loadPOIRatings(poi.id || poi._id);
+            }
+
+            populatePOIDetails(poi) {
+                // Update header
+                document.getElementById('poiDetailTitle').textContent = poi.name;
+
+                const category = this.categories.find(cat =>
+                    (cat.id && cat.id === poi.category) || cat.name === poi.category
+                );
+                const categoryName = category ? (category.display_name || category.name) : poi.category;
+                document.getElementById('poiDetailCategory').textContent = categoryName;
+
+                // Basic information
+                const basicInfo = document.getElementById('poiBasicInfo');
+                basicInfo.innerHTML = `
+                    <div class="poi-info-item">
+                        <div class="poi-info-label">
+                            <i class="fas fa-map-marker-alt"></i>
+                            Konum
+                        </div>
+                        <div class="poi-info-value">${poi.latitude.toFixed(6)}, ${poi.longitude.toFixed(6)}</div>
+                    </div>
+                    <div class="poi-info-item">
+                        <div class="poi-info-label">
+                            <i class="fas fa-list"></i>
+                            Kategori
+                        </div>
+                        <div class="poi-info-value">${categoryName}</div>
+                    </div>
+                    ${poi.description ? `
+                        <div class="poi-info-item" style="grid-column: 1 / -1;">
+                            <div class="poi-info-label">
+                                <i class="fas fa-align-left"></i>
+                                Açıklama
+                            </div>
+                            <div class="poi-info-value">${poi.description}</div>
+                        </div>
+                    ` : ''}
+                `;
+
+                // Tags
+                const tagsSection = document.getElementById('poiTagsSection');
+                const tagsContainer = document.getElementById('poiTagsContainer');
+
+                if (poi.tags && poi.tags.length > 0) {
+                    tagsSection.style.display = 'block';
+                    tagsContainer.innerHTML = poi.tags.map(tag =>
+                        `<span class="poi-tag-large">${tag}</span>`
+                    ).join('');
+                } else {
+                    tagsSection.style.display = 'none';
+                }
+
+                // Ratings
+                this.displayPOIRatings(poi);
+            }
+
+            async loadPOIMedia(poiId) {
+                try {
+                    const response = await this.authenticatedFetch(`/api/poi/${poiId}/media`);
+                    if (response.ok) {
+                        const media = await response.json();
+                        this.renderPOIMedia(media);
+                    }
+                } catch (error) {
+                    console.error('Error loading POI media:', error);
+                }
+            }
+
+            renderPOIMedia(media) {
+                const mediaSection = document.getElementById('poiMediaSection');
+                const mediaGallery = document.getElementById('poiMediaGallery');
+
+                if (media && media.length > 0) {
+                    mediaSection.style.display = 'block';
+                    mediaGallery.innerHTML = media.map(item => `
+                        <div class="media-item" onclick="this.showMediaModal('${item.url}', '${item.type}')">
+                            <img src="${item.thumbnail || item.url}" alt="${item.filename}" loading="lazy">
+                            <div class="media-item-type">${item.type.toUpperCase()}</div>
+                            <div class="media-item-overlay">${item.filename}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    mediaSection.style.display = 'none';
+                }
+            }
+
+            async loadPOIRatings(poiId) {
+                try {
+                    const response = await this.authenticatedFetch(`/api/poi/${poiId}/ratings`);
+                    if (response.ok) {
+                        const ratings = await response.json();
+                        this.renderPOIRatings(ratings);
+                    }
+                } catch (error) {
+                    console.error('Error loading POI ratings:', error);
+                }
+            }
+
+            renderPOIRatings(ratings) {
+                const ratingsSection = document.getElementById('poiRatingsSection');
+                const ratingsContainer = document.getElementById('poiRatingsContainer');
+
+                if (!ratingsSection || !ratingsContainer) {
+                    console.warn('Ratings container elements not found');
+                    return;
+                }
+
+                if (ratings && Object.keys(ratings).length > 0) {
+                    ratingsSection.style.display = 'block';
+
+                    const ratingCategories = {
+                        tarihi: { icon: 'fas fa-landmark', label: 'Tarihi', color: '#8B4513' },
+                        sanat_kultur: { icon: 'fas fa-palette', label: 'Sanat & Kültür', color: '#9B59B6' },
+                        doga: { icon: 'fas fa-leaf', label: 'Doğa', color: '#27AE60' },
+                        eglence: { icon: 'fas fa-music', label: 'Eğlence', color: '#E74C3C' },
+                        alisveris: { icon: 'fas fa-shopping-cart', label: 'Alışveriş', color: '#F39C12' },
+                        spor: { icon: 'fas fa-dumbbell', label: 'Spor', color: '#34495E' },
+                        macera: { icon: 'fas fa-mountain', label: 'Macera', color: '#D35400' },
+                        rahatlatici: { icon: 'fas fa-spa', label: 'Rahatlatıcı', color: '#16A085' }
+                    };
+
+                    ratingsContainer.innerHTML = Object.entries(ratings)
+                        .filter(([key, value]) => value > 0)
+                        .map(([key, value]) => {
+                            const category = ratingCategories[key];
+                            if (!category) return '';
+
+                            return `
+                                <div class="rating-item">
+                                    <div class="rating-label" style="color: ${category.color}">
+                                        <i class="${category.icon}"></i>
+                                        ${category.label}
+                                    </div>
+                                    <div class="rating-value">${value}</div>
+                                    <div class="rating-bar">
+                                        <div class="rating-fill" style="width: ${value}%"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                } else {
+                    ratingsSection.style.display = 'none';
+                }
+            }
+
+            async showEditForm(poi) {
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('poiDetailView').classList.remove('active');
+                document.getElementById('poiEditForm').classList.add('active');
+
+                await this.populateEditForm(poi);
+            }
+
+            async populateEditForm(poi) {
+                // Populate basic fields
+                document.getElementById('editName').value = poi.name || '';
+                document.getElementById('editLatitude').value = poi.latitude || '';
+                document.getElementById('editLongitude').value = poi.longitude || '';
+                document.getElementById('editDescription').value = poi.description || '';
+                document.getElementById('editTags').value = poi.tags ? poi.tags.join(', ') : '';
+
+                // Ensure categories are loaded
+                if (!this.categories || this.categories.length === 0) {
+                    console.log('Categories not loaded, loading now...');
+                    await this.loadCategories();
+                }
+
+                // Populate category dropdown
+                const categorySelect = document.getElementById('editCategory');
+                if (!categorySelect) {
+                    console.error('editCategory element not found');
+                    return;
+                }
+
+                console.log('Categories:', this.categories); // Debug log
+                console.log('POI category:', poi.category); // Debug log
+
+                categorySelect.innerHTML = '<option value="">Seçiniz</option>';
+
+                if (!this.categories || this.categories.length === 0) {
+                    console.warn('No categories available after loading');
+                    return;
+                }
+
+                this.categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id || category.name;
+                    option.textContent = category.display_name || category.name;
+                    option.selected = (category.id || category.name) === poi.category;
+                    categorySelect.appendChild(option);
+                    console.log('Added category option:', category); // Debug log
+                });
+
+                // Load and populate ratings
+                if (poi.id || poi._id) {
+                    this.loadPOIRatingsForEdit(poi.id || poi._id);
+                    // Also load media for edit form
+                    this.loadPOIMedia(poi.id || poi._id);
+                } else {
+                    // If no ID, show empty ratings
+                    console.warn('POI has no ID, showing empty ratings');
+                    this.renderEditRatings({});
+                }
+            }
+
+            async loadPOIRatingsForEdit(poiId) {
+                try {
+                    console.log('Loading ratings for POI:', poiId); // Debug log
+
+                    // First check if POI already has ratings in its data
+                    if (this.selectedPOI && this.selectedPOI.ratings) {
+                        console.log('Using POI ratings from data:', this.selectedPOI.ratings);
+                        this.renderEditRatings(this.selectedPOI.ratings);
+                        return;
+                    }
+
+                    const response = await this.authenticatedFetch(`/api/poi/${poiId}/ratings`);
+                    console.log('Ratings API response status:', response.status); // Debug log
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('Loaded ratings data:', data); // Debug log
+
+                        // Handle different response formats
+                        const ratings = data.ratings || data || {};
+                        this.renderEditRatings(ratings);
+                    } else {
+                        console.warn('Ratings API failed, using empty ratings');
+                        this.renderEditRatings({});
+                    }
+                } catch (error) {
+                    console.error('Error loading POI ratings for edit:', error);
+                    this.renderEditRatings({});
+                }
+            }
+
+            renderEditRatings(ratings) {
+                const ratingsGrid = document.getElementById('editRatingsGrid');
+                console.log('Rendering edit ratings:', ratings); // Debug log
+                console.log('Ratings grid element:', ratingsGrid); // Debug log
+
+                if (!ratingsGrid) {
+                    console.error('editRatingsGrid element not found');
+                    return;
+                }
+
+                const ratingCategories = {
+                    tarihi: { icon: 'fas fa-landmark', label: 'Tarihi', color: '#8B4513' },
+                    sanat_kultur: { icon: 'fas fa-palette', label: 'Sanat & Kültür', color: '#9B59B6' },
+                    doga: { icon: 'fas fa-leaf', label: 'Doğa', color: '#27AE60' },
+                    eglence: { icon: 'fas fa-music', label: 'Eğlence', color: '#E74C3C' },
+                    alisveris: { icon: 'fas fa-shopping-cart', label: 'Alışveriş', color: '#F39C12' },
+                    spor: { icon: 'fas fa-dumbbell', label: 'Spor', color: '#34495E' },
+                    macera: { icon: 'fas fa-mountain', label: 'Macera', color: '#D35400' },
+                    rahatlatici: { icon: 'fas fa-spa', label: 'Rahatlatıcı', color: '#16A085' },
+                    yemek: { icon: 'fas fa-utensils', label: 'Yemek', color: '#E67E22' },
+                    gece_hayati: { icon: 'fas fa-moon', label: 'Gece Hayatı', color: '#8E44AD' }
+                };
+
+                ratingsGrid.innerHTML = Object.entries(ratingCategories).map(([key, category]) => {
+                    const value = ratings[key] || 0;
+                    return `
+                        <div class="rating-item-edit">
+                            <div class="rating-label" style="color: ${category.color}">
+                                <i class="${category.icon}"></i>
+                                ${category.label}
+                            </div>
+                            <div class="rating-slider-container">
+                                <input type="range" class="rating-slider" min="0" max="100" 
+                                       value="${value}" id="rating_${key}" 
+                                       style="background: linear-gradient(to right, ${category.color} 0%, ${category.color} ${value}%, var(--poi-border) ${value}%, var(--poi-border) 100%);">
+                                <span class="rating-display" id="rating_${key}_display">${value}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                console.log('Rating grid HTML generated:', ratingsGrid.innerHTML); // Debug log
+
+                // Add event listeners for sliders
+                Object.keys(ratingCategories).forEach(key => {
+                    const slider = document.getElementById(`rating_${key}`);
+                    if (slider) {
+                        slider.addEventListener('input', (e) => {
+                            this.updateRatingDisplay(key, e.target.value);
+                        });
+                    }
+                });
+            }
+
+            hideWorkspace() {
+                document.getElementById('emptyState').style.display = 'flex';
+                document.getElementById('poiDetailView').classList.remove('active');
+                document.getElementById('poiEditForm').classList.remove('active');
+                this.selectedPOI = null;
+            }
+
+            async savePOI() {
+                if (!this.selectedPOI || !this.selectedPOI.id) {
+                    console.error('savePOI called without a valid selectedPOI.id', this.selectedPOI);
+                    this.showToast('Geçersiz POI seçimi. Lütfen listeden bir POI seçin.', 'error');
+                    return;
+                }
+
+                const formData = {
+                    name: document.getElementById('editName').value,
+                    category: document.getElementById('editCategory').value,
+                    latitude: parseFloat(document.getElementById('editLatitude').value),
+                    longitude: parseFloat(document.getElementById('editLongitude').value),
+                    description: document.getElementById('editDescription').value,
+                    tags: document.getElementById('editTags').value.split(',').map(tag => tag.trim()).filter(tag => tag)
+                };
+
+                // Collect ratings
+                const ratings = {};
+                const ratingCategories = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'];
+                ratingCategories.forEach(category => {
+                    const ratingElement = document.getElementById(`rating_${category}`);
+                    if (ratingElement) {
+                        ratings[category] = parseInt(ratingElement.value);
+                    }
+                });
+
+                try {
+                    // Update POI
+                    const poiResponse = await this.authenticatedFetch(`/api/poi/${this.selectedPOI.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    if (!poiResponse.ok) {
+                        throw new Error('POI güncellenemedi');
+                    }
+
+                    // Update ratings
+                    const ratingsResponse = await this.authenticatedFetch(`/api/poi/${this.selectedPOI.id}/ratings`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(ratings)
+                    });
+
+                    if (!ratingsResponse.ok) {
+                        console.warn('Ratings could not be updated');
+                    }
+
+                    // Refresh data
+                    await this.loadPOIs();
+
+                    // Update selected POI and show details
+                    const updatedPOI = { ...this.selectedPOI, ...formData };
+                    this.selectedPOI = updatedPOI;
+                    this.showPOIDetails(updatedPOI);
+
+                    this.showToast('POI başarıyla güncellendi', 'success');
+
+                } catch (error) {
+                    console.error('Error saving POI:', error);
+                    this.showToast('POI güncellenirken hata oluştu', 'error');
+                }
+            }
+
+            async deletePOI() {
+                if (!this.selectedPOI) return;
+
+                if (!confirm(`"${this.selectedPOI.name}" POI'sini silmek istediğinizden emin misiniz?`)) {
+                    return;
+                }
+
+                try {
+                    const response = await this.authenticatedFetch(`/api/poi/${this.selectedPOI.id}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('POI silinemedi');
+                    }
+
+                    // Refresh data
+                    await this.loadPOIs();
+                    this.hideWorkspace();
+
+                    this.showToast('POI başarıyla silindi', 'success');
+
+                } catch (error) {
+                    console.error('Error deleting POI:', error);
+                    this.showToast('POI silinirken hata oluştu', 'error');
+                }
+            }
+
+            // Create POI Methods
+            showCreatePOIModal() {
+                // Populate category dropdown
+                this.populateCreateCategoryDropdown();
+
+                // Setup rating sliders
+                this.setupCreateRatingSliders();
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('createPOIModal'));
+                modal.show();
+            }
+
+            showCreatePOIModalWithCoordinates(lat, lng) {
+                // Populate category dropdown
+                this.populateCreateCategoryDropdown();
+
+                // Setup rating sliders
+                this.setupCreateRatingSliders();
+
+                // Pre-fill coordinates
+                document.getElementById('createLatitude').value = lat.toFixed(6);
+                document.getElementById('createLongitude').value = lng.toFixed(6);
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('createPOIModal'));
+                modal.show();
+
+                // Show toast to inform user
+                this.showToast('Koordinatlar otomatik dolduruldu. POI bilgilerini tamamlayın.', 'info');
+            }
+
+            populateCreateCategoryDropdown() {
+                const categorySelect = document.getElementById('createCategory');
+                categorySelect.innerHTML = '<option value="">Seçiniz</option>';
+
+                if (this.categories && this.categories.length > 0) {
+                    this.categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id || category.name;
+                        option.textContent = category.display_name || category.name;
+                        categorySelect.appendChild(option);
+                    });
+                }
+            }
+
+            setupCreateRatingSliders() {
+                const ratingsGrid = document.getElementById('createRatingsGrid');
+
+                const ratingCategories = {
+                    tarihi: { icon: 'fas fa-landmark', label: 'Tarihi', color: '#8B4513' },
+                    sanat_kultur: { icon: 'fas fa-palette', label: 'Sanat & Kültür', color: '#9B59B6' },
+                    doga: { icon: 'fas fa-leaf', label: 'Doğa', color: '#27AE60' },
+                    eglence: { icon: 'fas fa-music', label: 'Eğlence', color: '#E74C3C' },
+                    alisveris: { icon: 'fas fa-shopping-cart', label: 'Alışveriş', color: '#F39C12' },
+                    spor: { icon: 'fas fa-dumbbell', label: 'Spor', color: '#34495E' },
+                    macera: { icon: 'fas fa-mountain', label: 'Macera', color: '#D35400' },
+                    rahatlatici: { icon: 'fas fa-spa', label: 'Rahatlatıcı', color: '#16A085' },
+                    yemek: { icon: 'fas fa-utensils', label: 'Yemek', color: '#E67E22' },
+                    gece_hayati: { icon: 'fas fa-moon', label: 'Gece Hayatı', color: '#8E44AD' }
+                };
+
+                ratingsGrid.innerHTML = Object.entries(ratingCategories).map(([key, category]) => {
+                    return `
+                        <div class="rating-item-edit">
+                            <div class="rating-label" style="color: ${category.color}">
+                                <i class="${category.icon}"></i>
+                                ${category.label}
+                            </div>
+                            <div class="rating-slider-container">
+                                <input type="range" class="rating-slider" min="0" max="100" 
+                                       value="0" id="create_rating_${key}" 
+                                       style="background: linear-gradient(to right, ${category.color} 0%, ${category.color} 0%, var(--poi-border) 0%, var(--poi-border) 100%);">
+                                <span class="rating-display" id="create_rating_${key}_display">0</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Add event listeners for sliders
+                Object.keys(ratingCategories).forEach(key => {
+                    const slider = document.getElementById(`create_rating_${key}`);
+                    if (slider) {
+                        slider.addEventListener('input', (e) => {
+                            this.updateCreateRatingDisplay(key, e.target.value);
+                        });
+                    }
+                });
+            }
+
+            updateCreateRatingDisplay(category, value) {
+                const displayElement = document.getElementById(`create_rating_${category}_display`);
+                const sliderElement = document.getElementById(`create_rating_${category}`);
+
+                if (displayElement) {
+                    displayElement.textContent = value;
+                }
+
+                if (sliderElement) {
+                    const ratingCategories = {
+                        tarihi: '#8B4513',
+                        sanat_kultur: '#9B59B6',
+                        doga: '#27AE60',
+                        eglence: '#E74C3C',
+                        alisveris: '#F39C12',
+                        spor: '#34495E',
+                        macera: '#D35400',
+                        rahatlatici: '#16A085',
+                        yemek: '#E67E22',
+                        gece_hayati: '#8E44AD'
+                    };
+
+                    const color = ratingCategories[category] || 'var(--poi-primary)';
+                    sliderElement.style.background = `linear-gradient(to right, ${color} 0%, ${color} ${value}%, var(--poi-border) ${value}%, var(--poi-border) 100%)`;
+                }
+            }
+
+            async createPOI() {
+                const formData = {
+                    name: document.getElementById('createName').value,
+                    category: document.getElementById('createCategory').value,
+                    latitude: parseFloat(document.getElementById('createLatitude').value),
+                    longitude: parseFloat(document.getElementById('createLongitude').value),
+                    description: document.getElementById('createDescription').value,
+                    tags: document.getElementById('createTags').value.split(',').map(tag => tag.trim()).filter(tag => tag)
+                };
+
+                // Validate required fields
+                if (!formData.name || !formData.category || !formData.latitude || !formData.longitude) {
+                    this.showToast('Lütfen tüm zorunlu alanları doldurun', 'error');
+                    return;
+                }
+
+                // Collect ratings
+                const ratings = {};
+                const ratingCategories = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'];
+                ratingCategories.forEach(category => {
+                    const ratingElement = document.getElementById(`create_rating_${category}`);
+                    if (ratingElement) {
+                        ratings[category] = parseInt(ratingElement.value);
+                    }
+                });
+
+                try {
+                    // Create POI
+                    const poiResponse = await this.authenticatedFetch('/api/poi', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    if (!poiResponse.ok) {
+                        throw new Error('POI oluşturulamadı');
+                    }
+
+                    const newPOI = await poiResponse.json();
+
+                    // Save ratings if POI was created successfully
+                    if (newPOI.id) {
+                        try {
+                            await this.authenticatedFetch(`/api/poi/${newPOI.id}/ratings`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(ratings)
+                            });
+                        } catch (error) {
+                            console.warn('Ratings could not be saved:', error);
+                        }
+                    }
+
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('createPOIModal'));
+                    modal.hide();
+
+                    // Clear form
+                    document.getElementById('createPOIForm').reset();
+                    this.setupCreateRatingSliders(); // Reset sliders
+
+                    // Refresh POI list
+                    await this.loadPOIs();
+
+                    this.showToast('POI başarıyla oluşturuldu!', 'success');
+
+                } catch (error) {
+                    console.error('POI creation error:', error);
+                    this.showToast('POI oluşturulurken hata oluştu: ' + error.message, 'error');
+                }
+            }
+
+            // Media Management Methods
+            async loadPOIMedia(poiId) {
+                if (!poiId) return;
+
+                try {
+                    const response = await this.authenticatedFetch(`/api/poi/${poiId}/media`);
+                    if (!response.ok) return;
+
+                    const data = await response.json();
+                    const mediaFiles = data.media || [];
+
+                    // Update detail view media gallery
+                    this.displayMediaGallery(mediaFiles);
+
+                    // Update edit form current media
+                    this.displayCurrentMedia(mediaFiles, poiId);
+
+                } catch (error) {
+                    console.error('Error loading POI media:', error);
+                }
+            }
+
+            displayMediaGallery(mediaFiles) {
+                const mediaSection = document.getElementById('poiMediaSection');
+                const mediaGallery = document.getElementById('poiMediaGallery');
+
+                if (!mediaSection || !mediaGallery) return;
+
+                if (mediaFiles.length === 0) {
+                    mediaSection.style.display = 'none';
+                    return;
+                }
+
+                mediaSection.style.display = 'block';
+
+                mediaGallery.innerHTML = mediaFiles.map(media => {
+                    const previewPath = media.preview_path || media.thumbnail_path || media.path;
+                    const isImage = media.media_type === 'image';
+
+                    return `
+                        <div class="media-gallery-item" onclick="showMediaModal('/${media.path}', '${media.filename}', '${media.media_type}')">
+                            ${isImage ?
+                            `<img src="/${previewPath}" class="media-gallery-preview" alt="${media.filename}">` :
+                            `<div class="media-gallery-placeholder">
+                                    ${this.getMediaTypeIcon(media.media_type)}
+                                </div>`
+                        }
+                            <div class="media-type-badge">${this.getMediaTypeIcon(media.media_type)}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            displayCurrentMedia(mediaFiles, poiId) {
+                const container = document.getElementById('currentMedia');
+                if (!container) return;
+
+                if (mediaFiles.length === 0) {
+                    container.innerHTML = '<div class="text-center text-muted py-3">Henüz medya dosyası eklenmemiş.</div>';
+                    return;
+                }
+
+                // Group media by type
+                const groupedMedia = {};
+                mediaFiles.forEach(media => {
+                    const type = media.media_type || 'unknown';
+                    if (!groupedMedia[type]) groupedMedia[type] = [];
+                    groupedMedia[type].push(media);
+                });
+
+                let mediaHtml = '';
+
+                Object.keys(groupedMedia).forEach(mediaType => {
+                    const typeIcon = this.getMediaTypeIcon(mediaType);
+                    const typeLabel = {
+                        'image': 'Görseller',
+                        'video': 'Videolar',
+                        'audio': 'Ses Dosyaları',
+                        'model_3d': '3D Modeller',
+                        'unknown': 'Diğer'
+                    }[mediaType] || mediaType.toUpperCase();
+
+                    mediaHtml += `
+                        <div class="media-type-section">
+                            <h6 class="media-type-title">${typeIcon} ${typeLabel} (${groupedMedia[mediaType].length})</h6>
+                            <div class="current-media-grid">
+                    `;
+
+                    groupedMedia[mediaType].forEach(media => {
+                        const previewPath = media.preview_path || media.thumbnail_path || media.path;
+                        const isImage = mediaType === 'image';
+
+                        mediaHtml += `
+                            <div class="media-item-card">
+                                <button class="media-delete-btn" onclick="deleteMediaFile('${poiId}', '${media.filename}')" title="Sil">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                
+                                ${isImage ?
+                                `<img src="/${previewPath}" class="media-preview" alt="${media.filename}" 
+                                          onclick="showMediaModal('/${media.path}', '${media.filename}', '${mediaType}')">` :
+                                `<div class="media-placeholder" onclick="showMediaModal('/${media.path}', '${media.filename}', '${mediaType}')">
+                                        ${this.getMediaTypeIcon(mediaType)}
+                                        <div class="media-format">${media.format?.toUpperCase() || ''}</div>
+                                    </div>`
+                            }
+                                
+                                <div class="media-type-badge">${this.getMediaTypeIcon(mediaType)}</div>
+                                
+                                <div class="media-item-info">
+                                    <div class="media-item-name">${media.filename}</div>
+                                    <div class="media-item-size">${(media.size / 1024).toFixed(0)}KB</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    mediaHtml += `
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = mediaHtml;
+            }
+
+            getMediaTypeIcon(mediaType) {
+                const icons = {
+                    'image': '📸',
+                    'video': '🎥',
+                    'audio': '🎵',
+                    'model_3d': '🧊',
+                    'unknown': '📄'
+                };
+                return icons[mediaType] || '📄';
+            }
+
+            getMediaMaxSize(mediaType) {
+                const sizes = {
+                    'image': 15,
+                    'video': 100,
+                    'audio': 50,
+                    'model_3d': 50
+                };
+                return sizes[mediaType] || 15;
+            }
+
+            async uploadPOIMedia() {
+                if (!this.selectedPOI) {
+                    this.showToast('Önce bir POI seçin', 'error');
+                    return;
+                }
+
+                const fileInput = document.getElementById('mediaFile');
+                const mediaTypeSelect = document.getElementById('mediaType');
+                const mediaCaption = document.getElementById('mediaCaption').value;
+                const isPrimary = document.getElementById('isPrimaryMedia').checked;
+
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    this.showToast('Lütfen bir medya dosyası seçin', 'error');
+                    return;
+                }
+
+                const file = fileInput.files[0];
+                const filename = file.name.toLowerCase();
+
+                // Auto-detect media type
+                let mediaType = mediaTypeSelect.value;
+                if (mediaType === 'auto') {
+                    if (filename.match(/\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/)) {
+                        mediaType = 'image';
+                    } else if (filename.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)$/)) {
+                        mediaType = 'video';
+                    } else if (filename.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/)) {
+                        mediaType = 'audio';
+                    } else if (filename.match(/\.(glb|gltf|obj|fbx|dae|ply|stl)$/)) {
+                        mediaType = 'model_3d';
+                    } else {
+                        this.showToast('Dosya türü tespit edilemedi. Lütfen medya türünü manuel olarak seçin.', 'error');
+                        return;
+                    }
+                }
+
+                // File size check
+                const maxSize = this.getMediaMaxSize(mediaType) * 1024 * 1024;
+                if (file.size > maxSize) {
+                    this.showToast(`Dosya boyutu ${this.getMediaMaxSize(mediaType)}MB'dan küçük olmalıdır.\n\nSeçilen dosya: ${(file.size / 1024 / 1024).toFixed(1)}MB`, 'error');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('media', file);
+                formData.append('caption', mediaCaption);
+                formData.append('is_primary', isPrimary);
+
+                try {
+                    const response = await this.authenticatedFetch(`/api/poi/${this.selectedPOI.id}/media`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Medya yükleme başarısız');
+                    }
+
+                    const result = await response.json();
+
+                    if (result.media && result.media.compression_ratio && result.media.compression_ratio !== "0%") {
+                        this.showToast(`${this.getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!\n📦 Boyut azalması: ${result.media.compression_ratio}`, 'success');
+                    } else {
+                        this.showToast(`${this.getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!`, 'success');
+                    }
+
+                    // Clear form fields
+                    fileInput.value = '';
+                    document.getElementById('mediaCaption').value = '';
+                    document.getElementById('isPrimaryMedia').checked = false;
+                    mediaTypeSelect.value = 'auto';
+
+                    // Reload media
+                    await this.loadPOIMedia(this.selectedPOI.id);
+
+                } catch (error) {
+                    console.error('Media upload error:', error);
+                    this.showToast('Medya yükleme hatası: ' + error.message, 'error');
+                }
+            }
+
+            showMediaModal(mediaPath, filename, mediaType) {
+                const modal = document.createElement('div');
+                modal.className = 'modal fade';
+
+                let modalContent = '';
+                if (mediaType === 'image') {
+                    modalContent = `<img src="${mediaPath}" class="img-fluid rounded-3 shadow-lg" alt="${filename}" style="max-height: 70vh;">`;
+                } else if (mediaType === 'video') {
+                    modalContent = `
+                        <video controls class="w-100 rounded-3 shadow-lg" style="max-height: 70vh;">
+                            <source src="${mediaPath}" type="video/mp4">
+                            Tarayıcınız video oynatmayı desteklemiyor.
+                        </video>`;
+                } else if (mediaType === 'audio') {
+                    modalContent = `
+                        <div class="text-center p-4">
+                            <i class="fas fa-music fa-3x text-primary mb-3"></i>
+                            <h5>${filename}</h5>
+                            <audio controls class="w-100 mt-3">
+                                <source src="${mediaPath}">
+                                Tarayıcınız ses oynatmayı desteklemiyor.
+                            </audio>
+                        </div>`;
+                } else if (mediaType === 'model_3d') {
+                    modalContent = `
+                        <div class="text-center p-4">
+                            <i class="fas fa-cube fa-3x text-primary mb-3"></i>
+                            <h5>${filename}</h5>
+                            <p class="text-muted">3D model dosyası - indirip uygun bir uygulamada görüntüleyebilirsiniz.</p>
+                        </div>`;
+                } else {
+                    modalContent = `
+                        <div class="text-center p-4">
+                            <i class="fas fa-file fa-3x text-primary mb-3"></i>
+                            <h5>${filename}</h5>
+                            <p class="text-muted">Medya dosyası</p>
+                        </div>`;
+                }
+
+                modal.innerHTML = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title fw-bold"><i class="fas fa-file me-2"></i>${filename}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body text-center p-4">
+                                ${modalContent}
+                            </div>
+                            <div class="modal-footer justify-content-center">
+                                <a href="${mediaPath}" target="_blank" class="btn btn-primary">
+                                    <i class="fas fa-external-link-alt me-1"></i> Yeni Sekmede Aç/İndir
+                                </a>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="fas fa-times me-1"></i> Kapat
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+
+                modal.addEventListener('hidden.bs.modal', () => {
+                    modal.remove();
+                });
+            }
+
+            async deleteMediaFile(poiId, filename) {
+                if (!confirm(`'${filename}' dosyasını silmek istediğinizden emin misiniz?`)) {
+                    return;
+                }
+
+                try {
+                    const response = await this.authenticatedFetch(`/api/poi/${poiId}/media/${filename}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Dosya silinemedi');
+                    }
+
+                    this.showToast('Medya dosyası başarıyla silindi', 'success');
+
+                    // Reload media
+                    await this.loadPOIMedia(poiId);
+
+                } catch (error) {
+                    console.error('Media delete error:', error);
+                    this.showToast('Medya silme hatası: ' + error.message, 'error');
+                }
+            }
+
+            showToast(message, type = 'info') {
+                // Simple toast notification
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    color: white;
+                    font-weight: 600;
+                    z-index: 10000;
+                    animation: slideIn 0.3s ease;
+                `;
+
+                switch (type) {
+                    case 'success':
+                        toast.style.background = 'var(--poi-success)';
+                        break;
+                    case 'error':
+                        toast.style.background = 'var(--poi-danger)';
+                        break;
+                    default:
+                        toast.style.background = 'var(--poi-info)';
+                }
+
+                toast.textContent = message;
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            }
+
+            displayPOIRatings(poi) {
+                const ratingsSection = document.getElementById('poiRatingsSection');
+                const ratingsContainer = document.getElementById('poiRatingsContainer');
+
+                if (!ratingsSection || !ratingsContainer) return;
+
+                // Rating categories from poi_manager_ui.html
+                const ratingCategories = {
+                    'tarihi': { name: '🏛️ Tarihi', color: '#8B4513' },
+                    'sanat_kultur': { name: '🎨 Sanat ve Kültür', color: '#9B59B6' },
+                    'doga': { name: '🌿 Doğa', color: '#27AE60' },
+                    'eglence': { name: '🎪 Eğlence', color: '#E74C3C' },
+                    'alisveris': { name: '🛍️ Alışveriş', color: '#F39C12' },
+                    'spor': { name: '⚽ Spor', color: '#34495E' },
+                    'macera': { name: '🏔️ Macera', color: '#D35400' },
+                    'rahatlatici': { name: '😌 Rahatlatıcı', color: '#16A085' },
+                    'yemek': { name: '🍽️ Yemek', color: '#E67E22' },
+                    'gece_hayati': { name: '🌙 Gece Hayatı', color: '#8E44AD' }
+                };
+
+                if (poi.ratings && typeof poi.ratings === 'object') {
+                    ratingsSection.style.display = 'block';
+
+                    let totalRating = 0;
+                    let ratingCount = 0;
+                    let ratingsHTML = '';
+
+                    Object.entries(ratingCategories).forEach(([key, category]) => {
+                        const rating = poi.ratings[key] || 0;
+                        if (rating > 0) {
+                            totalRating += rating;
+                            ratingCount++;
+                        }
+
+                        ratingsHTML += `
+                            <div class="rating-item-display">
+                                <div class="rating-label" style="color: ${category.color}">
+                                    ${category.name}
+                                </div>
+                                <div class="rating-bar-container">
+                                    <div class="rating-bar-bg">
+                                        <div class="rating-bar-fill" style="width: ${rating}%; background: ${category.color}"></div>
+                                    </div>
+                                    <span class="rating-value">${rating}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    const averageRating = ratingCount > 0 ? Math.round(totalRating / ratingCount) : 0;
+
+                    ratingsContainer.innerHTML = `
+                        <div class="ratings-summary">
+                            <div class="average-rating">
+                                <div class="average-score">${averageRating}</div>
+                                <div class="average-label">Ortalama Puan</div>
+                                <div class="rating-stars">
+                                    ${this.generateStars(averageRating)}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ratings-breakdown">
+                            ${ratingsHTML}
+                        </div>
+                    `;
+                } else {
+                    ratingsSection.style.display = 'none';
+                }
+            }
+
+            generateStars(rating) {
+                const starCount = Math.round(rating / 20); // Convert 0-100 to 0-5 stars
+                let starsHTML = '';
+
+                for (let i = 1; i <= 5; i++) {
+                    if (i <= starCount) {
+                        starsHTML += '<i class="fas fa-star"></i>';
+                    } else {
+                        starsHTML += '<i class="far fa-star"></i>';
+                    }
+                }
+
+                return starsHTML;
+            }
+
+            generatePopupRating(poi) {
+                if (!poi.ratings || typeof poi.ratings !== 'object') {
+                    return '';
+                }
+
+                let totalRating = 0;
+                let ratingCount = 0;
+
+                Object.values(poi.ratings).forEach(rating => {
+                    if (typeof rating === 'number' && rating > 0) {
+                        totalRating += rating;
+                        ratingCount++;
+                    }
+                });
+
+                if (ratingCount === 0) {
+                    return '';
+                }
+
+                const averageRating = Math.round(totalRating / ratingCount);
+                const stars = this.generateStars(averageRating);
+
+                return `
+                    <div class="poi-popup-rating">
+                        <span class="poi-popup-stars">${stars}</span>
+                        <span>${averageRating}/100</span>
+                    </div>
+                `;
+            }
+
+            updateRatingDisplay(category, value) {
+                const displayElement = document.getElementById(`rating_${category}_display`);
+                const sliderElement = document.getElementById(`rating_${category}`);
+
+                if (displayElement) {
+                    displayElement.textContent = value;
+                }
+
+                if (sliderElement) {
+                    // Update slider background gradient
+                    const ratingCategories = {
+                        tarihi: '#8B4513',
+                        sanat_kultur: '#9B59B6',
+                        doga: '#27AE60',
+                        eglence: '#E74C3C',
+                        alisveris: '#F39C12',
+                        spor: '#34495E',
+                        macera: '#D35400',
+                        rahatlatici: '#16A085',
+                        yemek: '#E67E22',
+                        gece_hayati: '#8E44AD'
+                    };
+
+                    const color = ratingCategories[category] || 'var(--poi-primary)';
+                    sliderElement.style.background = `linear-gradient(to right, ${color} 0%, ${color} ${value}%, var(--poi-border) ${value}%, var(--poi-border) 100%)`;
+                }
+            }
+
+            // Authentication Methods
+            async checkAuthStatus() {
+                console.log('🔐 Checking auth status...');
+
+                try {
+                    const response = await fetch('/auth/status');
+                    console.log('🔐 Auth status response:', response.status, response.ok);
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('🔐 Auth status data:', data);
+
+                        if (data.authenticated) {
+                            this.csrfToken = data.csrf_token;
+                            console.log('🔐 Authentication successful, CSRF token:', this.csrfToken);
+                            this.updateSessionStatus(data.session_info);
+                            return true;
+                        } else {
+                            console.log('🔐 Not authenticated');
+                        }
+                    } else {
+                        console.log('🔐 Auth status request failed');
+                    }
+
+                    // If not authenticated, redirect to login with return URL (avoid redirect loop)
+                    const currentPath = window.location.pathname + window.location.search;
+                    const loginUrl = `/auth/login?next=${encodeURIComponent(currentPath)}`;
+                    const lastRedirectAt = Number(sessionStorage.getItem('authRedirectAt') || 0);
+                    const now = Date.now();
+                    if (now - lastRedirectAt > 10000) { // at most once per 10s
+                        console.log('🔐 Redirecting to login...', loginUrl);
+                        sessionStorage.setItem('authRedirectAt', String(now));
+                        window.location.href = loginUrl;
+                    } else {
+                        console.warn('⏳ Suppressing repeated login redirect to avoid loop.');
+                        this.showError('Oturum doğrulaması başarısız. Lütfen tekrar giriş yapın.');
+                    }
+                    return false;
+                } catch (error) {
+                    console.error('🔐 Auth status check failed:', error);
+                    const currentPath = window.location.pathname + window.location.search;
+                    const loginUrl = `/auth/login?next=${encodeURIComponent(currentPath)}`;
+                    const lastRedirectAt = Number(sessionStorage.getItem('authRedirectAt') || 0);
+                    const now = Date.now();
+                    if (now - lastRedirectAt > 10000) {
+                        sessionStorage.setItem('authRedirectAt', String(now));
+                        window.location.href = loginUrl;
+                    } else {
+                        this.showError('Oturum kontrolü başarısız. Lütfen daha sonra tekrar deneyin.');
+                    }
+                    return false;
+                }
+            }
+
+            updateSessionStatus(sessionInfo) {
+                let statusElement = document.getElementById('sessionStatus');
+                // Create the session status element if it's missing to avoid null access
+                if (!statusElement) {
+                    try {
+                        const container = document.querySelector('.session-info') || document.querySelector('.header-actions');
+                        if (container) {
+                            const wrapper = document.createElement('span');
+                            wrapper.id = 'sessionStatus';
+                            wrapper.className = 'badge bg-secondary';
+                            wrapper.textContent = 'Bilinmiyor';
+                            container.appendChild(wrapper);
+                            statusElement = wrapper;
+                        }
+                    } catch (e) {
+                        console.warn('Session status container not found, skipping status update');
+                    }
+                }
+
+                if (!statusElement) {
+                    return; // No place to render; do not throw
+                }
+
+                if (sessionInfo) {
+                    statusElement.textContent = 'Aktif';
+                    statusElement.className = 'badge bg-success';
+
+                    // Update session timeout warning if needed
+                    if (sessionInfo.expires_at) {
+                        const expiresAt = new Date(sessionInfo.expires_at);
+                        const now = new Date();
+                        const timeLeft = expiresAt - now;
+
+                        if (timeLeft <= 0) {
+                            statusElement.textContent = 'Süresi Doldu';
+                            statusElement.className = 'badge bg-danger';
+                            // Redirect to login (guard against loops)
+                            setTimeout(() => {
+                                const currentPath = window.location.pathname + window.location.search;
+                                const loginUrl = `/auth/login?next=${encodeURIComponent(currentPath)}`;
+                                const lastRedirectAt = Number(sessionStorage.getItem('authRedirectAt') || 0);
+                                const now = Date.now();
+                                if (now - lastRedirectAt > 10000) {
+                                    sessionStorage.setItem('authRedirectAt', String(now));
+                                    window.location.href = loginUrl;
+                                }
+                            }, 1000);
+                        } else if (timeLeft < 5 * 60 * 1000) { // Less than 5 minutes
+                            statusElement.textContent = 'Yakında Dolacak';
+                            statusElement.className = 'badge bg-warning';
+                        }
+                    }
+                } else {
+                    statusElement.textContent = 'Bilinmiyor';
+                    statusElement.className = 'badge bg-secondary';
+                }
+            }
+
+            async logout() {
+                console.log('🔐 Logging out...');
+
+                try {
+                    const response = await fetch('/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.csrfToken
+                        }
+                    });
+
+                    if (response.ok) {
+                        this.showToast('Başarıyla çıkış yapıldı', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/auth/login';
+                        }, 1000);
+                    } else {
+                        throw new Error('Logout failed');
+                    }
+                } catch (error) {
+                    console.error('🔐 Logout failed:', error);
+                    this.showToast('Çıkış yapılırken hata oluştu', 'error');
+                    // Force redirect even if logout request failed
+                    setTimeout(() => {
+                        window.location.href = '/auth/login';
+                    }, 2000);
+                }
+            }
+
+            async refreshCSRFToken() {
+                try {
+                    const response = await fetch('/auth/csrf-token');
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.csrfToken = data.csrf_token;
+                        return this.csrfToken;
+                    }
+                } catch (error) {
+                    console.error('CSRF token refresh failed:', error);
+                }
+                return null;
+            }
+
+            // Enhanced fetch function with authentication
+            async authenticatedFetch(url, options = {}) {
+                // Add CSRF token to requests that modify data
+                if (options.method && ['POST', 'PUT', 'DELETE'].includes(options.method.toUpperCase())) {
+                    if (!this.csrfToken) {
+                        await this.refreshCSRFToken();
+                    }
+
+                    options.headers = {
+                        ...options.headers,
+                        'X-CSRFToken': this.csrfToken
+                    };
+                }
+
+                // Add credentials
+                options.credentials = 'include';
+
+                const response = await fetch(url, options);
+
+                // Handle authentication errors
+                if (response.status === 401) {
+                    this.showToast('Oturum süresi doldu, yeniden giriş yapılıyor...', 'warning');
+                    setTimeout(() => {
+                        const currentPath = window.location.pathname + window.location.search;
+                        const loginUrl = `/auth/login?next=${encodeURIComponent(currentPath)}`;
+                        const lastRedirectAt = Number(sessionStorage.getItem('authRedirectAt') || 0);
+                        const now = Date.now();
+                        if (now - lastRedirectAt > 10000) {
+                            sessionStorage.setItem('authRedirectAt', String(now));
+                            window.location.href = loginUrl;
+                        }
+                    }, 2000);
+                    throw new Error('Authentication required');
+                }
+
+                return response;
+            }
+        }
+
+        // Global functions for HTML onclick handlers
+        function logout() {
+            if (window.poiManager) {
+                window.poiManager.logout();
+            }
+        }
+
+        function showPasswordChangeModal() {
+            const existing = document.getElementById('passwordChangeModal');
+            if (existing) {
+                const modal = new bootstrap.Modal(existing);
+                modal.show();
+                return;
+            }
+
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.id = 'passwordChangeModal';
+            modal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fas fa-key me-2"></i>Şifre Değiştir</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="passwordChangeForm">
+                                <div class="mb-3">
+                                    <label for="currentPassword" class="form-label"><i class="fas fa-lock me-1"></i>Mevcut Şifre</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="currentPassword" name="current_password" required>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('currentPassword', this)"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="newPassword" class="form-label"><i class="fas fa-key me-1"></i>Yeni Şifre</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="newPassword" name="new_password" required>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('newPassword', this)"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">Şifre en az 8 karakter olmalı ve büyük/küçük harf, rakam ve özel karakter içermelidir.</small>
+                                    <div id="passwordStrength" class="mt-2"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirmPassword" class="form-label"><i class="fas fa-check me-1"></i>Yeni Şifre Tekrar</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('confirmPassword', this)"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                    <div id="passwordMatch" class="mt-1"></div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                            <button type="button" id="changePasswordSubmitBtn" class="btn btn-primary" onclick="changePassword()"><i class="fas fa-save me-1"></i>Değiştir</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+
+            const newPasswordInput = modal.querySelector('#newPassword');
+            const confirmPasswordInput = modal.querySelector('#confirmPassword');
+            if (newPasswordInput) newPasswordInput.addEventListener('input', () => validatePasswordStrength(newPasswordInput.value));
+            if (confirmPasswordInput) confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+        }
+
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            const icon = button.querySelector('i');
+            if (!input || !icon) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        function validatePasswordStrength(password) {
+            const strengthDiv = document.getElementById('passwordStrength');
+            if (!strengthDiv) return;
+            let score = 0;
+            const feedback = [];
+            if (password.length >= 8) score += 1; else feedback.push('En az 8 karakter');
+            if (/[A-Z]/.test(password)) score += 1; else feedback.push('Büyük harf');
+            if (/[a-z]/.test(password)) score += 1; else feedback.push('Küçük harf');
+            if (/\d/.test(password)) score += 1; else feedback.push('Rakam');
+            if (/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(password)) score += 1; else feedback.push('Özel karakter');
+            let strengthText = '';
+            let strengthClass = '';
+            if (score === 5) { strengthText = '<i class="fas fa-check-circle text-success me-1"></i>Güçlü şifre'; strengthClass = 'text-success'; }
+            else if (score >= 3) { strengthText = '<i class="fas fa-exclamation-circle text-warning me-1"></i>Orta güçlükte'; strengthClass = 'text-warning'; }
+            else { strengthText = '<i class="fas fa-times-circle text-danger me-1"></i>Zayıf şifre'; strengthClass = 'text-danger'; }
+            strengthDiv.className = strengthClass;
+            strengthDiv.innerHTML = strengthText + (feedback.length ? ` <small class="text-muted">(${feedback.join(', ')})</small>` : '');
+            checkPasswordMatch();
+        }
+
+        function checkPasswordMatch() {
+            const newPassword = document.getElementById('newPassword')?.value;
+            const confirmPassword = document.getElementById('confirmPassword')?.value;
+            const matchDiv = document.getElementById('passwordMatch');
+            if (!matchDiv || confirmPassword === undefined) return;
+            if (!confirmPassword) { matchDiv.innerHTML = ''; return; }
+            if (newPassword === confirmPassword) {
+                matchDiv.className = 'text-success';
+                matchDiv.innerHTML = '<i class="fas fa-check-circle me-1"></i>Eşleşti';
+            } else {
+                matchDiv.className = 'text-danger';
+                matchDiv.innerHTML = '<i class="fas fa-times-circle me-1"></i>Eşleşmiyor';
+            }
+        }
+
+        async function changePassword() {
+            const form = document.getElementById('passwordChangeForm');
+            const submitBtn = document.getElementById('changePasswordSubmitBtn');
+            if (!form) return;
+            const formData = new FormData(form);
+            const currentPassword = formData.get('current_password');
+            const newPassword = formData.get('new_password');
+            const confirmPassword = formData.get('confirm_password');
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                window.poiManager?.showToast('Lütfen tüm alanları doldurun', 'error');
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                window.poiManager?.showToast('Yeni şifre ve tekrarı eşleşmiyor', 'error');
+                return;
+            }
+            if (newPassword.length < 8) {
+                window.poiManager?.showToast('Yeni şifre en az 8 karakter olmalıdır', 'error');
+                return;
+            }
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Değiştiriliyor...';
+            try {
+                const response = await fetch('/auth/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.poiManager?.csrfToken || ''
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword,
+                        confirm_password: confirmPassword
+                    })
+                });
+                if (response.ok) {
+                    window.poiManager?.showToast('Şifre başarıyla değiştirildi. Yeniden giriş yapılıyor...', 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('passwordChangeModal'));
+                    if (modal) modal.hide();
+                    setTimeout(() => { window.location.href = '/auth/login'; }, 1200);
+                } else {
+                    const data = await response.json().catch(() => ({}));
+                    window.poiManager?.showToast('Şifre değiştirilemedi: ' + (data.error || response.statusText), 'error');
+                }
+            } catch (err) {
+                window.poiManager?.showToast('İstek hatası: ' + err.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save me-1"></i>Değiştir';
+            }
+        }
+
+        function showCreatePOIModal() {
+            if (window.poiManager) {
+                window.poiManager.showCreatePOIModal();
+            }
+        }
+
+        function createPOI() {
+            if (window.poiManager) {
+                window.poiManager.createPOI();
+            }
+        }
+
+        function uploadPOIMedia() {
+            if (window.poiManager) {
+                window.poiManager.uploadPOIMedia();
+            }
+        }
+
+        function showMediaModal(mediaPath, filename, mediaType) {
+            if (window.poiManager) {
+                window.poiManager.showMediaModal(mediaPath, filename, mediaType);
+            }
+        }
+
+        function deleteMediaFile(poiId, filename) {
+            if (window.poiManager) {
+                window.poiManager.deleteMediaFile(poiId, filename);
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            window.poiManager = new POIManager();
+            // Mark current page for NavigationManager active detection
+            if (window.navigationManager) {
+                window.navigationManager.currentPage = 'poi-management';
+                window.navigationManager.refresh();
+            }
+        });
+
+        // Map fullscreen toggle (parity with poi_manager_ui)
+        function toggleMapFullscreen() {
+            const mapEl = document.getElementById('map');
+            const btn = document.getElementById('toggleFullscreenBtn');
+            mapEl.classList.toggle('fullscreen');
+            document.body.classList.toggle('map-fullscreen');
+            if (window.poiManager?.map) {
+                setTimeout(() => {
+                    window.poiManager.map.invalidateSize();
+                }, 200);
+            }
+            if (btn) {
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('fa-expand');
+                    icon.classList.toggle('fa-compress');
+                }
+            }
+        }
+    </script>
+    <script src="static/js/api-client.js"></script>
+    <script src="static/js/navigation-manager.js"></script>
+</body>
+
+</html>

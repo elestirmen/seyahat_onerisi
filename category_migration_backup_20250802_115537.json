@@ -1,0 +1,2919 @@
+{
+  "timestamp": "2025-08-02T11:55:37.408085",
+  "pois": [
+    {
+      "id": 1,
+      "name": "Test POI Updated",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000005260014C19744140B3CD8DE909514340",
+      "icon": null,
+      "description": "Kapadokya'nın en popüler restoranlarından biri. Türk ve dünya mutfağından lezzetler, romantik ambiyans ve mükemmel şehir manzarası."
+    },
+    {
+      "id": 2,
+      "name": "Ehlikeyf Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000001DAF40F4A4744140E94317D4B7504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 3,
+      "name": "Sofra Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000002237C30DF8744140300DC347C4504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 4,
+      "name": "Lagarto Restaurant (Kayakapı Premium Caves - Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000004A07EBFF1C744140E6CAA0DAE0504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 5,
+      "name": "Fırın Express Pide & Kebap (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E6100000A9DE1AD82A754140CDE9B298D8504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 6,
+      "name": "Mahzen Şarap Evi (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E6100000F1F44A5986744140850838842A514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 7,
+      "name": "Apetino Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E6100000FE43FAEDEB7441408577B988EF504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 8,
+      "name": "Kolcuoğlu Ürgüp (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000007FC16ED8B67441409487855AD3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 9,
+      "name": "Han Çırağan Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000009352D0ED257541405BB6D61709514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 10,
+      "name": "Ürgüp Pide Salonu (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E6100000F0A2AF20CD7441409B8F6B43C5504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 11,
+      "name": "Ürgüp Müzesi",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000A27A6B60AB74414045F0BF95EC504340",
+      "icon": null,
+      "description": "Kapadokya bölgesinin zengin tarihini ve kültürünü sergileyen önemli bir müze. Bizans dönemine ait eserler, yerel el sanatları ve arkeolojik buluntular sergilenmektedir."
+    },
+    {
+      "id": 12,
+      "name": "Temenni Tepesi (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E610000094D920938C7441406284F068E3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 13,
+      "name": "Cappadocia Ebru Art House (Ürgüp) 2",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000A9DE1AD82A754140CDE9B298D8504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 14,
+      "name": "Ürgüp Erhan Ayata At Müzesi ve Güzel Atlar Sergisi (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000B1F9B836547441405BB1BFEC9E504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 15,
+      "name": "Temenni Anıt Mezarı (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E610000094D920938C7441406284F068E3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 16,
+      "name": "Rum Hamamı (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E610000000AE64C7467441405B99F04BFD504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 17,
+      "name": "El Sanatları Çarşısı (Ürgüp Cumhuriyet Meydanı)",
+      "display_name": "sanatsal",
+      "color": "0101000020E61000007FC16ED8B67441409487855AD3504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 18,
+      "name": "Kapadokya Sanat ve El Sanatları Merkezi (Ürgüp)",
+      "display_name": "sanatsal",
+      "color": "0101000020E6100000F0A2AF20CD7441409B8F6B43C5504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 19,
+      "name": "Kilim Art Gallery (Ürgüp)",
+      "display_name": "sanatsal",
+      "color": "0101000020E6100000FE43FAEDEB7441408577B988EF504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 20,
+      "name": "Temenni Hill (Ürgüp)",
+      "display_name": "doga_macera",
+      "color": "0101000020E610000094D920938C7441406284F068E3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 21,
+      "name": "Ürgüp ATV Turu Başlangıç Noktası (Ürgüp)",
+      "display_name": "doga_macera",
+      "color": "0101000020E6100000F71E2E39EE744140A01518B2BA514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 22,
+      "name": "Üç Güzeller Peribacaları (Ürgüp)",
+      "display_name": "doga_macera",
+      "color": "0101000020E61000000B7A6F0C01724140C37E4FAC53514340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 23,
+      "name": "Vefa Küçük Parkı (Ürgüp)",
+      "display_name": "doga_macera",
+      "color": "0101000020E6100000A9DE1AD82A754140CDE9B298D8504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 24,
+      "name": "Kayakapı Premium Caves (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E610000086200725CC744140A306D3307C504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 25,
+      "name": "Yunak Evleri Cappadocia (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E61000001500E319347441405AF0A2AF20514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 26,
+      "name": "Esbelli Evi Cave Hotel (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E6100000B1F9B836547441405BB1BFEC9E504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 27,
+      "name": "Dere Suites Cappadocia (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E610000000AE64C7467441405B99F04BFD504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 28,
+      "name": "Seraphim Cave Hotel (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E610000048E17A14AE734140A0C37C79014E4340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 29,
+      "name": "AJWA Cappadocia (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E6100000F1F44A5986744140850838842A514340",
+      "icon": null,
+      "description": "bu bir test amaçlı bir açıklamadır."
+    },
+    {
+      "id": 30,
+      "name": "Utopia Cave Cappadocia (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E6100000404D2D5BEB73414068E89FE062514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 31,
+      "name": "Ziggy Cafe & Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000005260014C19744140B3CD8DE909514340",
+      "icon": null,
+      "description": "Kapadokya'nın en popüler restoranlarından biri. Türk ve dünya mutfağından lezzetler, romantik ambiyans ve mükemmel şehir manzarası."
+    },
+    {
+      "id": 32,
+      "name": "Ehlikeyf Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000001DAF40F4A4744140E94317D4B7504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 33,
+      "name": "Sofra Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000002237C30DF8744140300DC347C4504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 34,
+      "name": "Lagarto Restaurant (Kayakapı Premium Caves - Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000004A07EBFF1C744140E6CAA0DAE0504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 35,
+      "name": "Fırın Express Pide & Kebap (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E6100000A9DE1AD82A754140CDE9B298D8504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 36,
+      "name": "Mahzen Şarap Evi (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E6100000F1F44A5986744140850838842A514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 37,
+      "name": "Apetino Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E6100000FE43FAEDEB7441408577B988EF504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 38,
+      "name": "Kolcuoğlu Ürgüp (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000007FC16ED8B67441409487855AD3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 39,
+      "name": "Han Çırağan Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000009352D0ED257541405BB6D61709514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 40,
+      "name": "Ürgüp Pide Salonu (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E6100000F0A2AF20CD7441409B8F6B43C5504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 41,
+      "name": "Ürgüp Müzesi",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000A27A6B60AB74414045F0BF95EC504340",
+      "icon": null,
+      "description": "Kapadokya bölgesinin zengin tarihini ve kültürünü sergileyen önemli bir müze. Bizans dönemine ait eserler, yerel el sanatları ve arkeolojik buluntular sergilenmektedir."
+    },
+    {
+      "id": 42,
+      "name": "Temenni Tepesi (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E610000094D920938C7441406284F068E3504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 43,
+      "name": "Cappadocia Ebru Art House (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000A9DE1AD82A754140CDE9B298D8504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 44,
+      "name": "Ürgüp Erhan Ayata At Müzesi ve Güzel Atlar Sergisi (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000B1F9B836547441405BB1BFEC9E504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 45,
+      "name": "Temenni Anıt Mezarı (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E610000094D920938C7441406284F068E3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 46,
+      "name": "Rum Hamamı (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E610000000AE64C7467441405B99F04BFD504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 47,
+      "name": "El Sanatları Çarşısı (Ürgüp Cumhuriyet Meydanı)",
+      "display_name": "sanatsal",
+      "color": "0101000020E61000007FC16ED8B67441409487855AD3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 48,
+      "name": "Kapadokya Sanat ve El Sanatları Merkezi (Ürgüp)",
+      "display_name": "sanatsal",
+      "color": "0101000020E6100000F0A2AF20CD7441409B8F6B43C5504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 49,
+      "name": "Kilim Art Gallery (Ürgüp)",
+      "display_name": "sanatsal",
+      "color": "0101000020E6100000FE43FAEDEB7441408577B988EF504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 50,
+      "name": "Temenni Hill (Ürgüp)",
+      "display_name": "doga_macera",
+      "color": "0101000020E610000094D920938C7441406284F068E3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 51,
+      "name": "Ürgüp ATV Turu Başlangıç Noktası (Ürgüp)",
+      "display_name": "doga_macera",
+      "color": "0101000020E6100000F71E2E39EE744140A01518B2BA514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 52,
+      "name": "Üç Güzeller Peribacaları (Ürgüp)",
+      "display_name": "doga_macera",
+      "color": "0101000020E61000000B7A6F0C01724140C37E4FAC53514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 53,
+      "name": "Vefa Küçük Parkı (Ürgüp)",
+      "display_name": "doga_macera",
+      "color": "0101000020E6100000A9DE1AD82A754140CDE9B298D8504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 54,
+      "name": "Kayakapı Premium Caves (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E610000086200725CC744140A306D3307C504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 55,
+      "name": "Yunak Evleri Cappadocia (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E61000001500E319347441405AF0A2AF20514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 56,
+      "name": "Esbelli Evi Cave Hotel (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E6100000B1F9B836547441405BB1BFEC9E504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 57,
+      "name": "Dere Suites Cappadocia (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E610000000AE64C7467441405B99F04BFD504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 58,
+      "name": "Seraphim Cave Hotel (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E610000048E17A14AE734140A0C37C79014E4340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 59,
+      "name": "AJWA Cappadocia (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E6100000F1F44A5986744140850838842A514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 60,
+      "name": "Utopia Cave Cappadocia (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E6100000404D2D5BEB73414068E89FE062514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 61,
+      "name": "cappadoica palace",
+      "display_name": "konaklama",
+      "color": "0101000020E6100000B70C384BC9744140EACF7EA488504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 62,
+      "name": "super mario castle",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000C2FA3F87F97641403D4679E6E5504340",
+      "icon": null,
+      "description": "süper mario kalesine benzer bir yapısı vardır."
+    },
+    {
+      "id": 63,
+      "name": "sivritaş",
+      "display_name": "doga_macera",
+      "color": "0101000020E6100000C8409E5DBE754140EAB298D87C504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 64,
+      "name": "pancarlı cami",
+      "display_name": "kulturel",
+      "color": "0101000020E61000009F03CB1132744140AB984A3FE1504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 65,
+      "name": "pancarlı cami",
+      "display_name": "kulturel",
+      "color": "0101000020E61000009F03CB1132744140AB984A3FE1504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 66,
+      "name": "ürgüp tarihi hamamı",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000EBFD463B6E744140DD5B9198A0504340",
+      "icon": null,
+      "description": "tarihi ürgüp hamamıdır."
+    },
+    {
+      "id": 67,
+      "name": "ürgüp tarihi hamamı",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000EBFD463B6E744140DD5B9198A0504340",
+      "icon": null,
+      "description": "tarihi ürgüp hamamıdır."
+    },
+    {
+      "id": 68,
+      "name": "Asmalı Konak",
+      "display_name": "kulturel",
+      "color": "0101000020E61000006CB07092E67341406B274A4222514340",
+      "icon": null,
+      "description": "Türk dizi tarihinin önemli yapıtlarından olan Asmalı Konak dizisinin çekildiği Ürgüp İlçesinde bulunan yapı, 180 yıllık geçmişe sahiptir ve 42 adet odası bulunmaktadır."
+    },
+    {
+      "id": 69,
+      "name": "Asmalı Konak",
+      "display_name": "kulturel",
+      "color": "0101000020E61000006CB07092E67341406B274A4222514340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 70,
+      "name": "Mezarlık",
+      "display_name": "doga_macera",
+      "color": "0101000020E61000006E895C7006754140E23E726BD24F4340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 71,
+      "name": "Mezarlık",
+      "display_name": "doga_macera",
+      "color": "0101000020E61000006E895C7006754140E23E726BD24F4340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 72,
+      "name": "Dutlu Cami",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000705B5B785E744140F23FF9BB77504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 73,
+      "name": "Dutlu Cami",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000705B5B785E744140F23FF9BB77504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 74,
+      "name": "Yunak Cami",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000E2783E03EA734140EEB4352218514340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 75,
+      "name": "Yunak Cami",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000E2783E03EA734140EEB4352218514340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 76,
+      "name": "Esbelli Cami",
+      "display_name": "kulturel",
+      "color": "0101000020E610000073D6A71C937341409AEB34D252514340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 77,
+      "name": "Esbelli Cami",
+      "display_name": "kulturel",
+      "color": "0101000020E610000073D6A71C937341409AEB34D252514340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 78,
+      "name": "Cami kebir",
+      "display_name": "kulturel",
+      "color": "0101000020E610000011AAD4EC81744140B680D07AF8504340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 79,
+      "name": "Topuz Seyir tepesi",
+      "display_name": "doga_macera",
+      "color": "0101000020E61000007BDCB75A277C4140E814E46723534340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 80,
+      "name": "Ziggy Cafe & Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000005260014C19744140B3CD8DE909514340",
+      "icon": null,
+      "description": "Kapadokya'nın en popüler restoranlarından biri. Türk ve dünya mutfağından lezzetler, romantik ambiyans ve mükemmel şehir manzarası."
+    },
+    {
+      "id": 81,
+      "name": "Ehlikeyf Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000001DAF40F4A4744140E94317D4B7504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 82,
+      "name": "Sofra Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000002237C30DF8744140300DC347C4504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 83,
+      "name": "Lagarto Restaurant (Kayakapı Premium Caves - Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000004A07EBFF1C744140E6CAA0DAE0504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 84,
+      "name": "Fırın Express Pide & Kebap (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E6100000A9DE1AD82A754140CDE9B298D8504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 85,
+      "name": "Mahzen Şarap Evi (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E6100000F1F44A5986744140850838842A514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 86,
+      "name": "Apetino Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E6100000FE43FAEDEB7441408577B988EF504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 87,
+      "name": "Kolcuoğlu Ürgüp (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000007FC16ED8B67441409487855AD3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 88,
+      "name": "Han Çırağan Restaurant (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E61000009352D0ED257541405BB6D61709514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 89,
+      "name": "Ürgüp Pide Salonu (Ürgüp)",
+      "display_name": "gastronomik",
+      "color": "0101000020E6100000F0A2AF20CD7441409B8F6B43C5504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 90,
+      "name": "Ürgüp Müzesi",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000A27A6B60AB74414045F0BF95EC504340",
+      "icon": null,
+      "description": "Kapadokya bölgesinin zengin tarihini ve kültürünü sergileyen önemli bir müze. Bizans dönemine ait eserler, yerel el sanatları ve arkeolojik buluntular sergilenmektedir."
+    },
+    {
+      "id": 91,
+      "name": "Temenni Tepesi (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E610000094D920938C7441406284F068E3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 92,
+      "name": "Cappadocia Ebru Art House (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000A9DE1AD82A754140CDE9B298D8504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 93,
+      "name": "Ürgüp Erhan Ayata At Müzesi ve Güzel Atlar Sergisi (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000B1F9B836547441405BB1BFEC9E504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 94,
+      "name": "Temenni Anıt Mezarı (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E610000094D920938C7441406284F068E3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 95,
+      "name": "Rum Hamamı (Ürgüp)",
+      "display_name": "kulturel",
+      "color": "0101000020E610000000AE64C7467441405B99F04BFD504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 96,
+      "name": "El Sanatları Çarşısı (Ürgüp Cumhuriyet Meydanı)",
+      "display_name": "sanatsal",
+      "color": "0101000020E61000007FC16ED8B67441409487855AD3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 97,
+      "name": "Kapadokya Sanat ve El Sanatları Merkezi (Ürgüp)",
+      "display_name": "sanatsal",
+      "color": "0101000020E6100000F0A2AF20CD7441409B8F6B43C5504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 98,
+      "name": "Kilim Art Gallery (Ürgüp)",
+      "display_name": "sanatsal",
+      "color": "0101000020E6100000FE43FAEDEB7441408577B988EF504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 99,
+      "name": "Temenni Hill (Ürgüp)",
+      "display_name": "doga_macera",
+      "color": "0101000020E610000094D920938C7441406284F068E3504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 100,
+      "name": "Ürgüp ATV Turu Başlangıç Noktası (Ürgüp)",
+      "display_name": "doga_macera",
+      "color": "0101000020E6100000F71E2E39EE744140A01518B2BA514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 101,
+      "name": "Üç Güzeller Peribacaları (Ürgüp)",
+      "display_name": "doga_macera",
+      "color": "0101000020E61000000B7A6F0C01724140C37E4FAC53514340",
+      "icon": null,
+      "description": ""
+    },
+    {
+      "id": 102,
+      "name": "Vefa Küçük Parkı (Ürgüp)",
+      "display_name": "doga_macera",
+      "color": "0101000020E6100000A9DE1AD82A754140CDE9B298D8504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 103,
+      "name": "Kayakapı Premium Caves (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E610000086200725CC744140A306D3307C504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 104,
+      "name": "Yunak Evleri Cappadocia (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E61000001500E319347441405AF0A2AF20514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 105,
+      "name": "Esbelli Evi Cave Hotel (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E6100000B1F9B836547441405BB1BFEC9E504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 106,
+      "name": "Dere Suites Cappadocia (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E610000000AE64C7467441405B99F04BFD504340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 107,
+      "name": "Seraphim Cave Hotel (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E610000048E17A14AE734140A0C37C79014E4340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 108,
+      "name": "AJWA Cappadocia (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E610000031992A1895744140F0A7C64B37514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 109,
+      "name": "Utopia Cave Cappadocia (Ürgüp)",
+      "display_name": "konaklama",
+      "color": "0101000020E6100000404D2D5BEB73414068E89FE062514340",
+      "icon": null,
+      "description": null
+    },
+    {
+      "id": 110,
+      "name": "ürgüp müzesi",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000863DEDF0D77441403C122F4FE7504340",
+      "icon": null,
+      "description": "ürgüp müzesi"
+    },
+    {
+      "id": 111,
+      "name": "Hodul Dağı Tümülüsü (Ağcaören Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E6100000840D4FAF94854140FC1873D712424340",
+      "icon": null,
+      "description": "Hodul Dağı Tümülüsü (Ağcaören Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 112,
+      "name": "Yeni Cami (Ağcaören Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000005DDC460378834140CC7F48BF7D454340",
+      "icon": null,
+      "description": "Yeni Cami (Ağcaören Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 113,
+      "name": "Eski Cami (Ağcaören Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000002497FF907E834140A167B3EA73454340",
+      "icon": null,
+      "description": "Eski Cami (Ağcaören Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 114,
+      "name": "Çeşme (Ağcaören Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E610000017B7D100DE82414005C58F3177454340",
+      "icon": null,
+      "description": "Çeşme (Ağcaören Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 115,
+      "name": "Mezarlık 1 (Ağcaören Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E610000017D9CEF753834140BEC1172653454340",
+      "icon": null,
+      "description": "Mezarlık 1 (Ağcaören Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 116,
+      "name": "Mezarlık 2 (Ağcaören Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E61000004260E5D02283414068226C787A454340",
+      "icon": null,
+      "description": "Mezarlık 2 (Ağcaören Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 117,
+      "name": "Mezarlık 3 (Ağcaören Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E610000096218E75718341405A643BDF4F454340",
+      "icon": null,
+      "description": "Mezarlık 3 (Ağcaören Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 118,
+      "name": "Çeşme 1 (Akköy Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000F46C567DAE864140174850FC184B4340",
+      "icon": null,
+      "description": "Çeşme 1 (Akköy Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 119,
+      "name": "Çeşme 2 (Akköy Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000029A081B9E8641402575029A084B4340",
+      "icon": null,
+      "description": "Çeşme 2 (Akköy Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 120,
+      "name": "Çeşme 3 (Akköy Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000F5DBD7817386414097900F7A364B4340",
+      "icon": null,
+      "description": "Çeşme 3 (Akköy Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 121,
+      "name": "Çeşme 4 (Akköy Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000AED85F764F864140B37BF2B0504B4340",
+      "icon": null,
+      "description": "Çeşme 4 (Akköy Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 122,
+      "name": "Çeşme 5 (Akköy Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E610000020D26F5F078641407A36AB3E574B4340",
+      "icon": null,
+      "description": "Çeşme 5 (Akköy Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 123,
+      "name": "Akköy Hacı Mikdat Cami",
+      "display_name": "dini",
+      "color": "0101000020E6100000D881734694864140A5BDC117264B4340",
+      "icon": null,
+      "description": "Akköy Hacı Mikdat Cami - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 124,
+      "name": "Kaya Cami (Akköy Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000001F85EB51B8864140174850FC184B4340",
+      "icon": null,
+      "description": "Kaya Cami (Akköy Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 125,
+      "name": "Akköy Hat Cami",
+      "display_name": "dini",
+      "color": "0101000020E610000082E2C798BB864140EC2FBB270F4B4340",
+      "icon": null,
+      "description": "Akköy Hat Cami - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 126,
+      "name": "Saray (Akköy Köyü)",
+      "display_name": "saray_kale",
+      "color": "0101000020E610000082E2C798BB864140EC2FBB270F4B4340",
+      "icon": null,
+      "description": "Saray (Akköy Köyü) - Tarihi savunma ve yönetim yapısı."
+    },
+    {
+      "id": 127,
+      "name": "Kilise I (Akköy Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000742497FF9086414097900F7A364B4340",
+      "icon": null,
+      "description": "Kilise I (Akköy Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 128,
+      "name": "Kilise II (Akköy Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000E4141DC9E58741406DC5FEB27B4A4340",
+      "icon": null,
+      "description": "Kilise II (Akköy Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 129,
+      "name": "Yusuf Bey Cami (Ayvalı Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000009EEFA7C64B6F4140A089B0E1E9454340",
+      "icon": null,
+      "description": "Yusuf Bey Cami (Ayvalı Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 130,
+      "name": "Köprü (Ayvalı Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000ACADD85F766F4140E7FBA9F1D2454340",
+      "icon": null,
+      "description": "Köprü (Ayvalı Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 131,
+      "name": "Kilise (Ayvalı Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000E5F21FD26F6F4140A089B0E1E9454340",
+      "icon": null,
+      "description": "Kilise (Ayvalı Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 132,
+      "name": "Mezarlık (Ayvalı Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E610000048BF7D1D386F4140A167B3EA73454340",
+      "icon": null,
+      "description": "Mezarlık (Ayvalı Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 133,
+      "name": "Ayvalı Nekropol",
+      "display_name": "tarihi",
+      "color": "0101000020E61000005839B4C8766E4140A01A2FDD24464340",
+      "icon": null,
+      "description": "Ayvalı Nekropol - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 134,
+      "name": "Çeşme (Bahçeli Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000BE9F1A2FDD6C4140CA32C4B12E464340",
+      "icon": null,
+      "description": "Çeşme (Bahçeli Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 135,
+      "name": "Bahçeli Köyü Mustafa Ağa Cami",
+      "display_name": "dini",
+      "color": "0101000020E6100000789CA223B96C414003780B2428464340",
+      "icon": null,
+      "description": "Bahçeli Köyü Mustafa Ağa Cami - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 136,
+      "name": "Bahçeli Köyü Osman Ağa Cami",
+      "display_name": "dini",
+      "color": "0101000020E6100000865AD3BCE36C414003780B2428464340",
+      "icon": null,
+      "description": "Bahçeli Köyü Osman Ağa Cami - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 137,
+      "name": "Okul (Bahçeli Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E610000031992A18956C41402E90A0F831464340",
+      "icon": null,
+      "description": "Okul (Bahçeli Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 138,
+      "name": "İçeri Dere Kilisesi (Bahçeli Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000030BB270F0B6D41406666666666464340",
+      "icon": null,
+      "description": "İçeri Dere Kilisesi (Bahçeli Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 139,
+      "name": "Kilise II (Bahçeli Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000DB8AFD65F76C4140F38E537424474340",
+      "icon": null,
+      "description": "Kilise II (Bahçeli Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 140,
+      "name": "Kilise III (Bahçeli Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000DB8AFD65F76C4140F38E537424474340",
+      "icon": null,
+      "description": "Kilise III (Bahçeli Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 141,
+      "name": "Değirmen (Bahçeli Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E610000014AE47E17A6C4140E71DA7E848464340",
+      "icon": null,
+      "description": "Değirmen (Bahçeli Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 142,
+      "name": "Kilise (Başdere Köyü Eyüplü Mah.)",
+      "display_name": "dini",
+      "color": "0101000020E61000008D28ED0DBE884140E4141DC9E5474340",
+      "icon": null,
+      "description": "Kilise (Başdere Köyü Eyüplü Mah.) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 143,
+      "name": "Kagir Cami (Yeni) (Başdere Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000000C93A982518941408FC2F5285C474340",
+      "icon": null,
+      "description": "Kagir Cami (Yeni) (Başdere Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 144,
+      "name": "Kagir Cami (Başdere Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000029ED0DBE30894140ACADD85F76474340",
+      "icon": null,
+      "description": "Kagir Cami (Başdere Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 145,
+      "name": "Kaya Cami+Kagir (Başdere Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000006FF085C9548941401E166A4DF3464340",
+      "icon": null,
+      "description": "Kaya Cami+Kagir (Başdere Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 146,
+      "name": "Çeşme I (Başdere Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000613255302A8941401D38674469474340",
+      "icon": null,
+      "description": "Çeşme I (Başdere Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 147,
+      "name": "Okul (Başdere Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E61000000C93A982518941401D38674469474340",
+      "icon": null,
+      "description": "Okul (Başdere Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 148,
+      "name": "Başdere Köyü Çeşme II",
+      "display_name": "mimari",
+      "color": "0101000020E61000008CB96B09F9884140BA6B09F9A0474340",
+      "icon": null,
+      "description": "Başdere Köyü Çeşme II - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 149,
+      "name": "Değirmen I (Başdere Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000004694F6065F88414039D6C56D34484340",
+      "icon": null,
+      "description": "Değirmen I (Başdere Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 150,
+      "name": "Değirmen II (Başdere Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000009A779CA2238941403B014D840D474340",
+      "icon": null,
+      "description": "Değirmen II (Başdere Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 151,
+      "name": "Mezarlık (Başdere Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E610000061C3D32B65894140492EFF21FD464340",
+      "icon": null,
+      "description": "Mezarlık (Başdere Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 152,
+      "name": "Yeni Cami (Başdere Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000044FAEDEBC0894140910F7A36AB464340",
+      "icon": null,
+      "description": "Yeni Cami (Başdere Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 153,
+      "name": "Büyük Çeç Tümülüsü (Başdere Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E6100000B3EA73B5158B4140742497FF903E4340",
+      "icon": null,
+      "description": "Büyük Çeç Tümülüsü (Başdere Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 154,
+      "name": "Küçük Çeç Tümülüsü (Başdere Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E6100000A60A4625758A4140D93D7958A83D4340",
+      "icon": null,
+      "description": "Küçük Çeç Tümülüsü (Başdere Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 155,
+      "name": "Boyalı Köyü Camisi",
+      "display_name": "dini",
+      "color": "0101000020E61000000C022B8716814140401361C3D34B4340",
+      "icon": null,
+      "description": "Boyalı Köyü Camisi - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 156,
+      "name": "Çeşme I (Boyalı Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000000C022B8716814140CE88D2DEE04B4340",
+      "icon": null,
+      "description": "Çeşme I (Boyalı Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 157,
+      "name": "Çeşme II (Boyalı Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000001B9E5E29CB8041405D6DC5FEB24B4340",
+      "icon": null,
+      "description": "Çeşme II (Boyalı Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 158,
+      "name": "İlkokul (Boyalı Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000D42B6519E280414016FBCBEEC94B4340",
+      "icon": null,
+      "description": "İlkokul (Boyalı Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 159,
+      "name": "Kilise (Boyalı Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000E2E995B20C8141404F401361C34B4340",
+      "icon": null,
+      "description": "Kilise (Boyalı Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 160,
+      "name": "Sağlık Ocağı (Boyalı Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E6100000295C8FC2F5804140B29DEFA7C64B4340",
+      "icon": null,
+      "description": "Sağlık Ocağı (Boyalı Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 161,
+      "name": "Mezarlık (Boyalı Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E6100000462575029A804140B29DEFA7C64B4340",
+      "icon": null,
+      "description": "Mezarlık (Boyalı Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 162,
+      "name": "Necippaşa Cami (Cemil Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000000F0BB5A679774140098A1F63EE424340",
+      "icon": null,
+      "description": "Necippaşa Cami (Cemil Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 163,
+      "name": "Cami (Minare) (Cemil Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000009EEFA7C64B774140098A1F63EE424340",
+      "icon": null,
+      "description": "Cami (Minare) (Cemil Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 164,
+      "name": "Hagios Stefanos Kilisesi- Keşlik Manastırı (Cemil Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000C66D3480B778414036CD3B4ED1414340",
+      "icon": null,
+      "description": "Hagios Stefanos Kilisesi- Keşlik Manastırı (Cemil Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 165,
+      "name": "Archangelios Kilisesi ve Keşlik Manastırı (Cemil Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000029CB10C7BA78414052B81E85EB414340",
+      "icon": null,
+      "description": "Archangelios Kilisesi ve Keşlik Manastırı (Cemil Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 166,
+      "name": "Kutsal Haç Kilisesi (Cemil Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000008F5374249777414017B7D100DE424340",
+      "icon": null,
+      "description": "Kutsal Haç Kilisesi (Cemil Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 167,
+      "name": "Meryem Ana Kilisesi Mezarlık Alanı (Cemil Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000E4839ECDAA774140CFF753E3A5434340",
+      "icon": null,
+      "description": "Meryem Ana Kilisesi Mezarlık Alanı (Cemil Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 168,
+      "name": "Eski Rum Okulu (Konut) (Cemil Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E61000000F0BB5A67977414017B7D100DE424340",
+      "icon": null,
+      "description": "Eski Rum Okulu (Konut) (Cemil Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 169,
+      "name": "İlkokul (Cemil Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000E5F21FD26F774140986E1283C0424340",
+      "icon": null,
+      "description": "İlkokul (Cemil Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 170,
+      "name": "Şapel (Cemil Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E61000000F0BB5A67977414017B7D100DE424340",
+      "icon": null,
+      "description": "Şapel (Cemil Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 171,
+      "name": "Kütüphane (Cemil Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000736891ED7C774140098A1F63EE424340",
+      "icon": null,
+      "description": "Kütüphane (Cemil Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 172,
+      "name": "Çeşme 1 (Cemil Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000D734EF38457741406DE7FBA9F1424340",
+      "icon": null,
+      "description": "Çeşme 1 (Cemil Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 173,
+      "name": "Çeşme 2 ve Çamaşırhane (Cemil Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000C8073D9B55774140986E1283C0424340",
+      "icon": null,
+      "description": "Çeşme 2 ve Çamaşırhane (Cemil Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 174,
+      "name": "Çeşme 3 (Cemil Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000004850FC187377414050FC1873D7424340",
+      "icon": null,
+      "description": "Çeşme 3 (Cemil Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 175,
+      "name": "Çeşme 4 (Cemil Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E610000048E17A14AE7741407B14AE47E1424340",
+      "icon": null,
+      "description": "Çeşme 4 (Cemil Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 176,
+      "name": "Çeşme 5 (Mustafa Ağa Çeşmesi) (Cemil Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E610000048E17A14AE774140B459F5B9DA424340",
+      "icon": null,
+      "description": "Çeşme 5 (Mustafa Ağa Çeşmesi) (Cemil Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 177,
+      "name": "Köprü (Yıkıldı) (Cemil Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000000F0BB5A67977414017B7D100DE424340",
+      "icon": null,
+      "description": "Köprü (Yıkıldı) (Cemil Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 178,
+      "name": "Köprü (Cemil Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000C8073D9B55774140986E1283C0424340",
+      "icon": null,
+      "description": "Köprü (Cemil Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 179,
+      "name": "Köy Odası (Cemil Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E61000004850FC18737741406DE7FBA9F1424340",
+      "icon": null,
+      "description": "Köy Odası (Cemil Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 180,
+      "name": "Cemilköy İgnimbiritleri",
+      "display_name": "diger",
+      "color": "0101000020E61000003A234A7B837741405F984C158C424340",
+      "icon": null,
+      "description": "Cemilköy İgnimbiritleri - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 181,
+      "name": "Cemilköy Tümülüsü",
+      "display_name": "tarihi",
+      "color": "0101000020E6100000AA60545227784140098A1F63EE424340",
+      "icon": null,
+      "description": "Cemilköy Tümülüsü - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 182,
+      "name": "Damsa Vadisi ve Cemil Peribacaları",
+      "display_name": "diger",
+      "color": "0101000020E61000007FFB3A70CE784140C442AD69DE414340",
+      "icon": null,
+      "description": "Damsa Vadisi ve Cemil Peribacaları - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 183,
+      "name": "Çökek Köyü İlkokul",
+      "display_name": "kulturel",
+      "color": "0101000020E61000006E3480B7407A41401DC9E53FA4574340",
+      "icon": null,
+      "description": "Çökek Köyü İlkokul - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 184,
+      "name": "Cami (Çökek Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000009A779CA223794140F2B0506B9A574340",
+      "icon": null,
+      "description": "Cami (Çökek Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 185,
+      "name": "Köy İçi Kilise (Çökek Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000000C022B8716794140AB3E575BB1574340",
+      "icon": null,
+      "description": "Köy İçi Kilise (Çökek Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 186,
+      "name": "Manastır (Çökek Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000000B462575027A4140744694F606574340",
+      "icon": null,
+      "description": "Manastır (Çökek Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 187,
+      "name": "Köy Konağı (Çökek Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E6100000295C8FC2F5784140736891ED7C574340",
+      "icon": null,
+      "description": "Köy Konağı (Çökek Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 188,
+      "name": "Emir Fahreddin Saray Sâlâriye (Sarıhan) Hanı (Çökek Köyü)",
+      "display_name": "saray_kale",
+      "color": "0101000020E6100000DC68006F81744140508D976E125B4340",
+      "icon": null,
+      "description": "Emir Fahreddin Saray Sâlâriye (Sarıhan) Hanı (Çökek Köyü) - Tarihi savunma ve yönetim yapısı."
+    },
+    {
+      "id": 189,
+      "name": "Kaya Cami (Demirtaş Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000008FC2F5285C874140287E8CB96B494340",
+      "icon": null,
+      "description": "Kaya Cami (Demirtaş Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 190,
+      "name": "Türbe- Mezarlık (Demirtaş Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000065AA605452874140FE65F7E461494340",
+      "icon": null,
+      "description": "Türbe- Mezarlık (Demirtaş Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 191,
+      "name": "Değirmen (Demirtaş Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000014D840D4F8741406FF085C954494340",
+      "icon": null,
+      "description": "Değirmen (Demirtaş Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 192,
+      "name": "Mezarlık Alanı (Karakaya Mevkii) (İbrahimpaşa Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E61000006A4DF38E536C41404D840D4FAF4C4340",
+      "icon": null,
+      "description": "Mezarlık Alanı (Karakaya Mevkii) (İbrahimpaşa Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 193,
+      "name": "İbrahimpaşa Nekropol",
+      "display_name": "tarihi",
+      "color": "0101000020E610000057EC2FBB276F41408AB0E1E9954A4340",
+      "icon": null,
+      "description": "İbrahimpaşa Nekropol - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 194,
+      "name": "Manay Tepesi (İbrahimpaşa Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E61000003EE8D9ACFA6C414016FBCBEEC94B4340",
+      "icon": null,
+      "description": "Manay Tepesi (İbrahimpaşa Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 195,
+      "name": "Babayan Kilisesi (İbrahimpaşa Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000772D211FF46C4140865AD3BCE34C4340",
+      "icon": null,
+      "description": "Babayan Kilisesi (İbrahimpaşa Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 196,
+      "name": "Örsürtü Cami (İbrahimpaşa Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000005B423EE8D96C414014D044D8F04C4340",
+      "icon": null,
+      "description": "Örsürtü Cami (İbrahimpaşa Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 197,
+      "name": "Hacı Mehmet Cami (İbrahimpaşa Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000000612143FC66C4140F7E461A1D64C4340",
+      "icon": null,
+      "description": "Hacı Mehmet Cami (İbrahimpaşa Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 198,
+      "name": "1 Numaralı Çeşme (İbrahimpaşa Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000005B423EE8D96C4140DB8AFD65F74C4340",
+      "icon": null,
+      "description": "1 Numaralı Çeşme (İbrahimpaşa Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 199,
+      "name": "2 Numaralı Çeşme (İbrahimpaşa Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000789CA223B96C4140BE9F1A2FDD4C4340",
+      "icon": null,
+      "description": "2 Numaralı Çeşme (İbrahimpaşa Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 200,
+      "name": "İbrahimpaşa Köprüsü",
+      "display_name": "mimari",
+      "color": "0101000020E6100000696FF085C96C41404D840D4FAF4C4340",
+      "icon": null,
+      "description": "İbrahimpaşa Köprüsü - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 201,
+      "name": "Cami (İltaş Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000931804560E854140A60A4625754A4340",
+      "icon": null,
+      "description": "Cami (İltaş Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 202,
+      "name": "Çeşme (İltaş Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000931804560E854140A60A4625754A4340",
+      "icon": null,
+      "description": "Çeşme (İltaş Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 203,
+      "name": "Okul (İltaş Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000F775E09C1185414098DD9387854A4340",
+      "icon": null,
+      "description": "Okul (İltaş Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 204,
+      "name": "1 Numaralı Kilise (İltaş Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000F775E09C11854140A8C64B3789494340",
+      "icon": null,
+      "description": "1 Numaralı Kilise (İltaş Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 205,
+      "name": "2 Numaralı Kilise (İltaş Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000F775E09C11854140A8C64B3789494340",
+      "icon": null,
+      "description": "2 Numaralı Kilise (İltaş Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 206,
+      "name": "Mezarlık alanı ve Türbe (Karacaören Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000211FF46C567D414091ED7C3F354E4340",
+      "icon": null,
+      "description": "Mezarlık alanı ve Türbe (Karacaören Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 207,
+      "name": "Cami (Karacaören Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000CC5D4BC8077D41401F85EB51B84E4340",
+      "icon": null,
+      "description": "Cami (Karacaören Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 208,
+      "name": "Okul (Karacaören Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000CC5D4BC8077D4140910F7A36AB4E4340",
+      "icon": null,
+      "description": "Okul (Karacaören Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 209,
+      "name": "Eski Han (Karacaören Köyü)",
+      "display_name": "saray_kale",
+      "color": "0101000020E6100000DB8AFD65F77C41402DB29DEFA74E4340",
+      "icon": null,
+      "description": "Eski Han (Karacaören Köyü) - Tarihi savunma ve yönetim yapısı."
+    },
+    {
+      "id": 210,
+      "name": "Muhtarlık Binası (Karacaören Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E610000005A3923A017D4140029A081B9E4E4340",
+      "icon": null,
+      "description": "Muhtarlık Binası (Karacaören Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 211,
+      "name": "1 Numaralı Çeşme ve Çamaşırhane (Karacaören Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000865AD3BCE37C4140BBB88D06F04E4340",
+      "icon": null,
+      "description": "1 Numaralı Çeşme ve Çamaşırhane (Karacaören Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 212,
+      "name": "2 Numaralı Çeşme (Karacaören Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000228E75711B7D4140029A081B9E4E4340",
+      "icon": null,
+      "description": "2 Numaralı Çeşme (Karacaören Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 213,
+      "name": "Güvercinlikler (Karacaören Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E6100000E86A2BF6977D41406688635DDC4E4340",
+      "icon": null,
+      "description": "Güvercinlikler (Karacaören Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 214,
+      "name": "Kurt Deresi Kaya Mezarı (Karacaören Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E610000014AE47E17A7C41404C378941604D4340",
+      "icon": null,
+      "description": "Kurt Deresi Kaya Mezarı (Karacaören Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 215,
+      "name": "Kurt Deresi Kilise (Karacaören Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000014AE47E17A7C41404C378941604D4340",
+      "icon": null,
+      "description": "Kurt Deresi Kilise (Karacaören Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 216,
+      "name": "Hacı İsa Cami (Karain Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E61000009031772D217F4140B3EA73B5154B4340",
+      "icon": null,
+      "description": "Hacı İsa Cami (Karain Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 217,
+      "name": "Çeşme (Karain Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000006688635DDC7E41404FAF9465884B4340",
+      "icon": null,
+      "description": "Çeşme (Karain Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 218,
+      "name": "Namazgah (Karain Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E6100000D7A3703D0A7F4140091B9E5E294B4340",
+      "icon": null,
+      "description": "Namazgah (Karain Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 219,
+      "name": "Sultan Alaaddin Cami (Yıkıldı) (Karain Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000022B8716D97E414024287E8CB94B4340",
+      "icon": null,
+      "description": "Sultan Alaaddin Cami (Yıkıldı) (Karain Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 220,
+      "name": "Okul (Karain Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E61000006688635DDC7E414033C4B12E6E4B4340",
+      "icon": null,
+      "description": "Okul (Karain Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 221,
+      "name": "Bezirhane (Karain Köyü)",
+      "display_name": "saray_kale",
+      "color": "0101000020E6100000C9E53FA4DF7E4140CFF753E3A54B4340",
+      "icon": null,
+      "description": "Bezirhane (Karain Köyü) - Tarihi savunma ve yönetim yapısı."
+    },
+    {
+      "id": 222,
+      "name": "Kilise-Manastır (Karain Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000082E2C798BB7E41405C2041F1634C4340",
+      "icon": null,
+      "description": "Kilise-Manastır (Karain Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 223,
+      "name": "Değirmen (Karain Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000006688635DDC7E4140083D9B559F4B4340",
+      "icon": null,
+      "description": "Değirmen (Karain Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 224,
+      "name": "Köy Konağı- Muhtarlık (Karain Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E6100000575BB1BFEC7E414025068195434B4340",
+      "icon": null,
+      "description": "Köy Konağı- Muhtarlık (Karain Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 225,
+      "name": "Mezarlık (Karain Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E610000010E9B7AF037F41407A36AB3E574B4340",
+      "icon": null,
+      "description": "Mezarlık (Karain Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 226,
+      "name": "Güvercinlik (Karain Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E61000009FCDAACFD57E4140D0D556EC2F4B4340",
+      "icon": null,
+      "description": "Güvercinlik (Karain Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 227,
+      "name": "Sağlık Ocağı- Lojman (Karain Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E61000006519E258177F414033333333334B4340",
+      "icon": null,
+      "description": "Sağlık Ocağı- Lojman (Karain Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 228,
+      "name": "Kütüphane (Karain Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E610000010E9B7AF037F414033333333334B4340",
+      "icon": null,
+      "description": "Kütüphane (Karain Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 229,
+      "name": "Türbe ve Mezarlık (Karakaya Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000234A7B832F84414017D9CEF7535B4340",
+      "icon": null,
+      "description": "Türbe ve Mezarlık (Karakaya Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 230,
+      "name": "Kaya cami (Karakaya Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000088855AD3BC83414095D40968225C4340",
+      "icon": null,
+      "description": "Kaya cami (Karakaya Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 231,
+      "name": "Sultan Alaaddin Cami (Yıkıldı) (Karlık Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000058A835CD3B7E4140BA6B09F9A0474340",
+      "icon": null,
+      "description": "Sultan Alaaddin Cami (Yıkıldı) (Karlık Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 232,
+      "name": "Köy Konağı- Müştemilat (Karlık Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E610000011363CBD527E41408126C286A7474340",
+      "icon": null,
+      "description": "Köy Konağı- Müştemilat (Karlık Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 233,
+      "name": "Eski İptidai Mektebi (Karlık Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E6100000D95F764F1E7E41402BF697DD93474340",
+      "icon": null,
+      "description": "Eski İptidai Mektebi (Karlık Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 234,
+      "name": "Karlık İlkokulu",
+      "display_name": "kulturel",
+      "color": "0101000020E61000005917B7D1007E41408195438B6C474340",
+      "icon": null,
+      "description": "Karlık İlkokulu - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 235,
+      "name": "Çeşme (Karlık Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000002EFF21FDF67D41404850FC1873474340",
+      "icon": null,
+      "description": "Çeşme (Karlık Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 236,
+      "name": "Okul Lojman- Bahçesi (Karlık Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000925CFE43FA7D4140F31FD26F5F474340",
+      "icon": null,
+      "description": "Okul Lojman- Bahçesi (Karlık Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 237,
+      "name": "Mezarlık (Karlık Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E6100000AED85F764F7E4140736891ED7C474340",
+      "icon": null,
+      "description": "Mezarlık (Karlık Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 238,
+      "name": "Değirmen (Karlık Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000009FABADD85F7E4140C898BB9690474340",
+      "icon": null,
+      "description": "Değirmen (Karlık Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 239,
+      "name": "Karlık Kilisesi",
+      "display_name": "dini",
+      "color": "0101000020E61000009FCDAACFD57E4140FE43FAEDEB484340",
+      "icon": null,
+      "description": "Karlık Kilisesi - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 240,
+      "name": "Karlık Köyü Kurt Deresi Nekropol",
+      "display_name": "tarihi",
+      "color": "0101000020E61000009FCDAACFD57E4140FE43FAEDEB484340",
+      "icon": null,
+      "description": "Karlık Köyü Kurt Deresi Nekropol - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 241,
+      "name": "Mazı Nekropol Alanı",
+      "display_name": "tarihi",
+      "color": "0101000020E6100000ECC039234A6B4140CEAACFD5563C4340",
+      "icon": null,
+      "description": "Mazı Nekropol Alanı - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 242,
+      "name": "Mazıköy Kilisesi",
+      "display_name": "dini",
+      "color": "0101000020E61000006C787AA52C6B41404F401361C33B4340",
+      "icon": null,
+      "description": "Mazıköy Kilisesi - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 243,
+      "name": "Mazı Yer Altı Şehri",
+      "display_name": "diger",
+      "color": "0101000020E610000008AC1C5A646B4140234A7B832F3C4340",
+      "icon": null,
+      "description": "Mazı Yer Altı Şehri - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 244,
+      "name": "Mazıköy İlkokulu",
+      "display_name": "kulturel",
+      "color": "0101000020E61000002497FF907E6B4140158C4AEA043C4340",
+      "icon": null,
+      "description": "Mazıköy İlkokulu - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 245,
+      "name": "Mazı Muhtarlık Binası",
+      "display_name": "diger",
+      "color": "0101000020E610000096218E75716B4140CE1951DA1B3C4340",
+      "icon": null,
+      "description": "Mazı Muhtarlık Binası - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 246,
+      "name": "Mazıköy Camisi",
+      "display_name": "dini",
+      "color": "0101000020E61000005DDC4603786B41406ABC7493183C4340",
+      "icon": null,
+      "description": "Mazıköy Camisi - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 247,
+      "name": "Sağlık Ocağı (Mazı Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E61000007AC7293A926B4140B1BFEC9E3C3C4340",
+      "icon": null,
+      "description": "Sağlık Ocağı (Mazı Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 248,
+      "name": "Baş Değirmen (Mustafapaşa Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000D93D7958A8754140545227A089484340",
+      "icon": null,
+      "description": "Baş Değirmen (Mustafapaşa Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 249,
+      "name": "Kukuşdibi Tepesi (Mustafapaşa Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E61000003108AC1C5A7441404F1E166A4D4B4340",
+      "icon": null,
+      "description": "Kukuşdibi Tepesi (Mustafapaşa Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 250,
+      "name": "Gorgoli Tepesi/ Meryem Ana Dağı (Mustafapaşa Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E610000008AC1C5A6473414007F0164850444340",
+      "icon": null,
+      "description": "Gorgoli Tepesi/ Meryem Ana Dağı (Mustafapaşa Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 251,
+      "name": "Kalaşa Mevkii (Mustafapaşa Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E6100000F085C954C17041406E3480B7404A4340",
+      "icon": null,
+      "description": "Kalaşa Mevkii (Mustafapaşa Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 252,
+      "name": "Topakoğlu Bezirhanesi (Mustafapaşa Köyü)",
+      "display_name": "saray_kale",
+      "color": "0101000020E61000007B14AE47E172414018265305A34A4340",
+      "icon": null,
+      "description": "Topakoğlu Bezirhanesi (Mustafapaşa Köyü) - Tarihi savunma ve yönetim yapısı."
+    },
+    {
+      "id": 253,
+      "name": "İsimsiz Bezirhane (Mustafapaşa Köyü)",
+      "display_name": "saray_kale",
+      "color": "0101000020E61000006DE7FBA9F1724140FB3A70CE884A4340",
+      "icon": null,
+      "description": "İsimsiz Bezirhane (Mustafapaşa Köyü) - Tarihi savunma ve yönetim yapısı."
+    },
+    {
+      "id": 254,
+      "name": "Karadağ Tümülüsü (Sarıhıdır Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E610000032772D211F7C4140B84082E2C7604340",
+      "icon": null,
+      "description": "Karadağ Tümülüsü (Sarıhıdır Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 255,
+      "name": "Hanözü Peribacaları (Sarıhıdır Köyü)",
+      "display_name": "saray_kale",
+      "color": "0101000020E6100000D0B359F5B9724140789CA223B95C4340",
+      "icon": null,
+      "description": "Hanözü Peribacaları (Sarıhıdır Köyü) - Tarihi savunma ve yönetim yapısı."
+    },
+    {
+      "id": 256,
+      "name": "Sarıhıdır Tüneli",
+      "display_name": "diger",
+      "color": "0101000020E610000080B74082E277414090A0F831E65E4340",
+      "icon": null,
+      "description": "Sarıhıdır Tüneli - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 257,
+      "name": "Değirmen I (Sarıhıdır Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000D0B359F5B9724140789CA223B95C4340",
+      "icon": null,
+      "description": "Değirmen I (Sarıhıdır Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 258,
+      "name": "Değirmen II (Sarıhıdır Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000004ED1915CFE73414077BE9F1A2F5D4340",
+      "icon": null,
+      "description": "Değirmen II (Sarıhıdır Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 259,
+      "name": "Sarıhıdır Köyü Eski Cami",
+      "display_name": "dini",
+      "color": "0101000020E6100000D734EF3845774140F5B9DA8AFD5D4340",
+      "icon": null,
+      "description": "Sarıhıdır Köyü Eski Cami - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 260,
+      "name": "Mezarlık Alanı (Sarıhıdır Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E6100000D95F764F1E7641403D9B559FAB5D4340",
+      "icon": null,
+      "description": "Mezarlık Alanı (Sarıhıdır Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 261,
+      "name": "Sofu Dede Türbesi (Sofular Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000082E2C798BB7E41402497FF907E5B4340",
+      "icon": null,
+      "description": "Sofu Dede Türbesi (Sofular Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 262,
+      "name": "Sofular Kilisesi",
+      "display_name": "dini",
+      "color": "0101000020E6100000029A081B9E7E4140DE9387855A5B4340",
+      "icon": null,
+      "description": "Sofular Kilisesi - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 263,
+      "name": "Sofular Nekropol",
+      "display_name": "tarihi",
+      "color": "0101000020E6100000029A081B9E7E4140DE9387855A5B4340",
+      "icon": null,
+      "description": "Sofular Nekropol - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 264,
+      "name": "Sofular Höyük",
+      "display_name": "diger",
+      "color": "0101000020E6100000D3BCE3141D8141406A4DF38E535C4340",
+      "icon": null,
+      "description": "Sofular Höyük - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 265,
+      "name": "Sofular İlkokulu",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000575BB1BFEC7E4140508D976E125B4340",
+      "icon": null,
+      "description": "Sofular İlkokulu - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 266,
+      "name": "Sofular Köyü Camisi",
+      "display_name": "dini",
+      "color": "0101000020E6100000492EFF21FD7E414089D2DEE00B5B4340",
+      "icon": null,
+      "description": "Sofular Köyü Camisi - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 267,
+      "name": "Sofular Köyü Kaya Camisi",
+      "display_name": "dini",
+      "color": "0101000020E6100000C976BE9F1A7F4140508D976E125B4340",
+      "icon": null,
+      "description": "Sofular Köyü Kaya Camisi - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 268,
+      "name": "Mezarlık alanı (Şahinefendi Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E61000009A999999997941406ABC7493183C4340",
+      "icon": null,
+      "description": "Mezarlık alanı (Şahinefendi Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 269,
+      "name": "Şahinefendi Köyü Camii",
+      "display_name": "dini",
+      "color": "0101000020E61000006FF085C954794140A301BC05123C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Camii - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 270,
+      "name": "1 Nolu Çeşme (Şahinefendi Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E610000070CE88D2DE784140401361C3D33B4340",
+      "icon": null,
+      "description": "1 Nolu Çeşme (Şahinefendi Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 271,
+      "name": "2 Nolu Çeşme (Şahinefendi Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000C520B0726879414040A4DFBE0E3C4340",
+      "icon": null,
+      "description": "2 Nolu Çeşme (Şahinefendi Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 272,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (1)",
+      "display_name": "dini",
+      "color": "0101000020E6100000D1915CFE437A4140A245B6F3FD3C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (1) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 273,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (2)",
+      "display_name": "dini",
+      "color": "0101000020E6100000FC1873D7127A41406ADE718A8E3C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (2) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 274,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (3)",
+      "display_name": "dini",
+      "color": "0101000020E610000098DD9387857A414007F01648503C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (3) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 275,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (4)",
+      "display_name": "dini",
+      "color": "0101000020E61000005F07CE19517A4140DCD78173463C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (4) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 276,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (5)",
+      "display_name": "dini",
+      "color": "0101000020E6100000984C158C4A7A4140DCD78173463C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (5) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 277,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (6)",
+      "display_name": "dini",
+      "color": "0101000020E6100000E0BE0E9C337A4140EA043411363C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (6) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 278,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (7)",
+      "display_name": "dini",
+      "color": "0101000020E6100000A779C7293A7A4140A3923A014D3C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (7) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 279,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (8)",
+      "display_name": "dini",
+      "color": "0101000020E6100000EEEBC039237A414007F01648503C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (8) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 280,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (9)",
+      "display_name": "dini",
+      "color": "0101000020E6100000355EBA490C7A4140CEAACFD5563C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (9) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 281,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (10)",
+      "display_name": "dini",
+      "color": "0101000020E6100000C3D32B65197A4140F8C264AA603C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (10) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 282,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (11)",
+      "display_name": "dini",
+      "color": "0101000020E610000060764F1E167A4140F8C264AA603C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (11) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 283,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (12)",
+      "display_name": "dini",
+      "color": "0101000020E6100000273108AC1C7A41408638D6C56D3C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (12) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 284,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (13)",
+      "display_name": "dini",
+      "color": "0101000020E6100000D200DE02097A41403108AC1C5A3C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (13) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 285,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (14)",
+      "display_name": "dini",
+      "color": "0101000020E6100000355EBA490C7A4140BF7D1D38673C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (14) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 286,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (15)",
+      "display_name": "dini",
+      "color": "0101000020E6100000E02D90A0F87941406A4DF38E533C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (15) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 287,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (16)",
+      "display_name": "dini",
+      "color": "0101000020E6100000EE5A423EE87941404DF38E53743C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (16) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 288,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (17)",
+      "display_name": "dini",
+      "color": "0101000020E610000036CD3B4ED1794140F853E3A59B3C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (17) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 289,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (18)",
+      "display_name": "dini",
+      "color": "0101000020E61000007D3F355EBA794140DBF97E6ABC3C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (18) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 290,
+      "name": "Şahinefendi Köyü Kilise-Manastır Bölgesi (19)",
+      "display_name": "dini",
+      "color": "0101000020E6100000C364AA60547A4140BF7D1D38673C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kilise-Manastır Bölgesi (19) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 291,
+      "name": "Sobesos Antik Kenti (Şahinefendi Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E6100000DD240681957B4140C139234A7B3B4340",
+      "icon": null,
+      "description": "Sobesos Antik Kenti (Şahinefendi Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 292,
+      "name": "Şahinefendi Köyü İlkokulu",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000C520B07268794140075F984C153C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü İlkokulu - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 293,
+      "name": "Şahinefendi Orta Tepe",
+      "display_name": "diger",
+      "color": "0101000020E6100000D1915CFE437A4140A245B6F3FD3C4340",
+      "icon": null,
+      "description": "Şahinefendi Orta Tepe - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 294,
+      "name": "Şahinefendi Köyü Kral yolu",
+      "display_name": "diger",
+      "color": "0101000020E6100000D1915CFE437A4140A245B6F3FD3C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Kral yolu - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 295,
+      "name": "Şahinefendi Köyü Bezirhane",
+      "display_name": "saray_kale",
+      "color": "0101000020E6100000B7627FD93D79414040A4DFBE0E3C4340",
+      "icon": null,
+      "description": "Şahinefendi Köyü Bezirhane - Tarihi savunma ve yönetim yapısı."
+    },
+    {
+      "id": 296,
+      "name": "Şekilli Roma Mezarları (Taşkınpaşa Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E610000017D9CEF7537B414094F6065F983C4340",
+      "icon": null,
+      "description": "Şekilli Roma Mezarları (Taşkınpaşa Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 297,
+      "name": "Çeşme (Taşkınpaşa Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000D34D621058794140AC1C5A643B3F4340",
+      "icon": null,
+      "description": "Çeşme (Taşkınpaşa Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 298,
+      "name": "Taşkınpaşa Cami",
+      "display_name": "dini",
+      "color": "0101000020E61000005305A3923A794140AC8BDB68003F4340",
+      "icon": null,
+      "description": "Taşkınpaşa Cami - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 299,
+      "name": "Taşkınpaşa Medresesi/Zaviye",
+      "display_name": "diger",
+      "color": "0101000020E6100000E17A14AE477941406519E258173F4340",
+      "icon": null,
+      "description": "Taşkınpaşa Medresesi/Zaviye - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 300,
+      "name": "Taşkınpaşa Namazgah",
+      "display_name": "diger",
+      "color": "0101000020E6100000363CBD529679414002BC0512143F4340",
+      "icon": null,
+      "description": "Taşkınpaşa Namazgah - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 301,
+      "name": "Taşkınpaşa Fosil Yatağı",
+      "display_name": "diger",
+      "color": "0101000020E6100000F38E5374247741409C33A2B437404340",
+      "icon": null,
+      "description": "Taşkınpaşa Fosil Yatağı - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 302,
+      "name": "Taşkınpaşa Peribacası",
+      "display_name": "diger",
+      "color": "0101000020E61000008195438B6C774140D49AE61DA7404340",
+      "icon": null,
+      "description": "Taşkınpaşa Peribacası - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 303,
+      "name": "Kesikbaş Türbesi (Taşkınpaşa Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E6100000280F0BB5A67941406519E258173F4340",
+      "icon": null,
+      "description": "Kesikbaş Türbesi (Taşkınpaşa Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 304,
+      "name": "Taşkınpaşa İlkokulu",
+      "display_name": "kulturel",
+      "color": "0101000020E61000008C4AEA043479414010E9B7AF033F4340",
+      "icon": null,
+      "description": "Taşkınpaşa İlkokulu - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 305,
+      "name": "Kale Tepe (Taşkınpaşa Köyü)",
+      "display_name": "saray_kale",
+      "color": "0101000020E61000001B2FDD2406794140C976BE9F1A3F4340",
+      "icon": null,
+      "description": "Kale Tepe (Taşkınpaşa Köyü) - Tarihi savunma ve yönetim yapısı."
+    },
+    {
+      "id": 306,
+      "name": "Sağlık Ocağı (Taşkınpaşa Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E61000005396218E75794140D734EF38453F4340",
+      "icon": null,
+      "description": "Sağlık Ocağı (Taşkınpaşa Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 307,
+      "name": "Taşkınpaşa İçeribağ Kilisesi",
+      "display_name": "dini",
+      "color": "0101000020E61000009BE61DA7E87841406688635DDC3E4340",
+      "icon": null,
+      "description": "Taşkınpaşa İçeribağ Kilisesi - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 308,
+      "name": "Köy İçi İsimsiz Kilise (Taşkınpaşa Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000029ED0DBE3079414057EC2FBB273F4340",
+      "icon": null,
+      "description": "Köy İçi İsimsiz Kilise (Taşkınpaşa Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 309,
+      "name": "Kütüphane (Taşkınpaşa Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E61000006FF085C954794140AC1C5A643B3F4340",
+      "icon": null,
+      "description": "Kütüphane (Taşkınpaşa Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 310,
+      "name": "1 Numaralı Su Değirmeni (Taşkınpaşa Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000E09C11A5BD7941408E06F01648404340",
+      "icon": null,
+      "description": "1 Numaralı Su Değirmeni (Taşkınpaşa Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 311,
+      "name": "2 Numaralı Su Değirmeni (Taşkınpaşa Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000E02D90A0F87941406688635DDC3E4340",
+      "icon": null,
+      "description": "2 Numaralı Su Değirmeni (Taşkınpaşa Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 312,
+      "name": "Köy İçi Kagir Değirmen (Taşkınpaşa Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E610000044696FF085794140BADA8AFD653F4340",
+      "icon": null,
+      "description": "Köy İçi Kagir Değirmen (Taşkınpaşa Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 313,
+      "name": "Eski Mescit (Taşkınpaşa Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000045D8F0F44A794140D734EF38453F4340",
+      "icon": null,
+      "description": "Eski Mescit (Taşkınpaşa Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 314,
+      "name": "Çamaşırhane (Taşkınpaşa Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000613255302A794140F4FDD478E93E4340",
+      "icon": null,
+      "description": "Çamaşırhane (Taşkınpaşa Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 315,
+      "name": "Yazılıkaya (Taşkınpaşa Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E6100000E2E995B20C794140A089B0E1E93D4340",
+      "icon": null,
+      "description": "Yazılıkaya (Taşkınpaşa Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 316,
+      "name": "Taşkınpaşa Köyü Kral yolu (1)",
+      "display_name": "diger",
+      "color": "0101000020E6100000E09C11A5BD794140D34D621058414340",
+      "icon": null,
+      "description": "Taşkınpaşa Köyü Kral yolu (1) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 317,
+      "name": "Taşkınpaşa Köyü Kral yolu (2)",
+      "display_name": "diger",
+      "color": "0101000020E610000075931804567E41403D0AD7A3703D4340",
+      "icon": null,
+      "description": "Taşkınpaşa Köyü Kral yolu (2) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 318,
+      "name": "Ulaşlı Köyü Camisi",
+      "display_name": "dini",
+      "color": "0101000020E610000060E5D022DB794140764F1E166A554340",
+      "icon": null,
+      "description": "Ulaşlı Köyü Camisi - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 319,
+      "name": "Mezarlık Alanı (Ulaşlı Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E61000007DD0B359F579414005C58F3177554340",
+      "icon": null,
+      "description": "Mezarlık Alanı (Ulaşlı Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 320,
+      "name": "Güvercinlikler (Ulaşlı Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E6100000DD240681957B41408351499D80564340",
+      "icon": null,
+      "description": "Güvercinlikler (Ulaşlı Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 321,
+      "name": "Çeşme/ Çamaşırhane 1 (Yeşilöz Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000C9E53FA4DF7E4140E8D9ACFA5C454340",
+      "icon": null,
+      "description": "Çeşme/ Çamaşırhane 1 (Yeşilöz Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 322,
+      "name": "Çeşme/ Çamaşırhane 2 (Yeşilöz Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000C9E53FA4DF7E4140F7065F984C454340",
+      "icon": null,
+      "description": "Çeşme/ Çamaşırhane 2 (Yeşilöz Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 323,
+      "name": "Çeşme/ Çamaşırhane 3 (Yeşilöz Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000AC1C5A643B7F41404CA60A4625454340",
+      "icon": null,
+      "description": "Çeşme/ Çamaşırhane 3 (Yeşilöz Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 324,
+      "name": "Çeşme 4 (Yeşilöz Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E610000054742497FF804140B1E1E995B2444340",
+      "icon": null,
+      "description": "Çeşme 4 (Yeşilöz Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 325,
+      "name": "Yeşilöz Köyü Necippaşa Cami",
+      "display_name": "dini",
+      "color": "0101000020E6100000AC8BDB68007F41403E7958A835454340",
+      "icon": null,
+      "description": "Yeşilöz Köyü Necippaşa Cami - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 326,
+      "name": "Yeşilöz Köyü Kaya Cami",
+      "display_name": "dini",
+      "color": "0101000020E610000074B515FBCB7E414013F241CF66454340",
+      "icon": null,
+      "description": "Yeşilöz Köyü Kaya Cami - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 327,
+      "name": "Çağlak Mevkii (Yeşilöz Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E6100000BADA8AFD657F4140A2B437F8C2444340",
+      "icon": null,
+      "description": "Çağlak Mevkii (Yeşilöz Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 328,
+      "name": "Alkaya Harabeleri (1) (Yeşilöz Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E61000003B70CE88D27E4140789CA223B9444340",
+      "icon": null,
+      "description": "Alkaya Harabeleri (1) (Yeşilöz Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 329,
+      "name": "Alkaya Harabeleri (2) (Yeşilöz Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E61000009F3C2CD49A7E4140226C787AA5444340",
+      "icon": null,
+      "description": "Alkaya Harabeleri (2) (Yeşilöz Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 330,
+      "name": "Alkaya Harabeleri (3) (Yeşilöz Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E610000020D26F5F077E4140DCD7817346444340",
+      "icon": null,
+      "description": "Alkaya Harabeleri (3) (Yeşilöz Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 331,
+      "name": "Alkaya Harabeleri (4) (Yeşilöz Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E6100000764F1E166A7D41401A51DA1B7C414340",
+      "icon": null,
+      "description": "Alkaya Harabeleri (4) (Yeşilöz Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 332,
+      "name": "Yeşilöz Köyü Roma Mezarları (1)",
+      "display_name": "tarihi",
+      "color": "0101000020E610000020D26F5F077E4140DCD7817346444340",
+      "icon": null,
+      "description": "Yeşilöz Köyü Roma Mezarları (1) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 333,
+      "name": "Yeşilöz Köyü Roma Mezarları (2)",
+      "display_name": "tarihi",
+      "color": "0101000020E61000005839B4C8767E4140696FF085C9444340",
+      "icon": null,
+      "description": "Yeşilöz Köyü Roma Mezarları (2) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 334,
+      "name": "Yeşilöz Köyü Yazıtlı Roma Mezarı",
+      "display_name": "tarihi",
+      "color": "0101000020E610000091ED7C3F357E4140CDCCCCCCCC444340",
+      "icon": null,
+      "description": "Yeşilöz Köyü Yazıtlı Roma Mezarı - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 335,
+      "name": "Yeşilöz Köyü Roma Yolu (1)",
+      "display_name": "tarihi",
+      "color": "0101000020E61000003B70CE88D27E4140789CA223B9444340",
+      "icon": null,
+      "description": "Yeşilöz Köyü Roma Yolu (1) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 336,
+      "name": "Yeşilöz Köyü Roma Yolu (2)",
+      "display_name": "tarihi",
+      "color": "0101000020E61000009F3C2CD49A7E4140226C787AA5444340",
+      "icon": null,
+      "description": "Yeşilöz Köyü Roma Yolu (2) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 337,
+      "name": "Ağmaz Harabeleri (1) (Yeşilöz Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E6100000764F1E166A7D41401A51DA1B7C414340",
+      "icon": null,
+      "description": "Ağmaz Harabeleri (1) (Yeşilöz Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 338,
+      "name": "Ağmaz Harabeleri (2) (Yeşilöz Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E6100000925CFE43FA7D4140D34D621058414340",
+      "icon": null,
+      "description": "Ağmaz Harabeleri (2) (Yeşilöz Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    },
+    {
+      "id": 339,
+      "name": "Yeşilöz Köyü Lahit",
+      "display_name": "diger",
+      "color": "0101000020E61000008126C286A77F4140CE88D2DEE0434340",
+      "icon": null,
+      "description": "Yeşilöz Köyü Lahit - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 340,
+      "name": "Yeşilöz Köyü Ören Mevkii",
+      "display_name": "diger",
+      "color": "0101000020E6100000DB8AFD65F784414055C1A8A44E404340",
+      "icon": null,
+      "description": "Yeşilöz Köyü Ören Mevkii - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 341,
+      "name": "Yeşilöz Saint Theodore Kilisesi",
+      "display_name": "dini",
+      "color": "0101000020E6100000E63FA4DFBE7E4140AE47E17A14464340",
+      "icon": null,
+      "description": "Yeşilöz Saint Theodore Kilisesi - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 342,
+      "name": "Yeşilöz Köy İçi İsimsiz Kilise (1)",
+      "display_name": "dini",
+      "color": "0101000020E61000006688635DDC7E4140228E75711B454340",
+      "icon": null,
+      "description": "Yeşilöz Köy İçi İsimsiz Kilise (1) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 343,
+      "name": "Yeşilöz Köy İçi İsimsiz Kilise (2)",
+      "display_name": "dini",
+      "color": "0101000020E61000006688635DDC7E4140228E75711B454340",
+      "icon": null,
+      "description": "Yeşilöz Köy İçi İsimsiz Kilise (2) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 344,
+      "name": "Yeşilöz Köy İçi İsimsiz Kilise (3)",
+      "display_name": "dini",
+      "color": "0101000020E6100000C9E53FA4DF7E414085EB51B81E454340",
+      "icon": null,
+      "description": "Yeşilöz Köy İçi İsimsiz Kilise (3) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 345,
+      "name": "Sultan Aleaddin Cami (Mescit) (Yeşilöz Köyü)",
+      "display_name": "dini",
+      "color": "0101000020E610000057EC2FBB277F4140F775E09C11454340",
+      "icon": null,
+      "description": "Sultan Aleaddin Cami (Mescit) (Yeşilöz Köyü) - Bölgenin önemli dini yapılarından biri."
+    },
+    {
+      "id": 346,
+      "name": "Tarihi Mezarlık Alanı (Yeşilöz Köyü)",
+      "display_name": "mezarlik",
+      "color": "0101000020E61000001DC9E53FA47F4140CDCCCCCCCC444340",
+      "icon": null,
+      "description": "Tarihi Mezarlık Alanı (Yeşilöz Köyü) - Tarihi mezarlık alanı."
+    },
+    {
+      "id": 347,
+      "name": "1 Numaralı Motorlu Değirmen (Yeşilöz Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E610000002BC0512147F4140211FF46C56454340",
+      "icon": null,
+      "description": "1 Numaralı Motorlu Değirmen (Yeşilöz Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 348,
+      "name": "2 Numaralı Motorlu Değirmen (Yeşilöz Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E61000001EA7E8482E7F414013F241CF66454340",
+      "icon": null,
+      "description": "2 Numaralı Motorlu Değirmen (Yeşilöz Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 349,
+      "name": "Seten (Yeşilöz Köyü)",
+      "display_name": "diger",
+      "color": "0101000020E6100000E561A1D6347F4140DAACFA5C6D454340",
+      "icon": null,
+      "description": "Seten (Yeşilöz Köyü) - Bölgenin önemli noktalarından biri."
+    },
+    {
+      "id": 350,
+      "name": "1 Numaralı Su Değirmeni (Yeşilöz Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000E561A1D6347F4140AF25E4839E454340",
+      "icon": null,
+      "description": "1 Numaralı Su Değirmeni (Yeşilöz Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 351,
+      "name": "2 Numaralı Su Değirmeni (Yeşilöz Köyü)",
+      "display_name": "mimari",
+      "color": "0101000020E6100000567DAEB6627F41405917B7D100464340",
+      "icon": null,
+      "description": "2 Numaralı Su Değirmeni (Yeşilöz Köyü) - Geleneksel Anadolu mimarisinin örneği."
+    },
+    {
+      "id": 352,
+      "name": "Eski İlkokul/Köy Konağı (Yeşilöz Köyü)",
+      "display_name": "kulturel",
+      "color": "0101000020E6100000E5D022DBF97E41406891ED7C3F454340",
+      "icon": null,
+      "description": "Eski İlkokul/Köy Konağı (Yeşilöz Köyü) - Yerel kültür ve eğitim hayatının merkezi."
+    },
+    {
+      "id": 353,
+      "name": "Hodul Dağı Tümülüsü (Yeşilöz Köyü)",
+      "display_name": "tarihi",
+      "color": "0101000020E6100000DB8AFD65F784414055C1A8A44E404340",
+      "icon": null,
+      "description": "Hodul Dağı Tümülüsü (Yeşilöz Köyü) - Tarihi ve arkeolojik değere sahip antik yapı."
+    }
+  ],
+  "categories": [
+    {
+      "id": 26,
+      "name": "diger",
+      "display_name": "📍 Diğer",
+      "color": "#00fffb",
+      "icon": "map-pin",
+      "description": "Peribacaları, tepeler, tüneller ve diğer ilgi çekici noktalar"
+    },
+    {
+      "id": 21,
+      "name": "dini",
+      "display_name": "🕌 Dini Yapılar",
+      "color": "#8B4513",
+      "icon": "mosque",
+      "description": "Camiler, kiliseler, manastırlar ve diğer dini yapılar"
+    },
+    {
+      "id": 4,
+      "name": "doga_macera",
+      "display_name": "🌿 Doğa & Macera",
+      "color": "#f39c12",
+      "icon": "hiking",
+      "description": "Doğal güzellikler ve macera aktiviteleri"
+    },
+    {
+      "id": 1,
+      "name": "gastronomik",
+      "display_name": "🍽️ Gastronomik",
+      "color": "#e74c3c",
+      "icon": "utensils",
+      "description": "Restoranlar, kafeler ve lezzet noktaları"
+    },
+    {
+      "id": 5,
+      "name": "konaklama",
+      "display_name": "🏨 Konaklama",
+      "color": "#9b59b6",
+      "icon": "bed",
+      "description": "Oteller, pansiyonlar ve konaklama tesisleri"
+    },
+    {
+      "id": 2,
+      "name": "kulturel",
+      "display_name": "🏛️ Kültürel",
+      "color": "#3498db",
+      "icon": "landmark",
+      "description": "Müzeler, tarihi yerler ve kültürel mekanlar"
+    },
+    {
+      "id": 24,
+      "name": "mezarlik",
+      "display_name": "⚰️ Mezarlık Alanları",
+      "color": "#696969",
+      "icon": "cross",
+      "description": "Tarihi ve modern mezarlık alanları"
+    },
+    {
+      "id": 23,
+      "name": "mimari",
+      "display_name": "🏗️ Mimari Yapılar",
+      "color": "#4682B4",
+      "icon": "building",
+      "description": "Çeşmeler, değirmenler, köprüler ve geleneksel yapılar"
+    },
+    {
+      "id": 3,
+      "name": "sanatsal",
+      "display_name": "🎨 Sanatsal",
+      "color": "#2ecc71",
+      "icon": "palette",
+      "description": "Sanat galerileri, atölyeler ve yaratıcı mekanlar"
+    },
+    {
+      "id": 25,
+      "name": "saray_kale",
+      "display_name": "🏰 Saray ve Kaleler",
+      "color": "#800000",
+      "icon": "chess-rook",
+      "description": "Hanlar, bezirhaneler, kaleler ve savunma yapıları"
+    },
+    {
+      "id": 22,
+      "name": "tarihi",
+      "display_name": "🏛️ Tarihi Yapılar",
+      "color": "#CD853F",
+      "icon": "landmark",
+      "description": "Tümülüsler, nekropol alanları ve antik kalıntılar"
+    }
+  ]
+}

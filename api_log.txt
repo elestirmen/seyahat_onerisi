@@ -1,0 +1,12 @@
+INFO:auth_config:Authentication configuration loaded successfully
+INFO:poi_database_adapter:PostgreSQL veritabanına bağlandı
+INFO:poi_database_adapter:PostgreSQL bağlantısı kapatıldı
+Session cleanup worker started
+🚀 POI Yönetim Sistemi başlatılıyor...
+📊 Web arayüzü: http://localhost:5001/poi_manager_ui.html
+🔌 API endpoint'leri: http://localhost:5001/api/
+✅ POSTGRESQL veritabanı bağlantısı aktif
+ * Serving Flask app 'poi_api'
+ * Debug mode: on
+Address already in use
+Port 5001 is in use by another program. Either identify and stop that program, or start the server with a different port.

@@ -1,0 +1,193 @@
+{
+    "gastronomik": [
+        {
+            "_id": "64f1e2a3b2c4d5e6f7890001",
+            "name": "Ziggy Cafe & Restaurant (\u00dcrg\u00fcp)",
+            "category": "gastronomik",
+            "latitude": 38.633115,
+            "longitude": 34.907022,
+            "description": "Kapadokya'n\u0131n en pop\u00fcler restoranlar\u0131ndan biri. T\u00fcrk ve d\u00fcnya mutfa\u011f\u0131ndan lezzetler, romantik ambiyans ve m\u00fckemmel \u015fehir manzaras\u0131.",
+            "tags": [
+                "Turkish",
+                "International",
+                "Vegetarian"
+            ],
+            "isActive": true
+        },
+        {
+            "_id": "64f1e2a3b2c4d5e6f7890002",
+            "name": "Ehlikeyf Restaurant (\u00dcrg\u00fcp)",
+            "category": "gastronomik",
+            "latitude": 38.63061,
+            "longitude": 34.911284,
+            "description": "Geleneksel T\u00fcrk mutfa\u011f\u0131n\u0131n lezzetlerini sunan aile restoran\u0131.",
+            "tags": [
+                "Turkish",
+                "Traditional"
+            ],
+            "isActive": true
+        },
+        {
+            "_id": "64f1e2a3b2c4d5e6f7890003",
+            "name": "Sofra Restaurant (\u00dcrg\u00fcp)",
+            "category": "gastronomik",
+            "latitude": 38.63099,
+            "longitude": 34.91382,
+            "description": "\u00d6zel tariflerle haz\u0131rlanan yemeklerin bulundu\u011fu nezih restoran.",
+            "tags": [
+                "Turkish",
+                "Fine Dining"
+            ],
+            "isActive": true
+        },
+        {
+            "_id": "e164b2b6-0293-4662-a5e8-2c5b1e2bc680",
+            "name": "test",
+            "category": "gastronomik",
+            "latitude": 38.618482,
+            "longitude": 34.898795,
+            "description": "",
+            "tags": [],
+            "isActive": false,
+            "createdAt": "2025-07-16T23:03:22.793055",
+            "deletedAt": "2025-07-16T23:04:07.342006"
+        }
+    ],
+    "kulturel": [
+        {
+            "_id": "64f1e2a3b2c4d5e6f7890004",
+            "name": "\u00dcrg\u00fcp M\u00fczesi (\u00fcrg\u00fcp)",
+            "category": "kulturel",
+            "latitude": 38.63222,
+            "longitude": 34.91148,
+            "description": "Kapadokya b\u00f6lgesinin zengin tarihini ve k\u00fclt\u00fcr\u00fcn\u00fc sergileyen \u00f6nemli bir m\u00fcze. Bizans d\u00f6nemine ait eserler, yerel el sanatlar\u0131 ve arkeolojik buluntular sergilenmektedir.",
+            "tags": [
+                "Museum",
+                "History",
+                "Culture"
+            ],
+            "isActive": true,
+            "updatedAt": "2025-07-16T22:46:17.889445"
+        },
+        {
+            "_id": "64f1e2a3b2c4d5e6f7890005",
+            "name": "Temenni Tepesi (\u00dcrg\u00fcp)",
+            "category": "kulturel",
+            "latitude": 38.63194,
+            "longitude": 34.91054,
+            "description": "\u00dcrg\u00fcp'\u00fcn panoramik manzaras\u0131n\u0131n g\u00f6r\u00fclebilece\u011fi tarihi tepe.",
+            "tags": [
+                "Viewpoint",
+                "Historic"
+            ],
+            "isActive": true,
+            "updatedAt": "2025-07-16T22:51:51.898033"
+        },
+        {
+            "_id": "6f7d6fa4-29f6-42a8-9624-e3901ecfd125",
+            "name": "duayeri cami",
+            "category": "kulturel",
+            "latitude": 38.630529,
+            "longitude": 34.915061,
+            "description": "duayeri cami",
+            "tags": [],
+            "isActive": true,
+            "createdAt": "2025-07-16T22:46:43.889914"
+        }
+    ],
+    "sanatsal": [
+        {
+            "_id": "64f1e2a3b2c4d5e6f7890006",
+            "name": "El Sanatlar\u0131 \u00c7ar\u015f\u0131s\u0131 (\u00dcrg\u00fcp Cumhuriyet Meydan\u0131)",
+            "category": "sanatsal",
+            "latitude": 38.631917,
+            "longitude": 34.913458,
+            "description": "Yerel el sanatlar\u0131 \u00fcr\u00fcnlerinin sat\u0131ld\u0131\u011f\u0131 geleneksel \u00e7ar\u015f\u0131.",
+            "tags": [
+                "Handicrafts",
+                "Shopping",
+                "Traditional"
+            ],
+            "isActive": true,
+            "updatedAt": "2025-07-16T23:25:23.027866"
+        },
+        {
+            "_id": "533a39ae-d43c-4675-afb8-78eb5a12e0cb",
+            "name": "at m\u00fczesi",
+            "category": "sanatsal",
+            "latitude": 38.63121,
+            "longitude": 34.909492,
+            "description": "",
+            "tags": [],
+            "isActive": true,
+            "createdAt": "2025-07-16T22:57:29.517426",
+            "updatedAt": "2025-07-16T23:00:25.283734"
+        }
+    ],
+    "doga_macera": [
+        {
+            "_id": "64f1e2a3b2c4d5e6f7890007",
+            "name": "\u00dc\u00e7 G\u00fczeller Peribacalar\u0131 (\u00dcrg\u00fcp)",
+            "category": "doga_macera",
+            "latitude": 38.635366,
+            "longitude": 34.890657,
+            "description": "Kapadokya'n\u0131n en \u00fcnl\u00fc peribacalar\u0131ndan olan \u00dc\u00e7 G\u00fczeller.",
+            "tags": [
+                "Fairy Chimneys",
+                "Nature",
+                "Photography"
+            ],
+            "isActive": true
+        },
+        {
+            "_id": "11756c7f-378b-4840-8df9-fd06efd4cb53",
+            "name": "sivrita\u015f",
+            "category": "doga_macera",
+            "latitude": 38.630212,
+            "longitude": 34.919659,
+            "description": "",
+            "tags": [],
+            "isActive": true,
+            "createdAt": "2025-07-16T23:38:12.817934"
+        }
+    ],
+    "konaklama": [
+        {
+            "_id": "64f1e2a3b2c4d5e6f7890008",
+            "name": "Kayakap\u0131 Premium Caves (\u00dcrg\u00fcp)",
+            "category": "konaklama",
+            "latitude": 38.634483,
+            "longitude": 34.908972,
+            "description": "Kapadokya'n\u0131n e\u015fsiz ma\u011fara oteli deneyimi.",
+            "tags": [
+                "Cave Hotel",
+                "Luxury",
+                "Unique"
+            ],
+            "isActive": true,
+            "updatedAt": "2025-07-16T23:16:27.101745"
+        },
+        {
+            "_id": "98e6e06d-b81d-460b-a18c-8ab1cf0c095c",
+            "name": "Mustafa Otel",
+            "category": "konaklama",
+            "latitude": 38.634137,
+            "longitude": 34.925881,
+            "description": "",
+            "tags": [],
+            "isActive": true,
+            "createdAt": "2025-07-16T23:08:23.895251"
+        },
+        {
+            "_id": "4e46970b-70e8-49c6-a963-a0abd0693865",
+            "name": "dere suits",
+            "category": "konaklama",
+            "latitude": 38.63193,
+            "longitude": 34.907164,
+            "description": "",
+            "tags": [],
+            "isActive": true,
+            "createdAt": "2025-07-16T23:35:03.979791"
+        }
+    ]
+}

@@ -1,0 +1,4 @@
+- projede hazır rota import edebilelim.
+-dil modeli ile yazılı giriş yapılabilisin. örneğin pide yapılan yer var mı ürgüpte dendiği zaman buna uygun yerler gelsin.
+- hazır rota seçme kısmında popup penceresinde rota önizlemesi görünsün.
+-hazır rotalar kuş uçumu oluşturuluyor. Bu yol ağını izlesin ya da hazır her bir noktası rotanın olsun

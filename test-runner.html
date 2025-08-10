@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POI Manager Enhanced - Test Runner</title>
+    <style>
+        :root {
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --dark-color: #343a40;
+            --light-color: #f8f9fa;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            background: var(--light-color);
+            line-height: 1.6;
+        }
+        
+        .test-runner-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: var(--dark-color);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .header p {
+            margin: 0.5rem 0 0 0;
+            opacity: 0.8;
+        }
+        
+        .controls {
+            padding: 1.5rem;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: var(--info-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: var(--error-color);
+            color: white;
+        }
+        
+        .test-stats {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .stat-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        
+        .stat-total {
+            background: var(--dark-color);
+            color: white;
+        }
+        
+        .stat-passed {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .stat-failed {
+            background: var(--error-color);
+            color: white;
+        }
+        
+        .test-results {
+            padding: 1.5rem;
+        }
+        
+        .test-item {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            border-left: 4px solid transparent;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .test-item.passed {
+            border-left-color: var(--success-color);
+            background: #d4edda;
+        }
+        
+        .test-item.failed {
+            border-left-color: var(--error-color);
+            background: #f8d7da;
+        }
+        
+        .test-item.pending {
+            border-left-color: var(--warning-color);
+            background: #fff3cd;
+        }
+        
+        .test-name {
+            font-weight: 600;
+        }
+        
+        .test-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-passed {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .status-failed {
+            background: var(--error-color);
+            color: white;
+        }
+        
+        .status-pending {
+            background: var(--warning-color);
+            color: var(--dark-color);
+        }
+        
+        .error-details {
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background: rgba(220, 53, 69, 0.1);
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            color: var(--error-color);
+        }
+        
+        .console-output {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: var(--dark-color);
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-color), var(--info-color));
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .test-stats {
+                justify-content: center;
+            }
+            
+            .test-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.5rem;
+            }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-runner-container">
+        <div class="header">
+            <h1>
+                <i class="fas fa-flask"></i>
+                POI Manager Enhanced - Test Suite
+            </h1>
+            <p>Comprehensive testing for POI management and map functionality</p>
+        </div>
+        
+        <div class="controls">
+            <div>
+                <button id="runAllTests" class="btn btn-primary">
+                    <i class="fas fa-play"></i>
+                    Run All Tests
+                </button>
+                <button id="runUnitTests" class="btn btn-primary">
+                    <i class="fas fa-code"></i>
+                    Unit Tests Only
+                </button>
+                <button id="runIntegrationTests" class="btn btn-primary">
+                    <i class="fas fa-link"></i>
+                    Integration Tests Only
+                </button>
+                <button id="clearResults" class="btn btn-danger">
+                    <i class="fas fa-trash"></i>
+                    Clear Results
+                </button>
+            </div>
+            
+            <div class="test-stats">
+                <span class="stat-badge stat-total">
+                    Total: <span id="totalTests">0</span>
+                </span>
+                <span class="stat-badge stat-passed">
+                    Passed: <span id="passedTests">0</span>
+                </span>
+                <span class="stat-badge stat-failed">
+                    Failed: <span id="failedTests">0</span>
+                </span>
+            </div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="test-results" id="testResults">
+            <p style="text-align: center; color: #6c757d; margin: 2rem 0;">
+                <i class="fas fa-info-circle"></i>
+                Click "Run All Tests" to start testing
+            </p>
+        </div>
+        
+        <div class="console-output hidden" id="consoleOutput">
+            <div style="margin-bottom: 1rem; font-weight: bold;">Console Output:</div>
+            <div id="consoleContent"></div>
+        </div>
+    </div>
+
+    <!-- Dependencies -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    
+    <!-- Application Scripts -->
+    <script src="static/js/enhanced-map-manager.js"></script>
+    <script>
+        // Mock POI Manager for testing (simplified version)
+        class POIManager {
+            constructor() {
+                this.currentPage = 1;
+                this.itemsPerPage = 20;
+                this.totalItems = 0;
+                this.totalPages = 0;
+                this.currentFilters = {
+                    search: '',
+                    category: '',
+                    sort: 'name_asc'
+                };
+                this.selectedCategories = new Set();
+                this.pois = [];
+                this.routes = [];
+                this.categories = [];
+                this.selectedPOI = null;
+                this.map = null;
+                this.mapManager = null;
+                this.markers = {};
+                this.csrfToken = null;
+                this.loadingStates = {};
+                this.eventListeners = {};
+                this.virtualScrolling = null;
+            }
+
+            async init() {
+                await this.initializeMap();
+                await this.loadCategories();
+                await this.loadPOIs();
+                await this.loadRoutes();
+            }
+
+            async initializeMap() {
+                const mapContainer = document.getElementById('map');
+                if (!mapContainer) {
+                    // Create temporary map container for testing
+                    const tempContainer = document.createElement('div');
+                    tempContainer.id = 'map';
+                    tempContainer.style.width = '100px';
+                    tempContainer.style.height = '100px';
+                    tempContainer.style.position = 'absolute';
+                    tempContainer.style.left = '-9999px';
+                    document.body.appendChild(tempContainer);
+                }
+
+                this.mapManager = new EnhancedMapManager('map', {
+                    center: [38.6431, 34.8331],
+                    zoom: 11,
+                    enableClustering: true,
+                    enableTouch: true
+                });
+
+                this.map = this.mapManager.getMap();
+            }
+
+            async loadCategories() {
+                this.categories = [
+                    { name: 'gastronomik', display_name: 'Gastronomik', color: '#e74c3c', icon: 'utensils' },
+                    { name: 'kulturel', display_name: 'Kültürel', color: '#3498db', icon: 'landmark' },
+                    { name: 'sanatsal', display_name: 'Sanatsal', color: '#2ecc71', icon: 'palette' }
+                ];
+                return this.categories;
+            }
+
+            async loadPOIs() {
+                if (window.fetch) {
+                    try {
+                        const response = await fetch('/api/pois');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.pois = data.pois || data || [];
+                        }
+                    } catch (error) {
+                        this.pois = [];
+                    }
+                } else {
+                    this.pois = [];
+                }
+                return this.pois;
+            }
+
+            async loadRoutes() {
+                if (window.fetch) {
+                    try {
+                        const response = await fetch('/api/routes');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.routes = data.routes || data || [];
+                        }
+                    } catch (error) {
+                        this.routes = [];
+                    }
+                } else {
+                    this.routes = [];
+                }
+                return this.routes;
+            }
+
+            getCategoryInfo(categoryName) {
+                const defaultCategories = {
+                    gastronomik: { display_name: "🍽️ Gastronomik", color: "#e74c3c", icon: "utensils" },
+                    kulturel: { display_name: "🏛️ Kültürel", color: "#3498db", icon: "landmark" },
+                    sanatsal: { display_name: "🎨 Sanatsal", color: "#2ecc71", icon: "palette" },
+                    doga_macera: { display_name: "🌿 Doğa & Macera", color: "#f39c12", icon: "hiking" },
+                    konaklama: { display_name: "🏨 Konaklama", color: "#9b59b6", icon: "bed" },
+                    alisveris: { display_name: "🛍️ Alışveriş", color: "#f39c12", icon: "shopping-cart" },
+                    eglence: { display_name: "🎪 Eğlence", color: "#e74c3c", icon: "music" },
+                    spor: { display_name: "⚽ Spor", color: "#34495e", icon: "dumbbell" }
+                };
+                
+                return defaultCategories[categoryName] || {
+                    display_name: "📍 Genel",
+                    color: "#6c757d",
+                    icon: "map-marker-alt"
+                };
+            }
+
+            setupVirtualScrolling() {
+                const poiListContainer = document.getElementById('poiList');
+                if (!poiListContainer) return;
+
+                this.virtualScrolling = {
+                    container: poiListContainer,
+                    itemHeight: 120,
+                    viewportHeight: 0,
+                    scrollTop: 0,
+                    totalItems: 0,
+                    visibleStart: 0,
+                    visibleEnd: 0,
+                    buffer: 5
+                };
+            }
+
+            throttle(func, wait) {
+                let timeout;
+                let lastTime = 0;
+                
+                return function executedFunction(...args) {
+                    const now = Date.now();
+                    
+                    if (now - lastTime >= wait) {
+                        func.apply(this, args);
+                        lastTime = now;
+                    } else {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(() => {
+                            func.apply(this, args);
+                            lastTime = Date.now();
+                        }, wait - (now - lastTime));
+                    }
+                };
+            }
+
+            debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+        }
+
+        // Make POIManager globally available
+        window.POIManager = POIManager;
+    </script>
+    <script src="static/js/poi-manager-tests.js"></script>
+    <script src="static/js/file-parser-tests.js"></script>
+
+    <script>
+        // Test Runner Application
+        class TestRunner {
+            constructor() {
+                this.isRunning = false;
+                this.currentTest = 0;
+                this.totalTests = 0;
+                this.originalConsoleLog = console.log;
+                this.originalConsoleError = console.error;
+                this.originalConsoleWarn = console.warn;
+                this.consoleBuffer = [];
+                
+                this.initializeUI();
+                this.setupConsoleCapture();
+            }
+
+            initializeUI() {
+                // Event listeners for buttons
+                document.getElementById('runAllTests').addEventListener('click', () => this.runAllTests());
+                document.getElementById('runUnitTests').addEventListener('click', () => this.runUnitTests());
+                document.getElementById('runIntegrationTests').addEventListener('click', () => this.runIntegrationTests());
+                document.getElementById('clearResults').addEventListener('click', () => this.clearResults());
+            }
+
+            setupConsoleCapture() {
+                const self = this;
+                
+                console.log = function(...args) {
+                    self.consoleBuffer.push({ type: 'log', args });
+                    self.originalConsoleLog.apply(console, args);
+                    self.updateConsoleOutput();
+                };
+                
+                console.error = function(...args) {
+                    self.consoleBuffer.push({ type: 'error', args });
+                    self.originalConsoleError.apply(console, args);
+                    self.updateConsoleOutput();
+                };
+                
+                console.warn = function(...args) {
+                    self.consoleBuffer.push({ type: 'warn', args });
+                    self.originalConsoleWarn.apply(console, args);
+                    self.updateConsoleOutput();
+                };
+            }
+
+            updateConsoleOutput() {
+                const consoleOutput = document.getElementById('consoleOutput');
+                const consoleContent = document.getElementById('consoleContent');
+                
+                if (this.consoleBuffer.length > 0) {
+                    consoleOutput.classList.remove('hidden');
+                    
+                    const lastEntries = this.consoleBuffer.slice(-50); // Show last 50 entries
+                    consoleContent.innerHTML = lastEntries.map(entry => {
+                        const color = entry.type === 'error' ? '#ff6b6b' : 
+                                    entry.type === 'warn' ? '#ffd93d' : '#00ff00';
+                        const text = entry.args.join(' ');
+                        return `<div style="color: ${color};">${this.escapeHtml(text)}</div>`;
+                    }).join('');
+                    
+                    consoleContent.scrollTop = consoleContent.scrollHeight;
+                }
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            async runAllTests() {
+                if (this.isRunning) return;
+                
+                this.isRunning = true;
+                this.clearResults();
+                this.updateUI(true);
+                
+                try {
+                    await window.POIManagerTests.testFramework.runAll();
+                    this.displayTestResults();
+                } catch (error) {
+                    console.error('Test execution failed:', error);
+                } finally {
+                    this.isRunning = false;
+                    this.updateUI(false);
+                }
+            }
+
+            async runUnitTests() {
+                if (this.isRunning) return;
+                
+                this.isRunning = true;
+                this.clearResults();
+                this.updateUI(true);
+                
+                try {
+                    const unitTests = window.POIManagerTests.testFramework.tests.filter(test => 
+                        !test.name.includes('Integration') && !test.name.includes('End-to-End')
+                    );
+                    
+                    await this.runSpecificTests(unitTests);
+                    this.displayTestResults();
+                } catch (error) {
+                    console.error('Unit test execution failed:', error);
+                } finally {
+                    this.isRunning = false;
+                    this.updateUI(false);
+                }
+            }
+
+            async runIntegrationTests() {
+                if (this.isRunning) return;
+                
+                this.isRunning = true;
+                this.clearResults();
+                this.updateUI(true);
+                
+                try {
+                    const integrationTests = window.POIManagerTests.testFramework.tests.filter(test => 
+                        test.name.includes('Integration') || test.name.includes('End-to-End')
+                    );
+                    
+                    await this.runSpecificTests(integrationTests);
+                    this.displayTestResults();
+                } catch (error) {
+                    console.error('Integration test execution failed:', error);
+                } finally {
+                    this.isRunning = false;
+                    this.updateUI(false);
+                }
+            }
+
+            async runSpecificTests(tests) {
+                const framework = new window.POIManagerTests.SimpleTestFramework();
+                
+                tests.forEach(test => {
+                    framework.test(test.name, test.function);
+                });
+                
+                await framework.runAll();
+                
+                // Update main framework results
+                window.POIManagerTests.testFramework.results = framework.results;
+                window.POIManagerTests.testFramework.tests = framework.tests;
+            }
+
+            displayTestResults() {
+                const testResults = document.getElementById('testResults');
+                const framework = window.POIManagerTests.testFramework;
+                
+                if (framework.tests.length === 0) {
+                    testResults.innerHTML = `
+                        <p style="text-align: center; color: #6c757d; margin: 2rem 0;">
+                            <i class="fas fa-info-circle"></i>
+                            No tests to display
+                        </p>
+                    `;
+                    return;
+                }
+                
+                const testItemsHTML = framework.tests.map(test => {
+                    const statusClass = test.status || 'pending';
+                    const statusIcon = test.status === 'passed' ? '✓' : 
+                                     test.status === 'failed' ? '✗' : '⧗';
+                    
+                    return `
+                        <div class="test-item ${statusClass}">
+                            <div class="test-name">${test.name}</div>
+                            <div class="test-status">
+                                <div class="status-icon status-${statusClass}">${statusIcon}</div>
+                                <span>${test.status || 'pending'}</span>
+                            </div>
+                            ${test.error ? `<div class="error-details">${this.escapeHtml(test.error.message)}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+                testResults.innerHTML = testItemsHTML;
+                
+                // Update stats
+                this.updateStats(framework.results);
+                this.updateProgress(framework.results.total > 0 ? 
+                    (framework.results.passed + framework.results.failed) / framework.results.total * 100 : 0);
+            }
+
+            updateStats(results) {
+                document.getElementById('totalTests').textContent = results.total || 0;
+                document.getElementById('passedTests').textContent = results.passed || 0;
+                document.getElementById('failedTests').textContent = results.failed || 0;
+            }
+
+            updateProgress(percentage) {
+                const progressFill = document.getElementById('progressFill');
+                progressFill.style.width = `${percentage}%`;
+            }
+
+            updateUI(isRunning) {
+                const buttons = document.querySelectorAll('.btn');
+                buttons.forEach(btn => {
+                    btn.disabled = isRunning;
+                    if (isRunning) {
+                        btn.classList.add('loading');
+                    } else {
+                        btn.classList.remove('loading');
+                    }
+                });
+                
+                if (isRunning) {
+                    document.getElementById('runAllTests').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running Tests...';
+                } else {
+                    document.getElementById('runAllTests').innerHTML = '<i class="fas fa-play"></i> Run All Tests';
+                }
+            }
+
+            clearResults() {
+                this.consoleBuffer = [];
+                const testResults = document.getElementById('testResults');
+                const consoleOutput = document.getElementById('consoleOutput');
+                
+                testResults.innerHTML = `
+                    <p style="text-align: center; color: #6c757d; margin: 2rem 0;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Running tests...
+                    </p>
+                `;
+                
+                consoleOutput.classList.add('hidden');
+                
+                this.updateStats({ total: 0, passed: 0, failed: 0 });
+                this.updateProgress(0);
+                
+                // Reset test framework
+                if (window.POIManagerTests && window.POIManagerTests.testFramework) {
+                    window.POIManagerTests.testFramework.results = { passed: 0, failed: 0, total: 0 };
+                    window.POIManagerTests.testFramework.tests.forEach(test => {
+                        test.status = 'pending';
+                        delete test.error;
+                    });
+                }
+            }
+        }
+
+        // Initialize Test Runner when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.testRunner = new TestRunner();
+            console.log('🧪 Test Runner initialized. Ready to run tests!');
+        });
+    </script>
+</body>
+</html>
