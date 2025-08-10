@@ -79,14 +79,19 @@ class RouteService:
         if connection_string:
             self.connection_string = connection_string
         else:
-            # Environment variables'dan bağlantı bilgilerini al
-            host = os.getenv('POI_DB_HOST', 'localhost')
-            port = os.getenv('POI_DB_PORT', '5432')
-            database = os.getenv('POI_DB_NAME', 'poi_db')
-            user = os.getenv('POI_DB_USER', 'poi_user')
-            password = os.getenv('POI_DB_PASSWORD', 'poi_password')
-            
-            self.connection_string = f"postgresql://{user}:{password}@{host}:{port}/{database}"
+            # Prefer unified connection string if provided to avoid mismatch
+            env_conn = os.getenv('POI_DB_CONNECTION')
+            if env_conn:
+                self.connection_string = env_conn
+            else:
+                # Environment variables'dan bağlantı bilgilerini al
+                host = os.getenv('POI_DB_HOST', 'localhost')
+                port = os.getenv('POI_DB_PORT', '5432')
+                database = os.getenv('POI_DB_NAME', 'poi_db')
+                user = os.getenv('POI_DB_USER', 'poi_user')
+                password = os.getenv('POI_DB_PASSWORD', 'poi_password')
+                
+                self.connection_string = f"postgresql://{user}:{password}@{host}:{port}/{database}"
         
         self.conn = None
     
@@ -1010,3 +1015,11 @@ def test_route_service():
 
 if __name__ == "__main__":
     test_route_service()
+
+# --- Cache utilities ---
+def clear_route_cache():
+    """Clear all cached route data (list/details)."""
+    try:
+        _route_cache.clear()
+    except Exception:
+        pass

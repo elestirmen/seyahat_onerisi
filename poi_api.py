@@ -3673,7 +3673,7 @@ def public_rate_limit(max_requests=100, window_seconds=60):
 
 # Public route endpoints
 @app.route('/api/routes', methods=['GET'])
-@public_rate_limit(max_requests=100, window_seconds=60)
+# Rate limit disabled per request
 def get_predefined_routes():
     """Get all active predefined routes with pagination support"""
     try:
@@ -3721,7 +3721,7 @@ def get_predefined_routes():
         }), 500
 
 @app.route('/api/routes/<int:route_id>', methods=['GET'])
-@public_rate_limit(max_requests=100, window_seconds=60)
+# Rate limit disabled per request
 def get_route_details(route_id):
     """Get detailed information about a specific route"""
     try:
@@ -4123,7 +4123,7 @@ class SecureFileUploader:
 
 @app.route('/api/routes/import', methods=['POST'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=50, window_seconds=300)  # 50 uploads per 5 minutes (relaxed for testing)
+# Rate limit disabled per request
 def upload_route_file():
     """
     Upload and validate route file (GPX, KML, KMZ)
@@ -4332,7 +4332,7 @@ def upload_route_file():
 
 @app.route('/api/routes/import/progress/<upload_id>', methods=['GET'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=100, window_seconds=60)
+# Rate limit disabled per request
 def get_upload_progress(upload_id):
     """
     Get upload progress for a specific upload ID
@@ -4370,7 +4370,7 @@ def get_upload_progress(upload_id):
 
 @app.route('/api/routes/import/confirm', methods=['POST'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=20, window_seconds=300)
+# Rate limit disabled per request
 def confirm_route_import():
     """
     Confirm and save imported route to database
@@ -4548,6 +4548,13 @@ def confirm_route_import():
                         if upload_id in upload_progress:
                             del upload_progress[upload_id]
                     
+                    # Clear in-memory caches for route listings/details
+                    try:
+                        from route_service import clear_route_cache
+                        clear_route_cache()
+                    except Exception as _:
+                        pass
+
                     return jsonify({
                         'success': True,
                         'message': 'Rota başarıyla import edildi',
@@ -4580,7 +4587,7 @@ def confirm_route_import():
 
 @app.route('/api/routes/import/cancel', methods=['POST'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=50, window_seconds=60)
+# Rate limit disabled per request
 def cancel_route_import():
     """
     Cancel route import and clean up temporary files

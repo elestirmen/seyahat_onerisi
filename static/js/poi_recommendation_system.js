@@ -2371,12 +2371,16 @@ function getDistance(lat1, lon1, lat2, lon2) {
 function drawWalkingRoute(routeInfo) {
     console.log('🎨 Drawing walking route:', routeInfo);
 
-    // Remove existing route layers
+    // Remove existing route layers and any simple fallback line
     map.eachLayer(function (layer) {
-        if (layer.options && layer.options.className === 'walking-route') {
+        if (layer.options && (layer.options.className === 'walking-route' || layer.options.className === 'simple-route-layer')) {
             map.removeLayer(layer);
         }
     });
+    if (window.simpleRouteLayer && map.hasLayer(window.simpleRouteLayer)) {
+        map.removeLayer(window.simpleRouteLayer);
+        window.simpleRouteLayer = null;
+    }
 
     const routeColor = '#27ae60'; // Green for walking
     const fallbackColor = '#e74c3c'; // Red for fallback
@@ -3852,6 +3856,15 @@ async function selectPredefinedRoute(route) {
         if (!map) {
             console.log('🗺️ Initializing map for predefined route...');
             await initializeEmptyMap();
+        } else {
+            // If map already exists, ensure proper resizing after becoming visible
+            setTimeout(() => {
+                try {
+                    map.invalidateSize();
+                } catch (e) {
+                    console.warn('Map invalidateSize failed:', e);
+                }
+            }, 100);
         }
     }
     
@@ -3880,11 +3893,16 @@ async function selectPredefinedRoute(route) {
                     // Show POIs on map
                     await displayRoutePOIsOnMap(routePOIs);
                     
-                    // Fit map to show all POIs if geometry wasn't loaded
+                    // If no saved geometry, try smart routing (road network)
                     if (!geometryLoaded) {
-                        setTimeout(() => {
-                            fitMapToRoutePOIs(routePOIs);
-                        }, 300);
+                        console.log('🧠 No saved geometry, trying smart routing via API...');
+                        const smartLoaded = await tryLoadSmartRouteForPOIs(routePOIs);
+                        // If smart routing also not available, fit to POIs as a fallback
+                        if (!smartLoaded) {
+                            setTimeout(() => {
+                                fitMapToRoutePOIs(routePOIs);
+                            }, 300);
+                        }
                     }
                 } else {
                     // No POIs found, show message but still try to show route geometry
@@ -4100,39 +4118,59 @@ async function displayRoutePOIsOnMap(pois) {
     
     console.log(`📍 Added ${markersAdded} markers to map out of ${pois.length} POIs`);
     
-    // Draw route line if we have multiple POIs
+    // Draw simple fallback line only if there is no saved/smart route on the map
     if (routeCoordinates.length > 1) {
-        // Remove existing simple route layer if present
-        if (window.simpleRouteLayer) {
-            map.removeLayer(window.simpleRouteLayer);
-            window.simpleRouteLayer = null;
-        }
+        const hasRealRouteLayer = (() => {
+            let found = false;
+            if (!map) return false;
+            map.eachLayer(layer => {
+                if (found) return;
+                if (layer && layer.options && (layer.options.className === 'saved-route' || layer.options.className === 'walking-route')) {
+                    found = true;
+                }
+            });
+            return found;
+        })();
 
-        // Create polyline for the route and store globally
-        window.simpleRouteLayer = L.polyline(routeCoordinates, {
-            color: '#007bff',
-            weight: 4,
-            opacity: 0.7,
-            dashArray: '10, 5',
-            className: 'simple-route-layer'
-        }).addTo(map);
+        if (!hasRealRouteLayer) {
+            // Remove existing simple route layer if present
+            if (window.simpleRouteLayer) {
+                map.removeLayer(window.simpleRouteLayer);
+                window.simpleRouteLayer = null;
+            }
 
-        markers.push(window.simpleRouteLayer);
-
-        // If route is circular, connect last point to first
-        const route = predefinedRoutes.find(r => r.pois && r.pois.length > 0);
-        if (route && route.is_circular && routeCoordinates.length > 2) {
-            const circularLine = L.polyline([
-                routeCoordinates[routeCoordinates.length - 1],
-                routeCoordinates[0]
-            ], {
-                color: '#28a745',
+            // Create polyline for the route and store globally
+            window.simpleRouteLayer = L.polyline(routeCoordinates, {
+                color: '#007bff',
                 weight: 4,
                 opacity: 0.7,
-                dashArray: '5, 10'
+                dashArray: '10, 5',
+                className: 'simple-route-layer'
             }).addTo(map);
 
-            markers.push(circularLine);
+            markers.push(window.simpleRouteLayer);
+
+            // If route is circular, connect last point to first
+            const route = predefinedRoutes.find(r => r.pois && r.pois.length > 0);
+            if (route && route.is_circular && routeCoordinates.length > 2) {
+                const circularLine = L.polyline([
+                    routeCoordinates[routeCoordinates.length - 1],
+                    routeCoordinates[0]
+                ], {
+                    color: '#28a745',
+                    weight: 4,
+                    opacity: 0.7,
+                    dashArray: '5, 10'
+                }).addTo(map);
+
+                markers.push(circularLine);
+            }
+        } else {
+            // Ensure any previous simple fallback line is removed when a real route exists
+            if (window.simpleRouteLayer && map.hasLayer(window.simpleRouteLayer)) {
+                map.removeLayer(window.simpleRouteLayer);
+                window.simpleRouteLayer = null;
+            }
         }
     }
     
@@ -4711,12 +4749,16 @@ function displaySavedRouteGeometry(geometryData) {
     console.log('📍 geometryData keys:', Object.keys(geometryData));
     console.log('📍 geometryData.geometry:', geometryData.geometry);
     
-    // Remove existing route layers
+    // Remove existing route layers and any simple fallback line
     map.eachLayer(function(layer) {
-        if (layer.options && (layer.options.className === 'saved-route' || layer.options.className === 'walking-route')) {
+        if (layer.options && (layer.options.className === 'saved-route' || layer.options.className === 'walking-route' || layer.options.className === 'simple-route-layer')) {
             map.removeLayer(layer);
         }
     });
+    if (window.simpleRouteLayer && map.hasLayer(window.simpleRouteLayer)) {
+        map.removeLayer(window.simpleRouteLayer);
+        window.simpleRouteLayer = null;
+    }
     
     // Remove simple route layer if it exists to avoid overlap
     if (window.simpleRouteLayer) {
@@ -4853,6 +4895,72 @@ function displaySavedRouteGeometry(geometryData) {
         
     } catch (error) {
         console.error('❌ Error displaying saved route geometry:', error);
+    }
+}
+
+// Try to load smart road-network route for a set of POIs (fallback when saved geometry missing)
+async function tryLoadSmartRouteForPOIs(pois) {
+    try {
+        if (!pois || pois.length < 2) return false;
+
+        const waypointPayload = pois
+            .filter(p => p.lat && p.lon && !isNaN(parseFloat(p.lat)) && !isNaN(parseFloat(p.lon)))
+            .map(p => ({
+                lat: parseFloat(p.lat),
+                lng: parseFloat(p.lon),
+                name: p.name || ''
+            }));
+
+        if (waypointPayload.length < 2) return false;
+
+        const resp = await fetch(`${apiBase}/route/smart`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ waypoints: waypointPayload })
+        });
+
+        if (!resp.ok) return false;
+        const data = await resp.json();
+
+        // Preferred successful format
+        if (data.success && data.route && Array.isArray(data.route.segments) && data.route.segments.length > 0) {
+            const coords = data.route.segments[0].coordinates.map(c => [c.lat, c.lng]);
+            // Remove simple fallback line if present
+            if (window.simpleRouteLayer && map && map.hasLayer(window.simpleRouteLayer)) {
+                try { map.removeLayer(window.simpleRouteLayer); } catch (_) {}
+                window.simpleRouteLayer = null;
+            }
+            const line = L.polyline(coords, {
+                color: '#4ecdc4',
+                weight: 5,
+                opacity: 0.85,
+                className: 'walking-route'
+            }).addTo(map);
+            setTimeout(() => map.fitBounds(line.getBounds(), { padding: [20, 20], maxZoom: 16 }), 50);
+            return true;
+        }
+
+        // Fallback format: route with plain coordinates list
+        if (data.route && Array.isArray(data.route.coordinates) && data.route.coordinates.length > 1) {
+            const coords = data.route.coordinates.map(c => [c[1], c[0]]);
+            if (window.simpleRouteLayer && map && map.hasLayer(window.simpleRouteLayer)) {
+                try { map.removeLayer(window.simpleRouteLayer); } catch (_) {}
+                window.simpleRouteLayer = null;
+            }
+            const line = L.polyline(coords, {
+                color: '#4ecdc4',
+                weight: 5,
+                opacity: 0.85,
+                className: 'walking-route'
+            }).addTo(map);
+            setTimeout(() => map.fitBounds(line.getBounds(), { padding: [20, 20], maxZoom: 16 }), 50);
+            return true;
+        }
+
+        return false;
+    } catch (e) {
+        console.warn('Smart route fallback failed:', e);
+        return false;
     }
 }
 
