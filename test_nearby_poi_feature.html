@@ -73,7 +73,7 @@
             try {
                 document.getElementById('findStatus').innerHTML = '<span class="text-info">🔄 Aranıyor...</span>';
                 
-                const response = await fetch(`${apiBase}/routes/${routeId}/nearby-pois?max_distance=500`, {
+                const response = await fetch(`${apiBase}/routes/${routeId}/nearby-pois`, {
                     credentials: 'include'
                 });
                 
@@ -116,10 +116,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({
-                        max_distance: 500,
-                        auto_confirm: true
-                    })
+                    body: JSON.stringify({ auto_confirm: true })
                 });
                 
                 const data = await response.json();

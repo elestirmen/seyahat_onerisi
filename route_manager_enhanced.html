@@ -3817,8 +3817,7 @@
             try {
                 showNotification('Yakın POI\'ler aranıyor...', 'info');
                 
-                const maxDistance = 500; // 500 metre
-                const response = await fetch(`${apiBase}/routes/${currentRoute.id}/nearby-pois?max_distance=${maxDistance}`, {
+                const response = await fetch(`${apiBase}/routes/${currentRoute.id}/nearby-pois`, {
                     credentials: 'include'
                 });
                 
@@ -3826,9 +3825,10 @@
                 
                 if (response.ok && data.success) {
                     const nearbyPois = data.nearby_pois || [];
+                    const effectiveMax = (data.parameters && data.parameters.max_distance_meters) ? data.parameters.max_distance_meters : undefined;
                     if (nearbyPois.length > 0) {
-                        showNotification(`${nearbyPois.length} yakın POI bulundu`, 'success');
-                        displayNearbyPOIsModal(nearbyPois, maxDistance);
+                        showNotification(`${nearbyPois.length} yakın POI bulundu ${effectiveMax ? `(${effectiveMax}m)` : ''}`, 'success');
+                        displayNearbyPOIsModal(nearbyPois, effectiveMax || '');
                     } else {
                         showNotification('Rota yakınında POI bulunamadı', 'info');
                     }
@@ -3866,7 +3866,6 @@
                 showNotification('Yakın POI\'ler otomatik ekleniyor...', 'info');
                 
                 const requestData = {
-                    max_distance: 500,
                     auto_confirm: true
                 };
                 
@@ -4018,14 +4017,15 @@
             alert(`✅ Test başarılı!\nSeçili rota: ${currentRoute.name}\nID: ${currentRoute.id}\nAPI Base: ${apiBase}`);
             
             // Test API call
-            fetch(`${apiBase}/routes/${currentRoute.id}/nearby-pois?max_distance=500`, {
+            fetch(`${apiBase}/routes/${currentRoute.id}/nearby-pois`, {
                 credentials: 'include'
             })
             .then(response => response.json())
             .then(data => {
                 console.log('🔍 API Test Sonucu:', data);
                 if (data.success) {
-                    alert(`🎉 API Test Başarılı!\n${data.total_found} POI bulundu.`);
+                    const eff = data.parameters && data.parameters.max_distance_meters ? ` (radar: ${data.parameters.max_distance_meters}m)` : '';
+                    alert(`🎉 API Test Başarılı!\n${data.total_found} POI bulundu${eff}.`);
                 } else {
                     alert(`❌ API Test Başarısız!\nHata: ${data.error}`);
                 }

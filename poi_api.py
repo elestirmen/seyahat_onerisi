@@ -2919,16 +2919,80 @@ DRIVING_GRAPH_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'u
 # Ürgüp merkez koordinatları ve sınırları
 URGUP_CENTER = (38.6310, 34.9130)
 URGUP_BOUNDS = {
-    'north': 38.65,
-    'south': 38.61,
-    'east': 34.93,
-    'west': 34.89
+    'north': 38.6350,  # Daha dar alan: şehir merkezi yürüme alanı
+    'south': 38.6280,
+    'east': 34.9180,
+    'west': 34.9080
 }
 
 def is_within_urgup_center(lat, lon):
-    """Check if coordinates are within Ürgüp center walking area"""
-    return (URGUP_BOUNDS['south'] <= lat <= URGUP_BOUNDS['north'] and 
-            URGUP_BOUNDS['west'] <= lon <= URGUP_BOUNDS['east'])
+    """Check if coordinates are within 3000m radius of Ürgüp center"""
+    from geopy.distance import distance
+    urgup_center_point = URGUP_CENTER  # (38.6310, 34.9130)
+    poi_point = (lat, lon)
+    distance_meters = distance(urgup_center_point, poi_point).meters
+    return distance_meters <= 3000
+
+def _estimate_route_center_latlon(route: Dict[str, Any], geometry_data: Dict[str, Any] = None):
+    """Estimate a representative (lat, lon) for a route using POIs or geometry.
+    Returns a tuple (lat, lon) or None if not available.
+    """
+    try:
+        # Prefer POIs centroid if present
+        pois = route.get('pois') or []
+        valid_coords = []
+        for poi in pois:
+            lat = poi.get('lat') if isinstance(poi, dict) else None
+            lon = poi.get('lon') if isinstance(poi, dict) else None
+            if lat is not None and lon is not None:
+                try:
+                    lat_f = float(lat)
+                    lon_f = float(lon)
+                    if -90 <= lat_f <= 90 and -180 <= lon_f <= 180:
+                        valid_coords.append((lat_f, lon_f))
+                        # Debug: POI'nin merkez içinde mi dışında mı olduğunu logla
+                        is_center = is_within_urgup_center(lat_f, lon_f)
+                        poi_name = poi.get('name', 'Unnamed POI')
+                        logger.info(f"📍 POI: {poi_name} ({lat_f:.4f}, {lon_f:.4f}) -> {'MERKEZ' if is_center else 'DIŞ'}")
+                except Exception:
+                    pass
+        if valid_coords:
+            avg_lat = sum(lat for lat, _ in valid_coords) / len(valid_coords)
+            avg_lon = sum(lon for _, lon in valid_coords) / len(valid_coords)
+            return (avg_lat, avg_lon)
+
+        # Fallback: use route geometry centroid/first point
+        if geometry_data and isinstance(geometry_data, dict):
+            geom = geometry_data.get('geometry') or geometry_data
+            try:
+                if isinstance(geom, str):
+                    import json as _json
+                    geom = _json.loads(geom)
+            except Exception:
+                geom = None
+
+            if isinstance(geom, dict) and geom.get('type') == 'LineString':
+                coords = geom.get('coordinates') or []
+                if coords:
+                    # Compute simple centroid by averaging
+                    lats = []
+                    lons = []
+                    for c in coords:
+                        if isinstance(c, (list, tuple)) and len(c) >= 2:
+                            lons.append(float(c[0]))
+                            lats.append(float(c[1]))
+                    if lats and lons:
+                        return (sum(lats)/len(lats), sum(lons)/len(lons))
+        return None
+    except Exception:
+        return None
+
+def _is_route_in_urgup_center(route: Dict[str, Any], geometry_data: Dict[str, Any] = None) -> bool:
+    """Decide if a route is considered in Ürgüp center using its representative point."""
+    center = _estimate_route_center_latlon(route, geometry_data)
+    if not center:
+        return False
+    return is_within_urgup_center(center[0], center[1])
 
 def download_driving_graph():
     """Download and save driving network for wider Ürgüp area"""
@@ -5057,7 +5121,29 @@ def find_nearby_pois_for_route(route_id):
                 'error_code': 'ROUTE_NOT_FOUND'
             }), 404
         
-        # Find nearby POIs
+        # Dinamik yarıçap uygula: Ürgüp merkezinde 50m, dışında 250m.
+        # Kullanıcı bir değer gönderse bile üst sınır olarak dinamik yarıçapı uygula.
+        geometry = route_service.get_route_geometry(route_id)
+        is_center = _is_route_in_urgup_center(route, geometry)
+        dynamic_default = 50 if is_center else 250
+        user_supplied = request.args.get('max_distance')
+        
+        logger.info(f"🔍 Route {route_id} nearby POI request - is_center: {is_center}, dynamic_default: {dynamic_default}m, user_supplied: {user_supplied}")
+        
+        if user_supplied is not None:
+            try:
+                user_val = int(user_supplied)
+                user_val = min(2000, max(1, user_val))
+                max_distance = min(user_val, dynamic_default)
+                logger.info(f"🔍 User supplied {user_val}m, limited to {max_distance}m by dynamic default")
+            except Exception:
+                max_distance = dynamic_default
+                logger.info(f"🔍 Invalid user input, using dynamic default: {max_distance}m")
+        else:
+            max_distance = dynamic_default
+            logger.info(f"🔍 No user input, using dynamic default: {max_distance}m")
+
+        # Find nearby POIs with decided radius
         nearby_pois = route_service.find_nearby_pois(route_id, max_distance)
         
         route_service.disconnect()
@@ -5071,7 +5157,9 @@ def find_nearby_pois_for_route(route_id):
             'nearby_pois': nearby_pois,
             'total_found': len(nearby_pois),
             'parameters': {
-                'max_distance_meters': max_distance
+                'max_distance_meters': max_distance,
+                'is_center_route': is_center,
+                'user_supplied': user_supplied
             }
         }), 200
         
@@ -5111,8 +5199,14 @@ def auto_associate_nearby_pois(route_id):
     try:
         data = request.get_json() or {}
         
-        # Get parameters
-        max_distance = min(2000, max(50, int(data.get('max_distance', 500))))
+        # Get parameters (user override if provided)
+        user_max_distance = data.get('max_distance')
+        max_distance = None
+        if user_max_distance is not None:
+            try:
+                max_distance = min(2000, max(50, int(user_max_distance)))
+            except Exception:
+                max_distance = None
         auto_confirm = bool(data.get('auto_confirm', False))
         categories = data.get('categories', [])
         
@@ -5135,12 +5229,23 @@ def auto_associate_nearby_pois(route_id):
                 'error_code': 'ROUTE_NOT_FOUND'
             }), 404
         
-        # Auto-associate nearby POIs
-        result = route_service.auto_associate_nearby_pois(
-            route_id, 
-            max_distance, 
-            auto_confirm
-        )
+        # Dinamik yarıçap uygula (50m merkez, 250m dışı). Kullanıcı değer girdiyse bile üst sınır uygula.
+        geometry = route_service.get_route_geometry(route_id)
+        is_center = _is_route_in_urgup_center(route, geometry)
+        dynamic_default = 50 if is_center else 250
+        user_max_distance = max_distance
+        
+        logger.info(f"🔧 Route {route_id} auto-associate POI request - is_center: {is_center}, dynamic_default: {dynamic_default}m, user_max_distance: {user_max_distance}")
+        
+        if max_distance is None:
+            max_distance = dynamic_default
+            logger.info(f"🔧 No user input, using dynamic default: {max_distance}m")
+        else:
+            max_distance = min(max_distance, dynamic_default)
+            logger.info(f"🔧 User supplied {user_max_distance}m, limited to {max_distance}m by dynamic default")
+
+        # Auto-associate nearby POIs with decided radius
+        result = route_service.auto_associate_nearby_pois(route_id, max_distance, auto_confirm)
         
         # Filter by categories if specified
         if categories and result.get('found_pois'):
