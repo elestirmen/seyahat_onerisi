@@ -3508,6 +3508,8 @@ async function initializePredefinedMap() {
 
 function displayRouteOnMap(route) {
     console.log('🗺️ Displaying route on predefined map:', route);
+    console.log('🔍 Route geometry:', route.geometry);
+    console.log('🔍 Route POIs:', route.pois);
     
     if (!predefinedMap || !predefinedMapInitialized) {
         console.warn('⚠️ Predefined map not initialized, initializing now...');
@@ -3518,6 +3520,8 @@ function displayRouteOnMap(route) {
         });
         return;
     }
+    
+    console.log('🗺️ Predefined map is ready, proceeding with route display...');
     
     try {
         // Clear existing route layers
@@ -3535,18 +3539,23 @@ function displayRouteOnMap(route) {
         
         // Display route geometry if available
         if (route.geometry) {
+            console.log('🔍 Route has geometry, processing...');
             let geometryData = route.geometry;
             if (typeof geometryData === 'string') {
                 try {
                     geometryData = JSON.parse(geometryData);
+                    console.log('✅ Parsed geometry from string:', geometryData);
                 } catch (e) {
-                    console.warn('⚠️ Could not parse route geometry');
+                    console.warn('⚠️ Could not parse route geometry:', e);
                     return;
                 }
             }
             
+            console.log('🔍 Processing geometry data:', geometryData);
+            
             if (geometryData.coordinates || geometryData.geometry) {
                 const coords = geometryData.coordinates || geometryData.geometry.coordinates;
+                console.log('🔍 Found coordinates:', coords ? coords.length : 'none', 'points');
                 if (coords && coords.length > 0) {
                     // Create route polyline
                     const routeLine = L.polyline(coords.map(coord => [coord[1], coord[0]]), {
@@ -3584,8 +3593,11 @@ function displayRouteOnMap(route) {
         }
         
         // If no geometry, try to display POI markers
+        console.log('🔍 No valid geometry found, trying POI markers...');
         if (route.pois && route.pois.length > 0) {
+            console.log('🔍 Route has', route.pois.length, 'POIs');
             const validPois = route.pois.filter(poi => poi.lat && poi.lng);
+            console.log('🔍 Valid POIs with coordinates:', validPois.length);
             
             if (validPois.length > 0) {
                 const bounds = L.latLngBounds();
@@ -3629,11 +3641,23 @@ function displayRouteOnMap(route) {
                 }
                 
                 console.log('✅ Route POIs displayed on predefined map');
+            } else {
+                console.warn('⚠️ No valid POI coordinates found');
             }
+        } else {
+            console.warn('⚠️ Route has no POIs');
         }
+        
+        // If we reach here, nothing was displayed
+        console.warn('⚠️ No route data could be displayed on map - neither geometry nor POIs');
+        showNotification('Bu rotada görüntülenecek harita verisi bulunamadı', 'warning');
+        
+        // At least center the map on Ürgüp
+        predefinedMap.setView([38.6436, 34.8128], 13);
         
     } catch (error) {
         console.error('❌ Error displaying route on map:', error);
+        showNotification('Rota haritada gösterilirken hata oluştu', 'error');
     }
 }
 
@@ -5430,6 +5454,65 @@ window.testTabSwitching = async function() {
     } catch (error) {
         console.error('❌ Tab switching test failed:', error);
         return false;
+    }
+};
+
+// Debug function for route display issues
+window.debugRouteDisplay = function(routeId) {
+    console.log('🧪 Debugging route display for route ID:', routeId);
+    
+    // Find route in predefined routes
+    const route = predefinedRoutes.find(r => r.id == routeId || r._id == routeId);
+    if (!route) {
+        console.error('❌ Route not found in predefined routes');
+        return;
+    }
+    
+    console.log('🔍 Found route:', route);
+    console.log('🔍 Route name:', route.name);
+    console.log('🔍 Route geometry:', route.geometry);
+    console.log('🔍 Route POIs:', route.pois);
+    console.log('🔍 Map initialized:', predefinedMapInitialized);
+    console.log('🔍 Map object:', predefinedMap);
+    
+    // Try to display
+    if (predefinedMapInitialized) {
+        displayRouteOnMap(route);
+    } else {
+        console.log('🔄 Initializing map first...');
+        initializePredefinedMap().then(() => {
+            displayRouteOnMap(route);
+        });
+    }
+};
+
+// Test function to check route data
+window.checkRouteData = async function() {
+    console.log('🧪 Checking route data...');
+    
+    try {
+        const response = await fetch(`${apiBase}/routes`);
+        if (response.ok) {
+            const data = await response.json();
+            const routes = data.routes || [];
+            console.log('📊 Total routes:', routes.length);
+            
+            routes.forEach((route, index) => {
+                console.log(`Route ${index + 1}:`, {
+                    id: route.id || route._id,
+                    name: route.name,
+                    hasGeometry: !!route.geometry,
+                    hasPOIs: !!(route.pois && route.pois.length > 0),
+                    poiCount: route.pois ? route.pois.length : 0
+                });
+            });
+            
+            if (routes.length > 0) {
+                console.log('🧪 Use window.debugRouteDisplay(' + (routes[0].id || routes[0]._id) + ') to test first route');
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error checking route data:', error);
     }
 };
 
