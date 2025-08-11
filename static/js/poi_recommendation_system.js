@@ -3596,19 +3596,20 @@ function displayRouteOnMap(route) {
         console.log('🔍 No valid geometry found, trying POI markers...');
         if (route.pois && route.pois.length > 0) {
             console.log('🔍 Route has', route.pois.length, 'POIs');
-            const validPois = route.pois.filter(poi => poi.lat && poi.lng);
+            const validPois = route.pois.filter(poi => poi.lat && (poi.lng || poi.lon));
             console.log('🔍 Valid POIs with coordinates:', validPois.length);
-            
+
             if (validPois.length > 0) {
                 const bounds = L.latLngBounds();
-                
+
                 validPois.forEach((poi, index) => {
-                    const marker = L.marker([poi.lat, poi.lng], {
+                    const lng = poi.lng !== undefined ? poi.lng : poi.lon;
+                    const marker = L.marker([poi.lat, lng], {
                         icon: L.divIcon({
                             className: 'route-poi-marker',
                             html: `<div style="
-                                background: ${routeColor}; 
-                                color: white; 
+                                background: ${routeColor};
+                                color: white;
                                 width: 30px; 
                                 height: 30px; 
                                 border-radius: 50%; 
@@ -3623,16 +3624,16 @@ function displayRouteOnMap(route) {
                             iconAnchor: [15, 15]
                         })
                     }).addTo(predefinedMap);
-                    
+
                     marker.bindPopup(`
                         <div style="text-align: center;">
                             <h5 style="margin: 0 0 8px 0;">${poi.name}</h5>
                             <p style="margin: 0; font-size: 12px; color: #666;">Durak ${index + 1}</p>
                         </div>
                     `);
-                    
+
                     predefinedMapLayers.push(marker);
-                    bounds.extend([poi.lat, poi.lng]);
+                    bounds.extend([poi.lat, lng]);
                 });
                 
                 // Fit map to POI bounds
@@ -3902,7 +3903,7 @@ function showNoRoutesMessage(message = 'Seçilen kriterlere uygun rota bulunamad
     }
 }
 
-function showRouteDetails(route) {
+async function showRouteDetails(route) {
     console.log('📋 Showing route details for:', route);
     
     const modal = document.getElementById('routeDetailModal');
@@ -3928,14 +3929,16 @@ function showRouteDetails(route) {
     
     // Show modal
     modal.classList.add('show');
-    
-    // Display route on predefined map
+
+    // Load route details and update map when done
+    const detailed = await loadRouteDetails(route, modalBody);
+    const detailedRoute = detailed && (detailed.success ? detailed.route : detailed);
+    if (detailedRoute) {
+        Object.assign(route, detailedRoute);
+    }
     displayRouteOnMap(route);
-    
-    // Load route details
-    loadRouteDetails(route, modalBody);
-    
-    // Setup select button
+
+    // Setup select button with updated route data
     selectBtn.onclick = () => selectPredefinedRoute(route);
     
     // Setup close functionality
@@ -3976,22 +3979,33 @@ async function loadRouteDetails(route, container) {
     try {
         // Fetch detailed route information including POIs
         const response = await fetch(`${apiBase}/routes/${route.id}`);
-        
+
         if (response.ok) {
             const detailedRoute = await response.json();
-            displayRouteDetails(detailedRoute, container);
+
+            // Only attempt to render details if a container is provided
+            if (container) {
+                displayRouteDetails(detailedRoute, container);
+            }
+
+            return detailedRoute;
         } else {
             throw new Error(`HTTP ${response.status}`);
         }
     } catch (error) {
         console.error('❌ Error loading route details:', error);
-        container.innerHTML = `
-            <div style="text-align: center; padding: 40px; color: #666;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 16px; color: #f56565;"></i>
-                <p>Rota detayları yüklenirken hata oluştu.</p>
-                <p style="font-size: 0.9rem; margin-top: 8px;">Lütfen daha sonra tekrar deneyin.</p>
-            </div>
-        `;
+
+        if (container) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 16px; color: #f56565;"></i>
+                    <p>Rota detayları yüklenirken hata oluştu.</p>
+                    <p style="font-size: 0.9rem; margin-top: 8px;">Lütfen daha sonra tekrar deneyin.</p>
+                </div>
+            `;
+        }
+
+        return null;
     }
 }
 
@@ -4138,13 +4152,27 @@ function createPOIList(pois) {
 
 async function selectPredefinedRoute(route) {
     console.log('✅ Selecting predefined route:', route);
-    
+
     // Close modal
     closeRouteDetailModal();
-    
+
+    // Ensure detailed data is present before displaying
+    if (!route.geometry || !route.pois || route.pois.length === 0) {
+        try {
+            console.log('ℹ️ Route missing details, loading before selection...');
+            const detailed = await loadRouteDetails(route);
+            const detailedRoute = detailed && (detailed.success ? detailed.route : detailed);
+            if (detailedRoute) {
+                Object.assign(route, detailedRoute);
+            }
+        } catch (error) {
+            console.error('❌ Error loading route details for selection:', error);
+        }
+    }
+
     // Stay in predefined routes tab and show route on its own map
     // No tab switching needed - use the predefined routes map
-    
+
     // Show notification
     showNotification(`✅ "${route.name}" rotası haritada gösteriliyor!`, 'success');
     
