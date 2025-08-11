@@ -462,7 +462,7 @@ class RouteDetailsPanel {
         const waypoints = [];
         let cumulativeDistance = 0;
 
-        // Add start location
+        // Add start location (if exists in personal routes)
         if (routeData.start) {
             waypoints.push({
                 lat: routeData.start.lat,
@@ -476,8 +476,13 @@ class RouteDetailsPanel {
         if (routeData.waypoints && routeData.waypoints.length > 0) {
             for (let i = 0; i < routeData.waypoints.length; i++) {
                 const poi = routeData.waypoints[i];
-                const prevPoint = i === 0 ? routeData.start : routeData.waypoints[i - 1];
+                
+                // For predefined routes, use the first POI as starting point if no start location
+                const prevPoint = i === 0 ? 
+                    (routeData.start || null) : 
+                    routeData.waypoints[i - 1];
 
+                // Calculate distance from previous point
                 if (prevPoint) {
                     const segmentDistance = this.calculateDistance(
                         prevPoint.lat || prevPoint.latitude,
@@ -486,6 +491,9 @@ class RouteDetailsPanel {
                         poi.lng || poi.longitude
                     );
                     cumulativeDistance += segmentDistance;
+                } else if (i === 0 && !routeData.start) {
+                    // First POI in predefined route without start location
+                    cumulativeDistance = 0;
                 }
 
                 waypoints.push({
@@ -2620,11 +2628,16 @@ function showPredefinedRouteDetailsPanel(route, latlng) {
         for (let i = 0; i < route.pois.length - 1; i++) {
             const current = route.pois[i];
             const next = route.pois[i + 1];
-            if (current.lat && current.lng && next.lat && next.lng) {
-                totalDistance += getDistance(current.lat, current.lng, next.lat, next.lng);
+            if (current.lat && (current.lng || current.lon) && next.lat && (next.lng || next.lon)) {
+                const currentLng = current.lng || current.lon;
+                const nextLng = next.lng || next.lon;
+                totalDistance += getDistance(current.lat, currentLng, next.lat, nextLng);
             }
         }
     }
+    
+    // Convert to kilometers and format
+    totalDistance = (totalDistance / 1000).toFixed(2);
     
     const estimatedTime = Math.round(totalDistance / 5 * 60); // 5 km/h walking speed, in minutes
     const routeType = route.route_type === 'walking' ? 'Yürüyüş' : 
@@ -5196,6 +5209,36 @@ function displayRouteDetails(routeData, container) {
                 </div>
             </div>
             
+            <div class="route-elevation-section">
+                <h4><i class="fas fa-mountain"></i> Yükseklik Profili</h4>
+                <div class="route-elevation-container">
+                    <div class="elevation-preview-chart" id="elevationPreview_${route.id}">
+                        <div class="elevation-loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>Yükseklik verileri yükleniyor...</span>
+                        </div>
+                    </div>
+                    <div class="elevation-preview-stats" id="elevationStats_${route.id}">
+                        <div class="elevation-stat">
+                            <span class="stat-label">Min:</span>
+                            <span class="stat-value">--m</span>
+                        </div>
+                        <div class="elevation-stat">
+                            <span class="stat-label">Max:</span>
+                            <span class="stat-value">--m</span>
+                        </div>
+                        <div class="elevation-stat">
+                            <span class="stat-label">↗ Tırmanış:</span>
+                            <span class="stat-value">--m</span>
+                        </div>
+                        <div class="elevation-stat">
+                            <span class="stat-label">↘ İniş:</span>
+                            <span class="stat-value">--m</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="route-detail-description">
                 <h4><i class="fas fa-info-circle"></i> Açıklama</h4>
                 <p>${route.description || 'Bu rota için açıklama bulunmuyor.'}</p>
@@ -5239,7 +5282,190 @@ function displayRouteDetails(routeData, container) {
                 }
             }, 300);
         }
+        
+        // Load elevation profile for the route
+        loadRouteElevationProfile(route);
     }, 300);
+}
+
+// Load elevation profile for route preview
+async function loadRouteElevationProfile(route) {
+    if (!route || !route.pois || route.pois.length === 0) {
+        console.log('⚠️ No POIs available for elevation profile');
+        return;
+    }
+    
+    const chartContainerId = `elevationPreview_${route.id}`;
+    const statsContainerId = `elevationStats_${route.id}`;
+    
+    const chartContainer = document.getElementById(chartContainerId);
+    const statsContainer = document.getElementById(statsContainerId);
+    
+    if (!chartContainer || !statsContainer) {
+        console.log('⚠️ Elevation containers not found');
+        return;
+    }
+    
+    try {
+        console.log('🏔️ Loading elevation profile for route:', route.name);
+        
+        // Create waypoints for elevation data
+        const waypoints = route.pois.map(poi => ({
+            lat: poi.lat,
+            lng: poi.lng || poi.lon,
+            name: poi.name,
+            category: poi.category || 'diger'
+        }));
+        
+        // Collect elevation data
+        const elevationData = [];
+        let cumulativeDistance = 0;
+        
+        for (let i = 0; i < waypoints.length; i++) {
+            const poi = waypoints[i];
+            
+            // Calculate distance from previous point
+            if (i > 0) {
+                const prevPoi = waypoints[i - 1];
+                const segmentDistance = getDistance(
+                    prevPoi.lat, prevPoi.lng,
+                    poi.lat, poi.lng
+                );
+                cumulativeDistance += segmentDistance;
+            }
+            
+            // Get elevation
+            const elevation = await getElevation(poi.lat, poi.lng);
+            
+            elevationData.push({
+                distance: cumulativeDistance / 1000, // Convert to km
+                elevation: elevation,
+                name: poi.name,
+                lat: poi.lat,
+                lng: poi.lng
+            });
+        }
+        
+        // Calculate statistics
+        const elevations = elevationData.map(d => d.elevation);
+        const minElevation = Math.min(...elevations);
+        const maxElevation = Math.max(...elevations);
+        
+        let totalAscent = 0;
+        let totalDescent = 0;
+        
+        for (let i = 1; i < elevations.length; i++) {
+            const diff = elevations[i] - elevations[i - 1];
+            if (diff > 0) {
+                totalAscent += diff;
+            } else {
+                totalDescent += Math.abs(diff);
+            }
+        }
+        
+        // Update statistics
+        const statElements = statsContainer.querySelectorAll('.elevation-stat .stat-value');
+        if (statElements.length >= 4) {
+            statElements[0].textContent = `${Math.round(minElevation)}m`;
+            statElements[1].textContent = `${Math.round(maxElevation)}m`;
+            statElements[2].textContent = `${Math.round(totalAscent)}m`;
+            statElements[3].textContent = `${Math.round(totalDescent)}m`;
+        }
+        
+        // Create mini chart
+        createMiniElevationChart(chartContainerId, elevationData);
+        
+    } catch (error) {
+        console.error('❌ Error loading elevation profile:', error);
+        chartContainer.innerHTML = `
+            <div class="elevation-error">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Yükseklik verileri yüklenemedi</span>
+            </div>
+        `;
+    }
+}
+
+// Create mini elevation chart for preview
+function createMiniElevationChart(containerId, elevationData) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // Create canvas
+    container.innerHTML = '<canvas id="miniChart_' + containerId + '" width="300" height="100"></canvas>';
+    const canvas = document.getElementById('miniChart_' + containerId);
+    
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Prepare data
+    const distances = elevationData.map(d => d.distance.toFixed(1));
+    const elevations = elevationData.map(d => d.elevation);
+    const names = elevationData.map(d => d.name);
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: distances,
+            datasets: [{
+                label: 'Yükseklik (m)',
+                data: elevations,
+                borderColor: '#4285f4',
+                backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            const index = tooltipItems[0].dataIndex;
+                            return names[index];
+                        },
+                        label: function(context) {
+                            return `Yükseklik: ${context.parsed.y}m`;
+                        },
+                        afterLabel: function(context) {
+                            return `Mesafe: ${context.label}km`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    display: false,
+                    title: {
+                        display: false
+                    }
+                },
+                y: {
+                    display: true,
+                    position: 'right',
+                    ticks: {
+                        font: { size: 10 },
+                        callback: function(value) {
+                            return value + 'm';
+                        }
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
 }
 
 function createPOIList(pois) {

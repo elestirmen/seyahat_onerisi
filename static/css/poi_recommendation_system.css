@@ -6037,4 +6037,101 @@ ute Preview Map Styles */
     color: #e74c3c;
 }
 
+/* Route Elevation Preview Styles */
+.route-elevation-section {
+    margin-bottom: 24px;
+}
+
+.route-elevation-section h4 {
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+    color: var(--text-color);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.route-elevation-container {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.elevation-preview-chart {
+    height: 100px;
+    margin-bottom: 16px;
+    background: white;
+    border-radius: 8px;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    position: relative;
+}
+
+.elevation-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #666;
+    font-size: 0.9rem;
+    gap: 8px;
+}
+
+.elevation-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #e53e3e;
+    font-size: 0.9rem;
+    gap: 8px;
+}
+
+.elevation-preview-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.elevation-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    font-size: 0.85rem;
+}
+
+.elevation-stat .stat-label {
+    color: #666;
+    font-weight: 500;
+}
+
+.elevation-stat .stat-value {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .elevation-preview-stats {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .elevation-stat {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+    
+    .elevation-preview-chart {
+        height: 80px;
+        margin-bottom: 12px;
+    }
+}
+
 /* Dark Mode Support */
