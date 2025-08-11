@@ -4047,38 +4047,18 @@ function displayRouteOnMap(route) {
                         className: 'route-on-map predefined-route-line'
                     }).addTo(predefinedMap);
                     
-                    // Enhanced route click functionality for predefined routes
+                    // Show detailed route information on click
                     routeLine.on('click', function(e) {
                         e.originalEvent.stopPropagation();
+                        showRouteDetails(route);
+                    });
+
+                    // Show route options on right click
+                    routeLine.on('contextmenu', function(e) {
+                        e.originalEvent.preventDefault();
                         showPredefinedRouteOptionsPopup(e.latlng, route);
                     });
-                    
-                    // Add route info popup (legacy support)
-                    const popupContent = `
-                        <div style="text-align: center; min-width: 200px;">
-                            <h4 style="margin: 0 0 8px 0; color: ${routeColor};">${route.name}</h4>
-                            <p style="margin: 4px 0; font-size: 14px; color: #666;">
-                                ${route.route_type === 'walking' ? '🚶 Yürüyüş' : 
-                                  route.route_type === 'hiking' ? '🥾 Doğa Yürüyüşü' :
-                                  route.route_type === 'cycling' ? '🚴 Bisiklet' : 
-                                  route.route_type === 'driving' ? '🚗 Araç' : route.route_type}
-                            </p>
-                            ${route.estimated_duration ? `<p style="margin: 4px 0; font-size: 14px;">⏱️ ${route.estimated_duration} dk</p>` : ''}
-                            ${route.total_distance ? `<p style="margin: 4px 0; font-size: 14px;">📏 ${route.total_distance.toFixed(1)} km</p>` : ''}
-                            <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: center;">
-                                <button onclick="exportPredefinedRouteToGoogleMaps('${route.id || route._id}'); event.stopPropagation();" 
-                                        style="background: #4285f4; color: white; border: none; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer;">
-                                    🗺️ Google Maps
-                                </button>
-                                <button onclick="showRouteDetail('${route.id || route._id}'); event.stopPropagation();" 
-                                        style="background: #667eea; color: white; border: none; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer;">
-                                    📋 Detaylar
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    
-                    routeLine.bindPopup(popupContent);
+
                     predefinedMapLayers.push(routeLine);
                     
                     // Create bounds for fitting the map - start with route bounds
@@ -4237,7 +4217,7 @@ function displayRouteOnMap(route) {
                 // Draw route line connecting POIs if we have more than one point
                 if (routeCoordinates.length > 1) {
                     console.log('🛣️ Drawing route line connecting', routeCoordinates.length, 'POIs');
-                    
+
                     const routeLine = L.polyline(routeCoordinates, {
                         color: routeColor,
                         weight: 4,
@@ -4245,28 +4225,19 @@ function displayRouteOnMap(route) {
                         className: 'route-connecting-line',
                         dashArray: '10, 5' // Dashed line to indicate estimated route
                     }).addTo(predefinedMap);
-                    
-                    // Add route info popup to the line
-                    const popupContent = `
-                        <div style="text-align: center; min-width: 200px;">
-                            <h4 style="margin: 0 0 8px 0; color: ${routeColor};">${route.name}</h4>
-                            <p style="margin: 4px 0; font-size: 14px; color: #666;">
-                                ${route.route_type === 'walking' ? '🚶 Yürüyüş' : 
-                                  route.route_type === 'hiking' ? '🥾 Doğa Yürüyüşü' :
-                                  route.route_type === 'cycling' ? '🚴 Bisiklet' : 
-                                  route.route_type === 'driving' ? '🚗 Araç' : route.route_type || '🗺️ Rota'}
-                            </p>
-                            <p style="margin: 4px 0; font-size: 12px; color: #888;">
-                                🔗 ${routeCoordinates.length} nokta arası bağlantı
-                            </p>
-                            ${route.estimated_duration ? `<p style="margin: 4px 0; font-size: 14px;">⏱️ ${route.estimated_duration} dk</p>` : ''}
-                            ${route.total_distance ? `<p style="margin: 4px 0; font-size: 14px;">📏 ${route.total_distance.toFixed(1)} km</p>` : ''}
-                        </div>
-                    `;
-                    
-                    routeLine.bindPopup(popupContent);
+
+                    routeLine.on('click', function(e) {
+                        e.originalEvent.stopPropagation();
+                        showRouteDetails(route);
+                    });
+
+                    routeLine.on('contextmenu', function(e) {
+                        e.originalEvent.preventDefault();
+                        showPredefinedRouteOptionsPopup(e.latlng, route);
+                    });
+
                     predefinedMapLayers.push(routeLine);
-                    
+
                     console.log('✅ Route line added successfully');
                 } else {
                     console.log('ℹ️ Only one POI, no connecting line needed');
@@ -4689,16 +4660,17 @@ function displayRouteOnMapFallback(route) {
                         className: 'fallback-route-line',
                         dashArray: '15, 10' // More dashed to indicate estimated route
                     }).addTo(predefinedMap);
-                    
-                    routeLine.bindPopup(`
-                        <div style="text-align: center;">
-                            <h4 style="margin: 0 0 8px 0; color: #2563eb;">${route.name}</h4>
-                            <p style="margin: 4px 0; font-size: 12px; color: #888;">
-                                🔗 Tahmini rota - ${routeCoordinates.length} nokta
-                            </p>
-                        </div>
-                    `);
-                    
+
+                    routeLine.on('click', function(e) {
+                        e.originalEvent.stopPropagation();
+                        showRouteDetails(route);
+                    });
+
+                    routeLine.on('contextmenu', function(e) {
+                        e.originalEvent.preventDefault();
+                        showPredefinedRouteOptionsPopup(e.latlng, route);
+                    });
+
                     predefinedMapLayers.push(routeLine);
                     console.log('✅ Fallback connecting line added');
                 }
@@ -5026,9 +4998,19 @@ function closeRouteDetailModal() {
     if (modal) {
         modal.classList.remove('show');
         document.removeEventListener('keydown', handleRouteModalKeydown);
-        
+
         // Clean up preview maps
         cleanupPreviewMaps();
+    }
+}
+
+// Helper to show route details by ID (used by popup actions)
+function showRouteDetail(routeId) {
+    const route = predefinedRoutes.find(r => (r.id || r._id) === routeId);
+    if (route) {
+        showRouteDetails(route);
+    } else {
+        console.error('❌ Route not found for ID:', routeId);
     }
 }
 
