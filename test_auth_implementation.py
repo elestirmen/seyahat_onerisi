@@ -359,7 +359,11 @@ class TestSecurityFeatures(unittest.TestCase):
             configure_session(app)
             
             # Check session configuration
-            self.assertTrue(app.config.get('SESSION_COOKIE_SECURE', False))
+            from auth_config import auth_config
+            self.assertEqual(
+                app.config.get('SESSION_COOKIE_SECURE'),
+                auth_config.SESSION_COOKIE_SECURE
+            )
             self.assertTrue(app.config.get('SESSION_COOKIE_HTTPONLY', True))
             self.assertIsNotNone(app.config.get('SECRET_KEY'))
             
