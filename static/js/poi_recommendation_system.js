@@ -2732,6 +2732,11 @@ function copyRouteToPersonalRoute(routeId) {
         return;
     }
 
+    // Remove existing predefined route overlays so they don't capture clicks
+    if (typeof clearPredefinedMapContent === 'function') {
+        clearPredefinedMapContent();
+    }
+
     // Switch to dynamic routes tab
     switchToTab('dynamic-routes');
 
