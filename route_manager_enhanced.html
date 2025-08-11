@@ -383,6 +383,29 @@
             margin-bottom: 0.75rem;
         }
 
+        .route-item-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-route-info {
+            background: none;
+            border: none;
+            color: var(--route-primary);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: var(--route-transition);
+            opacity: 0.7;
+        }
+
+        .btn-route-info:hover {
+            background: rgba(37, 99, 235, 0.1);
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
         .route-checkbox {
             position: absolute;
             top: 1rem;
@@ -686,6 +709,110 @@
             color: #666;
             font-size: 0.8rem;
             font-weight: 600;
+        }
+
+        /* Route Details Popup Styles */
+        .route-detail-popup {
+            padding: 0;
+        }
+
+        .route-detail-popup .route-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--route-border);
+        }
+
+        .route-detail-popup .route-description-full {
+            margin-bottom: 1.5rem;
+        }
+
+        .route-detail-popup .route-description-full h6 {
+            color: var(--route-primary);
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .route-detail-popup .route-statistics h6 {
+            color: var(--route-primary);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .stats-grid-popup {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card-popup {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: var(--route-light);
+            border-radius: var(--route-radius);
+            border: 1px solid var(--route-border);
+        }
+
+        .stat-card-popup .stat-icon {
+            margin-right: 0.75rem;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--route-primary);
+            color: white;
+            border-radius: 50%;
+            font-size: 1rem;
+        }
+
+        .stat-card-popup .stat-info {
+            flex: 1;
+        }
+
+        .stat-card-popup .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--route-primary);
+            line-height: 1;
+        }
+
+        .stat-card-popup .stat-label {
+            font-size: 0.8rem;
+            color: var(--route-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .route-detail-popup .route-tags-section h6 {
+            color: var(--route-primary);
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .route-detail-popup .route-metadata h6 {
+            color: var(--route-primary);
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .metadata-grid-popup {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .metadata-grid-popup .metadata-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--route-border);
+        }
+
+        .metadata-grid-popup .metadata-item:last-child {
+            border-bottom: none;
         }
 
         /* POI Order Badge */
@@ -1453,14 +1580,20 @@
                 const rid = getRouteId(route);
                 return `
                 <div class="route-item ${selectedRoutes.has(rid) ? 'selected' : ''}" 
-                     data-route-id="${rid}" role="button" tabindex="0" onclick="selectRoute(${rid}); return false;">
+                     data-route-id="${rid}" role="button" tabindex="0" onclick="selectRoute(${rid}); return false;"
+                     ondblclick="showRouteDetailsPopup(${rid}); return false;">
                     <input type="checkbox" class="route-checkbox" 
                            ${selectedRoutes.has(rid) ? 'checked' : ''}
                            onclick="toggleRouteSelection(event, ${rid}); return false;">
                     
                     <div class="route-item-header">
                         <h4 class="route-item-title">${escapeHtml(route.name)}</h4>
-                        ${(!route.geometry || (route.geometry && !route.geometry.geometry && !route.geometry.type)) ? '<span class="badge bg-warning" title="Harita geometrisi yok">Geometri Yok</span>' : ''}
+                        <div class="route-item-actions">
+                            ${(!route.geometry || (route.geometry && !route.geometry.geometry && !route.geometry.type)) ? '<span class="badge bg-warning" title="Harita geometrisi yok">Geometri Yok</span>' : ''}
+                            <button class="btn-route-info" onclick="showRouteDetailsPopup(${rid}); event.stopPropagation(); return false;" title="Rota Detayları">
+                                <i class="fas fa-info-circle"></i>
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="route-type-badge route-type-${route.route_type}">
@@ -1797,6 +1930,156 @@
 
             // Add CSS for route detail view
             addRouteDetailStyles();
+        }
+
+        // Show route details in a popup modal
+        function showRouteDetailsPopup(routeId) {
+            const route = allRoutes.find(r => getRouteId(r) === routeId);
+            if (!route) {
+                console.error('Route not found:', routeId);
+                return;
+            }
+
+            const modalHtml = `
+                <div class="modal fade" id="routeDetailsModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-route me-2"></i>
+                                    Rota Detayları - ${escapeHtml(route.name)}
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="route-detail-popup">
+                                    <div class="route-detail-header">
+                                        <div class="route-type-badge route-type-${route.route_type}">
+                                            ${ROUTE_TYPES[route.route_type]?.icon || '🗺️'} 
+                                            ${ROUTE_TYPES[route.route_type]?.name || route.route_type}
+                                        </div>
+                                        <div class="difficulty-display">
+                                            <span class="difficulty-stars">${getDifficultyStars(route.difficulty_level)}</span>
+                                            <span class="difficulty-text">Zorluk: ${route.difficulty_level}/5</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="route-description-full">
+                                        <h6><i class="fas fa-info-circle me-2"></i>Açıklama</h6>
+                                        <p>${escapeHtml(route.description || 'Açıklama bulunmuyor')}</p>
+                                    </div>
+
+                                    <div class="route-statistics">
+                                        <h6><i class="fas fa-chart-bar me-2"></i>İstatistikler</h6>
+                                        <div class="stats-grid-popup">
+                                            <div class="stat-card-popup">
+                                                <div class="stat-icon">
+                                                    <i class="fas fa-clock"></i>
+                                                </div>
+                                                <div class="stat-info">
+                                                    <div class="stat-value">${route.estimated_duration || 0}</div>
+                                                    <div class="stat-label">Dakika</div>
+                                                </div>
+                                            </div>
+                                            <div class="stat-card-popup">
+                                                <div class="stat-icon">
+                                                    <i class="fas fa-route"></i>
+                                                </div>
+                                                <div class="stat-info">
+                                                    <div class="stat-value">${(route.total_distance || 0).toFixed(2)}</div>
+                                                    <div class="stat-label">Kilometre</div>
+                                                </div>
+                                            </div>
+                                            <div class="stat-card-popup">
+                                                <div class="stat-icon">
+                                                    <i class="fas fa-mountain"></i>
+                                                </div>
+                                                <div class="stat-info">
+                                                    <div class="stat-value">${route.elevation_gain || 0}</div>
+                                                    <div class="stat-label">Yükselti (m)</div>
+                                                </div>
+                                            </div>
+                                            <div class="stat-card-popup">
+                                                <div class="stat-icon">
+                                                    <i class="fas fa-map-marker-alt"></i>
+                                                </div>
+                                                <div class="stat-info">
+                                                    <div class="stat-value">${route.poi_count || 0}</div>
+                                                    <div class="stat-label">POI Sayısı</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    ${route.tags ? `
+                                        <div class="route-tags-section">
+                                            <h6><i class="fas fa-tags me-2"></i>Etiketler</h6>
+                                            <div class="tags-container">
+                                                ${route.tags.split(',').map(tag => 
+                                                    `<span class="tag-chip">${escapeHtml(tag.trim())}</span>`
+                                                ).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+
+                                    <div class="route-metadata">
+                                        <h6><i class="fas fa-info me-2"></i>Metadata</h6>
+                                        <div class="metadata-grid-popup">
+                                            <div class="metadata-item">
+                                                <strong>Oluşturulma:</strong>
+                                                <span>${formatDate(route.created_at)}</span>
+                                            </div>
+                                            <div class="metadata-item">
+                                                <strong>Güncellenme:</strong>
+                                                <span>${formatDate(route.updated_at)}</span>
+                                            </div>
+                                            <div class="metadata-item">
+                                                <strong>Dairesel Rota:</strong>
+                                                <span>${route.is_circular ? 'Evet' : 'Hayır'}</span>
+                                            </div>
+                                            ${route.import_source ? `
+                                                <div class="metadata-item">
+                                                    <strong>Import Kaynağı:</strong>
+                                                    <span>${escapeHtml(route.import_source)}</span>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary" onclick="selectRouteFromPopup(${routeId})">
+                                    <i class="fas fa-eye me-1"></i>Rotayı Seç ve Görüntüle
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if any
+            const existingModal = document.getElementById('routeDetailsModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('routeDetailsModal'));
+            modal.show();
+        }
+
+        // Select route from popup and close modal
+        function selectRouteFromPopup(routeId) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('routeDetailsModal'));
+            if (modal) modal.hide();
+            
+            // Select the route
+            selectRoute(routeId);
         }
 
         // Add styles for route detail view

@@ -3383,18 +3383,20 @@ def create_smart_route():
                 print(f"OSMnx walking network error: {error_msg}")
 
             if error_msg:
-                return jsonify({
-                    'error': f'Walking network not available: {error_msg}',
-                    'fallback_used': True,
-                    'route': {
-                        'coordinates': [[wp['lng'], wp['lat']] for wp in waypoints],
-                        'distance': sum(haversine_distance(waypoints[i]['lat'], waypoints[i]['lng'], 
-                                                         waypoints[i+1]['lat'], waypoints[i+1]['lng']) 
-                                      for i in range(len(waypoints)-1)),
-                        'duration': 0,
-                        'instructions': [f"Walk to {wp.get('name', f'Point {i+1}')}" for i, wp in enumerate(waypoints)]
-                    }
-                })
+                # Try to reload the walking graph before falling back
+                try:
+                    print("🔄 Attempting to reload walking network...")
+                    import osmnx as ox
+                    G = ox.load_graphml(WALKING_GRAPH_PATH)
+                    error_msg = None
+                    print("✅ Walking network successfully reloaded")
+                except Exception as reload_error:
+                    print(f"❌ Failed to reload walking network: {reload_error}")
+                    return jsonify({
+                        'error': f'Walking network not available after reload attempt: {error_msg}. Original error: {str(reload_error)}',
+                        'suggestions': ['Check if OSMnx is properly installed', 'Verify GraphML file integrity', 'Try using driving route for longer distances'],
+                        'fallback_used': False
+                    }), 500
 
             # Walking route logic (simplified version)
             route_nodes = []
@@ -3465,18 +3467,20 @@ def create_smart_route():
                 print(f"OSMnx driving network error: {error_msg}")
 
             if error_msg:
-                return jsonify({
-                    'error': f'Driving network not available: {error_msg}',
-                    'fallback_used': True,
-                    'route': {
-                        'coordinates': [[wp['lng'], wp['lat']] for wp in waypoints],
-                        'distance': sum(haversine_distance(waypoints[i]['lat'], waypoints[i]['lng'], 
-                                                         waypoints[i+1]['lat'], waypoints[i+1]['lng']) 
-                                      for i in range(len(waypoints)-1)) * 1000,
-                        'duration': 0,
-                        'instructions': [f"Drive to {wp.get('name', f'Point {i+1}')}" for i, wp in enumerate(waypoints)]
-                    }
-                })
+                # Try to reload the driving graph before falling back
+                try:
+                    print("🔄 Attempting to reload driving network...")
+                    import osmnx as ox
+                    G = ox.load_graphml(DRIVING_GRAPH_PATH)
+                    error_msg = None
+                    print("✅ Driving network successfully reloaded")
+                except Exception as reload_error:
+                    print(f"❌ Failed to reload driving network: {reload_error}")
+                    return jsonify({
+                        'error': f'Driving network not available after reload attempt: {error_msg}. Original error: {str(reload_error)}',
+                        'suggestions': ['Check if OSMnx is properly installed', 'Verify GraphML file integrity', 'Check network coverage area'],
+                        'fallback_used': False
+                    }), 500
 
             # Find nearest nodes for each waypoint
             route_nodes = []
@@ -3487,20 +3491,24 @@ def create_smart_route():
                     print(f"Waypoint {i+1}: {wp.get('name', 'Unknown')} ({wp['lat']:.4f}, {wp['lng']:.4f}) -> Node {nearest_node}")
                 except Exception as e:
                     print(f"❌ Error finding nearest node for waypoint {i+1} ({wp['lat']:.4f}, {wp['lng']:.4f}): {e}")
-                    # Fallback to straight line if node not found
-                    return jsonify({
-                        'error': f'Waypoint {i+1} is outside driving network coverage',
-                        'fallback_used': True,
-                        'route': {
-                            'coordinates': [[wp['lng'], wp['lat']] for wp in waypoints],
-                            'distance': sum(haversine_distance(waypoints[j]['lat'], waypoints[j]['lng'], 
-                                                             waypoints[j+1]['lat'], waypoints[j+1]['lng']) 
-                                          for j in range(len(waypoints)-1)) * 1000,  # convert to meters
-                            'duration': 0,
-                            'instructions': [f"Direct route to {wp.get('name', f'Point {j+1}')}" for j, wp in enumerate(waypoints)],
-                            'transport_mode': 'direct'
-                        }
-                    })
+                    # Try to find nearest node with larger tolerance
+                    try:
+                        print(f"🔍 Searching for nearest node with larger radius for waypoint {i+1}...")
+                        nearest_node = ox.nearest_nodes(G, wp['lng'], wp['lat'], return_dist=False)
+                        route_nodes.append(nearest_node)
+                        print(f"✅ Found node {nearest_node} for waypoint {i+1} with expanded search")
+                    except Exception as e2:
+                        print(f"❌ Failed to find any road network node for waypoint {i+1}: {e2}")
+                        return jsonify({
+                            'error': f'Waypoint {i+1} ({wp.get("name", "Unknown")}) is completely outside the road network coverage area. Please select points closer to roads.',
+                            'waypoint_details': {
+                                'index': i+1,
+                                'name': wp.get('name', 'Unknown'),
+                                'lat': wp['lat'],
+                                'lng': wp['lng']
+                            },
+                            'suggestions': ['Move waypoint closer to a road', 'Use walking route for short distances', 'Check if point is in a restricted area']
+                        }), 400
 
             # Calculate route through all waypoints
             full_route = []
@@ -3585,8 +3593,50 @@ def create_smart_route():
                     print(f"Segment {i+1}: {len(path)} nodes, {segment_distance/1000:.2f} km")
                     
                 except nx.NetworkXNoPath:
-                    print(f"No driving path found between waypoints {i+1} and {i+2}")
-                    return jsonify({'error': f'No driving route found between waypoints {i+1} and {i+2}'}), 400
+                    print(f"No direct driving path found between waypoints {i+1} and {i+2}")
+                    # Try alternative routing strategies
+                    try:
+                        # Try using Dijkstra's algorithm instead
+                        print(f"🔄 Trying alternative routing for waypoints {i+1} to {i+2}...")
+                        path = nx.dijkstra_path(G, start_node, end_node, weight='length')
+                        print(f"✅ Found alternative path with {len(path)} nodes")
+                        
+                        # Process the alternative path same as before
+                        segment_coords = []
+                        segment_distance = 0
+                        
+                        for j, node in enumerate(path):
+                            node_data = G.nodes[node]
+                            coord = [node_data['x'], node_data['y']]
+                            segment_coords.append(coord)
+                            
+                            if j > 0:
+                                prev_node = path[j-1]
+                                if G.has_edge(prev_node, node):
+                                    edge_data = G.edges[prev_node, node, 0]
+                                    segment_distance += edge_data.get('length', 0)
+                        
+                        full_route.extend(segment_coords)
+                        total_distance += segment_distance
+                        
+                        avg_speed_kmh = 50
+                        segment_time = (segment_distance / 1000) / avg_speed_kmh * 60
+                        total_time += segment_time
+                        
+                        start_name = waypoints[i].get('name', f'Point {i+1}')
+                        end_name = waypoints[i+1].get('name', f'Point {i+2}')
+                        instructions.append(f"Drive from {start_name} to {end_name} ({segment_distance/1000:.1f} km) [alternative route]")
+                        
+                    except Exception as alt_error:
+                        print(f"❌ Alternative routing also failed: {alt_error}")
+                        return jsonify({
+                            'error': f'No driving route found between waypoints {i+1} and {i+2}. The road network may be disconnected at these points.',
+                            'details': {
+                                'from_waypoint': waypoints[i].get('name', f'Point {i+1}'),
+                                'to_waypoint': waypoints[i+1].get('name', f'Point {i+2}'),
+                                'suggestion': 'Try selecting waypoints that are connected by roads, or use walking route for short distances'
+                            }
+                        }), 400
                 except Exception as e:
                     print(f"Error calculating driving route segment {i+1}: {e}")
                     return jsonify({'error': f'Route calculation error: {str(e)}'}), 500
