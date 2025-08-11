@@ -2600,6 +2600,28 @@ function showPredefinedRouteOptionsPopup(latlng, route) {
     .openOn(predefinedMap);
 }
 
+// Attach standard click/context menu handlers for predefined route layers
+function attachPredefinedRouteEvents(layer, route) {
+    if (!layer) return;
+    // Remove existing handlers to avoid duplicates
+    layer.off('click');
+    layer.off('contextmenu');
+
+    layer.on('click', e => {
+        if (e.originalEvent) {
+            e.originalEvent.stopPropagation();
+        }
+        showRouteDetails(route);
+    });
+
+    layer.on('contextmenu', e => {
+        if (e.originalEvent) {
+            e.originalEvent.preventDefault();
+        }
+        showPredefinedRouteOptionsPopup(e.latlng, route);
+    });
+}
+
 // Create content for predefined route options popup
 function createPredefinedRouteOptionsContent(route) {
     const routeType = route.route_type === 'walking' ? '🚶 Yürüyüş' : 
@@ -4052,17 +4074,9 @@ function displayRouteOnMap(route) {
                         className: 'route-on-map predefined-route-line'
                     }).addTo(predefinedMap);
                     
-                    // Show detailed route information on click
-                    routeLine.on('click', function(e) {
-                        e.originalEvent.stopPropagation();
-                        showRouteDetails(route);
-                    });
+                    // Attach standard route interaction handlers
+                    attachPredefinedRouteEvents(routeLine, route);
 
-                    // Show route options on right click
-                    routeLine.on('contextmenu', function(e) {
-                        e.originalEvent.preventDefault();
-                        showPredefinedRouteOptionsPopup(e.latlng, route);
-                    });
 
                     predefinedMapLayers.push(routeLine);
                     
@@ -4231,15 +4245,9 @@ function displayRouteOnMap(route) {
                         dashArray: '10, 5' // Dashed line to indicate estimated route
                     }).addTo(predefinedMap);
 
-                    routeLine.on('click', function(e) {
-                        e.originalEvent.stopPropagation();
-                        showRouteDetails(route);
-                    });
+                    // Attach standard route interaction handlers
+                    attachPredefinedRouteEvents(routeLine, route);
 
-                    routeLine.on('contextmenu', function(e) {
-                        e.originalEvent.preventDefault();
-                        showPredefinedRouteOptionsPopup(e.latlng, route);
-                    });
 
                     predefinedMapLayers.push(routeLine);
 
@@ -4666,15 +4674,9 @@ function displayRouteOnMapFallback(route) {
                         dashArray: '15, 10' // More dashed to indicate estimated route
                     }).addTo(predefinedMap);
 
-                    routeLine.on('click', function(e) {
-                        e.originalEvent.stopPropagation();
-                        showRouteDetails(route);
-                    });
+                    // Attach standard route interaction handlers
+                    attachPredefinedRouteEvents(routeLine, route);
 
-                    routeLine.on('contextmenu', function(e) {
-                        e.originalEvent.preventDefault();
-                        showPredefinedRouteOptionsPopup(e.latlng, route);
-                    });
 
                     predefinedMapLayers.push(routeLine);
                     console.log('✅ Fallback connecting line added');
