@@ -3988,6 +3988,7 @@ async function loadRouteDetails(route, container) {
                 displayRouteDetails(detailedRoute, container);
             }
 
+
             return detailedRoute;
         } else {
             throw new Error(`HTTP ${response.status}`);
@@ -4004,6 +4005,7 @@ async function loadRouteDetails(route, container) {
                 </div>
             `;
         }
+
 
         return null;
     }
