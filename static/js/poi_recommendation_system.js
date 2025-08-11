@@ -3733,7 +3733,18 @@ function displayPredefinedRoutes(routes) {
     
     // Add click event listeners to route cards
     routesList.querySelectorAll('.route-card').forEach((card, index) => {
-        card.addEventListener('click', () => showRouteDetails(routes[index]));
+        card.addEventListener('click', async () => {
+            const route = routes[index];
+            
+            // First display route on map
+            if (!predefinedMapInitialized) {
+                await initializePredefinedMap();
+            }
+            displayRouteOnMap(route);
+            
+            // Then show route details modal
+            showRouteDetails(route);
+        });
     });
 }
 
@@ -4107,115 +4118,28 @@ async function selectPredefinedRoute(route) {
     // Close modal
     closeRouteDetailModal();
     
-    // Switch to dynamic routes tab to show the selected route
-    switchTab('dynamic-routes');
+    // Stay in predefined routes tab and show route on its own map
+    // No tab switching needed - use the predefined routes map
     
     // Show notification
-    showNotification(`✅ "${route.name}" rotası seçildi!`, 'success');
+    showNotification(`✅ "${route.name}" rotası haritada gösteriliyor!`, 'success');
     
-    // Show loading state and ensure sections are visible
-    const resultsSection = document.getElementById('resultsSection');
-    const routeSection = document.getElementById('routeSection');
-    const mapSection = document.getElementById('mapSection');
-    
-    if (resultsSection) {
-        resultsSection.style.display = 'block';
-        
-        const recommendationResults = document.getElementById('recommendationResults');
-        if (recommendationResults) {
-            recommendationResults.innerHTML = `
-                <div style="text-align: center; padding: 40px; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-                    <div class="loading">
-                        <div class="loading__spinner"></div>
-                        <p class="loading__text">Rota POI'leri yükleniyor...</p>
-                    </div>
-                </div>
-            `;
-        }
+    // Ensure predefined map is initialized
+    if (!predefinedMapInitialized) {
+        console.log('🗺️ Initializing predefined map for route selection...');
+        await initializePredefinedMap();
     }
     
-    // Make sure route section (which contains the map) is visible
-    if (routeSection) {
-        routeSection.style.display = 'block';
-    }
+    // Display route on the predefined routes map (left side)
+    displayRouteOnMap(route);
     
-    // Make sure map section is visible and initialize map if needed
-    if (mapSection) {
-        mapSection.style.display = 'block';
-        
-        // Initialize map immediately if it doesn't exist
-        if (!map) {
-            console.log('🗺️ Initializing map for predefined route...');
-            await initializeEmptyMap();
-        } else {
-            // If map already exists, ensure proper resizing after becoming visible
-            setTimeout(() => {
-                try {
-                    map.invalidateSize();
-                } catch (e) {
-                    console.warn('Map invalidateSize failed:', e);
-                }
-            }, 100);
-        }
-    }
+    // Keep route focused and highlighted
+    console.log('🎯 Route displayed on predefined routes map successfully');
     
-    try {
-        // Load route POIs from API
-        console.log('📍 Loading POIs for route:', route.id);
-        const response = await fetch(`${apiBase}/routes/${route.id}`);
-        
-        if (response.ok) {
-            const routeData = await response.json();
-            console.log('✅ Route data loaded:', routeData);
-            
-            // Extract POIs from route data - API returns {success: true, route: {...}}
-            const routePOIs = routeData.route?.pois || [];
-            console.log('📍 Route POIs:', routePOIs);
-            
-            // Her durumda geometri yüklemeyi dene
-            setTimeout(async () => {
-                console.log('🗺️ Attempting to load route geometry...');
-                const geometryLoaded = await loadAndDisplayRouteGeometry(route.id);
-                
-                if (routePOIs.length > 0) {
-                    // Display route info and POIs
-                    displaySelectedRoute(route, routePOIs);
-                    
-                    // Show POIs on map
-                    await displayRoutePOIsOnMap(routePOIs);
-                    
-                    // If no saved geometry, try smart routing (road network)
-                    if (!geometryLoaded) {
-                        console.log('🧠 No saved geometry, trying smart routing via API...');
-                        const smartLoaded = await tryLoadSmartRouteForPOIs(routePOIs);
-                        // If smart routing also not available, fit to POIs as a fallback
-                        if (!smartLoaded) {
-                            setTimeout(() => {
-                                fitMapToRoutePOIs(routePOIs);
-                            }, 300);
-                        }
-                    }
-                } else {
-                    // No POIs found, show message but still try to show route geometry
-                    displayRouteWithoutPOIs(route);
-                    
-                    // If no geometry was loaded and no POIs, show a message
-                    if (!geometryLoaded) {
-                        console.log('⚠️ No POIs and no geometry found for route');
-                        showNotification('Bu rotada POI ve geometri bilgisi bulunamadı', 'warning');
-                    }
-                }
-            }, 200);
-        } else {
-            console.error('❌ Failed to load route data:', response.status);
-            showNotification('Rota detayları yüklenirken hata oluştu', 'error');
-            displayRouteWithoutPOIs(route);
-        }
-    } catch (error) {
-        console.error('❌ Error loading route POIs:', error);
-        showNotification('Rota yüklenirken hata oluştu', 'error');
-        displayRouteWithoutPOIs(route);
-    }
+    // Store selected route for reference
+    window.currentSelectedRoute = route;
+    
+    console.log('✅ Predefined route selection completed successfully');
 }
 
 function displaySelectedRoute(route, pois) {
@@ -5316,21 +5240,17 @@ async function expandRoutePreview(routeId, routeName) {
         // Close current modal
         closeRouteDetailModal();
         
-        // Switch to dynamic routes tab
-        switchTab('dynamic-routes');
+        // Stay in predefined routes tab and show route on its own map
+        // No tab switching needed - use the predefined routes map
         
-        // Ensure main map is initialized before showing route
-        if (!map) {
-            console.log('🗺️ Main map not initialized, initializing for route preview...');
-            const mapInitialized = await initializeMainMap();
-            if (!mapInitialized) {
-                showNotification('Harita başlatılamadı', 'error');
-                return;
-            }
+        // Ensure predefined map is initialized
+        if (!predefinedMapInitialized) {
+            console.log('🗺️ Predefined map not initialized, initializing for route preview...');
+            await initializePredefinedMap();
         }
         
-        // Show route on main map
-        await selectPredefinedRoute(route);
+        // Show route on predefined routes map (left side)
+        displayRouteOnMap(route);
         
         // Show notification
         showNotification(`📍 "${routeName}" rotası haritada gösteriliyor`, 'success');
@@ -5534,6 +5454,7 @@ window.runAllSeparateTabMapTests = async function() {
         console.log('  ✅ Tab geçiş sistemi güncellendi (lazy loading, state koruma)');
         console.log('  ✅ Her sekme bağımsız harita instance\'ı çalıştırıyor');
         console.log('  ✅ Sekme geçişlerinde performans optimizasyonu');
+        console.log('  ✅ Hazır rotalar kendi haritasında gösteriliyor (sekme değişmiyor)');
         return true;
     } else {
         console.log('❌ Some tests failed. Please review the implementation.');
