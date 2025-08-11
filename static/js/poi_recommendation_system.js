@@ -3047,6 +3047,167 @@ function exportPredefinedRouteToGoogleMaps(routeId) {
     window.open(url, '_blank');
 }
 
+// Add navigation route from current location to route start
+async function addNavigationToRoute(route) {
+    console.log('🧭 Adding navigation route from current location');
+    
+    // Check if route has valid geometry or POIs for start point
+    let routeStartCoord = null;
+    
+    if (route.geometry && route.geometry.coordinates && route.geometry.coordinates.length > 0) {
+        const startCoord = route.geometry.coordinates[0];
+        routeStartCoord = [startCoord[1], startCoord[0]]; // lat, lng
+        console.log('📍 Route start from geometry:', routeStartCoord);
+    } else if (route.pois && route.pois.length > 0) {
+        const firstPoi = route.pois[0];
+        if (firstPoi.lat && (firstPoi.lng || firstPoi.lon)) {
+            routeStartCoord = [firstPoi.lat, firstPoi.lng || firstPoi.lon];
+            console.log('📍 Route start from POI:', routeStartCoord);
+        }
+    }
+    
+    if (!routeStartCoord) {
+        console.log('⚠️ Could not determine route start point');
+        return;
+    }
+    
+    // Request user location
+    try {
+        if (!navigator.geolocation) {
+            showNotification('❌ Konumunuz bu cihazda desteklenmiyor', 'error');
+            return;
+        }
+        
+        // Show loading notification
+        showNotification('📍 Konumunuz alınıyor...', 'info');
+        
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const userLocation = [position.coords.latitude, position.coords.longitude];
+                console.log('📱 User location:', userLocation);
+                
+                // Calculate distance to route start
+                const distance = getDistance(userLocation[0], userLocation[1], routeStartCoord[0], routeStartCoord[1]);
+                const distanceKm = (distance / 1000).toFixed(1);
+                
+                if (distance < 100) { // Less than 100 meters
+                    showNotification('🎯 Zaten rota başlangıcında bulunuyorsunuz!', 'success');
+                    return;
+                }
+                
+                // Get navigation route from current location to route start
+                await createNavigationRoute(userLocation, routeStartCoord, route.name, distanceKm);
+            },
+            (error) => {
+                console.error('❌ Geolocation error:', error);
+                let errorMessage = 'Konumunuz alınamadı';
+                
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Konum izni reddedildi. Lütfen tarayıcı ayarlarından konum iznini açın.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Konumunuz belirlenemedi. GPS açık olduğundan emin olun.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'Konum alınırken zaman aşımı oluştu.';
+                        break;
+                }
+                
+                showNotification(`❌ ${errorMessage}`, 'error');
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 300000 // 5 minutes cache
+            }
+        );
+        
+    } catch (error) {
+        console.error('❌ Navigation error:', error);
+        showNotification('❌ Navigasyon rotası oluşturulamadı', 'error');
+    }
+}
+
+// Create navigation route on map
+async function createNavigationRoute(fromCoord, toCoord, routeName, distanceKm) {
+    if (!predefinedMap) {
+        console.error('❌ Map not initialized for navigation route');
+        return;
+    }
+    
+    try {
+        console.log('🗺️ Creating navigation route');
+        console.log('📍 From:', fromCoord);
+        console.log('📍 To:', toCoord);
+        
+        // Add user location marker
+        const userMarker = L.marker(fromCoord, {
+            icon: L.divIcon({
+                html: '<div style="background: #007bff; color: white; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"><i class="fas fa-user"></i></div>',
+                className: 'user-location-marker',
+                iconSize: [25, 25],
+                iconAnchor: [12.5, 12.5]
+            })
+        }).addTo(predefinedMap);
+        
+        userMarker.bindTooltip('Mevcut Konumunuz', { permanent: false, direction: 'top' });
+        
+        // Try to get actual route from routing service
+        const routingUrl = `https://router.project-osrm.org/route/v1/walking/${fromCoord[1]},${fromCoord[0]};${toCoord[1]},${toCoord[0]}?overview=full&geometries=geojson`;
+        
+        let routeGeometry = null;
+        try {
+            const response = await fetch(routingUrl);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.routes && data.routes.length > 0) {
+                    routeGeometry = data.routes[0].geometry.coordinates;
+                    console.log('🛣️ Got routing geometry with', routeGeometry.length, 'points');
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Routing service failed, using direct line:', error);
+        }
+        
+        // Create navigation route line
+        let navigationRoute;
+        if (routeGeometry && routeGeometry.length > 2) {
+            // Use actual route from routing service
+            navigationRoute = L.polyline(
+                routeGeometry.map(coord => [coord[1], coord[0]]), {
+                color: '#ff6b35', // Orange color for navigation
+                weight: 5,
+                opacity: 0.8,
+                dashArray: '10, 5',
+                className: 'navigation-route-line'
+            }).addTo(predefinedMap);
+        } else {
+            // Fallback to direct line
+            navigationRoute = L.polyline([fromCoord, toCoord], {
+                color: '#ff6b35', // Orange color for navigation
+                weight: 5,
+                opacity: 0.8,
+                dashArray: '10, 5',
+                className: 'navigation-route-line'
+            }).addTo(predefinedMap);
+        }
+        
+        // Add to layers for cleanup
+        predefinedMapLayers.push(userMarker, navigationRoute);
+        
+        // Show success notification
+        showNotification(`🧭 Mevcut konumunuzdan "${routeName}" rotasına ${distanceKm} km ulaşım rotası eklendi!`, 'success');
+        
+        // Fit map to show both user location and route
+        const group = new L.featureGroup([userMarker, navigationRoute]);
+        predefinedMap.fitBounds(group.getBounds(), { padding: [20, 20] });
+        
+    } catch (error) {
+        console.error('❌ Error creating navigation route:', error);
+        showNotification('❌ Navigasyon rotası çizilirken hata oluştu', 'error');
+    }
+}
 
 // Export predefined route to Google Earth (for hiking trails)
 function exportPredefinedRouteToGoogleEarth(routeId) {
@@ -6046,6 +6207,9 @@ async function selectPredefinedRoute(route) {
              'Google Maps\'te Aç',
              () => exportPredefinedRouteToGoogleMaps(route.id || route._id)
          );
+         
+         // Add navigation route from current location to route start
+         addNavigationToRoute(route);
     
     // Ensure predefined map is initialized with multiple attempts
     let mapInitAttempts = 0;
