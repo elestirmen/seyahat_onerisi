@@ -66,7 +66,12 @@ class AuthConfig:
             self.PASSWORD_HASH = self._get_password_hash()
             
             # Session security settings
-            self.SESSION_COOKIE_SECURE = self._get_bool_config('POI_SESSION_SECURE', True)
+            # Default to secure cookies only in production; allow override via env
+            is_production = os.getenv('FLASK_ENV', '').lower() == 'production'
+            self.SESSION_COOKIE_SECURE = self._get_bool_config(
+                'POI_SESSION_SECURE',
+                is_production
+            )
             self.SESSION_COOKIE_HTTPONLY = True
             self.SESSION_COOKIE_SAMESITE = 'Strict'
             
