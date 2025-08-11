@@ -7,8 +7,19 @@ Rota yönetimi için veritabanı işlemleri ve business logic
 
 import os
 import json
-import psycopg2
-from psycopg2.extras import RealDictCursor, Json
+# Some tests import RouteService without the PostgreSQL driver installed.
+# Import psycopg2 lazily and fall back to placeholders so the module can be
+# imported without the optional dependency. Actual database operations will
+# simply fail with a clear error message when psycopg2 is missing.
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor, Json
+except ModuleNotFoundError:  # pragma: no cover - executed only when driver missing
+    psycopg2 = None
+    RealDictCursor = None
+
+    def Json(value):  # minimal stand-in used only for type compatibility in tests
+        return value
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 import logging
@@ -97,6 +108,9 @@ class RouteService:
     
     def connect(self):
         """Veritabanına bağlan"""
+        if psycopg2 is None:  # pragma: no cover - handled in tests
+            logger.error("psycopg2 is not installed. Database operations are unavailable.")
+            return False
         try:
             self.conn = psycopg2.connect(self.connection_string)
             logger.info("Route service database connection established")
@@ -125,6 +139,9 @@ class RouteService:
         Returns:
             Query sonucu veya None
         """
+        if psycopg2 is None:  # pragma: no cover - handled in tests
+            logger.error("psycopg2 is not installed. Query execution unavailable.")
+            return None
         if not self.conn:
             if not self.connect():
                 return None
