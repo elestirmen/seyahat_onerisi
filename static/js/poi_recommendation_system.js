@@ -450,7 +450,6 @@ class RouteDetailsPanel {
             }
         });
     }
-
     async collectElevationData(routeData) {
         const waypoints = [];
         let cumulativeDistance = 0;
@@ -925,7 +924,6 @@ class RouteDetailsPanel {
         console.log(`🎯 Focused on segment ${segmentIndex + 1}: ${segment.from} → ${segment.to}`);
     }
 }
-
 // Create custom marker icons
 function createCustomIcon(category, score, isLowScore = false) {
     const style = getCategoryStyle(category);
@@ -1426,7 +1424,6 @@ function showNextMedia() {
         loadCurrentMedia();
     }
 }
-
 function closeMediaModal() {
     const modal = document.getElementById('mediaModal');
     modal.classList.remove('show');
@@ -1915,12 +1912,10 @@ function openMediaModal(filePath, type, title = 'Medya Görüntüleyici') {
     };
     showMediaModal([mediaItem], 0);
 }
-
 // Elevation cache to prevent repeated API calls
 const elevationCache = new Map();
 let elevationRequestCount = 0;
 const MAX_ELEVATION_REQUESTS = 10; // Limit API requests
-
 // Get elevation data with improved fallback and caching
 async function getElevation(lat, lng) {
     const cacheKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
@@ -2076,7 +2071,7 @@ function updateRouteDisplay() {
         const categoryStyle = getCategoryStyle(poi.category);
         const stepNumber = startLocation ? index + 2 : index + 1;
         routeHTML += `
-                    <div style="display: flex; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 8px; margin-bottom: 6px;">
+                    <div class="route-item-clickable" onclick="RouteContextMenu.showForPOI(event, '${poi.id || poi._id}', ${index})" style="display: flex; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 8px; margin-bottom: 6px;">
                         <div style="background: ${categoryStyle.color}; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 10px;">
                             ${stepNumber}
                         </div>
@@ -2084,7 +2079,7 @@ function updateRouteDisplay() {
                             <div style="font-weight: 600;">${poi.name}</div>
                             <div style="color: #666; font-size: 11px;">${getCategoryDisplayName(poi.category)}</div>
                         </div>
-                        <button onclick="removeFromRoute('${poi.id || poi._id}')" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                        <button onclick="event.stopPropagation(); removeFromRoute('${poi.id || poi._id}')" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
                     </div>
                 `;
     });
@@ -2383,7 +2378,6 @@ function removeStartEndMarkers() {
         });
     }
 }
-
 // Function to add start and end markers
 function addStartEndMarkers(waypoints) {
     if (!waypoints || waypoints.length < 2) return;
@@ -2806,7 +2800,6 @@ function getDistance(lat1, lon1, lat2, lon2) {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
 }
-
 // Draw walking route on map
 function drawWalkingRoute(routeInfo) {
     console.log('🎨 Drawing walking route:', routeInfo);
@@ -3299,7 +3292,6 @@ function requestActualLocation() {
         options
     );
 }
-
 // Get user's current location with native browser dialog
 async function getCurrentLocation() {
     return new Promise(async (resolve, reject) => {
@@ -3746,7 +3738,6 @@ function initializeRouteTabs() {
     
     console.log('✅ Route tabs initialized');
 }
-
 function switchTab(tabName) {
     console.log(`🔄 Switching to tab: ${tabName}`);
     
@@ -4169,7 +4160,6 @@ function displayRouteOnMap(route) {
                 }
             }
         }
-        
         // If no geometry, try to display POI markers
         console.log('🔍 No valid geometry found, trying POI markers...');
         if (route.pois && route.pois.length > 0) {
@@ -4602,7 +4592,6 @@ function closeDetailedPOIModal() {
         modal.remove();
     }
 }
-
 // Fallback function for route display when standard method fails
 function displayRouteOnMapFallback(route) {
     console.log('🚨 === FALLBACK ROUTE DISPLAY ===');
@@ -5093,7 +5082,6 @@ async function loadRouteDetails(route, container) {
         return null;
     }
 }
-
 function displayRouteDetails(routeData, container) {
     // Handle API response structure - API returns {success: true, route: {...}}
     const route = routeData.success ? routeData.route : routeData;
@@ -5580,7 +5568,6 @@ function displaySelectedRoute(route, pois) {
         </div>
     `;
 }
-
 function displayRouteWithoutPOIs(route) {
     const recommendationResults = document.getElementById('recommendationResults');
     if (!recommendationResults) return;
@@ -6055,7 +6042,6 @@ window.testMapInit = async function() {
         console.error('❌ Map initialization failed');
     }
 };
-
 // Route preview map functionality
 let previewMaps = new Map(); // Store multiple preview maps
 
@@ -6542,7 +6528,6 @@ function displaySavedRouteGeometry(geometryData) {
         console.error('❌ Error displaying saved route geometry:', error);
     }
 }
-
 // Try to load smart road-network route for a set of POIs (fallback when saved geometry missing)
 async function tryLoadSmartRouteForPOIs(pois) {
     try {
@@ -7486,7 +7471,6 @@ function getCategoryBonus(poiCategory, preferences) {
 
     return Math.min(15, bonus); // Max 15 point category bonus
 }
-
 async function displayRecommendations(recommendationData) {
     const container = document.getElementById('recommendationResults');
     const routeSection = document.getElementById('routeSection');
@@ -7974,7 +7958,6 @@ async function initializeMap(recommendationData) {
         console.log('🗺️ Map fully loaded and displayed');
     }, 1000);
 }
-
 function focusOnMap(lat, lng) {
     if (map) {
         // Smooth scroll to map section
@@ -8302,3 +8285,401 @@ document.addEventListener('DOMContentLoaded', function() {
         return colors[type] || colors.info;
     }
 });
+
+// Route Context Menu Class
+class RouteContextMenu {
+    constructor() {
+        this.menu = document.getElementById('routeContextMenu');
+        this.isVisible = false;
+        this.currentPOI = null;
+        this.currentIndex = null;
+        
+        // Bind event listeners
+        this.bindEvents();
+    }
+
+    static getInstance() {
+        if (!window.routeContextMenuInstance) {
+            window.routeContextMenuInstance = new RouteContextMenu();
+        }
+        return window.routeContextMenuInstance;
+    }
+
+    bindEvents() {
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (this.isVisible && !this.menu.contains(e.target)) {
+                this.hide();
+            }
+        });
+
+        // Close menu on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isVisible) {
+                this.hide();
+            }
+        });
+
+        // Prevent menu from closing when clicking inside
+        this.menu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
+    showForPOI(event, poiId, index) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        console.log('🎯 Showing context menu for POI:', poiId, 'at index:', index);
+        
+        // Find the POI in selectedPOIs
+        const poi = selectedPOIs.find(p => (p.id || p._id) === poiId);
+        if (!poi) {
+            console.error('❌ POI not found in selectedPOIs');
+            return;
+        }
+        
+        this.currentPOI = poi;
+        this.currentIndex = index;
+        
+        // Update menu content
+        this.updateMenuContent();
+        
+        // Position menu
+        this.positionMenu(event);
+        
+        // Show menu
+        this.show();
+    }
+
+    updateMenuContent() {
+        if (!this.currentPOI) return;
+        
+        // Update title
+        const titleEl = document.getElementById('routeContextMenuTitle');
+        titleEl.textContent = this.currentPOI.name;
+        
+        // Update subtitle
+        const subtitleEl = document.getElementById('routeContextMenuSubtitle');
+        const stepNumber = startLocation ? this.currentIndex + 2 : this.currentIndex + 1;
+        subtitleEl.textContent = `${stepNumber}. durak - ${getCategoryDisplayName(this.currentPOI.category)}`;
+        
+        // Update route stats
+        this.updateRouteStats();
+        
+        // Update route steps
+        this.updateRouteSteps();
+    }
+
+    updateRouteStats() {
+        const stats = getRouteStatistics();
+        if (!stats) return;
+        
+        document.getElementById('contextDistance').textContent = `${stats.totalDistance.toFixed(1)} km`;
+        document.getElementById('contextDuration').textContent = `${Math.round(stats.estimatedTime)} dk`;
+        document.getElementById('contextStops').textContent = `${stats.pointCount} durak`;
+        document.getElementById('contextCategories').textContent = `${stats.categories.length} kategori`;
+    }
+
+    updateRouteSteps() {
+        const stepsContainer = document.getElementById('routeContextSteps');
+        let stepsHTML = '';
+        
+        // Add start location if exists
+        if (startLocation) {
+            stepsHTML += `
+                <div class="route-context-step">
+                    <div class="route-context-step-number">🏁</div>
+                    <div class="route-context-step-content">
+                        <div class="route-context-step-name">${startLocation.name}</div>
+                        <div class="route-context-step-category">Başlangıç Noktası</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add selected POIs
+        selectedPOIs.forEach((poi, index) => {
+            const stepNumber = startLocation ? index + 2 : index + 1;
+            const isCurrentPOI = poi === this.currentPOI;
+            const categoryStyle = getCategoryStyle(poi.category);
+            
+            stepsHTML += `
+                <div class="route-context-step ${isCurrentPOI ? 'current' : ''}">
+                    <div class="route-context-step-number" style="background: ${isCurrentPOI ? '#e74c3c' : categoryStyle.color}">
+                        ${stepNumber}
+                    </div>
+                    <div class="route-context-step-content">
+                        <div class="route-context-step-name">${poi.name} ${isCurrentPOI ? '(Seçili)' : ''}</div>
+                        <div class="route-context-step-category">${getCategoryDisplayName(poi.category)}</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        stepsContainer.innerHTML = stepsHTML;
+    }
+
+    positionMenu(event) {
+        const x = event.clientX;
+        const y = event.clientY;
+        const menuWidth = 320;
+        const menuHeight = 600; // Approximate height
+        
+        // Get viewport dimensions
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Calculate position
+        let left = x;
+        let top = y;
+        
+        // Adjust if menu would go off screen horizontally
+        if (left + menuWidth > viewportWidth) {
+            left = viewportWidth - menuWidth - 20;
+        }
+        
+        // Adjust if menu would go off screen vertically
+        if (top + menuHeight > viewportHeight) {
+            top = viewportHeight - menuHeight - 20;
+        }
+        
+        // Ensure minimum margins
+        left = Math.max(10, left);
+        top = Math.max(10, top);
+        
+        this.menu.style.left = `${left}px`;
+        this.menu.style.top = `${top}px`;
+    }
+
+    show() {
+        this.menu.classList.add('show');
+        this.isVisible = true;
+        
+        // Focus trap for accessibility
+        const focusableElements = this.menu.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+        if (focusableElements.length > 0) {
+            focusableElements[0].focus();
+        }
+    }
+
+    hide() {
+        this.menu.classList.remove('show');
+        this.isVisible = false;
+        this.currentPOI = null;
+        this.currentIndex = null;
+    }
+
+    // Action Methods
+    static showForPOI(event, poiId, index) {
+        const instance = RouteContextMenu.getInstance();
+        instance.showForPOI(event, poiId, index);
+    }
+
+    static showRouteDetails() {
+        const instance = RouteContextMenu.getInstance();
+        instance.hide();
+        
+        if (instance.currentPOI) {
+            console.log('🔍 Showing detailed route information');
+            
+            // Use existing route details panel
+            const routeData = {
+                pois: selectedPOIs,
+                startLocation: startLocation,
+                stats: getRouteStatistics()
+            };
+            
+            const panelInstance = RouteDetailsPanel.getInstance();
+            panelInstance.show(routeData);
+        }
+    }
+
+    static optimizeRoute() {
+        const instance = RouteContextMenu.getInstance();
+        instance.hide();
+        
+        console.log('⚡ Optimizing route');
+        optimizeRoute();
+        showNotification('Rota optimize ediliyor...', 'info');
+    }
+
+    static focusOnMap() {
+        const instance = RouteContextMenu.getInstance();
+        instance.hide();
+        
+        console.log('🗺️ Focusing route on map');
+        
+        if (selectedPOIs.length > 0) {
+            // Create bounds for all POIs
+            const bounds = L.latLngBounds();
+            
+            if (startLocation) {
+                bounds.extend([startLocation.latitude, startLocation.longitude]);
+            }
+            
+            selectedPOIs.forEach(poi => {
+                bounds.extend([poi.latitude, poi.longitude]);
+            });
+            
+            // Fit map to bounds with padding
+            map.fitBounds(bounds, { padding: [50, 50] });
+            
+            showNotification('Rota haritada odaklandı', 'success');
+        }
+    }
+
+    static shareRoute() {
+        const instance = RouteContextMenu.getInstance();
+        instance.hide();
+        
+        console.log('📤 Sharing route');
+        
+        // Create route share data
+        const routeData = {
+            pois: selectedPOIs.map(poi => ({
+                id: poi.id || poi._id,
+                name: poi.name,
+                latitude: poi.latitude,
+                longitude: poi.longitude,
+                category: poi.category
+            })),
+            startLocation: startLocation,
+            stats: getRouteStatistics(),
+            created: new Date().toISOString()
+        };
+        
+        // Create shareable URL
+        const routeDataEncoded = btoa(JSON.stringify(routeData));
+        const shareUrl = `${window.location.origin}${window.location.pathname}?route=${routeDataEncoded}`;
+        
+        // Copy to clipboard
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                showNotification('Rota linki panoya kopyalandı!', 'success');
+            }).catch(() => {
+                prompt('Rota linkini kopyalayın:', shareUrl);
+            });
+        } else {
+            prompt('Rota linkini kopyalayın:', shareUrl);
+        }
+    }
+
+    static openInGoogleMaps() {
+        const instance = RouteContextMenu.getInstance();
+        instance.hide();
+        
+        console.log('🌐 Opening route in Google Maps');
+        
+        let waypoints = [];
+        
+        if (startLocation) {
+            waypoints.push(`${startLocation.latitude},${startLocation.longitude}`);
+        }
+        
+        selectedPOIs.forEach(poi => {
+            waypoints.push(`${poi.latitude},${poi.longitude}`);
+        });
+        
+        if (waypoints.length >= 2) {
+            const origin = waypoints[0];
+            const destination = waypoints[waypoints.length - 1];
+            const waypointsParam = waypoints.slice(1, -1).join('|');
+            
+            let googleMapsUrl = `https://www.google.com/maps/dir/${origin}/${destination}`;
+            if (waypointsParam) {
+                googleMapsUrl += `?waypoints=${waypointsParam}`;
+            }
+            
+            window.open(googleMapsUrl, '_blank');
+            showNotification('Google Maps\'te açılıyor...', 'info');
+        } else {
+            showNotification('Google Maps için en az 2 nokta gerekli', 'warning');
+        }
+    }
+
+    static downloadRoute() {
+        const instance = RouteContextMenu.getInstance();
+        instance.hide();
+        
+        console.log('💾 Downloading route');
+        
+        const routeData = {
+            name: `Ürgüp Rotası - ${new Date().toLocaleDateString('tr-TR')}`,
+            description: `${selectedPOIs.length} durağı olan kişiselleştirilmiş rota`,
+            pois: selectedPOIs,
+            startLocation: startLocation,
+            stats: getRouteStatistics(),
+            created: new Date().toISOString()
+        };
+        
+        // Create JSON file
+        const jsonData = JSON.stringify(routeData, null, 2);
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create download link
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `urgup_rotasi_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showNotification('Rota dosyası indirildi', 'success');
+    }
+
+    static editRoute() {
+        const instance = RouteContextMenu.getInstance();
+        instance.hide();
+        
+        console.log('✏️ Editing route');
+        showNotification('Rota düzenleme modu aktif - POI\'leri sürükleyip bırakabilirsiniz', 'info');
+        
+        // Enable drag and drop for route items (this would need additional implementation)
+        // For now, just show a notification
+    }
+
+    static reverseRoute() {
+        const instance = RouteContextMenu.getInstance();
+        instance.hide();
+        
+        console.log('🔄 Reversing route');
+        
+        if (selectedPOIs.length >= 2) {
+            selectedPOIs.reverse();
+            updateRouteDisplay();
+            
+            // Recreate route with reversed order
+            if (selectedPOIs.length >= 1 && (startLocation || selectedPOIs.length >= 2)) {
+                createRoute();
+            }
+            
+            showNotification('Rota ters çevrildi', 'success');
+        } else {
+            showNotification('Ters çevirmek için en az 2 durak gerekli', 'warning');
+        }
+    }
+
+    static clearRoute() {
+        const instance = RouteContextMenu.getInstance();
+        instance.hide();
+        
+        console.log('🗑️ Clearing route');
+        
+        // Show confirmation dialog
+        if (confirm('Rotayı tamamen temizlemek istediğinizden emin misiniz?')) {
+            clearRoute();
+            showNotification('Rota temizlendi', 'info');
+        }
+    }
+}
+
+// Initialize RouteContextMenu when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    RouteContextMenu.getInstance();
+});
+
+// Export for global access
+window.RouteContextMenu = RouteContextMenu;

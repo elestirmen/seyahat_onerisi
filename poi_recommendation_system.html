@@ -341,6 +341,148 @@
         </div>
     </div>
 
+    <!-- Route Context Menu -->
+    <div id="routeContextMenu" class="route-context-menu">
+        <div class="route-context-menu-header">
+            <h3 class="route-context-menu-title">
+                <i class="fas fa-route"></i>
+                <span id="routeContextMenuTitle">Rota Seçenekleri</span>
+            </h3>
+            <p class="route-context-menu-subtitle" id="routeContextMenuSubtitle">Rotanız için mevcut işlemler</p>
+        </div>
+
+        <!-- Route Stats -->
+        <div class="route-context-stats" id="routeContextStats">
+            <h4><i class="fas fa-chart-bar"></i> Rota Özeti</h4>
+            <div class="route-context-stats-grid">
+                <div class="route-context-stat-item">
+                    <span class="icon">📏</span>
+                    <span class="value" id="contextDistance">-- km</span>
+                </div>
+                <div class="route-context-stat-item">
+                    <span class="icon">⏱️</span>
+                    <span class="value" id="contextDuration">-- dk</span>
+                </div>
+                <div class="route-context-stat-item">
+                    <span class="icon">📍</span>
+                    <span class="value" id="contextStops">-- durak</span>
+                </div>
+                <div class="route-context-stat-item">
+                    <span class="icon">🏷️</span>
+                    <span class="value" id="contextCategories">-- kategori</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Route Steps Preview -->
+        <div class="route-context-group">
+            <h4 class="route-context-menu-group-title">Rota Durakları</h4>
+            <div class="route-context-steps" id="routeContextSteps">
+                <!-- Route steps will be populated here -->
+            </div>
+        </div>
+
+        <div class="route-context-menu-divider"></div>
+
+        <!-- Action Menu Items -->
+        <div class="route-context-group">
+            <h4 class="route-context-menu-group-title">Rota İşlemleri</h4>
+            
+            <button class="route-context-menu-item" onclick="RouteContextMenu.showRouteDetails()">
+                <i class="route-context-menu-icon fas fa-info-circle"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Detaylı Bilgi</div>
+                    <div class="sub-text">Rota hakkında kapsamlı bilgi görüntüle</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item success" onclick="RouteContextMenu.optimizeRoute()">
+                <i class="route-context-menu-icon fas fa-magic"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Optimize Et</div>
+                    <div class="sub-text">En verimli sıralamayı bul</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item" onclick="RouteContextMenu.focusOnMap()">
+                <i class="route-context-menu-icon fas fa-search-location"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Haritada Göster</div>
+                    <div class="sub-text">Rotanın tamamını haritada odakla</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item" onclick="RouteContextMenu.shareRoute()">
+                <i class="route-context-menu-icon fas fa-share-alt"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Paylaş</div>
+                    <div class="sub-text">Link oluştur veya dışa aktar</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <div class="route-context-menu-divider"></div>
+
+        <div class="route-context-group">
+            <h4 class="route-context-menu-group-title">Navigasyon</h4>
+            
+            <button class="route-context-menu-item" onclick="RouteContextMenu.openInGoogleMaps()">
+                <i class="route-context-menu-icon fab fa-google"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Google Maps'te Aç</div>
+                    <div class="sub-text">Navigasyon için Google Maps'te görüntüle</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-external-link-alt"></i>
+            </button>
+
+            <button class="route-context-menu-item" onclick="RouteContextMenu.downloadRoute()">
+                <i class="route-context-menu-icon fas fa-download"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı İndir</div>
+                    <div class="sub-text">GPX veya JSON formatında kaydet</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <div class="route-context-menu-divider"></div>
+
+        <div class="route-context-group">
+            <h4 class="route-context-menu-group-title">Düzenleme</h4>
+            
+            <button class="route-context-menu-item warning" onclick="RouteContextMenu.editRoute()">
+                <i class="route-context-menu-icon fas fa-edit"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Düzenle</div>
+                    <div class="sub-text">Durakları yeniden düzenle veya ekle/çıkar</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item" onclick="RouteContextMenu.reverseRoute()">
+                <i class="route-context-menu-icon fas fa-exchange-alt"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Ters Çevir</div>
+                    <div class="sub-text">Son durağı başlangıç yap</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item danger" onclick="RouteContextMenu.clearRoute()">
+                <i class="route-context-menu-icon fas fa-trash"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Temizle</div>
+                    <div class="sub-text">Tüm durakları kaldır ve baştan başla</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
     <!-- Media Modal Overlay -->
     <div id="mediaModal" class="media-modal">
         <div class="media-modal-content">
