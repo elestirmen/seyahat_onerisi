@@ -3982,20 +3982,31 @@ async function loadRouteDetails(route, container) {
 
         if (response.ok) {
             const detailedRoute = await response.json();
-            displayRouteDetails(detailedRoute, container);
+
+            // Only attempt to render details if a container is provided
+            if (container) {
+                displayRouteDetails(detailedRoute, container);
+            }
+
+
             return detailedRoute;
         } else {
             throw new Error(`HTTP ${response.status}`);
         }
     } catch (error) {
         console.error('❌ Error loading route details:', error);
-        container.innerHTML = `
-            <div style="text-align: center; padding: 40px; color: #666;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 16px; color: #f56565;"></i>
-                <p>Rota detayları yüklenirken hata oluştu.</p>
-                <p style="font-size: 0.9rem; margin-top: 8px;">Lütfen daha sonra tekrar deneyin.</p>
-            </div>
-        `;
+
+        if (container) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 16px; color: #f56565;"></i>
+                    <p>Rota detayları yüklenirken hata oluştu.</p>
+                    <p style="font-size: 0.9rem; margin-top: 8px;">Lütfen daha sonra tekrar deneyin.</p>
+                </div>
+            `;
+        }
+
+
         return null;
     }
 }
@@ -4143,13 +4154,27 @@ function createPOIList(pois) {
 
 async function selectPredefinedRoute(route) {
     console.log('✅ Selecting predefined route:', route);
-    
+
     // Close modal
     closeRouteDetailModal();
-    
+
+    // Ensure detailed data is present before displaying
+    if (!route.geometry || !route.pois || route.pois.length === 0) {
+        try {
+            console.log('ℹ️ Route missing details, loading before selection...');
+            const detailed = await loadRouteDetails(route);
+            const detailedRoute = detailed && (detailed.success ? detailed.route : detailed);
+            if (detailedRoute) {
+                Object.assign(route, detailedRoute);
+            }
+        } catch (error) {
+            console.error('❌ Error loading route details for selection:', error);
+        }
+    }
+
     // Stay in predefined routes tab and show route on its own map
     // No tab switching needed - use the predefined routes map
-    
+
     // Show notification
     showNotification(`✅ "${route.name}" rotası haritada gösteriliyor!`, 'success');
     
