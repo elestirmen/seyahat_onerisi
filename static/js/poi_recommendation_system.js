@@ -2184,34 +2184,58 @@ async function createRoute() {
         });
 
         if (!response.ok) {
-            throw new Error(`Route API error: ${response.status}`);
+            const errorData = await response.json().catch(() => ({ error: 'API request failed' }));
+            console.error('❌ Route API error:', response.status, errorData);
+            
+            // Show detailed error message to user
+            if (response.status === 500) {
+                showNotification('⚠️ Rota servisi şu anda mevcut değil. Lütfen daha sonra tekrar deneyin.', 'error');
+            } else {
+                showNotification(`❌ Rota oluşturulamadı: ${errorData.error || 'Bilinmeyen hata'}`, 'error');
+            }
+            
+            throw new Error(`Route API error: ${response.status} - ${errorData.error || 'Unknown error'}`);
         }
 
         const routeData = await response.json();
-        console.log('🗺️ Walking route received:', routeData);
+        console.log('🗺️ Route data received:', routeData);
 
         if (routeData.success && routeData.route) {
             // Draw walking route on map
             drawWalkingRoute(routeData.route);
 
-            // Show route info
+            // Show route info with success message
             showRouteInfo(routeData.route);
+            showNotification(`✅ ${routeData.route.network_type === 'walking' ? 'Yürüyüş' : 'Araç'} rotası başarıyla oluşturuldu (${routeData.route.total_distance} km)`, 'success');
+            
+            // Mark todo as completed
+            if (typeof todo_write === 'function') {
+                // Update completion status - this will be handled by the main system
+            }
         } else {
             throw new Error('Invalid route data received');
         }
 
     } catch (error) {
-        console.error('Walking route error:', error);
-        console.log('🔄 Fallback: Using simple line connections...');
-
-        // Fallback to simple line connections
-        createSimpleRoute(waypoints);
+        console.error('❌ Route calculation error:', error);
+        
+        // Only use fallback after showing clear warning to user
+        const userConfirmed = await showRouteCreationWarning(error.message);
+        
+        if (userConfirmed) {
+            console.log('🔄 User confirmed: Using simplified route representation...');
+            createSimpleRoute(waypoints);
+        } else {
+            console.log('🚫 User cancelled route creation');
+            // Don't create any route
+            removeStartEndMarkers();
+        }
     }
 }
 
 // Create simple route with straight lines (fallback)
 function createSimpleRoute(waypoints) {
-    console.log('📏 Creating simple route with straight lines');
+    console.log('📏 Creating simplified route representation with straight lines');
 
     if (waypoints.length < 2) return;
 
@@ -2220,14 +2244,14 @@ function createSimpleRoute(waypoints) {
         map.removeLayer(window.simpleRouteLayer);
     }
 
-    // Create polyline with waypoints
+    // Create polyline with waypoints - more visible styling to indicate it's approximate
     const latlngs = waypoints.map(wp => [wp.lat, wp.lng]);
 
     window.simpleRouteLayer = L.polyline(latlngs, {
-        color: '#667eea',
-        weight: window.innerWidth <= 768 ? 7 : 5, // Thicker on mobile
-        opacity: 0.7,
-        dashArray: '10, 5', // Dashed line to indicate it's not a real route
+        color: '#f39c12', // Orange color to indicate this is not a real route
+        weight: window.innerWidth <= 768 ? 8 : 6, // Slightly thicker
+        opacity: 0.8,
+        dashArray: '15, 8', // More prominent dashed line 
         className: 'simple-route-line'
     }).addTo(map);
 
@@ -2237,18 +2261,21 @@ function createSimpleRoute(waypoints) {
         showRouteOptionsPopup(e.latlng, waypoints);
     });
 
-    // Add popup to explain this is a simple route
+    // Add popup to explain this is a simplified representation
     window.simpleRouteLayer.bindPopup(
         `
                 <div style="text-align: center; font-family: 'Segoe UI', sans-serif;">
-                    <h6 style="margin: 0 0 8px 0; color: #667eea;">📏 Basit Rota</h6>
-                    <p style="margin: 0; font-size: 12px; color: #666;">
-                        Düz çizgi bağlantıları<br>
-                        <small>(Gerçek yol rotası değil)</small>
+                    <h6 style="margin: 0 0 8px 0; color: #f39c12;">⚠️ Yaklaşık Rota Gösterimi</h6>
+                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">
+                        Bu düz çizgiler <strong>gerçek yol rotası değildir</strong>.<br>
+                        Sadece POI'lerin genel konumlarını gösterir.
                     </p>
+                    <div style="background: #fff3cd; padding: 6px; border-radius: 6px; margin: 8px 0; font-size: 10px; color: #856404;">
+                        Gerçek navigasyon için Google Maps kullanın
+                    </div>
                     <div style="margin-top: 8px;">
                         <button onclick="exportToGoogleMaps(); event.stopPropagation();" style="background: #4285f4; color: white; border: none; padding: 6px 12px; border-radius: 12px; font-size: 11px; cursor: pointer;">
-                            🗺️ Google Maps'te Aç
+                            🗺️ Google Maps'te Gerçek Rota
                         </button>
                     </div>
                 </div>
@@ -2310,10 +2337,10 @@ function createSimpleRoute(waypoints) {
         totalDistance += getDistance(latlngs[i][0], latlngs[i][1], latlngs[i + 1][0], latlngs[i + 1][1]);
     }
 
-    console.log(`📏 Basit rota oluşturuldu: ${totalDistance.toFixed(2)} km (düz çizgi mesafesi)`);
+    console.log(`📏 Yaklaşık rota gösterimi oluşturuldu: ${totalDistance.toFixed(2)} km (düz çizgi mesafesi)`);
 
-    // Show notification
-    showNotification(`📏 Basit rota oluşturuldu (${totalDistance.toFixed(2)} km düz çizgi mesafesi)`, 'info');
+    // Show notification with warning style
+    showNotification(`⚠️ Yaklaşık rota gösterimi oluşturuldu (${totalDistance.toFixed(2)} km düz mesafe). Gerçek yol rotası için Google Maps kullanın.`, 'warning');
 }
 
 // Show notification
@@ -2323,7 +2350,7 @@ function showNotification(message, type = 'info') {
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                background: ${type === 'error' ? '#e74c3c' : type === 'success' ? '#27ae60' : '#3498db'};
+                background: ${type === 'error' ? '#e74c3c' : type === 'success' ? '#27ae60' : type === 'warning' ? '#f39c12' : '#3498db'};
                 color: white;
                 padding: 12px 20px;
                 border-radius: 8px;
@@ -2338,7 +2365,89 @@ function showNotification(message, type = 'info') {
 
     setTimeout(() => {
         notification.remove();
-    }, 5000);
+    }, type === 'error' ? 8000 : 5000);
+}
+
+// Show route creation warning dialog
+function showRouteCreationWarning(errorMessage) {
+    return new Promise((resolve) => {
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            font-family: 'Segoe UI', sans-serif;
+        `;
+
+        dialog.innerHTML = `
+            <div style="
+                background: white;
+                border-radius: 20px;
+                padding: 30px;
+                max-width: 500px;
+                margin: 20px;
+                text-align: center;
+                box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+                animation: modalSlideIn 0.4s ease-out;
+            ">
+                <div style="font-size: 3rem; margin-bottom: 20px; color: #f39c12;">⚠️</div>
+                <h3 style="color: #333; margin: 0 0 16px 0; font-size: 1.4rem;">Rota Oluşturma Problemi</h3>
+                <p style="color: #666; margin: 0 0 20px 0; line-height: 1.6; font-size: 1rem;">
+                    Gerçek yol rotası hesaplanamadı. Bu durum genellikle şu nedenlerden kaynaklanır:
+                </p>
+                
+                <div style="background: #f8f9fa; padding: 16px; border-radius: 12px; margin-bottom: 20px; text-align: left;">
+                    <div style="color: #dc3545; font-size: 0.9rem; margin-bottom: 8px;">
+                        <strong>Hata detayı:</strong> ${errorMessage}
+                    </div>
+                    <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #666; font-size: 0.9rem; line-height: 1.5;">
+                        <li>Seçilen noktalar yol ağına çok uzak</li>
+                        <li>İnternet bağlantısı problemi</li>
+                        <li>Rota servisi geçici olarak mevcut değil</li>
+                        <li>Seçilen noktalar arasında yol bağlantısı yok</li>
+                    </ul>
+                </div>
+
+                <div style="background: #fff3cd; padding: 16px; border-radius: 12px; margin-bottom: 25px; text-align: left; border-left: 4px solid #ffc107;">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 1.2rem; margin-right: 8px;">📏</span>
+                        <strong style="color: #856404;">Alternatif Çözüm</strong>
+                    </div>
+                    <p style="margin: 0; color: #856404; font-size: 0.9rem; line-height: 1.5;">
+                        Düz çizgi bağlantıları gösterebiliriz. Bu <strong>gerçek yol rotası değildir</strong> 
+                        ancak POI'lerin konumlarını ve genel rotayı görmenizi sağlar.
+                    </p>
+                </div>
+
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button onclick="resolveRouteWarning(false)"
+                            style="background: #6c757d; color: white; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-size: 1rem; transition: all 0.3s ease;">
+                        ❌ İptal Et
+                    </button>
+                    <button onclick="resolveRouteWarning(true)"
+                            style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);">
+                        📏 Düz Çizgi Göster
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Add resolve function to global scope temporarily
+        window.resolveRouteWarning = (accepted) => {
+            dialog.remove();
+            delete window.resolveRouteWarning;
+            resolve(accepted);
+        };
+
+        document.body.appendChild(dialog);
+    });
 }
 
 // Clear route

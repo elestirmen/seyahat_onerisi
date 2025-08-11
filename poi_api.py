@@ -695,11 +695,23 @@ def load_walking_graph():
             raise ImportError(f"OSMnx required for walking routes: {e}")
 
         if not os.path.exists(WALKING_GRAPH_PATH):
-            raise FileNotFoundError(f"GraphML file not found: {WALKING_GRAPH_PATH}")
+            raise FileNotFoundError(f"Walking network file not found: {WALKING_GRAPH_PATH}")
 
-        print(f"\U0001F4C1 Loading walking network from: {WALKING_GRAPH_PATH}")
-        WALKING_GRAPH = ox.load_graphml(WALKING_GRAPH_PATH)
-        print(f"\u2705 Network loaded: {len(WALKING_GRAPH.nodes)} nodes, {len(WALKING_GRAPH.edges)} edges")
+        try:
+            print(f"\U0001F4C1 Loading walking network from: {WALKING_GRAPH_PATH}")
+            WALKING_GRAPH = ox.load_graphml(WALKING_GRAPH_PATH)
+            
+            # Validate the loaded graph
+            if len(WALKING_GRAPH.nodes) == 0:
+                raise ValueError("Walking network has no nodes")
+            if len(WALKING_GRAPH.edges) == 0:
+                raise ValueError("Walking network has no edges")
+                
+            print(f"\u2705 Walking network loaded: {len(WALKING_GRAPH.nodes)} nodes, {len(WALKING_GRAPH.edges)} edges")
+            
+        except Exception as e:
+            WALKING_GRAPH = None  # Reset to None so it can be retried
+            raise RuntimeError(f"Failed to load walking network: {e}")
 
     return WALKING_GRAPH
 
@@ -3078,9 +3090,21 @@ def load_driving_graph():
             if DRIVING_GRAPH is None:
                 raise FileNotFoundError(f"Could not download driving network")
         else:
-            print(f"📁 Loading driving network from: {DRIVING_GRAPH_PATH}")
-            DRIVING_GRAPH = ox.load_graphml(DRIVING_GRAPH_PATH)
-            print(f"✅ Driving network loaded: {len(DRIVING_GRAPH.nodes)} nodes, {len(DRIVING_GRAPH.edges)} edges")
+            try:
+                print(f"📁 Loading driving network from: {DRIVING_GRAPH_PATH}")
+                DRIVING_GRAPH = ox.load_graphml(DRIVING_GRAPH_PATH)
+                
+                # Validate the loaded graph
+                if len(DRIVING_GRAPH.nodes) == 0:
+                    raise ValueError("Driving network has no nodes")
+                if len(DRIVING_GRAPH.edges) == 0:
+                    raise ValueError("Driving network has no edges")
+                    
+                print(f"✅ Driving network loaded: {len(DRIVING_GRAPH.nodes)} nodes, {len(DRIVING_GRAPH.edges)} edges")
+                
+            except Exception as e:
+                DRIVING_GRAPH = None  # Reset to None so it can be retried
+                raise RuntimeError(f"Failed to load driving network: {e}")
 
     return DRIVING_GRAPH
 
@@ -3354,6 +3378,57 @@ def create_driving_route():
     except Exception as e:
         print(f"Driving route error: {str(e)}")
         return jsonify({'error': f'Driving route error: {str(e)}'}), 500
+
+# Route service health check endpoint
+@app.route('/api/route/health', methods=['GET'])
+def route_service_health():
+    """Check if route service is healthy and graphs are loaded"""
+    health_status = {
+        'status': 'healthy',
+        'services': {},
+        'timestamp': time.time()
+    }
+    
+    # Check walking graph
+    try:
+        walking_graph = load_walking_graph()
+        health_status['services']['walking'] = {
+            'status': 'available',
+            'nodes': len(walking_graph.nodes),
+            'edges': len(walking_graph.edges),
+            'file_path': WALKING_GRAPH_PATH
+        }
+    except Exception as e:
+        health_status['services']['walking'] = {
+            'status': 'unavailable',
+            'error': str(e),
+            'file_path': WALKING_GRAPH_PATH
+        }
+        health_status['status'] = 'degraded'
+    
+    # Check driving graph
+    try:
+        driving_graph = load_driving_graph()
+        health_status['services']['driving'] = {
+            'status': 'available',
+            'nodes': len(driving_graph.nodes),
+            'edges': len(driving_graph.edges),
+            'file_path': DRIVING_GRAPH_PATH
+        }
+    except Exception as e:
+        health_status['services']['driving'] = {
+            'status': 'unavailable',
+            'error': str(e),
+            'file_path': DRIVING_GRAPH_PATH
+        }
+        health_status['status'] = 'degraded'
+    
+    # Overall status
+    if all(service['status'] == 'unavailable' for service in health_status['services'].values()):
+        health_status['status'] = 'unhealthy'
+    
+    status_code = 200 if health_status['status'] == 'healthy' else (206 if health_status['status'] == 'degraded' else 503)
+    return jsonify(health_status), status_code
 
 # Smart route endpoint (automatically chooses walking or driving)
 @app.route('/api/route/smart', methods=['POST'])
