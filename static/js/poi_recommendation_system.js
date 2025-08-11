@@ -251,6 +251,14 @@ class RouteDetailsPanel {
         const duration = routeData.estimated_time || '0';
         const stops = routeData.waypoints ? routeData.waypoints.length : selectedPOIs.length;
         const routeType = routeData.route_type || 'yürüyüş';
+        
+        // Update panel title if route name is provided (for predefined routes)
+        const panelTitle = this.panel.querySelector('.route-header h3');
+        if (routeData.route_name && routeData.is_predefined) {
+            panelTitle.textContent = `🗺️ ${routeData.route_name}`;
+        } else {
+            panelTitle.textContent = 'Rota Detayları';
+        }
 
         document.getElementById('routeDistance').textContent = `${distance} km`;
         document.getElementById('routeDuration').textContent = `${Math.round(duration / 60)} saat`;
@@ -2600,6 +2608,51 @@ function showPredefinedRouteOptionsPopup(latlng, route) {
     .openOn(predefinedMap);
 }
 
+// Show route details panel for predefined routes (similar to personal routes)
+function showPredefinedRouteDetailsPanel(route, latlng) {
+    if (!route) return;
+    
+    const poiCount = route.pois ? route.pois.length : 0;
+    
+    // Calculate estimated time and distance
+    let totalDistance = 0;
+    if (route.pois && route.pois.length > 1) {
+        for (let i = 0; i < route.pois.length - 1; i++) {
+            const current = route.pois[i];
+            const next = route.pois[i + 1];
+            if (current.lat && current.lng && next.lat && next.lng) {
+                totalDistance += getDistance(current.lat, current.lng, next.lat, next.lng);
+            }
+        }
+    }
+    
+    const estimatedTime = Math.round(totalDistance / 5 * 60); // 5 km/h walking speed, in minutes
+    const routeType = route.route_type === 'walking' ? 'Yürüyüş' : 
+                      route.route_type === 'hiking' ? 'Doğa Yürüyüşü' :
+                      route.route_type === 'cycling' ? 'Bisiklet' : 
+                      route.route_type === 'driving' ? 'Araç' : 'Bilinmeyen';
+
+    // Create waypoints for the panel
+    const waypoints = route.pois ? route.pois.map(poi => ({
+        id: poi.id || poi._id,
+        name: poi.name,
+        latitude: poi.lat,
+        longitude: poi.lng || poi.lon,
+        category: poi.category || 'diger'
+    })) : [];
+
+    // Show the route details panel using the existing RouteDetailsPanel class
+    RouteDetailsPanel.show({
+        total_distance: totalDistance,
+        estimated_time: estimatedTime,
+        route_type: routeType,
+        waypoints: waypoints,
+        segments: [], // No segments for predefined routes
+        route_name: route.name,
+        is_predefined: true
+    });
+}
+
 // Attach standard click/context menu handlers for predefined route layers
 function attachPredefinedRouteEvents(layer, route) {
     if (!layer) return;
@@ -2611,7 +2664,8 @@ function attachPredefinedRouteEvents(layer, route) {
         if (e.originalEvent) {
             e.originalEvent.stopPropagation();
         }
-        showRouteDetails(route);
+        // Show route details panel similar to personal routes
+        showPredefinedRouteDetailsPanel(route, e.latlng);
     });
 
     layer.on('contextmenu', e => {

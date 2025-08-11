@@ -5386,8 +5386,8 @@ def auto_associate_nearby_pois(route_id):
 
 if __name__ == '__main__':
     print("🚀 POI Yönetim Sistemi başlatılıyor...")
-    print("📊 Web arayüzü: http://localhost:5505/poi_manager_ui.html")
-    print("🔌 API endpoint'leri: http://localhost:5505/api/")
+    print("📊 Web arayüzü: http://localhost:5560/poi_manager_ui.html")
+    print("🔌 API endpoint'leri: http://localhost:5560/api/")
     
     # Test database connection to show accurate status
     db = get_db()
@@ -5400,4 +5400,4 @@ if __name__ == '__main__':
     else:
         print("❌ Veritabanı bağlantısı başarısız")
     
-    app.run(debug=True, host='0.0.0.0', port=5505)
+    app.run(debug=True, host='0.0.0.0', port=5560)
