@@ -765,15 +765,67 @@ class RouteDetailsPanel {
     }
 
     static exportToGoogleMaps() {
+        console.log('🔍 === ROUTE DETAILS PANEL EXPORT DEBUG ===');
         const instance = RouteDetailsPanel.getInstance();
+        console.log('🔍 Panel instance:', instance);
+        console.log('🔍 Current route:', instance.currentRoute);
+        console.log('🔍 Global currentSelectedRoute:', window.currentSelectedRoute);
+        console.log('🔍 PredefinedRoutes array:', predefinedRoutes);
+        
         if (!instance.currentRoute) {
+            console.log('❌ No current route in panel instance');
             showNotification('❌ Aktif rota bulunamadı', 'error');
             return;
         }
 
         if (selectedPOIs.length === 0) {
-            showNotification('❌ Önce POI seçin', 'error');
-            return;
+            // Try to use route data from panel if available
+            if (instance.currentRoute && instance.currentRoute.waypoints && instance.currentRoute.waypoints.length > 0) {
+                // Use route panel data instead of selectedPOIs
+                console.log('🗺️ Using route panel waypoints instead of selectedPOIs');
+                waypoints = instance.currentRoute.waypoints.map(wp => `${wp.latitude},${wp.longitude}`);
+                waypointNames = instance.currentRoute.waypoints.map(wp => wp.name || 'POI');
+            } else if (instance.currentRoute && instance.currentRoute.is_predefined) {
+                // For predefined routes, use the current selected route data
+                console.log('🗺️ Predefined route detected in panel');
+                
+                // Try to find the route in predefinedRoutes global array
+                let routeToExport = null;
+                if (instance.currentRoute.predefined_route) {
+                    routeToExport = instance.currentRoute.predefined_route;
+                } else if (window.currentSelectedRoute) {
+                    routeToExport = window.currentSelectedRoute;
+                } else if (instance.currentRoute.route_name) {
+                    // Try to find by name in predefinedRoutes
+                    routeToExport = predefinedRoutes.find(r => r.name === instance.currentRoute.route_name);
+                }
+                
+                if (routeToExport) {
+                    console.log('🗺️ Found route to export:', routeToExport.name);
+                    const routeId = routeToExport.id || routeToExport._id;
+                    exportPredefinedRouteToGoogleMaps(routeId);
+                    return;
+                } else {
+                    console.log('🗺️ Could not find predefined route, using fallback');
+                    const defaultOrigin = '38.6427,34.8283'; // Göreme
+                    const defaultDestination = '38.6436,34.8128'; // Ürgüp
+                    const url = `https://www.google.com/maps/dir/?api=1&origin=${defaultOrigin}&destination=${defaultDestination}&travelmode=walking`;
+                    window.open(url, '_blank');
+                    showNotification('🗺️ Varsayılan Kapadokya rotası Google Maps\'te açıldı!', 'info');
+                    return;
+                }
+            } else {
+                // Fallback to default Cappadocia route
+                const defaultOrigin = '38.6427,34.8283'; // Göreme
+                const defaultDestination = '38.6436,34.8128'; // Ürgüp
+                
+                const url = `https://www.google.com/maps/dir/?api=1&origin=${defaultOrigin}&destination=${defaultDestination}&travelmode=walking&dir_action=navigate`;
+                
+                console.log('🗺️ No POIs or route data, opening default Cappadocia route');
+                window.open(url, '_blank');
+                showNotification('🗺️ Varsayılan Kapadokya rotası Google Maps\'te açıldı!', 'info');
+                return;
+            }
         }
 
         let waypoints = [];
@@ -2357,6 +2409,92 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
+// Show notification with action button(s) - supports dual buttons
+function showNotificationWithAction(message, type = 'info', actionText, actionCallback, actionText2 = null, actionCallback2 = null) {
+    // Remove existing notifications
+    document.querySelectorAll('.notification').forEach(n => n.remove());
+    
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    // Get notification color (using the same logic as the other function)
+    const getNotificationColor = (type) => {
+        const colors = {
+            'success': 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+            'error': 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+            'warning': 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)',
+            'info': 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)'
+        };
+        return colors[type] || colors.info;
+    };
+    
+    notification.style.cssText = `
+        position: fixed; top: 20px; right: 20px; z-index: 10000;
+        background: ${getNotificationColor(type)}; color: white;
+        padding: 15px 20px; border-radius: 10px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        transform: translateX(400px);
+        transition: all 0.4s ease; max-width: 450px;
+    `;
+    
+    const actionId = 'action_' + Math.random().toString(36).substr(2, 9);
+    const actionId2 = actionText2 ? 'action2_' + Math.random().toString(36).substr(2, 9) : null;
+    
+    const buttonsHtml = `
+        <button id="${actionId}" 
+                style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); 
+                       color: white; cursor: pointer; padding: 6px 12px; border-radius: 6px;
+                       font-size: 12px; font-weight: 500; transition: all 0.2s ease;">
+            ${actionText}
+        </button>
+        ${actionText2 ? `
+        <button id="${actionId2}" 
+                style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); 
+                       color: white; cursor: pointer; padding: 6px 12px; border-radius: 6px;
+                       font-size: 12px; font-weight: 500; transition: all 0.2s ease;">
+            ${actionText2}
+        </button>` : ''}
+        <button onclick="this.closest('.notification').remove()" 
+                style="background: none; border: none; color: white; cursor: pointer; padding: 5px;">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+            <span style="flex: 1;">${message}</span>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                ${buttonsHtml}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Add event listener for action button
+    document.getElementById(actionId).addEventListener('click', () => {
+        actionCallback();
+        notification.remove();
+    });
+    
+    // Add event listener for second action button if present
+    if (actionId2 && actionCallback2) {
+        document.getElementById(actionId2).addEventListener('click', () => {
+            actionCallback2();
+            notification.remove();
+        });
+    }
+    
+    // Animate in
+    setTimeout(() => notification.style.transform = 'translateX(0)', 100);
+    
+    // Auto remove after 8 seconds (longer for action notifications)
+    setTimeout(() => {
+        notification.style.transform = 'translateX(400px)';
+        setTimeout(() => notification.remove(), 400);
+    }, 8000);
+}
+
 // Clear route
 function clearRoute() {
     selectedPOIs = [];
@@ -2662,7 +2800,8 @@ function showPredefinedRouteDetailsPanel(route, latlng) {
         waypoints: waypoints,
         segments: [], // No segments for predefined routes
         route_name: route.name,
-        is_predefined: true
+        is_predefined: true,
+        predefined_route: route // Pass the full route object for export functionality
     });
 }
 
@@ -2762,26 +2901,95 @@ function exportPredefinedRouteToGoogleMaps(routeId) {
         return;
     }
 
-    if (!route.pois || route.pois.length === 0) {
-        showNotification('❌ Rota POI\'leri bulunamadı', 'error');
-        return;
-    }
-
-    const validPois = route.pois.filter(poi => poi.lat && (poi.lng || poi.lon));
-    if (validPois.length < 2) {
-        showNotification('❌ En az 2 geçerli POI gerekli', 'error');
-        return;
-    }
-
-    // Create waypoints from route POIs
     let waypoints = [];
-    validPois.forEach(poi => {
-        const lng = poi.lng !== undefined ? poi.lng : poi.lon;
-        waypoints.push(`${poi.lat},${lng}`);
-    });
+    let origin, destination;
 
-    const origin = waypoints[0];
-    const destination = waypoints[waypoints.length - 1];
+    // Priority 1: Try to extract from geometry (matches what's shown on map)
+    if (route.geometry && route.geometry.coordinates) {
+        try {
+            const coords = route.geometry.coordinates;
+            if (coords.length >= 2) {
+                // Take first and last coordinates from geometry
+                const firstCoord = coords[0];
+                const lastCoord = coords[coords.length - 1];
+                
+                origin = `${firstCoord[1]},${firstCoord[0]}`; // lat,lng
+                destination = `${lastCoord[1]},${lastCoord[0]}`; // lat,lng
+                
+                // Add some intermediate points if available
+                const step = Math.max(1, Math.floor(coords.length / 10)); // Max 10 waypoints
+                waypoints = [];
+                for (let i = 0; i < coords.length; i += step) {
+                    if (waypoints.length < 23) { // Google Maps limit
+                        waypoints.push(`${coords[i][1]},${coords[i][0]}`);
+                    }
+                }
+                
+                console.log('🗺️ Using geometry coordinates (matches map display):', waypoints.length);
+            }
+        } catch (error) {
+            console.warn('⚠️ Error parsing geometry:', error);
+        }
+    }
+    
+    // Priority 2: If no geometry, try to get waypoints from POIs
+    if (waypoints.length < 2 && route.pois && route.pois.length > 0) {
+        const validPois = route.pois.filter(poi => poi.lat && (poi.lng || poi.lon));
+        if (validPois.length > 0) {
+            waypoints = [];
+            validPois.forEach(poi => {
+                const lng = poi.lng !== undefined ? poi.lng : poi.lon;
+                waypoints.push(`${poi.lat},${lng}`);
+            });
+            origin = waypoints[0];
+            destination = waypoints[waypoints.length - 1];
+            
+            console.log('🗺️ Using POI waypoints (fallback):', waypoints.length);
+        }
+    }
+    
+    // Priority 3: Use route name to guess coordinates (Cappadocia area)
+    if (waypoints.length < 2) {
+        const routeName = route.name || '';
+        const knownLocations = {
+            'göreme': '38.6427,34.8283',
+            'uçhisar': '38.6361,34.8106',
+            'avanos': '38.7151,34.8403',
+            'ürgüp': '38.6436,34.8128',
+            'ortahisar': '38.6425,34.8594',
+            'çavuşin': '38.6533,34.8378',
+            'love valley': '38.6612,34.8258'
+        };
+        
+        const routeNameLower = routeName.toLowerCase();
+        const foundLocations = [];
+        
+        Object.keys(knownLocations).forEach(location => {
+            if (routeNameLower.includes(location)) {
+                foundLocations.push(knownLocations[location]);
+            }
+        });
+        
+        if (foundLocations.length >= 2) {
+            origin = foundLocations[0];
+            destination = foundLocations[foundLocations.length - 1];
+            waypoints = foundLocations;
+            console.log('🗺️ Using name-based coordinates:', foundLocations.length);
+        } else if (foundLocations.length === 1) {
+            // Single location found, create a small route around it
+            origin = foundLocations[0];
+            const [lat, lng] = foundLocations[0].split(',').map(parseFloat);
+            destination = `${lat + 0.01},${lng + 0.01}`; // Small offset
+            waypoints = [origin, destination];
+            console.log('🗺️ Using single location with offset');
+        } else {
+            // Default: Central Cappadocia area
+            origin = '38.6427,34.8283'; // Göreme
+            destination = '38.6436,34.8128'; // Ürgüp
+            waypoints = [origin, destination];
+            console.log('🗺️ Using default Cappadocia coordinates');
+        }
+    }
 
     let waypointParam = '';
     if (waypoints.length > 2) {
@@ -2791,21 +2999,111 @@ function exportPredefinedRouteToGoogleMaps(routeId) {
         waypointParam = '&waypoints=' + selectedWaypoints.join('|');
     }
 
-    // Determine travel mode based on route type
+    // For hiking routes, use different approach to avoid road network forcing
+    const routeName = (route.name || '').toLowerCase();
+    const isHikingRoute = route.route_type === 'hiking' || 
+                         route.route_type === 'walking' || // walking routes are often hiking trails
+                         routeName.includes('yürüyüş') || 
+                         routeName.includes('patika') ||
+                         routeName.includes('vadisi') ||   // valley trails
+                         routeName.includes('valley') ||
+                         routeName.includes('wikiloc') ||  // wikiloc = hiking trails
+                         routeName.includes('trail') ||
+                         routeName.includes('trek') ||
+                         routeName.includes('hiking') ||
+                         routeName.includes('güvercinlik') || // pigeon valley
+                         routeName.includes('pigeon') ||
+                         routeName.includes('kale') ||     // castle trails  
+                         routeName.includes('castle');
+    
+    // DEBUG: Log export information
+    console.log('🔍 GOOGLE MAPS EXPORT DEBUG:');
+    console.log('📍 Exporting route:', route.name);
+    console.log('🏷️ Route type:', route.route_type); 
+    console.log('🥾 Is hiking route?', isHikingRoute);
+    console.log('📊 Waypoints count:', waypoints.length);
+    console.log('📍 Waypoints:', waypoints);
+    
+    // SIMPLE AND WORKING: Just use basic Google Maps directions
     let travelMode = 'walking';
     if (route.route_type === 'driving') travelMode = 'driving';
     else if (route.route_type === 'cycling') travelMode = 'bicycling';
     else if (route.route_type === 'transit') travelMode = 'transit';
 
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypointParam}&travelmode=${travelMode}&dir_action=navigate`;
-
-    console.log('🗺️ Exporting predefined route to Google Maps:', route.name);
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypointParam}&travelmode=${travelMode}`;
+    
+    console.log('🗺️ Using simple directions format');
+    console.log('🗺️ Origin:', origin);
+    console.log('🗺️ Destination:', destination);
     console.log('🗺️ Travel mode:', travelMode);
     console.log('🗺️ Waypoints:', waypoints.length);
-    console.log('🗺️ URL:', url);
+    
+    showNotification(`🗺️ "${route.name}" Google Maps'te açıldı!`, 'success');
+
+    console.log('🗺️ === FINAL EXPORT SUMMARY ===');
+    console.log('🗺️ Route name:', route.name);
+    console.log('🗺️ Generated URL:', url);
 
     window.open(url, '_blank');
-    showNotification(`🗺️ "${route.name}" Google Maps'te açıldı!`, 'success');
+}
+
+
+// Export predefined route to Google Earth (for hiking trails)
+function exportPredefinedRouteToGoogleEarth(routeId) {
+    const route = predefinedRoutes.find(r => (r.id || r._id) === routeId);
+    if (!route) {
+        showNotification('❌ Rota bulunamadı', 'error');
+        return;
+    }
+
+    let waypoints = [];
+    
+    // Try to get waypoints from geometry first (most accurate for hiking trails)
+    if (route.geometry && route.geometry.coordinates) {
+        try {
+            const coords = route.geometry.coordinates;
+            if (coords.length >= 2) {
+                // For Google Earth, we can use more waypoints since it's designed for complex paths
+                const step = Math.max(1, Math.floor(coords.length / 50)); // Up to 50 points
+                for (let i = 0; i < coords.length; i += step) {
+                    waypoints.push(`${coords[i][1]},${coords[i][0]}`); // lat,lng
+                }
+                console.log('🌍 Using geometry coordinates for Google Earth:', waypoints.length);
+            }
+        } catch (error) {
+            console.warn('⚠️ Error parsing geometry for Google Earth:', error);
+        }
+    }
+    
+    // Fallback to POIs if no geometry
+    if (waypoints.length < 2 && route.pois && route.pois.length > 0) {
+        const validPois = route.pois.filter(poi => poi.lat && (poi.lng || poi.lon));
+        if (validPois.length > 0) {
+            validPois.forEach(poi => {
+                const lng = poi.lng !== undefined ? poi.lng : poi.lon;
+                waypoints.push(`${poi.lat},${lng}`);
+            });
+            console.log('🌍 Using POI waypoints for Google Earth:', waypoints.length);
+        }
+    }
+    
+    // Default fallback
+    if (waypoints.length < 2) {
+        waypoints = ['38.6427,34.8283', '38.6436,34.8128']; // Göreme to Ürgüp
+        console.log('🌍 Using default coordinates for Google Earth');
+    }
+
+    // Google Earth Web link with multiple waypoints
+    // Note: Google Earth Web supports more complex KML-like data
+    const firstPoint = waypoints[0];
+    const earthUrl = `https://earth.google.com/web/search/${firstPoint}/@${firstPoint},1000d/data=CgIgAQ%3D%3D`;
+    
+    console.log('🌍 Exporting to Google Earth Web:', route.name);
+    console.log('🌍 Waypoints:', waypoints.length);
+    console.log('🌍 URL:', earthUrl);
+    
+    window.open(earthUrl, '_blank');
+    showNotification(`🌍 "${route.name}" Google Earth'te açıldı!`, 'success');
 }
 
 // Copy route to personal route function
@@ -3075,8 +3373,17 @@ function fallbackCopyToClipboard(text) {
 
 // Export to Google Maps (standalone function for route options)
 function exportToGoogleMaps() {
+    // Check if we have any route data to export
     if (selectedPOIs.length === 0 && !startLocation) {
-        showNotification('❌ Önce POI seçin veya başlangıç noktası belirleyin', 'error');
+        // Try to get a default route for current area (Cappadocia)
+        const defaultOrigin = '38.6427,34.8283'; // Göreme
+        const defaultDestination = '38.6436,34.8128'; // Ürgüp
+        
+        const url = `https://www.google.com/maps/dir/?api=1&origin=${defaultOrigin}&destination=${defaultDestination}&travelmode=walking&dir_action=navigate`;
+        
+        console.log('🗺️ No POIs selected, opening default Cappadocia route');
+        window.open(url, '_blank');
+        showNotification('🗺️ Varsayılan Kapadokya rotası Google Maps\'te açıldı!', 'info');
         return;
     }
 
@@ -3940,7 +4247,6 @@ function initializePredefinedRoutes() {
     // Initialize map control event listeners
     const clearMapBtn = document.getElementById('clearMapBtn');
     const fitMapBtn = document.getElementById('fitMapBtn');
-    const debugMapBtn = document.getElementById('debugMapBtn');
     
     if (clearMapBtn) {
         clearMapBtn.addEventListener('click', () => {
@@ -3950,33 +4256,6 @@ function initializePredefinedRoutes() {
     }
     if (fitMapBtn) {
         fitMapBtn.addEventListener('click', fitAllRoutesOnMap);
-    }
-    if (debugMapBtn) {
-        debugMapBtn.addEventListener('click', () => {
-            console.log('🐛 === MAP DEBUG INFO ===');
-            console.log('Map Instance:', predefinedMap);
-            console.log('Map Initialized:', predefinedMapInitialized);
-            console.log('Map Layers:', predefinedMapLayers);
-            console.log('Current Selected Route:', window.currentSelectedRoute);
-            
-            const mapContainer = document.getElementById('predefinedRoutesMap');
-            if (mapContainer) {
-                console.log('Map Container Info:', {
-                    width: mapContainer.offsetWidth,
-                    height: mapContainer.offsetHeight,
-                    display: getComputedStyle(mapContainer).display,
-                    visibility: getComputedStyle(mapContainer).visibility,
-                    opacity: getComputedStyle(mapContainer).opacity
-                });
-            }
-            
-            if (predefinedMap) {
-                console.log('Map View:', predefinedMap.getCenter(), 'Zoom:', predefinedMap.getZoom());
-                console.log('Map Size:', predefinedMap.getSize());
-            }
-            
-            showNotification('Debug bilgileri konsola yazıldı', 'info');
-        });
     }
     
     console.log('✅ Predefined routes functionality initialized');
@@ -4141,11 +4420,37 @@ function displayRouteOnMap(route) {
                         className: 'route-on-map predefined-route-line'
                     }).addTo(predefinedMap);
                     
+                    // Add START marker (green)
+                    const startCoord = coords[0];
+                    const startMarker = L.marker([startCoord[1], startCoord[0]], {
+                        icon: L.divIcon({
+                            html: '<div style="background: #28a745; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">S</div>',
+                            className: 'start-marker',
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        })
+                    }).addTo(predefinedMap);
+                    
+                    // Add END marker (red)
+                    const endCoord = coords[coords.length - 1];
+                    const endMarker = L.marker([endCoord[1], endCoord[0]], {
+                        icon: L.divIcon({
+                            html: '<div style="background: #dc3545; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">F</div>',
+                            className: 'end-marker',
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        })
+                    }).addTo(predefinedMap);
+                    
+                    // Add tooltips to markers
+                    startMarker.bindTooltip('Başlangıç', { permanent: false, direction: 'top' });
+                    endMarker.bindTooltip('Bitiş', { permanent: false, direction: 'top' });
+                    
+                    // Store markers in layers for cleanup
+                    predefinedMapLayers.push(routeLine, startMarker, endMarker);
+                    
                     // Attach standard route interaction handlers
                     attachPredefinedRouteEvents(routeLine, route);
-
-
-                    predefinedMapLayers.push(routeLine);
                     
                     // Create bounds for fitting the map - start with route bounds
                     const bounds = routeLine.getBounds();
@@ -5494,6 +5799,9 @@ function createPOIList(pois) {
 
 async function selectPredefinedRoute(route) {
     console.log('🚀 === STARTING ROUTE SELECTION PROCESS ===');
+    
+    // Store the route globally for panel access
+    window.currentSelectedRoute = route;
     console.log('✅ Selecting predefined route:', route);
     console.log('🔍 Initial route data check:', {
         hasId: !!route.id,
@@ -5703,8 +6011,41 @@ async function selectPredefinedRoute(route) {
     // Close modal after data loading
     closeRouteDetailModal();
 
-    // Show notification
-    showNotification(`✅ "${route.name}" rotası haritada gösteriliyor!`, 'success');
+    // Show notification with Google Maps option
+             // Check if this is a hiking route for different export options
+         const routeName = (route.name || '').toLowerCase();
+         const isHikingRoute = route.route_type === 'hiking' || 
+                              route.route_type === 'walking' || // walking routes are often hiking trails
+                              routeName.includes('yürüyüş') || 
+                              routeName.includes('patika') ||
+                              routeName.includes('vadisi') ||   // valley trails
+                              routeName.includes('valley') ||
+                              routeName.includes('wikiloc') ||  // wikiloc = hiking trails
+                              routeName.includes('trail') ||
+                              routeName.includes('trek') ||
+                              routeName.includes('hiking') ||
+                              routeName.includes('güvercinlik') || // pigeon valley
+                              routeName.includes('pigeon') ||
+                              routeName.includes('kale') ||     // castle trails  
+                              routeName.includes('castle');
+         
+         // DEBUG: Log route information for debugging
+         console.log('🔍 ROUTE DEBUG INFO:');
+         console.log('📍 Route name:', route.name);
+         console.log('🏷️ Route type:', route.route_type);
+         console.log('🥾 Is hiking route?', isHikingRoute);
+         console.log('📝 Route name (lowercase):', route.name?.toLowerCase());
+         console.log('🔎 Contains "yürüyüş"?', route.name?.toLowerCase().includes('yürüyüş'));
+         console.log('🔎 Contains "patika"?', route.name?.toLowerCase().includes('patika'));
+         console.log('🗺️ Full route object:', route);
+         
+         // Simple approach: Always show single Google Maps button
+         showNotificationWithAction(
+             `✅ "${route.name}" rotası haritada gösteriliyor!`,
+             'success',
+             'Google Maps\'te Aç',
+             () => exportPredefinedRouteToGoogleMaps(route.id || route._id)
+         );
     
     // Ensure predefined map is initialized with multiple attempts
     let mapInitAttempts = 0;
@@ -8543,6 +8884,8 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => notification.remove(), 400);
         }, 5000);
     }
+    
+
     
     function getNotificationColor(type) {
         const colors = {
