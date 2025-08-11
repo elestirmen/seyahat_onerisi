@@ -5533,3 +5533,159 @@ ute Preview Map Styles */
     margin-right: 6px;
     animation: spin 1s linear infinite;
 }
+
+/* Route Options Popup Styles */
+.route-options-popup .leaflet-popup-content-wrapper {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border: none;
+    padding: 0;
+    overflow: hidden;
+}
+
+.route-options-popup .leaflet-popup-content {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.route-options-popup .leaflet-popup-close-button {
+    color: #666;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 8px;
+    transition: all 0.2s ease;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.route-options-popup .leaflet-popup-close-button:hover {
+    background: #f8f9fa;
+    color: #333;
+    transform: scale(1.1);
+}
+
+.route-options-popup .leaflet-popup-tip {
+    background: white;
+    border: none;
+}
+
+/* Enhanced Start/End Marker Styles */
+.start-location-marker,
+.end-location-marker {
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+    transition: all 0.2s ease;
+}
+
+.start-location-marker:hover,
+.end-location-marker:hover {
+    transform: scale(1.1);
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.2));
+}
+
+/* Route Tooltip Styles */
+.route-tooltip {
+    background: rgba(0, 0, 0, 0.8) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.3px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.route-tooltip.leaflet-tooltip-top:before {
+    border-top-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.route-tooltip.leaflet-tooltip-bottom:before {
+    border-bottom-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.route-tooltip.leaflet-tooltip-left:before {
+    border-left-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.route-tooltip.leaflet-tooltip-right:before {
+    border-right-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Enhanced Route Line Styles */
+.walking-route,
+.simple-route-line {
+    transition: all 0.3s ease;
+}
+
+.walking-route:hover,
+.simple-route-line:hover {
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+    cursor: pointer;
+}
+
+/* Waypoint Marker Styles */
+.waypoint-marker {
+    transition: all 0.2s ease;
+}
+
+.waypoint-marker:hover {
+    transform: scale(1.2);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+/* Predefined Route Popup Styles */
+.predefined-route-popup .leaflet-popup-content-wrapper {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(44, 90, 160, 0.15);
+    border: 2px solid rgba(44, 90, 160, 0.1);
+    padding: 0;
+    overflow: hidden;
+}
+
+.predefined-route-popup .leaflet-popup-content {
+    margin: 0;
+    padding: 16px;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.predefined-route-popup .leaflet-popup-close-button {
+    color: #2c5aa0;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 10px;
+    transition: all 0.2s ease;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.predefined-route-popup .leaflet-popup-close-button:hover {
+    background: rgba(44, 90, 160, 0.1);
+    color: #1a4080;
+    transform: scale(1.1);
+}
+
+.predefined-route-popup .leaflet-popup-tip {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 2px solid rgba(44, 90, 160, 0.1);
+}
+
+/* Enhanced Predefined Route Line Styles */
+.predefined-route-line {
+    transition: all 0.3s ease;
+}
+
+.predefined-route-line:hover {
+    filter: drop-shadow(0 3px 8px rgba(44, 90, 160, 0.3));
+    cursor: pointer;
+}
