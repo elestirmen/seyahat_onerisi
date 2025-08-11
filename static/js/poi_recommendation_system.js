@@ -4077,6 +4077,7 @@ function displayRouteOnMap(route) {
                     // Attach standard route interaction handlers
                     attachPredefinedRouteEvents(routeLine, route);
 
+
                     predefinedMapLayers.push(routeLine);
                     
                     // Create bounds for fitting the map - start with route bounds
@@ -4246,6 +4247,7 @@ function displayRouteOnMap(route) {
 
                     // Attach standard route interaction handlers
                     attachPredefinedRouteEvents(routeLine, route);
+
 
                     predefinedMapLayers.push(routeLine);
 
@@ -4674,6 +4676,7 @@ function displayRouteOnMapFallback(route) {
 
                     // Attach standard route interaction handlers
                     attachPredefinedRouteEvents(routeLine, route);
+
 
                     predefinedMapLayers.push(routeLine);
                     console.log('✅ Fallback connecting line added');
