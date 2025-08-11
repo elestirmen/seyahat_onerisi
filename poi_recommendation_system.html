@@ -277,9 +277,31 @@
                         <p class="loading__text">Hazır rotalar yükleniyor...</p>
                     </div>
 
-                    <!-- Routes List -->
-                    <div id="predefinedRoutesList" class="predefined-routes-list">
-                        <!-- Routes will be loaded here dynamically -->
+                    <!-- Map and Routes Container -->
+                    <div class="routes-map-container">
+                        <!-- Map Container -->
+                        <div class="predefined-map-container">
+                            <div id="predefinedRoutesMap" class="predefined-routes-map">
+                                <div class="map-loading" id="predefinedMapLoading">
+                                    <div class="loading__spinner"></div>
+                                    <p class="loading__text">Harita yükleniyor...</p>
+                                </div>
+                            </div>
+                            <!-- Map Controls -->
+                            <div class="map-controls">
+                                <button class="map-control-btn" id="clearMapBtn" title="Haritayı Temizle">
+                                    <i class="fas fa-eraser"></i>
+                                </button>
+                                <button class="map-control-btn" id="fitMapBtn" title="Tüm Rotaları Göster">
+                                    <i class="fas fa-expand-arrows-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Routes List -->
+                        <div id="predefinedRoutesList" class="predefined-routes-list">
+                            <!-- Routes will be loaded here dynamically -->
+                        </div>
                     </div>
 
                     <!-- No Routes Message -->
