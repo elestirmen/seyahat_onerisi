@@ -519,15 +519,18 @@ class ElevationChart {
         
         const padding = 20;
         const chartWidth = rect.width - (padding * 2);
+        const chartHeight = rect.height - (padding * 2);
         
-        if (x < padding || x > rect.width - padding) return;
+        if (x < padding || x > rect.width - padding || y < padding || y > rect.height - padding) {
+            return;
+        }
 
-        // Calculate position along route
+        // Calculate position along route (X)
         const maxDistance = Math.max(...this.elevationData.map(d => d.distance));
         const relativeX = (x - padding) / chartWidth;
         const targetDistance = relativeX * maxDistance;
 
-        // Find closest point
+        // Find closest point to X position
         let closestPoint = null;
         let minDiff = Infinity;
         
@@ -539,8 +542,15 @@ class ElevationChart {
             }
         });
 
+        // Use graph elevation at this X (nearest point on the polyline)
+        const cursorElevation = closestPoint ? Math.round(closestPoint.elevation) : null;
+
+        // Redraw chart base and draw crosshair overlay with inline label pinned to graph line
+        this.updateChart();
+        this.drawCrosshair(x, cursorElevation);
+
         if (closestPoint) {
-            this.showTooltip(e.clientX, e.clientY, closestPoint);
+            this.showTooltip(e.clientX, e.clientY, closestPoint, cursorElevation);
             this.updateMapMarker(closestPoint);
         }
     }
@@ -549,6 +559,8 @@ class ElevationChart {
         this.isMouseOver = false;
         this.hideTooltip();
         this.removeMapMarker();
+        // Clear overlays by redrawing chart
+        this.updateChart();
     }
 
     handleClick(e) {
@@ -597,18 +609,91 @@ class ElevationChart {
         }
     }
 
-    showTooltip(x, y, point) {
+    showTooltip(x, y, point, cursorElevation) {
         const tooltip = document.getElementById('elevationTooltip');
         if (!tooltip) return;
 
+        const cursorLine = typeof cursorElevation === 'number' 
+            ? `<br><span style="opacity:.8">İmleç: ${cursorElevation}m</span>` 
+            : '';
         const content = point.poi 
-            ? `<strong>${point.poi.name}</strong><br>Yükseklik: ${point.elevation}m<br>Mesafe: ${point.distance.toFixed(1)}km`
-            : `Yükseklik: ${point.elevation}m<br>Mesafe: ${point.distance.toFixed(1)}km`;
+            ? `<strong>${point.poi.name}</strong><br>Yükseklik: ${point.elevation}m<br>Mesafe: ${point.distance.toFixed(1)}km${cursorLine}`
+            : `Yükseklik: ${point.elevation}m<br>Mesafe: ${point.distance.toFixed(1)}km${cursorLine}`;
 
         tooltip.innerHTML = content;
         tooltip.style.left = `${x + 10}px`;
         tooltip.style.top = `${y - 10}px`;
         tooltip.classList.add('show');
+    }
+
+    drawCrosshair(x, cursorElevation) {
+        const rect = this.canvas.getBoundingClientRect();
+        const padding = 20;
+        const ctx = this.ctx;
+        ctx.save();
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        // Vertical line
+        ctx.beginPath();
+        ctx.moveTo(x, padding);
+        ctx.lineTo(x, rect.height - padding);
+        ctx.stroke();
+        // Horizontal line aligned with graph elevation (if available)
+        let yGraph = null;
+        if (typeof cursorElevation === 'number') {
+            const elevations = this.elevationData.map(d => d.elevation);
+            const minElevation = Math.min(...elevations);
+            const maxElevation = Math.max(...elevations);
+            const elevationRange = Math.max(1, maxElevation - minElevation);
+            const chartHeight = rect.height - (padding * 2);
+            yGraph = rect.height - padding - ((cursorElevation - minElevation) / elevationRange) * chartHeight;
+            ctx.beginPath();
+            ctx.moveTo(padding, yGraph);
+            ctx.lineTo(rect.width - padding, yGraph);
+            ctx.stroke();
+        }
+
+        // Inline elevation label next to cursor (always over the graph)
+        if (typeof cursorElevation === 'number') {
+            const label = `${cursorElevation} m`;
+            ctx.setLineDash([]);
+            ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            const textMetrics = ctx.measureText(label);
+            const textWidth = Math.ceil(textMetrics.width);
+            const textHeight = 16; // approx
+            const boxPaddingX = 6;
+            const boxPaddingY = 4;
+            let boxX = x + 8;
+            const desiredY = (yGraph !== null ? yGraph : rect.height / 2);
+            let boxY = desiredY - (textHeight + 8);
+            const boxW = textWidth + boxPaddingX * 2;
+            const boxH = textHeight + boxPaddingY * 2;
+
+            // Keep label inside chart area
+            if (boxX + boxW > rect.width - padding) boxX = x - boxW - 8;
+            if (boxX < padding) boxX = padding;
+            if (boxY < padding) boxY = desiredY + 8;
+            if (boxY + boxH > rect.height - padding) boxY = rect.height - padding - boxH;
+
+            // Draw background box with halo to stay visible over graph
+            ctx.shadowColor = 'rgba(0,0,0,0.35)';
+            ctx.shadowBlur = 6;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 2;
+            ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            ctx.fillRect(boxX, boxY, boxW, boxH);
+            ctx.shadowColor = 'transparent';
+            ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1);
+
+            // Draw text
+            ctx.fillStyle = '#ffffff';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(label, boxX + boxPaddingX, boxY + boxH / 2);
+        }
+        ctx.restore();
     }
 
     hideTooltip() {

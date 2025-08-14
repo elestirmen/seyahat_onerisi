@@ -22,9 +22,12 @@ class ElevationService:
             'min_lng': 34.7,
             'max_lng': 35.0
         }
-        # Real elevation provider config (optional)
-        self.elevation_provider = os.getenv('ELEVATION_PROVIDER', '').strip().lower()  # e.g., 'opentopodata'
-        self.elevation_dataset = os.getenv('ELEVATION_DATASET', 'srtm90m').strip().lower()  # e.g., 'srtm90m', 'eudem25m'
+        # Real elevation provider config (defaults enabled)
+        # Default to OpenTopoData + EU-DEM 25m unless explicitly disabled via env
+        env_provider = os.getenv('ELEVATION_PROVIDER', '').strip().lower()
+        env_dataset = os.getenv('ELEVATION_DATASET', '').strip().lower()
+        self.elevation_provider = env_provider if env_provider else 'opentopodata'
+        self.elevation_dataset = env_dataset if env_dataset else 'eudem25m'
         self.http_timeout_seconds = int(os.getenv('ELEVATION_HTTP_TIMEOUT', '10'))
         self.max_batch_size = 90  # keep URL size reasonable for GET
         self.request_backoff_seconds = 1
