@@ -58,7 +58,7 @@ def add_elevation_profile_column():
             # Add elevation_resolution column (meters between points)
             cur.execute("""
                 ALTER TABLE routes 
-                ADD COLUMN elevation_resolution INTEGER DEFAULT 100;
+                ADD COLUMN elevation_resolution INTEGER DEFAULT 10;
             """)
             print("✅ Added elevation_resolution column")
             

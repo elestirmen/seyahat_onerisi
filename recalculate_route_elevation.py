@@ -91,8 +91,8 @@ def recalculate_route_elevation(route_name_pattern=None):
                         
                         print(f"   📏 Total distance: {total_distance:.1f}m")
                         
-                        # Determine optimal resolution
-                        resolution = elevation_service.optimize_resolution_for_route(total_distance, len(coordinates))
+                        # Determine resolution (fixed ~10m)
+                        resolution = 10
                         print(f"   📊 Optimal resolution: {resolution}m")
                         
                         # Generate elevation profile from geometry
@@ -129,9 +129,8 @@ def recalculate_route_elevation(route_name_pattern=None):
                                 )
                                 total_distance += dist
                             
-                            resolution = elevation_service.optimize_resolution_for_route(
-                                total_distance, len(waypoints_for_elevation)
-                            )
+                            # Determine resolution (fixed ~10m)
+                            resolution = 10
                             
                             elevation_profile = elevation_service.generate_elevation_profile(
                                 waypoints_for_elevation, resolution

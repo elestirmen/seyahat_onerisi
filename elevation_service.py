@@ -22,6 +22,13 @@ class ElevationService:
             'min_lng': 34.7,
             'max_lng': 35.0
         }
+        # Real elevation provider config (optional)
+        self.elevation_provider = os.getenv('ELEVATION_PROVIDER', '').strip().lower()  # e.g., 'opentopodata'
+        self.elevation_dataset = os.getenv('ELEVATION_DATASET', 'srtm90m').strip().lower()  # e.g., 'srtm90m', 'eudem25m'
+        self.http_timeout_seconds = int(os.getenv('ELEVATION_HTTP_TIMEOUT', '10'))
+        self.max_batch_size = 90  # keep URL size reasonable for GET
+        self.request_backoff_seconds = 1
+        self.elevation_cache: Dict[str, float] = {}
         
         # Kapadokya bölgesi için gerçekçi elevation değerleri
         self.region_elevations = {
@@ -84,6 +91,74 @@ class ElevationService:
         
         # Kapadokya için makul sınırlar (800-1400m)
         return max(800, min(1400, round(estimated)))
+
+    def _cache_key(self, lat: float, lng: float) -> str:
+        # Round to 5 decimals (~1m precision) to improve cache hits
+        return f"{lat:.5f},{lng:.5f}"
+
+    def _fetch_elevations_opentopodata(self, points: List[Tuple[float, float]]) -> List[Optional[float]]:
+        if not points:
+            return []
+        results: List[Optional[float]] = []
+        base_url = f"https://api.opentopodata.org/v1/{self.elevation_dataset}"
+
+        # Process in chunks
+        for i in range(0, len(points), self.max_batch_size):
+            chunk = points[i:i + self.max_batch_size]
+            # Build locations param
+            locations = "|".join([f"{lat},{lng}" for lat, lng in chunk])
+            url = f"{base_url}?locations={locations}"
+            try:
+                resp = requests.get(url, timeout=self.http_timeout_seconds)
+                if resp.status_code == 429:
+                    time.sleep(self.request_backoff_seconds)
+                    resp = requests.get(url, timeout=self.http_timeout_seconds)
+                resp.raise_for_status()
+                data = resp.json()
+                chunk_results = []
+                for item in data.get('results', []):
+                    elevation = item.get('elevation')
+                    chunk_results.append(elevation if elevation is not None else None)
+                # If API returns fewer results than requested, pad None
+                while len(chunk_results) < len(chunk):
+                    chunk_results.append(None)
+                results.extend(chunk_results)
+            except Exception:
+                # On error, append None for this chunk
+                results.extend([None] * len(chunk))
+        return results
+
+    def _get_real_elevations(self, points: List[Tuple[float, float]]) -> List[float]:
+        """Fetch real elevations with caching and fallback to estimation when needed."""
+        elevations: List[float] = []
+        to_query: List[Tuple[int, float, float]] = []
+
+        # Prepare cache lookups
+        for idx, (lat, lng) in enumerate(points):
+            key = self._cache_key(lat, lng)
+            if key in self.elevation_cache:
+                elevations.append(self.elevation_cache[key])
+            else:
+                elevations.append(float('nan'))
+                to_query.append((idx, lat, lng))
+
+        # Query missing ones via provider
+        if to_query and self.elevation_provider == 'opentopodata':
+            query_points = [(lat, lng) for _, lat, lng in to_query]
+            fetch_results = self._fetch_elevations_opentopodata(query_points)
+            for (idx, lat, lng), elev in zip(to_query, fetch_results):
+                if elev is None:
+                    elev = self.get_estimated_elevation(lat, lng)
+                elevations[idx] = elev
+                self.elevation_cache[self._cache_key(lat, lng)] = elev
+
+        # Fallback if provider not configured
+        if any(math.isnan(v) for v in elevations):
+            for i, v in enumerate(elevations):
+                if math.isnan(v):
+                    lat, lng = points[i]
+                    elevations[i] = self.get_estimated_elevation(lat, lng)
+        return elevations
     
     def interpolate_points_along_route(self, waypoints: List[Dict], resolution_meters: int = 100) -> List[Dict]:
         """Rota boyunca belirtilen çözünürlükte noktalar oluşturur"""
@@ -192,6 +267,7 @@ class ElevationService:
         elevation_points = []
         total_distance = 0
         
+        included_points: List[Tuple[float, float]] = []
         for i, coord in enumerate(coordinates):
             lng, lat = coord[0], coord[1]  # GeoJSON format: [lng, lat]
             
@@ -212,15 +288,24 @@ class ElevationService:
             )
             
             if should_include:
-                elevation = self.get_estimated_elevation(lat, lng)
+                included_points.append((lat, lng))
                 elevation_points.append({
                     'lat': lat,
                     'lng': lng,
                     'distance': total_distance,
-                    'elevation': elevation,
+                    'elevation': None,  # fill below
                     'type': 'geometry_point',
-                    'name': f'Point {len(elevation_points) + 1}'
+                    'name': f'Point {len(included_points)}'
                 })
+
+        # Fill elevations using real provider if configured
+        if self.elevation_provider:
+            elevations = self._get_real_elevations(included_points)
+        else:
+            elevations = [self.get_estimated_elevation(lat, lng) for lat, lng in included_points]
+
+        for i, elev in enumerate(elevations):
+            elevation_points[i]['elevation'] = elev
         
         # İstatistikleri hesapla
         stats = self.calculate_elevation_stats(elevation_points)
@@ -250,6 +335,12 @@ class ElevationService:
         
         # Waypoint'ler arasında interpolasyon yap
         elevation_points = self.interpolate_points_along_route(waypoints, resolution_meters)
+        # Replace elevations with real data if provider configured
+        if self.elevation_provider and elevation_points:
+            pts = [(p['lat'], p['lng']) for p in elevation_points]
+            elevations = self._get_real_elevations(pts)
+            for i, elev in enumerate(elevations):
+                elevation_points[i]['elevation'] = elev
         
         # İstatistikleri hesapla
         stats = self.calculate_elevation_stats(elevation_points)
@@ -273,15 +364,9 @@ class ElevationService:
     
     def optimize_resolution_for_route(self, total_distance: float, waypoint_count: int) -> int:
         """Rota uzunluğuna göre optimal çözünürlük belirler"""
-        
-        if total_distance < 2000:  # 2km'den kısa
-            return 50   # 50m çözünürlük
-        elif total_distance < 10000:  # 10km'den kısa
-            return 100  # 100m çözünürlük
-        elif total_distance < 25000:  # 25km'den kısa
-            return 200  # 200m çözünürlük
-        else:  # Uzun rotalar
-            return 500  # 500m çözünürlük
+        # Tüm rotalar için ~10m örnekleme çözünürlüğü kullan
+        # Not: Çok uzun rotalarda performans gerekirse ayarlanabilir
+        return 10
 
 # Test fonksiyonu
 def test_elevation_service():

@@ -4714,8 +4714,8 @@ def confirm_route_import():
                                     )
                                     total_distance += dist
                                 
-                                # Determine optimal resolution
-                                resolution = elevation_service.optimize_resolution_for_route(total_distance, len(geometry_coords))
+                                # Determine resolution (fixed ~10m)
+                                resolution = 10
                                 
                                 # Generate elevation profile from geometry
                                 elevation_profile = elevation_service.generate_elevation_profile_from_geometry(
@@ -4742,8 +4742,8 @@ def confirm_route_import():
                                     )
                                     total_distance += dist
                                 
-                                # Determine optimal resolution
-                                resolution = elevation_service.optimize_resolution_for_route(total_distance, len(waypoints_for_elevation))
+                                # Determine resolution (fixed ~10m)
+                                resolution = 10
                                 
                                 # Generate elevation profile from waypoints
                                 elevation_profile = elevation_service.generate_elevation_profile(
