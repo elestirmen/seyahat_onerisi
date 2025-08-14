@@ -1,0 +1,1810 @@
+{
+  "total_files": 38,
+  "by_category": {
+    "web_ui": 3,
+    "authentication": 2,
+    "resources": 5,
+    "installation": 5,
+    "api": 2,
+    "troubleshooting": 5,
+    "implementation_reports": 6,
+    "hotfix_reports": 4,
+    "database": 2,
+    "production": 1,
+    "architecture": 1,
+    "routing": 2
+  },
+  "by_language": {
+    "tr": 14,
+    "en": 11,
+    "mixed": 13
+  },
+  "detailed_analysis": [
+    {
+      "filename": "ADMIN_PANEL_MIGRATION_GUIDE.md",
+      "title": "Admin Panel UI Improvement - Database Migration Guide",
+      "language": "en",
+      "category": "web_ui",
+      "content_length": 7478,
+      "main_topics": [
+        "Overview",
+        "Migration Components",
+        "Usage Instructions",
+        "Migration Safety Features",
+        "Post-Migration Verification",
+        "Integration with Existing System",
+        "Performance Considerations",
+        "Security Features",
+        "Monitoring and Maintenance",
+        "Troubleshooting"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Database setup content",
+        "Admin interface content"
+      ]
+    },
+    {
+      "filename": "ADMIN_PASSWORD_INFO.md",
+      "title": "POI Yönetim Sistemi - Admin Şifre Bilgileri",
+      "language": "tr",
+      "category": "authentication",
+      "content_length": 2972,
+      "main_topics": [
+        "🔐 Mevcut Admin Şifresi",
+        "📋 Şifre Özellikleri",
+        "🔧 Yapılandırma Dosyaları",
+        "🚀 Kullanım",
+        "🔄 Şifre Değiştirme",
+        "⚠️ Güvenlik Notları",
+        "🆘 Sorun Giderme"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": true,
+      "duplicate_content_indicators": []
+    },
+    {
+      "filename": "ADMIN_USER_GUIDE.md",
+      "title": "Admin User Guide - Predefined Routes System",
+      "language": "en",
+      "category": "web_ui",
+      "content_length": 10019,
+      "main_topics": [
+        "Table of Contents",
+        "Getting Started",
+        "Accessing the Admin Panel",
+        "Route Management",
+        "POI Association",
+        "Best Practices",
+        "Troubleshooting",
+        "Advanced Features",
+        "Security Notes",
+        "Conclusion"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": false,
+      "duplicate_content_indicators": [
+        "Admin interface content"
+      ]
+    },
+    {
+      "filename": "AUTHENTICATION_CONFIG.md",
+      "title": "POI Yönetim Sistemi - Kimlik Doğrulama Yapılandırması",
+      "language": "mixed",
+      "category": "authentication",
+      "content_length": 5018,
+      "main_topics": [
+        "Çevre Değişkenleri",
+        "Kurulum Adımları",
+        "Güvenlik Önerileri",
+        "Sorun Giderme",
+        "Güncelleme ve Bakım"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": []
+    },
+    {
+      "filename": "BRANCH_CHECK.md",
+      "title": "No title found",
+      "language": "tr",
+      "category": "resources",
+      "content_length": 104,
+      "main_topics": [],
+      "has_code_examples": false,
+      "has_installation_steps": false,
+      "has_api_docs": false,
+      "duplicate_content_indicators": []
+    },
+    {
+      "filename": "DATABASE_POI_SETUP_SUMMARY.md",
+      "title": "Veritabanından POI Çekme Kurulumu - Özet",
+      "language": "mixed",
+      "category": "installation",
+      "content_length": 2672,
+      "main_topics": [
+        "Mevcut Durum ✅",
+        "Test Adımları",
+        "Beklenen Sonuçlar",
+        "Sorun Giderme",
+        "Başarı Kriterleri",
+        "Sonraki Adımlar"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content"
+      ]
+    },
+    {
+      "filename": "DELETION_PROPOSAL.md",
+      "title": "DELETION PROPOSAL — ÖLÜ KOD TEMİZLİK ANALİZİ",
+      "language": "en",
+      "category": "resources",
+      "content_length": 7074,
+      "main_topics": [
+        "Özet",
+        "YÜKSEK RİSKSİZ SİLME ADAYLARI",
+        "ORTA RİSKLİ ADAYLAR (İNCELEME GEREKLİ)",
+        "KRİTİK KORUMA - DOKUNMAYİN",
+        "İMPORT GRAF ANALİZİ",
+        "GÜVENLE SİLİNEBİLECEKLER (PHASE 1)",
+        "SAFE_DELETE İŞLEMİ",
+        "RİSK DEĞERLENDİRMESİ",
+        "SONUÇ ve ÖNERİ"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content",
+        "Admin interface content"
+      ]
+    },
+    {
+      "filename": "FILE_UPLOAD_API_IMPLEMENTATION_SUMMARY.md",
+      "title": "File Upload API Implementation Summary",
+      "language": "en",
+      "category": "api",
+      "content_length": 10859,
+      "main_topics": [
+        "Overview",
+        "Implemented Components",
+        "Testing",
+        "Security Features",
+        "Performance Characteristics",
+        "Configuration",
+        "API Usage Examples",
+        "Files Created",
+        "Requirements Satisfied",
+        "Next Steps"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content"
+      ]
+    },
+    {
+      "filename": "HIZLI_BASLATMA.md",
+      "title": "⚡ Kapadokya POI Sistemi - Hızlı Başlatma",
+      "language": "tr",
+      "category": "installation",
+      "content_length": 6890,
+      "main_topics": [
+        "🎯 Hızlı Testler",
+        "❌ Hızlı Sorun Çözme",
+        "🔧 Geliştirici Modları",
+        "📋 Sistem Gereksinimleri Kontrolü",
+        "🚀 Önerilen Kurulum Sırası"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content"
+      ]
+    },
+    {
+      "filename": "HOTFIX_APPLIED.md",
+      "title": "HOTFIX UYGULANDI - Mevcut Fonksiyonalite Geri Yüklendi",
+      "language": "mixed",
+      "category": "troubleshooting",
+      "content_length": 3059,
+      "main_topics": [
+        "Yapılan Değişiklikler",
+        "Şu An Çalışan Durumlar",
+        "Test Edilmesi Gerekenler",
+        "Sonuç",
+        "Sonraki Adımlar",
+        "Acil Durum"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": false,
+      "duplicate_content_indicators": []
+    },
+    {
+      "filename": "HOTFIX_INSTRUCTIONS.md",
+      "title": "HOTFIX: Mevcut Fonksiyonaliteyi Geri Yükleme",
+      "language": "mixed",
+      "category": "troubleshooting",
+      "content_length": 2464,
+      "main_topics": [
+        "Sorun",
+        "Hızlı Çözüm",
+        "Uygulama Adımları",
+        "Test Etme",
+        "Uzun Vadeli Plan",
+        "Acil Uygulama"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": false,
+      "duplicate_content_indicators": []
+    },
+    {
+      "filename": "IMPLEMENTATION_SUMMARY.md",
+      "title": "Predefined Routes System - Implementation Summary",
+      "language": "en",
+      "category": "implementation_reports",
+      "content_length": 11888,
+      "main_topics": [
+        "🎯 Project Overview",
+        "✅ Completed Tasks",
+        "🏗️ System Architecture",
+        "🚀 Key Features Implemented",
+        "📊 Performance Improvements",
+        "🧪 Test Coverage",
+        "📚 Documentation Delivered",
+        "🔒 Security Implementation",
+        "🌟 System Compatibility",
+        "📈 Business Value Delivered"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content"
+      ]
+    },
+    {
+      "filename": "INSTALL.md",
+      "title": "🚀 Ürgüp POI Öneri Sistemi - Kurulum Kılavuzu",
+      "language": "tr",
+      "category": "installation",
+      "content_length": 6085,
+      "main_topics": [
+        "📋 Sistem Gereksinimleri",
+        "🔧 Adım Adım Kurulum",
+        "🔍 Kurulum Sorunları ve Çözümleri",
+        "🌐 Ağ Yapılandırması",
+        "📱 Mobil Test",
+        "🔄 Güncelleme",
+        "🚀 Production Deployment",
+        "📞 Destek"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content"
+      ]
+    },
+    {
+      "filename": "KURULUM_GUNCELLEME_NOTLARI.md",
+      "title": "📋 Kurulum Adımları Güncelleme Notları",
+      "language": "tr",
+      "category": "installation",
+      "content_length": 6913,
+      "main_topics": [
+        "🔄 Yapılan Güncellemeler",
+        "🚀 Yeni Özellikler",
+        "📋 Kurulum Seçenekleri",
+        "🧪 Test ve Doğrulama",
+        "⚠️ Yaygın Sorunlar ve Çözümler",
+        "🔄 Güncelleme Prosedürü",
+        "🗑️ Kaldırma İşlemi",
+        "📊 Kullanım İstatistikleri",
+        "🎯 Sonraki Adımlar",
+        "✅ Özet"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content"
+      ]
+    },
+    {
+      "filename": "KURULUM_REHBERI.md",
+      "title": "POI Yönetim Sistemi - Kurulum Rehberi",
+      "language": "tr",
+      "category": "installation",
+      "content_length": 8416,
+      "main_topics": [
+        "📋 Sistem Gereksinimleri",
+        "🗄️ Veritabanı Yapısı",
+        "🚀 Kurulum Adımları",
+        "🌐 Erişim",
+        "🔧 Yapılandırma",
+        "🔄 Yedekleme ve Geri Yükleme",
+        "🐛 Sorun Giderme",
+        "📊 Rating Sistemi",
+        "🔒 Güvenlik",
+        "📈 Performans Optimizasyonu"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content"
+      ]
+    },
+    {
+      "filename": "P1_SAFETY_NET_REPORT.md",
+      "title": "P1 — SAFETY NET FAZ RAPORU",
+      "language": "mixed",
+      "category": "hotfix_reports",
+      "content_length": 4821,
+      "main_topics": [
+        "Özet",
+        "Tamamlanan Görevler",
+        "Test Sonuçları",
+        "Oluşturulan Artefaktlar",
+        "Güvenlik Önlemleri",
+        "Risklere Karşı Koruma",
+        "Bir Sonraki Faz Hazırlığı",
+        "ONAY GEREKİYOR"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content"
+      ]
+    },
+    {
+      "filename": "P2_APP_FACTORY_REPORT.md",
+      "title": "P2 — APP FACTORY FAZ RAPORU",
+      "language": "mixed",
+      "category": "hotfix_reports",
+      "content_length": 4906,
+      "main_topics": [
+        "Özet",
+        "Tamamlanan Görevler",
+        "Kod Değişiklikleri",
+        "Test Sonuçları",
+        "Kod İstatistikleri",
+        "Architecture Changes",
+        "Güvenlik ve Kalite",
+        "Riskler ve Azaltma",
+        "Bir Sonraki Faz Hazırlığı",
+        "ONAY GEREKİYOR"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content"
+      ]
+    },
+    {
+      "filename": "P3_DB_ERROR_REPORT.md",
+      "title": "P3 — DB & HATALAR FAZ RAPORU",
+      "language": "mixed",
+      "category": "database",
+      "content_length": 6283,
+      "main_topics": [
+        "Özet",
+        "Tamamlanan Görevler",
+        "Kod Değişiklikleri",
+        "Architecture İyileştirmeleri",
+        "API İyileştirmeleri",
+        "Kod İstatistikleri",
+        "Test Sonuçları",
+        "Güvenlik ve Performans",
+        "Configuration Support",
+        "Riskler ve Azaltma"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content"
+      ]
+    },
+    {
+      "filename": "P4_SAFE_CLEANUP_REPORT.md",
+      "title": "P4 — SAFE CLEANUP FAZ RAPORU",
+      "language": "mixed",
+      "category": "hotfix_reports",
+      "content_length": 6399,
+      "main_topics": [
+        "Özet",
+        "Tamamlanan Görevler",
+        "Temizlik İstatistikleri",
+        "Restore Mekanizması Test",
+        "Risk Analizi ve Güvenlik",
+        "Kod Kalitesi İyileştirmesi",
+        "Contract Koruması",
+        "Monitoring ve İzleme",
+        "Bir Sonraki Faz Hazırlığı",
+        "SONUÇ"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": true,
+      "duplicate_content_indicators": []
+    },
+    {
+      "filename": "P5_POI_MODULE_REPORT.md",
+      "title": "P5 — POI MODÜLÜ FAZ RAPORU",
+      "language": "en",
+      "category": "hotfix_reports",
+      "content_length": 8812,
+      "main_topics": [
+        "Özet",
+        "Tamamlanan Görevler",
+        "Kod Değişiklikleri",
+        "Architecture İyileştirmesi",
+        "Modülerleştirilen Endpoint'ler",
+        "Service Layer Özellikleri",
+        "Compatibility & Contract",
+        "Test Sonuçları",
+        "Performans ve Kalite",
+        "Risk Değerlendirmesi"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content"
+      ]
+    },
+    {
+      "filename": "POI_ASSOCIATION_DEBUG_GUIDE.md",
+      "title": "POI İlişkilendirme Debug Rehberi",
+      "language": "mixed",
+      "category": "troubleshooting",
+      "content_length": 2487,
+      "main_topics": [
+        "Sorun",
+        "Debug Adımları",
+        "Olası Sorunlar ve Çözümler",
+        "Test Senaryosu",
+        "Beklenen Davranış"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": true,
+      "duplicate_content_indicators": []
+    },
+    {
+      "filename": "POI_ASSOCIATION_FIX_SUMMARY.md",
+      "title": "POI İlişkilendirme Sorunu Çözümü",
+      "language": "tr",
+      "category": "troubleshooting",
+      "content_length": 2361,
+      "main_topics": [
+        "Sorunun Kök Nedeni",
+        "Uygulanan Çözüm",
+        "Kullanım Adımları",
+        "Beklenen Sonuç",
+        "Debug İpuçları",
+        "Alternatif Çözümler"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content"
+      ]
+    },
+    {
+      "filename": "poi_database_design.md",
+      "title": "POI Veritabanı Tasarım Önerisi",
+      "language": "mixed",
+      "category": "database",
+      "content_length": 9752,
+      "main_topics": [
+        "Önerilen Veritabanı: PostgreSQL + PostGIS",
+        "Python Entegrasyonu",
+        "Alternatif: MongoDB Tasarımı",
+        "Görüntü ve 3D Model Saklama Stratejileri",
+        "Performans İpuçları"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": []
+    },
+    {
+      "filename": "POI_SUGGESTION_IMPLEMENTATION_SUMMARY.md",
+      "title": "POI Suggestion Algorithm Backend Implementation Summary",
+      "language": "en",
+      "category": "implementation_reports",
+      "content_length": 8017,
+      "main_topics": [
+        "Overview",
+        "Implementation Details",
+        "Testing",
+        "Performance Considerations",
+        "Requirements Compliance",
+        "Usage Examples",
+        "Future Enhancements",
+        "Conclusion"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content",
+        "Admin interface content"
+      ]
+    },
+    {
+      "filename": "POI_YONETIM_REHBERI.md",
+      "title": "🗺️ POI Yönetim Sistemi - Kurulum ve Kullanım Rehberi",
+      "language": "tr",
+      "category": "web_ui",
+      "content_length": 14111,
+      "main_topics": [
+        "ℹ️ Mevcut Durum",
+        "📋 İçindekiler",
+        "🔧 Sistem Gereksinimleri",
+        "⚡ Hızlı Kurulum",
+        "⚙️ Detaylı Kurulum",
+        "🗄️ Veritabanı Kurulumu",
+        "🚀 API Başlatma",
+        "🖥️ Web Arayüzü Kullanımı",
+        "🛣️ Rota Planlama",
+        "✨ Özellikler"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content"
+      ]
+    },
+    {
+      "filename": "PREDEFINED_ROUTES_API_DOCUMENTATION.md",
+      "title": "Predefined Routes System API Documentation",
+      "language": "en",
+      "category": "api",
+      "content_length": 12378,
+      "main_topics": [
+        "Overview",
+        "Table of Contents",
+        "Authentication",
+        "Public API Endpoints",
+        "Admin API Endpoints",
+        "Data Models",
+        "Error Handling",
+        "Rate Limiting",
+        "Performance Features",
+        "Usage Examples"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content"
+      ]
+    },
+    {
+      "filename": "PRODUCTION_READINESS_CHECKLIST.md",
+      "title": "Production Readiness Checklist - Predefined Routes System",
+      "language": "en",
+      "category": "production",
+      "content_length": 9920,
+      "main_topics": [
+        "Overview",
+        "✅ Pre-Deployment Checklist",
+        "🚀 Deployment Checklist",
+        "🧪 Testing Procedures",
+        "📊 Performance Benchmarks",
+        "🔧 Configuration Verification",
+        "🚨 Rollback Plan",
+        "📋 Go-Live Checklist",
+        "📞 Support Information",
+        "✅ Sign-Off"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content",
+        "Admin interface content"
+      ]
+    },
+    {
+      "filename": "PROJE_MIMARISI.md",
+      "title": "Proje Mimarisi ve Veritabanı Yapısı",
+      "language": "tr",
+      "category": "architecture",
+      "content_length": 5293,
+      "main_topics": [
+        "1. Genel Akış",
+        "2. Veritabanı Şeması",
+        "3. Önemli Python Dosyaları",
+        "4. Başlangıç ve Kurulum",
+        "5. Yeni Özellikler",
+        "6. API Endpoints (Güncel)",
+        "7. Ek Bilgiler"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content"
+      ]
+    },
+    {
+      "filename": "README.md",
+      "title": "🗺️ Ürgüp POI Öneri Sistemi",
+      "language": "tr",
+      "category": "resources",
+      "content_length": 7270,
+      "main_topics": [
+        "✨ Özellikler",
+        "🚀 Kurulum",
+        "📊 Veri Yapısı",
+        "🎛️ Kullanım Kılavuzu",
+        "🔧 Özelleştirme",
+        "🚀 Performans Optimizasyonları",
+        "🔒 Güvenlik",
+        "🐛 Sorun Giderme",
+        "📈 Gelecek Geliştirmeler",
+        "🤝 Katkıda Bulunma"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Admin interface content"
+      ]
+    },
+    {
+      "filename": "RESIZABLE_MAP_IMPLEMENTATION.md",
+      "title": "Resizable Map Implementation",
+      "language": "tr",
+      "category": "implementation_reports",
+      "content_length": 3183,
+      "main_topics": [
+        "Yapılan İyileştirmeler",
+        "Özellikler",
+        "Kullanım",
+        "Teknik Detaylar",
+        "Test Edilmesi Gerekenler",
+        "Gelecek İyileştirmeler",
+        "Performans Notları"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": false,
+      "duplicate_content_indicators": []
+    },
+    {
+      "filename": "ROTA_OLUSTURMA_HATASI_DUZELTME_RAPORU.md",
+      "title": "Rota Oluşturma Hatası Düzeltme Raporu",
+      "language": "tr",
+      "category": "routing",
+      "content_length": 4274,
+      "main_topics": [
+        "Problem Tanımı",
+        "Tespit Edilen Ana Problemler",
+        "Uygulanan Çözümler",
+        "Sonuçlar ve Doğrulamalar",
+        "Kullanım Önerileri",
+        "Gelecekteki Geliştirme Önerileri",
+        "Özet"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content"
+      ]
+    },
+    {
+      "filename": "ROUTE_FOCUS_IMPLEMENTATION.md",
+      "title": "Route Focus Implementation",
+      "language": "mixed",
+      "category": "implementation_reports",
+      "content_length": 4298,
+      "main_topics": [
+        "Yapılan İyileştirmeler",
+        "Yeni Fonksiyonlar",
+        "Kullanıcı Deneyimi İyileştirmeleri",
+        "Teknik Detaylar",
+        "Test Edilmesi Gerekenler",
+        "Gelecek İyileştirmeler"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": false,
+      "duplicate_content_indicators": []
+    },
+    {
+      "filename": "ROUTE_MANAGER_FIXES_SUMMARY.md",
+      "title": "Rota Yönetimi Düzeltmeleri",
+      "language": "tr",
+      "category": "troubleshooting",
+      "content_length": 2723,
+      "main_topics": [
+        "Sorunlar ve Çözümler",
+        "Yeni Özellikler",
+        "Teknik Değişiklikler",
+        "Test Edilmesi Gerekenler"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": true,
+      "duplicate_content_indicators": []
+    },
+    {
+      "filename": "ROUTE_MANAGER_UX_IMPROVEMENTS.md",
+      "title": "Route Manager UX İyileştirmeleri",
+      "language": "mixed",
+      "category": "routing",
+      "content_length": 2719,
+      "main_topics": [
+        "Yapılan İyileştirmeler",
+        "Kategori Simgeleri",
+        "Yeni Özellikler",
+        "Test Edilmesi Gerekenler",
+        "Sonraki Adımlar",
+        "Bilinen Sorunlar"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": false,
+      "duplicate_content_indicators": []
+    },
+    {
+      "filename": "ROUTE_PARSER_IMPLEMENTATION_SUMMARY.md",
+      "title": "Route File Parser Implementation Summary",
+      "language": "en",
+      "category": "implementation_reports",
+      "content_length": 7305,
+      "main_topics": [
+        "Overview",
+        "Implemented Components",
+        "Testing",
+        "Usage Examples",
+        "Files Created",
+        "Requirements Satisfied",
+        "Performance Characteristics",
+        "Next Steps",
+        "Compatibility",
+        "Conclusion"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Admin interface content"
+      ]
+    },
+    {
+      "filename": "TEST_SUMMARY.md",
+      "title": "Test Implementation Summary",
+      "language": "en",
+      "category": "implementation_reports",
+      "content_length": 6580,
+      "main_topics": [
+        "Overview",
+        "Test Coverage",
+        "Overall Test Statistics",
+        "Test Categories Covered",
+        "Requirements Compliance",
+        "Key Achievements",
+        "Test Execution",
+        "Conclusion"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content",
+        "Database setup content"
+      ]
+    },
+    {
+      "filename": "YEDEKLEME_REHBERI.md",
+      "title": "POI Yönetim Sistemi - Yedekleme ve Geri Yükleme Rehberi",
+      "language": "tr",
+      "category": "resources",
+      "content_length": 5820,
+      "main_topics": [
+        "🎯 Özellikler",
+        "📋 Gereksinimler",
+        "🚀 Hızlı Başlangıç",
+        "📁 Yedeklenen İçerik",
+        "🔧 Detaylı Kullanım",
+        "📊 Yedekleme Dosya Yapısı",
+        "🔒 Güvenlik Özellikleri",
+        "📝 Log Dosyaları",
+        "🚨 Sorun Giderme",
+        "🔄 Otomatik Yedekleme"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": true,
+      "has_api_docs": false,
+      "duplicate_content_indicators": [
+        "Database setup content"
+      ]
+    },
+    {
+      "filename": "RETENTION_POLICY.md",
+      "title": "SAFE_DELETE RETENTION POLICY",
+      "language": "mixed",
+      "category": "resources",
+      "content_length": 4473,
+      "main_topics": [
+        "Taşınan Dosyalar Özeti",
+        "Retention Timeline",
+        "Restore Prosedürü",
+        "İzleme ve Kontrol",
+        "Risk Değerlendirmesi",
+        "Kalıcı Silme Onayı"
+      ],
+      "has_code_examples": true,
+      "has_installation_steps": false,
+      "has_api_docs": true,
+      "duplicate_content_indicators": [
+        "Heavy API content"
+      ]
+    }
+  ],
+  "potential_duplicates": [
+    [
+      "P1_SAFETY_NET_REPORT.md",
+      "P2_APP_FACTORY_REPORT.md",
+      "hotfix_reports"
+    ],
+    [
+      "P1_SAFETY_NET_REPORT.md",
+      "P4_SAFE_CLEANUP_REPORT.md",
+      "hotfix_reports"
+    ],
+    [
+      "P1_SAFETY_NET_REPORT.md",
+      "P5_POI_MODULE_REPORT.md",
+      "hotfix_reports"
+    ],
+    [
+      "P2_APP_FACTORY_REPORT.md",
+      "P4_SAFE_CLEANUP_REPORT.md",
+      "hotfix_reports"
+    ],
+    [
+      "P2_APP_FACTORY_REPORT.md",
+      "P5_POI_MODULE_REPORT.md",
+      "hotfix_reports"
+    ],
+    [
+      "POI_SUGGESTION_IMPLEMENTATION_SUMMARY.md",
+      "ROUTE_PARSER_IMPLEMENTATION_SUMMARY.md",
+      "implementation_reports"
+    ],
+    [
+      "POI_SUGGESTION_IMPLEMENTATION_SUMMARY.md",
+      "TEST_SUMMARY.md",
+      "implementation_reports"
+    ],
+    [
+      "RESIZABLE_MAP_IMPLEMENTATION.md",
+      "ROUTE_FOCUS_IMPLEMENTATION.md",
+      "implementation_reports"
+    ]
+  ],
+  "category_details": {
+    "web_ui": [
+      {
+        "filename": "ADMIN_PANEL_MIGRATION_GUIDE.md",
+        "title": "Admin Panel UI Improvement - Database Migration Guide",
+        "language": "en",
+        "category": "web_ui",
+        "content_length": 7478,
+        "main_topics": [
+          "Overview",
+          "Migration Components",
+          "Usage Instructions",
+          "Migration Safety Features",
+          "Post-Migration Verification",
+          "Integration with Existing System",
+          "Performance Considerations",
+          "Security Features",
+          "Monitoring and Maintenance",
+          "Troubleshooting"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Database setup content",
+          "Admin interface content"
+        ]
+      },
+      {
+        "filename": "ADMIN_USER_GUIDE.md",
+        "title": "Admin User Guide - Predefined Routes System",
+        "language": "en",
+        "category": "web_ui",
+        "content_length": 10019,
+        "main_topics": [
+          "Table of Contents",
+          "Getting Started",
+          "Accessing the Admin Panel",
+          "Route Management",
+          "POI Association",
+          "Best Practices",
+          "Troubleshooting",
+          "Advanced Features",
+          "Security Notes",
+          "Conclusion"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": false,
+        "duplicate_content_indicators": [
+          "Admin interface content"
+        ]
+      },
+      {
+        "filename": "POI_YONETIM_REHBERI.md",
+        "title": "🗺️ POI Yönetim Sistemi - Kurulum ve Kullanım Rehberi",
+        "language": "tr",
+        "category": "web_ui",
+        "content_length": 14111,
+        "main_topics": [
+          "ℹ️ Mevcut Durum",
+          "📋 İçindekiler",
+          "🔧 Sistem Gereksinimleri",
+          "⚡ Hızlı Kurulum",
+          "⚙️ Detaylı Kurulum",
+          "🗄️ Veritabanı Kurulumu",
+          "🚀 API Başlatma",
+          "🖥️ Web Arayüzü Kullanımı",
+          "🛣️ Rota Planlama",
+          "✨ Özellikler"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content"
+        ]
+      }
+    ],
+    "authentication": [
+      {
+        "filename": "ADMIN_PASSWORD_INFO.md",
+        "title": "POI Yönetim Sistemi - Admin Şifre Bilgileri",
+        "language": "tr",
+        "category": "authentication",
+        "content_length": 2972,
+        "main_topics": [
+          "🔐 Mevcut Admin Şifresi",
+          "📋 Şifre Özellikleri",
+          "🔧 Yapılandırma Dosyaları",
+          "🚀 Kullanım",
+          "🔄 Şifre Değiştirme",
+          "⚠️ Güvenlik Notları",
+          "🆘 Sorun Giderme"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": true,
+        "duplicate_content_indicators": []
+      },
+      {
+        "filename": "AUTHENTICATION_CONFIG.md",
+        "title": "POI Yönetim Sistemi - Kimlik Doğrulama Yapılandırması",
+        "language": "mixed",
+        "category": "authentication",
+        "content_length": 5018,
+        "main_topics": [
+          "Çevre Değişkenleri",
+          "Kurulum Adımları",
+          "Güvenlik Önerileri",
+          "Sorun Giderme",
+          "Güncelleme ve Bakım"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": []
+      }
+    ],
+    "resources": [
+      {
+        "filename": "BRANCH_CHECK.md",
+        "title": "No title found",
+        "language": "tr",
+        "category": "resources",
+        "content_length": 104,
+        "main_topics": [],
+        "has_code_examples": false,
+        "has_installation_steps": false,
+        "has_api_docs": false,
+        "duplicate_content_indicators": []
+      },
+      {
+        "filename": "DELETION_PROPOSAL.md",
+        "title": "DELETION PROPOSAL — ÖLÜ KOD TEMİZLİK ANALİZİ",
+        "language": "en",
+        "category": "resources",
+        "content_length": 7074,
+        "main_topics": [
+          "Özet",
+          "YÜKSEK RİSKSİZ SİLME ADAYLARI",
+          "ORTA RİSKLİ ADAYLAR (İNCELEME GEREKLİ)",
+          "KRİTİK KORUMA - DOKUNMAYİN",
+          "İMPORT GRAF ANALİZİ",
+          "GÜVENLE SİLİNEBİLECEKLER (PHASE 1)",
+          "SAFE_DELETE İŞLEMİ",
+          "RİSK DEĞERLENDİRMESİ",
+          "SONUÇ ve ÖNERİ"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content",
+          "Admin interface content"
+        ]
+      },
+      {
+        "filename": "README.md",
+        "title": "🗺️ Ürgüp POI Öneri Sistemi",
+        "language": "tr",
+        "category": "resources",
+        "content_length": 7270,
+        "main_topics": [
+          "✨ Özellikler",
+          "🚀 Kurulum",
+          "📊 Veri Yapısı",
+          "🎛️ Kullanım Kılavuzu",
+          "🔧 Özelleştirme",
+          "🚀 Performans Optimizasyonları",
+          "🔒 Güvenlik",
+          "🐛 Sorun Giderme",
+          "📈 Gelecek Geliştirmeler",
+          "🤝 Katkıda Bulunma"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Admin interface content"
+        ]
+      },
+      {
+        "filename": "YEDEKLEME_REHBERI.md",
+        "title": "POI Yönetim Sistemi - Yedekleme ve Geri Yükleme Rehberi",
+        "language": "tr",
+        "category": "resources",
+        "content_length": 5820,
+        "main_topics": [
+          "🎯 Özellikler",
+          "📋 Gereksinimler",
+          "🚀 Hızlı Başlangıç",
+          "📁 Yedeklenen İçerik",
+          "🔧 Detaylı Kullanım",
+          "📊 Yedekleme Dosya Yapısı",
+          "🔒 Güvenlik Özellikleri",
+          "📝 Log Dosyaları",
+          "🚨 Sorun Giderme",
+          "🔄 Otomatik Yedekleme"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": false,
+        "duplicate_content_indicators": [
+          "Database setup content"
+        ]
+      },
+      {
+        "filename": "RETENTION_POLICY.md",
+        "title": "SAFE_DELETE RETENTION POLICY",
+        "language": "mixed",
+        "category": "resources",
+        "content_length": 4473,
+        "main_topics": [
+          "Taşınan Dosyalar Özeti",
+          "Retention Timeline",
+          "Restore Prosedürü",
+          "İzleme ve Kontrol",
+          "Risk Değerlendirmesi",
+          "Kalıcı Silme Onayı"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content"
+        ]
+      }
+    ],
+    "installation": [
+      {
+        "filename": "DATABASE_POI_SETUP_SUMMARY.md",
+        "title": "Veritabanından POI Çekme Kurulumu - Özet",
+        "language": "mixed",
+        "category": "installation",
+        "content_length": 2672,
+        "main_topics": [
+          "Mevcut Durum ✅",
+          "Test Adımları",
+          "Beklenen Sonuçlar",
+          "Sorun Giderme",
+          "Başarı Kriterleri",
+          "Sonraki Adımlar"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content"
+        ]
+      },
+      {
+        "filename": "HIZLI_BASLATMA.md",
+        "title": "⚡ Kapadokya POI Sistemi - Hızlı Başlatma",
+        "language": "tr",
+        "category": "installation",
+        "content_length": 6890,
+        "main_topics": [
+          "🎯 Hızlı Testler",
+          "❌ Hızlı Sorun Çözme",
+          "🔧 Geliştirici Modları",
+          "📋 Sistem Gereksinimleri Kontrolü",
+          "🚀 Önerilen Kurulum Sırası"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content"
+        ]
+      },
+      {
+        "filename": "INSTALL.md",
+        "title": "🚀 Ürgüp POI Öneri Sistemi - Kurulum Kılavuzu",
+        "language": "tr",
+        "category": "installation",
+        "content_length": 6085,
+        "main_topics": [
+          "📋 Sistem Gereksinimleri",
+          "🔧 Adım Adım Kurulum",
+          "🔍 Kurulum Sorunları ve Çözümleri",
+          "🌐 Ağ Yapılandırması",
+          "📱 Mobil Test",
+          "🔄 Güncelleme",
+          "🚀 Production Deployment",
+          "📞 Destek"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content"
+        ]
+      },
+      {
+        "filename": "KURULUM_GUNCELLEME_NOTLARI.md",
+        "title": "📋 Kurulum Adımları Güncelleme Notları",
+        "language": "tr",
+        "category": "installation",
+        "content_length": 6913,
+        "main_topics": [
+          "🔄 Yapılan Güncellemeler",
+          "🚀 Yeni Özellikler",
+          "📋 Kurulum Seçenekleri",
+          "🧪 Test ve Doğrulama",
+          "⚠️ Yaygın Sorunlar ve Çözümler",
+          "🔄 Güncelleme Prosedürü",
+          "🗑️ Kaldırma İşlemi",
+          "📊 Kullanım İstatistikleri",
+          "🎯 Sonraki Adımlar",
+          "✅ Özet"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content"
+        ]
+      },
+      {
+        "filename": "KURULUM_REHBERI.md",
+        "title": "POI Yönetim Sistemi - Kurulum Rehberi",
+        "language": "tr",
+        "category": "installation",
+        "content_length": 8416,
+        "main_topics": [
+          "📋 Sistem Gereksinimleri",
+          "🗄️ Veritabanı Yapısı",
+          "🚀 Kurulum Adımları",
+          "🌐 Erişim",
+          "🔧 Yapılandırma",
+          "🔄 Yedekleme ve Geri Yükleme",
+          "🐛 Sorun Giderme",
+          "📊 Rating Sistemi",
+          "🔒 Güvenlik",
+          "📈 Performans Optimizasyonu"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content"
+        ]
+      }
+    ],
+    "api": [
+      {
+        "filename": "FILE_UPLOAD_API_IMPLEMENTATION_SUMMARY.md",
+        "title": "File Upload API Implementation Summary",
+        "language": "en",
+        "category": "api",
+        "content_length": 10859,
+        "main_topics": [
+          "Overview",
+          "Implemented Components",
+          "Testing",
+          "Security Features",
+          "Performance Characteristics",
+          "Configuration",
+          "API Usage Examples",
+          "Files Created",
+          "Requirements Satisfied",
+          "Next Steps"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content"
+        ]
+      },
+      {
+        "filename": "PREDEFINED_ROUTES_API_DOCUMENTATION.md",
+        "title": "Predefined Routes System API Documentation",
+        "language": "en",
+        "category": "api",
+        "content_length": 12378,
+        "main_topics": [
+          "Overview",
+          "Table of Contents",
+          "Authentication",
+          "Public API Endpoints",
+          "Admin API Endpoints",
+          "Data Models",
+          "Error Handling",
+          "Rate Limiting",
+          "Performance Features",
+          "Usage Examples"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content"
+        ]
+      }
+    ],
+    "troubleshooting": [
+      {
+        "filename": "HOTFIX_APPLIED.md",
+        "title": "HOTFIX UYGULANDI - Mevcut Fonksiyonalite Geri Yüklendi",
+        "language": "mixed",
+        "category": "troubleshooting",
+        "content_length": 3059,
+        "main_topics": [
+          "Yapılan Değişiklikler",
+          "Şu An Çalışan Durumlar",
+          "Test Edilmesi Gerekenler",
+          "Sonuç",
+          "Sonraki Adımlar",
+          "Acil Durum"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": false,
+        "duplicate_content_indicators": []
+      },
+      {
+        "filename": "HOTFIX_INSTRUCTIONS.md",
+        "title": "HOTFIX: Mevcut Fonksiyonaliteyi Geri Yükleme",
+        "language": "mixed",
+        "category": "troubleshooting",
+        "content_length": 2464,
+        "main_topics": [
+          "Sorun",
+          "Hızlı Çözüm",
+          "Uygulama Adımları",
+          "Test Etme",
+          "Uzun Vadeli Plan",
+          "Acil Uygulama"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": false,
+        "duplicate_content_indicators": []
+      },
+      {
+        "filename": "POI_ASSOCIATION_DEBUG_GUIDE.md",
+        "title": "POI İlişkilendirme Debug Rehberi",
+        "language": "mixed",
+        "category": "troubleshooting",
+        "content_length": 2487,
+        "main_topics": [
+          "Sorun",
+          "Debug Adımları",
+          "Olası Sorunlar ve Çözümler",
+          "Test Senaryosu",
+          "Beklenen Davranış"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": true,
+        "duplicate_content_indicators": []
+      },
+      {
+        "filename": "POI_ASSOCIATION_FIX_SUMMARY.md",
+        "title": "POI İlişkilendirme Sorunu Çözümü",
+        "language": "tr",
+        "category": "troubleshooting",
+        "content_length": 2361,
+        "main_topics": [
+          "Sorunun Kök Nedeni",
+          "Uygulanan Çözüm",
+          "Kullanım Adımları",
+          "Beklenen Sonuç",
+          "Debug İpuçları",
+          "Alternatif Çözümler"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content"
+        ]
+      },
+      {
+        "filename": "ROUTE_MANAGER_FIXES_SUMMARY.md",
+        "title": "Rota Yönetimi Düzeltmeleri",
+        "language": "tr",
+        "category": "troubleshooting",
+        "content_length": 2723,
+        "main_topics": [
+          "Sorunlar ve Çözümler",
+          "Yeni Özellikler",
+          "Teknik Değişiklikler",
+          "Test Edilmesi Gerekenler"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": []
+      }
+    ],
+    "implementation_reports": [
+      {
+        "filename": "IMPLEMENTATION_SUMMARY.md",
+        "title": "Predefined Routes System - Implementation Summary",
+        "language": "en",
+        "category": "implementation_reports",
+        "content_length": 11888,
+        "main_topics": [
+          "🎯 Project Overview",
+          "✅ Completed Tasks",
+          "🏗️ System Architecture",
+          "🚀 Key Features Implemented",
+          "📊 Performance Improvements",
+          "🧪 Test Coverage",
+          "📚 Documentation Delivered",
+          "🔒 Security Implementation",
+          "🌟 System Compatibility",
+          "📈 Business Value Delivered"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content"
+        ]
+      },
+      {
+        "filename": "POI_SUGGESTION_IMPLEMENTATION_SUMMARY.md",
+        "title": "POI Suggestion Algorithm Backend Implementation Summary",
+        "language": "en",
+        "category": "implementation_reports",
+        "content_length": 8017,
+        "main_topics": [
+          "Overview",
+          "Implementation Details",
+          "Testing",
+          "Performance Considerations",
+          "Requirements Compliance",
+          "Usage Examples",
+          "Future Enhancements",
+          "Conclusion"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content",
+          "Admin interface content"
+        ]
+      },
+      {
+        "filename": "RESIZABLE_MAP_IMPLEMENTATION.md",
+        "title": "Resizable Map Implementation",
+        "language": "tr",
+        "category": "implementation_reports",
+        "content_length": 3183,
+        "main_topics": [
+          "Yapılan İyileştirmeler",
+          "Özellikler",
+          "Kullanım",
+          "Teknik Detaylar",
+          "Test Edilmesi Gerekenler",
+          "Gelecek İyileştirmeler",
+          "Performans Notları"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": false,
+        "duplicate_content_indicators": []
+      },
+      {
+        "filename": "ROUTE_FOCUS_IMPLEMENTATION.md",
+        "title": "Route Focus Implementation",
+        "language": "mixed",
+        "category": "implementation_reports",
+        "content_length": 4298,
+        "main_topics": [
+          "Yapılan İyileştirmeler",
+          "Yeni Fonksiyonlar",
+          "Kullanıcı Deneyimi İyileştirmeleri",
+          "Teknik Detaylar",
+          "Test Edilmesi Gerekenler",
+          "Gelecek İyileştirmeler"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": false,
+        "duplicate_content_indicators": []
+      },
+      {
+        "filename": "ROUTE_PARSER_IMPLEMENTATION_SUMMARY.md",
+        "title": "Route File Parser Implementation Summary",
+        "language": "en",
+        "category": "implementation_reports",
+        "content_length": 7305,
+        "main_topics": [
+          "Overview",
+          "Implemented Components",
+          "Testing",
+          "Usage Examples",
+          "Files Created",
+          "Requirements Satisfied",
+          "Performance Characteristics",
+          "Next Steps",
+          "Compatibility",
+          "Conclusion"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Admin interface content"
+        ]
+      },
+      {
+        "filename": "TEST_SUMMARY.md",
+        "title": "Test Implementation Summary",
+        "language": "en",
+        "category": "implementation_reports",
+        "content_length": 6580,
+        "main_topics": [
+          "Overview",
+          "Test Coverage",
+          "Overall Test Statistics",
+          "Test Categories Covered",
+          "Requirements Compliance",
+          "Key Achievements",
+          "Test Execution",
+          "Conclusion"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content"
+        ]
+      }
+    ],
+    "hotfix_reports": [
+      {
+        "filename": "P1_SAFETY_NET_REPORT.md",
+        "title": "P1 — SAFETY NET FAZ RAPORU",
+        "language": "mixed",
+        "category": "hotfix_reports",
+        "content_length": 4821,
+        "main_topics": [
+          "Özet",
+          "Tamamlanan Görevler",
+          "Test Sonuçları",
+          "Oluşturulan Artefaktlar",
+          "Güvenlik Önlemleri",
+          "Risklere Karşı Koruma",
+          "Bir Sonraki Faz Hazırlığı",
+          "ONAY GEREKİYOR"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content"
+        ]
+      },
+      {
+        "filename": "P2_APP_FACTORY_REPORT.md",
+        "title": "P2 — APP FACTORY FAZ RAPORU",
+        "language": "mixed",
+        "category": "hotfix_reports",
+        "content_length": 4906,
+        "main_topics": [
+          "Özet",
+          "Tamamlanan Görevler",
+          "Kod Değişiklikleri",
+          "Test Sonuçları",
+          "Kod İstatistikleri",
+          "Architecture Changes",
+          "Güvenlik ve Kalite",
+          "Riskler ve Azaltma",
+          "Bir Sonraki Faz Hazırlığı",
+          "ONAY GEREKİYOR"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content"
+        ]
+      },
+      {
+        "filename": "P4_SAFE_CLEANUP_REPORT.md",
+        "title": "P4 — SAFE CLEANUP FAZ RAPORU",
+        "language": "mixed",
+        "category": "hotfix_reports",
+        "content_length": 6399,
+        "main_topics": [
+          "Özet",
+          "Tamamlanan Görevler",
+          "Temizlik İstatistikleri",
+          "Restore Mekanizması Test",
+          "Risk Analizi ve Güvenlik",
+          "Kod Kalitesi İyileştirmesi",
+          "Contract Koruması",
+          "Monitoring ve İzleme",
+          "Bir Sonraki Faz Hazırlığı",
+          "SONUÇ"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": true,
+        "duplicate_content_indicators": []
+      },
+      {
+        "filename": "P5_POI_MODULE_REPORT.md",
+        "title": "P5 — POI MODÜLÜ FAZ RAPORU",
+        "language": "en",
+        "category": "hotfix_reports",
+        "content_length": 8812,
+        "main_topics": [
+          "Özet",
+          "Tamamlanan Görevler",
+          "Kod Değişiklikleri",
+          "Architecture İyileştirmesi",
+          "Modülerleştirilen Endpoint'ler",
+          "Service Layer Özellikleri",
+          "Compatibility & Contract",
+          "Test Sonuçları",
+          "Performans ve Kalite",
+          "Risk Değerlendirmesi"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content"
+        ]
+      }
+    ],
+    "database": [
+      {
+        "filename": "P3_DB_ERROR_REPORT.md",
+        "title": "P3 — DB & HATALAR FAZ RAPORU",
+        "language": "mixed",
+        "category": "database",
+        "content_length": 6283,
+        "main_topics": [
+          "Özet",
+          "Tamamlanan Görevler",
+          "Kod Değişiklikleri",
+          "Architecture İyileştirmeleri",
+          "API İyileştirmeleri",
+          "Kod İstatistikleri",
+          "Test Sonuçları",
+          "Güvenlik ve Performans",
+          "Configuration Support",
+          "Riskler ve Azaltma"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content"
+        ]
+      },
+      {
+        "filename": "poi_database_design.md",
+        "title": "POI Veritabanı Tasarım Önerisi",
+        "language": "mixed",
+        "category": "database",
+        "content_length": 9752,
+        "main_topics": [
+          "Önerilen Veritabanı: PostgreSQL + PostGIS",
+          "Python Entegrasyonu",
+          "Alternatif: MongoDB Tasarımı",
+          "Görüntü ve 3D Model Saklama Stratejileri",
+          "Performans İpuçları"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": []
+      }
+    ],
+    "production": [
+      {
+        "filename": "PRODUCTION_READINESS_CHECKLIST.md",
+        "title": "Production Readiness Checklist - Predefined Routes System",
+        "language": "en",
+        "category": "production",
+        "content_length": 9920,
+        "main_topics": [
+          "Overview",
+          "✅ Pre-Deployment Checklist",
+          "🚀 Deployment Checklist",
+          "🧪 Testing Procedures",
+          "📊 Performance Benchmarks",
+          "🔧 Configuration Verification",
+          "🚨 Rollback Plan",
+          "📋 Go-Live Checklist",
+          "📞 Support Information",
+          "✅ Sign-Off"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content",
+          "Admin interface content"
+        ]
+      }
+    ],
+    "architecture": [
+      {
+        "filename": "PROJE_MIMARISI.md",
+        "title": "Proje Mimarisi ve Veritabanı Yapısı",
+        "language": "tr",
+        "category": "architecture",
+        "content_length": 5293,
+        "main_topics": [
+          "1. Genel Akış",
+          "2. Veritabanı Şeması",
+          "3. Önemli Python Dosyaları",
+          "4. Başlangıç ve Kurulum",
+          "5. Yeni Özellikler",
+          "6. API Endpoints (Güncel)",
+          "7. Ek Bilgiler"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content",
+          "Database setup content"
+        ]
+      }
+    ],
+    "routing": [
+      {
+        "filename": "ROTA_OLUSTURMA_HATASI_DUZELTME_RAPORU.md",
+        "title": "Rota Oluşturma Hatası Düzeltme Raporu",
+        "language": "tr",
+        "category": "routing",
+        "content_length": 4274,
+        "main_topics": [
+          "Problem Tanımı",
+          "Tespit Edilen Ana Problemler",
+          "Uygulanan Çözümler",
+          "Sonuçlar ve Doğrulamalar",
+          "Kullanım Önerileri",
+          "Gelecekteki Geliştirme Önerileri",
+          "Özet"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": true,
+        "has_api_docs": true,
+        "duplicate_content_indicators": [
+          "Heavy API content"
+        ]
+      },
+      {
+        "filename": "ROUTE_MANAGER_UX_IMPROVEMENTS.md",
+        "title": "Route Manager UX İyileştirmeleri",
+        "language": "mixed",
+        "category": "routing",
+        "content_length": 2719,
+        "main_topics": [
+          "Yapılan İyileştirmeler",
+          "Kategori Simgeleri",
+          "Yeni Özellikler",
+          "Test Edilmesi Gerekenler",
+          "Sonraki Adımlar",
+          "Bilinen Sorunlar"
+        ],
+        "has_code_examples": true,
+        "has_installation_steps": false,
+        "has_api_docs": false,
+        "duplicate_content_indicators": []
+      }
+    ]
+  }
+}

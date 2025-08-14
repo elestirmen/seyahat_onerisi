@@ -1,0 +1,230 @@
+{
+  "backup_date": "2025-08-14T23:23:45.226974",
+  "backup_reason": "Documentation consolidation - Task 6",
+  "consolidated_into": "COMPREHENSIVE_TUTORIAL.md",
+  "backed_up_files": [
+    {
+      "filename": "ADMIN_PANEL_MIGRATION_GUIDE.md",
+      "original_path": "./ADMIN_PANEL_MIGRATION_GUIDE.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/ADMIN_PANEL_MIGRATION_GUIDE.md",
+      "size_bytes": 7490
+    },
+    {
+      "filename": "ADMIN_PASSWORD_INFO.md",
+      "original_path": "./ADMIN_PASSWORD_INFO.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/ADMIN_PASSWORD_INFO.md",
+      "size_bytes": 3122
+    },
+    {
+      "filename": "ADMIN_USER_GUIDE.md",
+      "original_path": "./ADMIN_USER_GUIDE.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/ADMIN_USER_GUIDE.md",
+      "size_bytes": 10066
+    },
+    {
+      "filename": "AUTHENTICATION_CONFIG.md",
+      "original_path": "./AUTHENTICATION_CONFIG.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/AUTHENTICATION_CONFIG.md",
+      "size_bytes": 5303
+    },
+    {
+      "filename": "BRANCH_CHECK.md",
+      "original_path": "./BRANCH_CHECK.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/BRANCH_CHECK.md",
+      "size_bytes": 104
+    },
+    {
+      "filename": "DATABASE_POI_SETUP_SUMMARY.md",
+      "original_path": "./DATABASE_POI_SETUP_SUMMARY.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/DATABASE_POI_SETUP_SUMMARY.md",
+      "size_bytes": 2809
+    },
+    {
+      "filename": "DELETION_PROPOSAL.md",
+      "original_path": "./DELETION_PROPOSAL.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/DELETION_PROPOSAL.md",
+      "size_bytes": 7361
+    },
+    {
+      "filename": "FILE_UPLOAD_API_IMPLEMENTATION_SUMMARY.md",
+      "original_path": "./FILE_UPLOAD_API_IMPLEMENTATION_SUMMARY.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/FILE_UPLOAD_API_IMPLEMENTATION_SUMMARY.md",
+      "size_bytes": 10889
+    },
+    {
+      "filename": "HIZLI_BASLATMA.md",
+      "original_path": "./HIZLI_BASLATMA.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/HIZLI_BASLATMA.md",
+      "size_bytes": 7216
+    },
+    {
+      "filename": "HOTFIX_APPLIED.md",
+      "original_path": "./HOTFIX_APPLIED.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/HOTFIX_APPLIED.md",
+      "size_bytes": 3290
+    },
+    {
+      "filename": "HOTFIX_INSTRUCTIONS.md",
+      "original_path": "./HOTFIX_INSTRUCTIONS.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/HOTFIX_INSTRUCTIONS.md",
+      "size_bytes": 2575
+    },
+    {
+      "filename": "IMPLEMENTATION_SUMMARY.md",
+      "original_path": "./IMPLEMENTATION_SUMMARY.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/IMPLEMENTATION_SUMMARY.md",
+      "size_bytes": 12043
+    },
+    {
+      "filename": "INSTALL.md",
+      "original_path": "./INSTALL.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/INSTALL.md",
+      "size_bytes": 6524
+    },
+    {
+      "filename": "KURULUM_GUNCELLEME_NOTLARI.md",
+      "original_path": "./KURULUM_GUNCELLEME_NOTLARI.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/KURULUM_GUNCELLEME_NOTLARI.md",
+      "size_bytes": 7339
+    },
+    {
+      "filename": "KURULUM_REHBERI.md",
+      "original_path": "./KURULUM_REHBERI.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/KURULUM_REHBERI.md",
+      "size_bytes": 8647
+    },
+    {
+      "filename": "P1_SAFETY_NET_REPORT.md",
+      "original_path": "./P1_SAFETY_NET_REPORT.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/P1_SAFETY_NET_REPORT.md",
+      "size_bytes": 5237
+    },
+    {
+      "filename": "P2_APP_FACTORY_REPORT.md",
+      "original_path": "./P2_APP_FACTORY_REPORT.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/P2_APP_FACTORY_REPORT.md",
+      "size_bytes": 5210
+    },
+    {
+      "filename": "P3_DB_ERROR_REPORT.md",
+      "original_path": "./P3_DB_ERROR_REPORT.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/P3_DB_ERROR_REPORT.md",
+      "size_bytes": 6511
+    },
+    {
+      "filename": "P4_SAFE_CLEANUP_REPORT.md",
+      "original_path": "./P4_SAFE_CLEANUP_REPORT.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/P4_SAFE_CLEANUP_REPORT.md",
+      "size_bytes": 6863
+    },
+    {
+      "filename": "P5_POI_MODULE_REPORT.md",
+      "original_path": "./P5_POI_MODULE_REPORT.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/P5_POI_MODULE_REPORT.md",
+      "size_bytes": 9247
+    },
+    {
+      "filename": "POI_ASSOCIATION_DEBUG_GUIDE.md",
+      "original_path": "./POI_ASSOCIATION_DEBUG_GUIDE.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/POI_ASSOCIATION_DEBUG_GUIDE.md",
+      "size_bytes": 2611
+    },
+    {
+      "filename": "POI_ASSOCIATION_FIX_SUMMARY.md",
+      "original_path": "./POI_ASSOCIATION_FIX_SUMMARY.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/POI_ASSOCIATION_FIX_SUMMARY.md",
+      "size_bytes": 2495
+    },
+    {
+      "filename": "POI_SUGGESTION_IMPLEMENTATION_SUMMARY.md",
+      "original_path": "./POI_SUGGESTION_IMPLEMENTATION_SUMMARY.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/POI_SUGGESTION_IMPLEMENTATION_SUMMARY.md",
+      "size_bytes": 8061
+    },
+    {
+      "filename": "POI_YONETIM_REHBERI.md",
+      "original_path": "./POI_YONETIM_REHBERI.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/POI_YONETIM_REHBERI.md",
+      "size_bytes": 14961
+    },
+    {
+      "filename": "PREDEFINED_ROUTES_API_DOCUMENTATION.md",
+      "original_path": "./PREDEFINED_ROUTES_API_DOCUMENTATION.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/PREDEFINED_ROUTES_API_DOCUMENTATION.md",
+      "size_bytes": 12425
+    },
+    {
+      "filename": "PRODUCTION_READINESS_CHECKLIST.md",
+      "original_path": "./PRODUCTION_READINESS_CHECKLIST.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/PRODUCTION_READINESS_CHECKLIST.md",
+      "size_bytes": 9946
+    },
+    {
+      "filename": "PROJE_MIMARISI.md",
+      "original_path": "./PROJE_MIMARISI.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/PROJE_MIMARISI.md",
+      "size_bytes": 5538
+    },
+    {
+      "filename": "RESIZABLE_MAP_IMPLEMENTATION.md",
+      "original_path": "./RESIZABLE_MAP_IMPLEMENTATION.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/RESIZABLE_MAP_IMPLEMENTATION.md",
+      "size_bytes": 3372
+    },
+    {
+      "filename": "ROTA_OLUSTURMA_HATASI_DUZELTME_RAPORU.md",
+      "original_path": "./ROTA_OLUSTURMA_HATASI_DUZELTME_RAPORU.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/ROTA_OLUSTURMA_HATASI_DUZELTME_RAPORU.md",
+      "size_bytes": 4645
+    },
+    {
+      "filename": "ROUTE_FOCUS_IMPLEMENTATION.md",
+      "original_path": "./ROUTE_FOCUS_IMPLEMENTATION.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/ROUTE_FOCUS_IMPLEMENTATION.md",
+      "size_bytes": 4549
+    },
+    {
+      "filename": "ROUTE_MANAGER_FIXES_SUMMARY.md",
+      "original_path": "./ROUTE_MANAGER_FIXES_SUMMARY.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/ROUTE_MANAGER_FIXES_SUMMARY.md",
+      "size_bytes": 2914
+    },
+    {
+      "filename": "ROUTE_MANAGER_UX_IMPROVEMENTS.md",
+      "original_path": "./ROUTE_MANAGER_UX_IMPROVEMENTS.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/ROUTE_MANAGER_UX_IMPROVEMENTS.md",
+      "size_bytes": 2929
+    },
+    {
+      "filename": "ROUTE_PARSER_IMPLEMENTATION_SUMMARY.md",
+      "original_path": "./ROUTE_PARSER_IMPLEMENTATION_SUMMARY.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/ROUTE_PARSER_IMPLEMENTATION_SUMMARY.md",
+      "size_bytes": 7370
+    },
+    {
+      "filename": "TEST_SUMMARY.md",
+      "original_path": "./TEST_SUMMARY.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/TEST_SUMMARY.md",
+      "size_bytes": 6645
+    },
+    {
+      "filename": "YEDEKLEME_REHBERI.md",
+      "original_path": "./YEDEKLEME_REHBERI.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/YEDEKLEME_REHBERI.md",
+      "size_bytes": 6115
+    },
+    {
+      "filename": "poi_database_design.md",
+      "original_path": "./poi_database_design.md",
+      "backup_path": "SAFE_DELETE/documentation_backup/poi_database_design.md",
+      "size_bytes": 9912
+    }
+  ],
+  "kept_files": [
+    "README.md",
+    "DOCUMENTATION_ANALYSIS_SUMMARY.md",
+    "TASK_1_COMPLETION_SUMMARY.md",
+    "DOCUMENTATION_CATEGORIZATION_MAP.md",
+    "COMPREHENSIVE_TUTORIAL.md"
+  ]
+}

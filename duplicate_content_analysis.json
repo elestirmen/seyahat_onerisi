@@ -1,0 +1,197 @@
+{
+  "duplicate_sections": [
+    {
+      "file1": "P1_SAFETY_NET_REPORT.md",
+      "section1": "introduction",
+      "file2": "P4_SAFE_CLEANUP_REPORT.md",
+      "section2": "introduction",
+      "similarity": 0.9032258064516129,
+      "content_length1": 121,
+      "content_length2": 125
+    },
+    {
+      "file1": "P1_SAFETY_NET_REPORT.md",
+      "section1": "introduction",
+      "file2": "P2_APP_FACTORY_REPORT.md",
+      "section2": "introduction",
+      "similarity": 0.8780487804878049,
+      "content_length1": 121,
+      "content_length2": 123
+    },
+    {
+      "file1": "P2_APP_FACTORY_REPORT.md",
+      "section1": "introduction",
+      "file2": "P5_POI_MODULE_REPORT.md",
+      "section2": "introduction",
+      "similarity": 0.8617886178861789,
+      "content_length1": 123,
+      "content_length2": 121
+    },
+    {
+      "file1": "P4_SAFE_CLEANUP_REPORT.md",
+      "section1": "introduction",
+      "file2": "P5_POI_MODULE_REPORT.md",
+      "section2": "introduction",
+      "similarity": 0.8387096774193549,
+      "content_length1": 125,
+      "content_length2": 121
+    },
+    {
+      "file1": "P1_SAFETY_NET_REPORT.md",
+      "section1": "introduction",
+      "file2": "P5_POI_MODULE_REPORT.md",
+      "section2": "introduction",
+      "similarity": 0.8360655737704918,
+      "content_length1": 121,
+      "content_length2": 121
+    },
+    {
+      "file1": "P2_APP_FACTORY_REPORT.md",
+      "section1": "introduction",
+      "file2": "P4_SAFE_CLEANUP_REPORT.md",
+      "section2": "introduction",
+      "similarity": 0.832,
+      "content_length1": 123,
+      "content_length2": 125
+    },
+    {
+      "file1": "P2_APP_FACTORY_REPORT.md",
+      "section1": "introduction",
+      "file2": "P3_DB_ERROR_REPORT.md",
+      "section2": "introduction",
+      "similarity": 0.7586206896551724,
+      "content_length1": 123,
+      "content_length2": 108
+    },
+    {
+      "file1": "P1_SAFETY_NET_REPORT.md",
+      "section1": "introduction",
+      "file2": "P3_DB_ERROR_REPORT.md",
+      "section2": "introduction",
+      "similarity": 0.7478260869565218,
+      "content_length1": 121,
+      "content_length2": 108
+    },
+    {
+      "file1": "P3_DB_ERROR_REPORT.md",
+      "section1": "introduction",
+      "file2": "P5_POI_MODULE_REPORT.md",
+      "section2": "introduction",
+      "similarity": 0.7478260869565218,
+      "content_length1": 108,
+      "content_length2": 121
+    },
+    {
+      "file1": "P3_DB_ERROR_REPORT.md",
+      "section1": "introduction",
+      "file2": "P4_SAFE_CLEANUP_REPORT.md",
+      "section2": "introduction",
+      "similarity": 0.7350427350427351,
+      "content_length1": 108,
+      "content_length2": 125
+    },
+    {
+      "file1": "P3_DB_ERROR_REPORT.md",
+      "section1": "kod i̇statistikleri",
+      "file2": "P5_POI_MODULE_REPORT.md",
+      "section2": "kod i̇statistikleri",
+      "similarity": 0.6538461538461539,
+      "content_length1": 208,
+      "content_length2": 208
+    },
+    {
+      "file1": "DATABASE_POI_SETUP_SUMMARY.md",
+      "section1": "başarı kriterleri",
+      "file2": "POI_ASSOCIATION_FIX_SUMMARY.md",
+      "section2": "beklenen sonuç",
+      "similarity": 0.6439024390243903,
+      "content_length1": 170,
+      "content_length2": 238
+    },
+    {
+      "file1": "INSTALL.md",
+      "section1": "introduction",
+      "file2": "KURULUM_REHBERI.md",
+      "section2": "introduction",
+      "similarity": 0.6195286195286195,
+      "content_length1": 162,
+      "content_length2": 135
+    },
+    {
+      "file1": "KURULUM_REHBERI.md",
+      "section1": "introduction",
+      "file2": "YEDEKLEME_REHBERI.md",
+      "section2": "introduction",
+      "similarity": 0.6020761245674741,
+      "content_length1": 135,
+      "content_length2": 154
+    }
+  ],
+  "installation_duplicates": [],
+  "api_duplicates": [],
+  "phase_analysis": {
+    "common_sections": {
+      "introduction": [
+        "P1_SAFETY_NET_REPORT.md",
+        "P2_APP_FACTORY_REPORT.md",
+        "P3_DB_ERROR_REPORT.md",
+        "P4_SAFE_CLEANUP_REPORT.md",
+        "P5_POI_MODULE_REPORT.md"
+      ],
+      "özet": [
+        "P1_SAFETY_NET_REPORT.md",
+        "P2_APP_FACTORY_REPORT.md",
+        "P3_DB_ERROR_REPORT.md",
+        "P4_SAFE_CLEANUP_REPORT.md",
+        "P5_POI_MODULE_REPORT.md"
+      ],
+      "tamamlanan görevler": [
+        "P1_SAFETY_NET_REPORT.md",
+        "P2_APP_FACTORY_REPORT.md",
+        "P3_DB_ERROR_REPORT.md",
+        "P4_SAFE_CLEANUP_REPORT.md",
+        "P5_POI_MODULE_REPORT.md"
+      ],
+      "test sonuçları": [
+        "P1_SAFETY_NET_REPORT.md",
+        "P2_APP_FACTORY_REPORT.md",
+        "P3_DB_ERROR_REPORT.md",
+        "P5_POI_MODULE_REPORT.md"
+      ],
+      "bir sonraki faz hazırlığı": [
+        "P1_SAFETY_NET_REPORT.md",
+        "P2_APP_FACTORY_REPORT.md",
+        "P3_DB_ERROR_REPORT.md",
+        "P4_SAFE_CLEANUP_REPORT.md",
+        "P5_POI_MODULE_REPORT.md"
+      ],
+      "onay gereki̇yor": [
+        "P1_SAFETY_NET_REPORT.md",
+        "P2_APP_FACTORY_REPORT.md",
+        "P4_SAFE_CLEANUP_REPORT.md",
+        "P5_POI_MODULE_REPORT.md"
+      ],
+      "kod değişiklikleri": [
+        "P2_APP_FACTORY_REPORT.md",
+        "P3_DB_ERROR_REPORT.md",
+        "P5_POI_MODULE_REPORT.md"
+      ],
+      "kod i̇statistikleri": [
+        "P2_APP_FACTORY_REPORT.md",
+        "P3_DB_ERROR_REPORT.md",
+        "P5_POI_MODULE_REPORT.md"
+      ],
+      "riskler ve azaltma": [
+        "P2_APP_FACTORY_REPORT.md",
+        "P3_DB_ERROR_REPORT.md"
+      ],
+      "sonuç": [
+        "P3_DB_ERROR_REPORT.md",
+        "P4_SAFE_CLEANUP_REPORT.md",
+        "P5_POI_MODULE_REPORT.md"
+      ]
+    },
+    "unique_content": {},
+    "structure_similarity": []
+  }
+}
