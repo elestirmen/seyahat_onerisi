@@ -39,6 +39,10 @@ let currentTab = 'dynamic-routes';
 let predefinedRoutes = [];
 let filteredRoutes = [];
 
+// Elevation chart instances
+let dynamicElevationChart = null;
+let predefinedElevationChart = null;
+
 // Application state for cleanup
 const AppState = {
     isInitialized: false,
@@ -2273,12 +2277,12 @@ async function createRoute() {
         console.log('🔄 Fallback: Using simple line connections...');
 
         // Fallback to simple line connections
-        createSimpleRoute(waypoints);
+        await createSimpleRoute(waypoints);
     }
 }
 
 // Create simple route with straight lines (fallback)
-function createSimpleRoute(waypoints) {
+async function createSimpleRoute(waypoints) {
     console.log('📏 Creating simple route with straight lines');
 
     if (waypoints.length < 2) return;
@@ -2379,6 +2383,21 @@ function createSimpleRoute(waypoints) {
     }
 
     console.log(`📏 Basit rota oluşturuldu: ${totalDistance.toFixed(2)} km (düz çizgi mesafesi)`);
+
+    // Create elevation chart for dynamic route
+    if (window.ElevationChart && waypoints.length > 1) {
+        if (dynamicElevationChart) {
+            dynamicElevationChart.destroy();
+        }
+        dynamicElevationChart = new ElevationChart('elevationChartContainer', map);
+        await dynamicElevationChart.loadRouteElevation({
+            pois: waypoints.map(wp => ({
+                name: wp.name,
+                latitude: wp.lat,
+                longitude: wp.lng
+            }))
+        });
+    }
 
     // Show notification
     showNotification(`📏 Basit rota oluşturuldu (${totalDistance.toFixed(2)} km düz çizgi mesafesi)`, 'info');
@@ -4292,15 +4311,15 @@ function initializeRouteTabs() {
     }
     
     // Add click event listeners
-    dynamicTab.addEventListener('click', () => switchTab('dynamic-routes'));
-    predefinedTab.addEventListener('click', () => switchTab('predefined-routes'));
+    dynamicTab.addEventListener('click', async () => await switchTab('dynamic-routes'));
+    predefinedTab.addEventListener('click', async () => await switchTab('predefined-routes'));
     
     // Initialize predefined routes functionality
     initializePredefinedRoutes();
     
     console.log('✅ Route tabs initialized');
 }
-function switchTab(tabName) {
+async function switchTab(tabName) {
     console.log(`🔄 Switching to tab: ${tabName}`);
     
     const previousTab = currentTab;
@@ -4343,7 +4362,7 @@ function switchTab(tabName) {
         
         // Load predefined routes if not already loaded
         if (predefinedRoutes.length === 0) {
-            loadPredefinedRoutes();
+            await loadPredefinedRoutes();
         }
         
         // Initialize predefined routes map if not already initialized (lazy loading)
@@ -4372,6 +4391,10 @@ function cleanupTabState(tabName) {
     if (tabName === 'dynamic-routes') {
         // Clean up dynamic routes state if needed
         // Keep the main map and markers for later use
+        if (dynamicElevationChart) {
+            dynamicElevationChart.destroy();
+            dynamicElevationChart = null;
+        }
     } else if (tabName === 'predefined-routes') {
         // Clean up predefined routes state
         // Close any open modals
@@ -4380,6 +4403,10 @@ function cleanupTabState(tabName) {
             closeRouteDetailModal();
         }
         // Keep the predefined map instance but clear temporary highlights
+        if (predefinedElevationChart) {
+            predefinedElevationChart.destroy();
+            predefinedElevationChart = null;
+        }
     }
 }
 
@@ -4500,7 +4527,7 @@ async function initializePredefinedMap() {
     }
 }
 
-function displayRouteOnMap(route) {
+async function displayRouteOnMap(route) {
     console.log('🗺️ === DISPLAYING ROUTE ON MAP ===');
     console.log('🗺️ Displaying route on predefined map:', route);
     console.log('🔍 Route geometry:', route.geometry);
@@ -4508,9 +4535,9 @@ function displayRouteOnMap(route) {
     
     if (!predefinedMap || !predefinedMapInitialized) {
         console.warn('⚠️ Predefined map not initialized, initializing now...');
-        initializePredefinedMap().then(() => {
+        initializePredefinedMap().then(async () => {
             if (predefinedMapInitialized) {
-                displayRouteOnMap(route);
+                await displayRouteOnMap(route);
             }
         });
         return;
@@ -4688,6 +4715,27 @@ function displayRouteOnMap(route) {
                     predefinedMap.fitBounds(bounds, { padding: [20, 20] });
                     
                     console.log('✅ Route with POIs displayed on predefined map');
+                    
+                    // Create elevation chart for predefined route with geometry
+                    if (window.ElevationChart && coords && coords.length > 1) {
+                        if (predefinedElevationChart) {
+                            predefinedElevationChart.destroy();
+                        }
+                        predefinedElevationChart = new ElevationChart('predefinedElevationChartContainer', predefinedMap);
+                        
+                        // Use elevation_profile from database if available
+                        if (route.elevation_profile && route.elevation_profile.points) {
+                            console.log('📊 Using pre-calculated elevation profile from database');
+                            await predefinedElevationChart.loadElevationProfile(route.elevation_profile);
+                        } else {
+                            console.log('📊 Calculating elevation profile from geometry');
+                            await predefinedElevationChart.loadRouteElevation({
+                                geometry: {
+                                    coordinates: coords
+                                }
+                            });
+                        }
+                    }
                     return;
                 }
             }
@@ -4795,6 +4843,29 @@ function displayRouteOnMap(route) {
                 }
                 
                 console.log('✅ Route POIs displayed on predefined map');
+                
+                // Create elevation chart for predefined route
+                if (window.ElevationChart && validPois.length > 1) {
+                    if (predefinedElevationChart) {
+                        predefinedElevationChart.destroy();
+                    }
+                    predefinedElevationChart = new ElevationChart('predefinedElevationChartContainer', predefinedMap);
+                    
+                    // Use elevation_profile from database if available
+                    if (route.elevation_profile && route.elevation_profile.points) {
+                        console.log('📊 Using pre-calculated elevation profile from database');
+                        await predefinedElevationChart.loadElevationProfile(route.elevation_profile);
+                    } else {
+                        console.log('📊 Calculating elevation profile from POIs');
+                        await predefinedElevationChart.loadRouteElevation({
+                            pois: validPois.map(poi => ({
+                                name: poi.name,
+                                latitude: poi.lat,
+                                longitude: poi.lng || poi.lon
+                            }))
+                        });
+                    }
+                }
             } else {
                 console.warn('⚠️ No valid POI coordinates found');
             }
@@ -5334,7 +5405,7 @@ function displayPredefinedRoutes(routes) {
             if (!predefinedMapInitialized) {
                 await initializePredefinedMap();
             }
-            displayRouteOnMap(route);
+            await displayRouteOnMap(route);
             
             // Then show route details modal
             showRouteDetails(route);
@@ -5505,7 +5576,7 @@ async function showRouteDetails(route) {
     if (detailedRoute) {
         Object.assign(route, detailedRoute);
     }
-    displayRouteOnMap(route);
+    await displayRouteOnMap(route);
 
     // Setup select button with updated route data
     selectBtn.onclick = () => selectPredefinedRoute(route);
@@ -6247,7 +6318,7 @@ async function selectPredefinedRoute(route) {
         console.log('🎯 Starting route display process...');
         
         // Approach 1: Standard display with delays
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
                 console.log('📍 Attempt 1: Standard route display with timing fix...');
                 
@@ -6269,7 +6340,7 @@ async function selectPredefinedRoute(route) {
                 }
                 
                 // Display route
-                displayRouteOnMap(route);
+                await displayRouteOnMap(route);
                 
                 // Verify display after a moment
                 setTimeout(() => {
@@ -7401,7 +7472,7 @@ async function expandRoutePreview(routeId, routeName) {
         }
         
         // Show route on predefined routes map (left side)
-        displayRouteOnMap(route);
+        await displayRouteOnMap(route);
         
         // Show notification
         showNotification(`📍 "${routeName}" rotası haritada gösteriliyor`, 'success');
@@ -7454,6 +7525,17 @@ function cleanupApplication() {
             }
         });
         AppState.activeRequests.clear();
+        
+        // Clean up elevation charts
+        if (dynamicElevationChart) {
+            dynamicElevationChart.destroy();
+            dynamicElevationChart = null;
+        }
+        
+        if (predefinedElevationChart) {
+            predefinedElevationChart.destroy();
+            predefinedElevationChart = null;
+        }
         
         // Clean up maps
         if (map) {
@@ -7569,11 +7651,11 @@ window.testTabSwitching = async function() {
     
     try {
         // Test switch to predefined routes
-        switchTab('predefined-routes');
+        await switchTab('predefined-routes');
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Test switch to dynamic routes
-        switchTab('dynamic-routes');
+        await switchTab('dynamic-routes');
         await new Promise(resolve => setTimeout(resolve, 500));
         
         console.log('✅ Tab switching test completed successfully');
@@ -7607,8 +7689,8 @@ window.debugRouteDisplay = function(routeId) {
         displayRouteOnMap(route);
     } else {
         console.log('🔄 Initializing map first...');
-        initializePredefinedMap().then(() => {
-            displayRouteOnMap(route);
+        initializePredefinedMap().then(async () => {
+            await displayRouteOnMap(route);
         });
     }
 };

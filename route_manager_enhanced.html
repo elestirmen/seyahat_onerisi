@@ -607,6 +607,13 @@
             min-height: 400px;
         }
 
+        /* Elevation Chart Container */
+        .route-elevation-container {
+            background: white;
+            border-top: 1px solid var(--route-border);
+            padding: 1rem;
+        }
+
         /* Map Fullscreen */
         .route-map-view.fullscreen {
             position: fixed;
@@ -1153,6 +1160,10 @@
                 </div>
             </div>
             <div id="routeMap"></div>
+            <!-- Elevation Chart Container -->
+            <div class="route-elevation-container">
+                <div id="routeElevationChartContainer" class="elevation-chart-hidden"></div>
+            </div>
         </section>
     </div>
 
@@ -1160,6 +1171,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>  
     <script src="static/js/rate-limiter.js"></script>
+    <script src="static/js/elevation-chart.js"></script>
     <script src="static/js/api-client.js"></script>
     <script src="static/js/navigation-manager.js"></script>
   <script>
@@ -1428,6 +1440,14 @@
                 .then(r => r.ok ? r.json() : null)
                 .then(d => { if (d?.csrf_token) csrfToken = d.csrf_token; })
                 .catch(() => {});
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (window.routeElevationChart) {
+                window.routeElevationChart.destroy();
+                window.routeElevationChart = null;
+            }
         });
 
         // Fetch and attach geometry for routes if missing
@@ -1930,6 +1950,31 @@
 
             // Add CSS for route detail view
             addRouteDetailStyles();
+            
+            // Create elevation chart for route manager
+            if (window.ElevationChart && route) {
+                setTimeout(async () => {
+                    if (window.routeElevationChart) {
+                        window.routeElevationChart.destroy();
+                    }
+                    window.routeElevationChart = new ElevationChart('routeElevationChartContainer', routeMap);
+                    
+                    // Load route data for elevation
+                    if (route.geometry) {
+                        await window.routeElevationChart.loadRouteElevation({
+                            geometry: route.geometry
+                        });
+                    } else if (route.pois && route.pois.length > 0) {
+                        await window.routeElevationChart.loadRouteElevation({
+                            pois: route.pois.map(poi => ({
+                                name: poi.name,
+                                latitude: poi.latitude || poi.lat,
+                                longitude: poi.longitude || poi.lng || poi.lon
+                            }))
+                        });
+                    }
+                }, 500);
+            }
         }
 
         // Show route details in a popup modal

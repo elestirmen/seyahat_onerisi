@@ -4,6 +4,7 @@ from poi_database_adapter import POIDatabaseFactory
 from poi_media_manager import POIMediaManager
 from route_service import RouteService
 from route_file_parser import RouteFileParser, RouteParserError
+from elevation_service import ElevationService
 from psycopg2.extras import RealDictCursor
 import os
 import json
@@ -4683,6 +4684,93 @@ def confirm_route_import():
                         """, (linestring_wkt, route_id))
                     
                     # Note: route_imports table not created yet, skipping import record
+                    
+                    # Calculate elevation profile - prefer geometry over waypoints for better accuracy
+                    elevation_profile = None
+                    elevation_source = None
+                    
+                    # Try to get geometry coordinates first
+                    geometry_coords = None
+                    if parsed_route.points:
+                        geometry_coords = [[p.longitude, p.latitude] for p in parsed_route.points]
+                        elevation_source = "geometry"
+                        print(f"🗺️ Using route geometry with {len(geometry_coords)} points for elevation calculation")
+                    elif parsed_route.waypoints and len(parsed_route.waypoints) >= 2:
+                        elevation_source = "waypoints"
+                        print(f"📍 Using waypoints for elevation calculation (no geometry available)")
+                    
+                    if elevation_source:
+                        try:
+                            print(f"🏔️ Calculating elevation profile for route: {route_data['name']}")
+                            elevation_service = ElevationService()
+                            
+                            if elevation_source == "geometry" and geometry_coords:
+                                # Calculate total distance from geometry for optimal resolution
+                                total_distance = 0
+                                for i in range(1, len(geometry_coords)):
+                                    dist = elevation_service.calculate_distance(
+                                        geometry_coords[i-1][1], geometry_coords[i-1][0],  # lat, lng
+                                        geometry_coords[i][1], geometry_coords[i][0]
+                                    )
+                                    total_distance += dist
+                                
+                                # Determine optimal resolution
+                                resolution = elevation_service.optimize_resolution_for_route(total_distance, len(geometry_coords))
+                                
+                                # Generate elevation profile from geometry
+                                elevation_profile = elevation_service.generate_elevation_profile_from_geometry(
+                                    geometry_coords, resolution
+                                )
+                                
+                            else:
+                                # Fallback to waypoints
+                                waypoints_for_elevation = [
+                                    {
+                                        'lat': wp.latitude,
+                                        'lng': wp.longitude,
+                                        'name': wp.name or f'Waypoint {i+1}'
+                                    }
+                                    for i, wp in enumerate(parsed_route.waypoints)
+                                ]
+                                
+                                # Calculate total distance to determine optimal resolution
+                                total_distance = 0
+                                for i in range(1, len(waypoints_for_elevation)):
+                                    dist = elevation_service.calculate_distance(
+                                        waypoints_for_elevation[i-1]['lat'], waypoints_for_elevation[i-1]['lng'],
+                                        waypoints_for_elevation[i]['lat'], waypoints_for_elevation[i]['lng']
+                                    )
+                                    total_distance += dist
+                                
+                                # Determine optimal resolution
+                                resolution = elevation_service.optimize_resolution_for_route(total_distance, len(waypoints_for_elevation))
+                                
+                                # Generate elevation profile from waypoints
+                                elevation_profile = elevation_service.generate_elevation_profile(
+                                    waypoints_for_elevation, resolution
+                                )
+                            
+                            # Update route with elevation data
+                            cursor.execute("""
+                                UPDATE routes 
+                                SET 
+                                    elevation_profile = %s,
+                                    elevation_resolution = %s,
+                                    elevation_gain = %s
+                                WHERE id = %s
+                            """, (
+                                json.dumps(elevation_profile),
+                                resolution,
+                                elevation_profile['stats']['elevation_gain'],
+                                route_id
+                            ))
+                            
+                            print(f"✅ Elevation profile calculated from {elevation_source}: {elevation_profile['point_count']} points, "
+                                  f"{elevation_profile['total_distance']:.1f}m distance, {resolution}m resolution")
+                                  
+                        except Exception as e:
+                            print(f"⚠️ Elevation profile calculation failed: {e}")
+                            # Continue without elevation data
                     
                     # Associate POIs if requested (using existing route_pois table)
                     poi_ids = data.get('associate_pois', [])

@@ -1,0 +1,56 @@
+{
+  "routes": [
+    {
+      "id": 1,
+      "name": "Kapadokya Vadiler Turu",
+      "description": "Ihlara Vadisi, Güvercinlik Vadisi ve Rose Valley'i kapsayan doğa yürüyüşü rotası",
+      "route_type": "hiking", 
+      "distance_km": 12.5,
+      "duration_hours": 4.5,
+      "difficulty_level": "moderate",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z",
+      "geometry": null
+    },
+    {
+      "id": 2,
+      "name": "Ürgüp Merkez Tarihi Tur",
+      "description": "Ürgüp merkez ve çevresindeki tarihi mekanları ziyaret eden kültür turu",
+      "route_type": "cultural",
+      "distance_km": 8.2,
+      "duration_hours": 3.0,
+      "difficulty_level": "easy",
+      "is_active": true,
+      "created_at": "2024-01-16T14:30:00Z",
+      "updated_at": "2024-01-16T14:30:00Z",
+      "geometry": null
+    },
+    {
+      "id": 3,
+      "name": "Avanos Seramik Atölyesi Rotası",
+      "description": "Avanos'taki geleneksel seramik atölyelerini ziyaret eden el sanatları turu",
+      "route_type": "cultural",
+      "distance_km": 15.3,
+      "duration_hours": 6.0,
+      "difficulty_level": "easy",
+      "is_active": true,
+      "created_at": "2024-01-17T09:15:00Z", 
+      "updated_at": "2024-01-17T09:15:00Z",
+      "geometry": null
+    },
+    {
+      "id": 4,
+      "name": "Kapadokya Bisiklet Turu",
+      "description": "Göreme, Çavuşin ve Avanos arasında bisiklet ile gezinti rotası",
+      "route_type": "cycling",
+      "distance_km": 25.7,
+      "duration_hours": 8.0,
+      "difficulty_level": "challenging",
+      "is_active": false,
+      "created_at": "2024-01-18T16:45:00Z",
+      "updated_at": "2024-01-20T11:30:00Z",
+      "geometry": null
+    }
+  ]
+}

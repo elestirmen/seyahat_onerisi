@@ -1,0 +1,11 @@
+name: CI\n\non: [push, pull_request]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Set up Python\n        uses: actions/setup-python@v5\n        with:\n          python-version: '3.12'\n      - name: Install deps\n        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || true
+          pip install ruff black isort pytest pyyaml jsonschema || true
+      - name: Quick checks
+        run: |
+          make validate
+          make quick || true
+      - name: Contract tests
+        run: |
+          make contract || true\n

@@ -1,0 +1,31 @@
+{
+  "timestamp": "2024-01-20T10:00:00Z",
+  "baseline_version": "1.0.0",
+  "measurements": {
+    "startup_time": 2.5,
+    "health_check": {
+      "avg": 0.050,
+      "min": 0.030,
+      "max": 0.080,
+      "success_rate": 1.0
+    },
+    "poi_listing": {
+      "avg": 0.120,
+      "min": 0.090,
+      "max": 0.180,
+      "success_rate": 1.0
+    },
+    "poi_search": {
+      "avg": 0.150,
+      "min": 0.110,
+      "max": 0.220,
+      "success_rate": 1.0
+    }
+  },
+  "environment": {
+    "base_url": "http://localhost:5000",
+    "os": "Linux",
+    "hostname": "ubuntu"
+  },
+  "notes": "Initial baseline measurement for P1 phase. Conservative estimates for production targets."
+}

@@ -2998,11 +2998,13 @@
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify(ratings)
+                        body: JSON.stringify({ ratings })
                     });
 
                     if (!ratingsResponse.ok) {
-                        console.warn('Ratings could not be updated');
+                        const ratingsError = await ratingsResponse.text();
+                        console.warn('Ratings could not be updated:', ratingsError);
+                        this.showToast('POI güncellendi ama puanlar kaydedilemedi', 'warning');
                     }
 
                     // Refresh data
@@ -3216,7 +3218,7 @@
                                 headers: {
                                     'Content-Type': 'application/json',
                                 },
-                                body: JSON.stringify(ratings)
+                                body: JSON.stringify({ ratings })
                             });
                         } catch (error) {
                             console.warn('Ratings could not be saved:', error);

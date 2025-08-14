@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elevation Chart Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .map-container {
+            height: 400px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .test-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .test-btn:hover {
+            background: #1d4ed8;
+        }
+        .test-btn.secondary {
+            background: #64748b;
+        }
+        .test-btn.secondary:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏔️ Elevation Chart Test</h1>
+        <p>Bu sayfa elevation chart component'ini test etmek için oluşturulmuştur.</p>
+        
+        <div class="test-buttons">
+            <button class="test-btn" onclick="testSimpleRoute()">Basit Rota Testi</button>
+            <button class="test-btn" onclick="testComplexRoute()">Karmaşık Rota Testi</button>
+            <button class="test-btn" onclick="testPOIRoute()">POI Rotası Testi</button>
+            <button class="test-btn secondary" onclick="clearChart()">Grafiği Temizle</button>
+        </div>
+        
+        <div id="mapContainer" class="map-container"></div>
+        <div id="elevationChartContainer"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="static/js/elevation-chart.js"></script>
+    <script>
+        let map;
+        let elevationChart;
+
+        // Initialize map
+        function initMap() {
+            map = L.map('mapContainer').setView([38.6436, 34.8128], 12);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Initialize elevation chart
+            elevationChart = new ElevationChart('elevationChartContainer', map);
+        }
+
+        // Test simple route
+        async function testSimpleRoute() {
+            const routeData = {
+                geometry: {
+                    coordinates: [
+                        [34.8128, 38.6436], // Ürgüp center
+                        [34.8200, 38.6500], // North
+                        [34.8300, 38.6400], // East
+                        [34.8250, 38.6300], // South
+                        [34.8128, 38.6436]  // Back to center
+                    ]
+                }
+            };
+            
+            await elevationChart.loadRouteElevation(routeData);
+            
+            // Add route line to map
+            const routeLine = L.polyline(
+                routeData.geometry.coordinates.map(coord => [coord[1], coord[0]]),
+                { color: '#2563eb', weight: 3 }
+            ).addTo(map);
+            
+            map.fitBounds(routeLine.getBounds());
+        }
+
+        // Test complex route
+        async function testComplexRoute() {
+            const routeData = {
+                geometry: {
+                    coordinates: [
+                        [34.8128, 38.6436], // Ürgüp
+                        [34.8300, 38.6500], // Göreme direction
+                        [34.8500, 38.6600], // Higher elevation
+                        [34.8700, 38.6400], // Avanos direction
+                        [34.8600, 38.6200], // Lower area
+                        [34.8400, 38.6100], // Valley
+                        [34.8200, 38.6300], // Back up
+                        [34.8128, 38.6436]  // Return
+                    ]
+                }
+            };
+            
+            await elevationChart.loadRouteElevation(routeData);
+            
+            // Add route line to map
+            const routeLine = L.polyline(
+                routeData.geometry.coordinates.map(coord => [coord[1], coord[0]]),
+                { color: '#dc2626', weight: 3 }
+            ).addTo(map);
+            
+            map.fitBounds(routeLine.getBounds());
+        }
+
+        // Test POI route
+        async function testPOIRoute() {
+            const routeData = {
+                pois: [
+                    {
+                        name: 'Ürgüp Merkez',
+                        latitude: 38.6436,
+                        longitude: 34.8128
+                    },
+                    {
+                        name: 'Göreme Açık Hava Müzesi',
+                        latitude: 38.6425,
+                        longitude: 34.8369
+                    },
+                    {
+                        name: 'Uçhisar Kalesi',
+                        latitude: 38.6267,
+                        longitude: 34.8058
+                    },
+                    {
+                        name: 'Avanos',
+                        latitude: 38.7147,
+                        longitude: 34.8458
+                    },
+                    {
+                        name: 'Zelve Açık Hava Müzesi',
+                        latitude: 38.6667,
+                        longitude: 34.8500
+                    }
+                ]
+            };
+            
+            await elevationChart.loadRouteElevation(routeData);
+            
+            // Add POI markers to map
+            routeData.pois.forEach((poi, index) => {
+                L.marker([poi.latitude, poi.longitude])
+                    .bindPopup(`<b>${poi.name}</b><br>Durak ${index + 1}`)
+                    .addTo(map);
+            });
+            
+            // Add connecting lines
+            const coordinates = routeData.pois.map(poi => [poi.latitude, poi.longitude]);
+            const routeLine = L.polyline(coordinates, { 
+                color: '#059669', 
+                weight: 3,
+                dashArray: '10, 5'
+            }).addTo(map);
+            
+            map.fitBounds(routeLine.getBounds());
+        }
+
+        // Clear chart and map
+        function clearChart() {
+            // Clear map layers
+            map.eachLayer(layer => {
+                if (layer instanceof L.Marker || layer instanceof L.Polyline) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            // Hide elevation chart
+            elevationChart.hideChart();
+            
+            // Reset map view
+            map.setView([38.6436, 34.8128], 12);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initMap);
+    </script>
+</body>
+</html>

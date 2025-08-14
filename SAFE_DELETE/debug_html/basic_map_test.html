@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temel Harita Testi</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        #map { height: 500px; width: 100%; border: 2px solid #333; }
+        .info { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🗺️ Temel Harita Testi</h1>
+    
+    <div class="info">
+        <strong>Test:</strong> Sadece OpenStreetMap katmanı yükleniyor.<br>
+        <strong>Beklenen:</strong> Ürgüp merkezi haritası ve bir test marker'ı görmelisiniz.
+    </div>
+
+    <div id="map"></div>
+    
+    <div class="info" id="status">
+        Harita yükleniyor...
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const statusDiv = document.getElementById('status');
+        
+        function updateStatus(message, color = 'black') {
+            statusDiv.innerHTML = message;
+            statusDiv.style.color = color;
+        }
+
+        try {
+            // Haritayı oluştur
+            updateStatus('Harita oluşturuluyor...', 'blue');
+            const map = L.map('map').setView([38.632, 34.912], 13);
+            
+            // OpenStreetMap katmanını ekle
+            updateStatus('OpenStreetMap katmanı ekleniyor...', 'blue');
+            const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            });
+
+            // Event listener'lar
+            osmLayer.on('loading', function() {
+                updateStatus('Harita karoları yükleniyor...', 'orange');
+            });
+
+            osmLayer.on('load', function() {
+                updateStatus('✅ Harita başarıyla yüklendi!', 'green');
+            });
+
+            osmLayer.on('tileerror', function(error) {
+                updateStatus('❌ Harita yükleme hatası: ' + error.error, 'red');
+                console.error('Tile error:', error);
+            });
+
+            // Katmanı haritaya ekle
+            osmLayer.addTo(map);
+
+            // Test marker'ı ekle
+            const marker = L.marker([38.632, 34.912]).addTo(map);
+            marker.bindPopup('<b>Ürgüp Merkezi</b><br>Test marker\'ı').openPopup();
+
+            updateStatus('Harita hazırlandı, karolar yükleniyor...', 'blue');
+
+        } catch (error) {
+            updateStatus('❌ JavaScript hatası: ' + error.message, 'red');
+            console.error('Map creation error:', error);
+        }
+    </script>
+</body>
+</html>

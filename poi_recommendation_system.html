@@ -200,6 +200,8 @@
                                 Önerilen yerleri harita üzerinde görün ve detaylarına ulaşın. Marker'lara tıklayarak daha fazla bilgi alabilirsiniz.
                             </p>
                             <div id="mapContainer" class="map-container-enhanced"></div>
+                            <!-- Elevation Chart Container -->
+                            <div id="elevationChartContainer" class="elevation-chart-hidden"></div>
                         </div>
 
                         <div id="routeSection" style="display: none; margin-top: 30px;">
@@ -287,6 +289,8 @@
                                     <p class="loading__text">Harita yükleniyor...</p>
                                 </div>
                             </div>
+                            <!-- Elevation Chart for Predefined Routes -->
+                            <div id="predefinedElevationChartContainer" class="elevation-chart-hidden"></div>
                             <!-- Map Controls -->
                             <div class="map-controls">
                                 <button class="map-control-btn" id="clearMapBtn" title="Haritayı Temizle">
@@ -591,6 +595,7 @@
 
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <script src="static/js/rate-limiter.js"></script>
+    <script src="static/js/elevation-chart.js"></script>
     <script src="static/js/poi_recommendation_system.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 </body>
