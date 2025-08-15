@@ -32,6 +32,7 @@ import logging
 import time
 import hashlib
 from functools import wraps
+from elevation_service import ElevationService
 
 logger = logging.getLogger(__name__)
 
@@ -665,18 +666,18 @@ class RouteService:
                 self.conn.rollback()
             return False
     
-    def save_route_geometry(self, route_id: int, geometry_segments: List[Dict], 
+    def save_route_geometry(self, route_id: int, geometry_segments: List[Dict],
                           total_distance: float, estimated_time: int, waypoints: List[Dict]) -> bool:
         """
-        Rota geometrisini veritabanına kaydet
-        
+        Rota geometrisini veritabanına kaydet ve elevation profilini oluştur
+
         Args:
             route_id: Rota ID'si
             geometry_segments: Rota segmentleri
             total_distance: Toplam mesafe (metre)
             estimated_time: Tahmini süre (saniye)
             waypoints: Waypoint'ler
-            
+
         Returns:
             Başarılıysa True
         """
@@ -684,69 +685,85 @@ class RouteService:
             logger.info(f"Saving geometry for route {route_id}")
             logger.info(f"Geometry segments: {len(geometry_segments)} segments")
             logger.info(f"Total distance: {total_distance}m, Estimated time: {estimated_time}s")
-            
+
             # Geometry segments'i LineString formatına çevir
-            linestring_coords = []
+            linestring_coords: List[List[float]] = []
             for i, segment in enumerate(geometry_segments):
                 logger.info(f"Processing segment {i}: {segment}")
                 if 'coordinates' in segment and segment['coordinates']:
                     for coord in segment['coordinates']:
                         if 'lat' in coord and 'lng' in coord:
                             linestring_coords.append([coord['lng'], coord['lat']])
-            
+
             logger.info(f"Extracted {len(linestring_coords)} coordinates")
-            
+
             if not linestring_coords:
                 logger.warning(f"No valid coordinates found for route {route_id}")
                 return False
-            
+
+            # Elevation profilini oluştur
+            elevation_service = ElevationService()
+            resolution = 10  # metres between points
+            elevation_profile = elevation_service.generate_elevation_profile_from_geometry(
+                linestring_coords, resolution
+            )
+            elevation_gain = elevation_profile['stats']['elevation_gain']
+
             # PostGIS LineString formatı oluştur
             linestring_wkt = "LINESTRING(" + ",".join([f"{lng} {lat}" for lng, lat in linestring_coords]) + ")"
             logger.info(f"Generated LineString WKT: {linestring_wkt[:200]}...")
-            
+
             # Veritabanını güncelle
             update_query = """
-                UPDATE routes 
+                UPDATE routes
                 SET route_geometry = ST_GeomFromText(%s, 4326),
                     total_distance = %s,
                     estimated_duration = %s,
                     waypoints = %s,
+                    elevation_profile = %s,
+                    elevation_resolution = %s,
+                    elevation_gain = %s,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = %s;
             """
-            
+
             # Estimated duration'ı dakikaya çevir
             estimated_duration_minutes = int(estimated_time / 60) if estimated_time > 0 else None
-            logger.info(f"Converted values - Distance: {total_distance / 1000}km, Duration: {estimated_duration_minutes}min")
-            
+            logger.info(
+                f"Converted values - Distance: {total_distance / 1000}km, Duration: {estimated_duration_minutes}min"
+            )
+
             params = (
                 linestring_wkt,
                 total_distance / 1000,  # Metre'den km'ye çevir
                 estimated_duration_minutes,
                 Json(waypoints),
+                Json(elevation_profile),
+                resolution,
+                elevation_gain,
                 route_id
             )
-            
+
             logger.info(f"Executing update query with params: {params}")
             result = self._execute_query(update_query, params, fetch_all=False)
             logger.info(f"Update query result: {result}")
-            
+
             # Commit the transaction
             if self.conn:
                 self.conn.commit()
                 logger.info("Transaction committed")
-            
+
             # Verify the update
             verify_query = "SELECT route_geometry IS NOT NULL as has_geometry FROM routes WHERE id = %s;"
             verify_result = self._execute_query(verify_query, (route_id,), fetch_one=True)
             logger.info(f"Verification result: {verify_result}")
-            
+
             # Cache'i temizle
             _route_cache.clear()
-            
+
             logger.info(f"Successfully saved geometry for route {route_id}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to save geometry for route {route_id}: {e}")
             if self.conn:

@@ -480,12 +480,53 @@ class TestRouteService(unittest.TestCase):
         
         with patch.object(self.service, '_execute_query', return_value=[]) as mock_query:
             self.service.search_routes(dangerous_input)
-            
+
             # Verify the query was called with parameterized input
             mock_query.assert_called_once()
             args, kwargs = mock_query.call_args
             # The dangerous input should be passed as a parameter, not concatenated
             self.assertIn('%', args[0])  # Should contain parameter placeholders
+
+    @patch('route_service.ElevationService')
+    def test_save_route_geometry_generates_elevation(self, mock_elev):
+        """save_route_geometry should generate elevation profile"""
+        mock_instance = mock_elev.return_value
+        mock_profile = {
+            'points': [],
+            'stats': {
+                'min_elevation': 100,
+                'max_elevation': 150,
+                'elevation_gain': 50,
+                'total_ascent': 50,
+                'total_descent': 0
+            },
+            'total_distance': 1000,
+            'point_count': 2,
+            'resolution': 10
+        }
+        mock_instance.generate_elevation_profile_from_geometry.return_value = mock_profile
+
+        geometry_segments = [
+            {'coordinates': [
+                {'lat': 38.0, 'lng': 34.0},
+                {'lat': 38.1, 'lng': 34.1}
+            ]}
+        ]
+
+        with patch.object(self.service, '_execute_query', side_effect=[1, {'has_geometry': True}]) as mock_exec:
+            result = self.service.save_route_geometry(
+                1,
+                geometry_segments,
+                total_distance=1000,
+                estimated_time=600,
+                waypoints=[{'lat': 38.0, 'lng': 34.0}, {'lat': 38.1, 'lng': 34.1}]
+            )
+
+            self.assertTrue(result)
+            mock_elev.assert_called_once()
+            mock_instance.generate_elevation_profile_from_geometry.assert_called_once()
+            first_call = mock_exec.call_args_list[0]
+            self.assertIn('elevation_profile', first_call[0][0])
 
 
 class TestRouteServiceIntegration(unittest.TestCase):
