@@ -973,7 +973,7 @@
                 </a>
             </nav>
             <div class="header-actions">
-                <button class="btn btn-primary" onclick="showCreateRouteModal()">
+                <button class="btn btn-primary" onclick="createAndEditRoute()">
                     <i class="fas fa-plus me-1"></i>
                     Yeni Rota
                 </button>
@@ -3103,147 +3103,15 @@
             showNotification('Harita temizlendi', 'success');
         }
 
-        function showCreateRouteModal() {
-            // Create modal HTML
-            const modalHtml = `
-                <div class="modal fade" id="createRouteModal" tabindex="-1" aria-labelledby="createRouteModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="createRouteModalLabel">
-                                    <i class="fas fa-plus-circle me-2"></i>Yeni Rota Oluştur
-                                </h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <form id="createRouteForm">
-                                    <div class="mb-3">
-                                        <label for="routeName" class="form-label">Rota Adı *</label>
-                                        <input type="text" class="form-control" id="routeName" required>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label for="routeDescription" class="form-label">Açıklama</label>
-                                        <textarea class="form-control" id="routeDescription" rows="3"></textarea>
-                                    </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="routeType" class="form-label">Rota Tipi *</label>
-                                                <select class="form-select" id="routeType" required>
-                                                    <option value="">Seçiniz</option>
-                                                    <option value="walking">Yürüyüş</option>
-                                                    <option value="hiking">Doğa Yürüyüşü</option>
-                                                    <option value="cycling">Bisiklet</option>
-                                                    <option value="driving">Araç</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="difficultyLevel" class="form-label">Zorluk Seviyesi *</label>
-                                                <select class="form-select" id="difficultyLevel" required>
-                                                    <option value="">Seçiniz</option>
-                                                    <option value="1">1 - Çok Kolay</option>
-                                                    <option value="2">2 - Kolay</option>
-                                                    <option value="3">3 - Orta</option>
-                                                    <option value="4">4 - Zor</option>
-                                                    <option value="5">5 - Çok Zor</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="estimatedDuration" class="form-label">Tahmini Süre (dakika)</label>
-                                                <input type="number" class="form-control" id="estimatedDuration" min="1">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="totalDistance" class="form-label">Toplam Mesafe (km)</label>
-                                                <input type="number" class="form-control" id="totalDistance" min="0" step="0.1">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label for="isCircular" class="form-label">
-                                            <input type="checkbox" id="isCircular" class="form-check-input me-2">
-                                            Dairesel Rota (başlangıç ve bitiş aynı nokta)
-                                        </label>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label for="tags" class="form-label">Etiketler</label>
-                                        <input type="text" class="form-control" id="tags" placeholder="Örn: doğa, tarih, fotoğraf (virgülle ayırın)">
-                                    </div>
-                                </form>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                                <button type="button" class="btn btn-primary" onclick="createNewRoute()">
-                                    <i class="fas fa-save me-2"></i>Rotayı Oluştur
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Remove existing modal if present
-            const existingModal = document.getElementById('createRouteModal');
-            if (existingModal) {
-                existingModal.remove();
-            }
-            
-            // Add modal to page
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            
-            // Show modal
-            const modal = new bootstrap.Modal(document.getElementById('createRouteModal'));
-            modal.show();
-        }
-
-        // Create new route function
-        async function createNewRoute() {
-            // Get form data
-            const form = document.getElementById('createRouteForm');
-            const formData = new FormData(form);
-            
+        async function createAndEditRoute() {
             const routeData = {
-                name: document.getElementById('routeName').value.trim(),
-                description: document.getElementById('routeDescription').value.trim(),
-                route_type: document.getElementById('routeType').value,
-                difficulty_level: parseInt(document.getElementById('difficultyLevel').value),
-                estimated_duration: parseInt(document.getElementById('estimatedDuration').value) || 0,
-                total_distance: parseFloat(document.getElementById('totalDistance').value) || 0,
-                is_circular: document.getElementById('isCircular').checked,
-                tags: document.getElementById('tags').value.trim(),
+                name: 'Yeni Rota',
+                route_type: 'walking',
+                difficulty_level: 1,
                 is_active: true
             };
-            
-            // Validation
-            if (!routeData.name) {
-                showNotification('Rota adı zorunludur!', 'error');
-                return;
-            }
-            
-            if (!routeData.route_type) {
-                showNotification('Rota tipi seçiniz!', 'error');
-                return;
-            }
-            
-            if (!routeData.difficulty_level) {
-                showNotification('Zorluk seviyesi seçiniz!', 'error');
-                return;
-            }
-            
+
             try {
-                // Send to API
                 const response = await fetch('/api/admin/routes', {
                     method: 'POST',
                     headers: {
@@ -3252,25 +3120,13 @@
                     },
                     body: JSON.stringify(routeData)
                 });
-                
+
                 if (response.ok) {
                     const result = await response.json();
-                    
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('createRouteModal'));
-                    modal.hide();
-                    
-                    // Refresh routes list
-                    loadRoutes();
-                    
-                    showNotification('✅ Yeni rota başarıyla oluşturuldu!', 'success');
-                    
-                    // Optionally select the new route
-                    if (result.route && result.route.id) {
-                        setTimeout(() => {
-                            selectRoute(result.route.id);
-                        }, 1000);
-                    }
+                    await loadRoutes();
+                    selectRoute(result.id);
+                    editCurrentRoute();
+                    showNotification('✅ Yeni rota oluşturuldu', 'success');
                 } else {
                     const error = await response.json();
                     showNotification(`❌ Rota oluşturulamadı: ${error.message || 'Bilinmeyen hata'}`, 'error');
