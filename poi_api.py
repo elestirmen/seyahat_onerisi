@@ -2752,16 +2752,28 @@ def admin_associate_route_pois(route_id):
             return jsonify({'error': 'Invalid CSRF token'}), 403
         
         poi_associations = data.get('pois', [])
-        
+
         if not isinstance(poi_associations, list):
             return jsonify({'error': 'POIs must be a list'}), 400
-        
+
+        geometry_segments = data.get('geometry')
+        total_distance = data.get('total_distance', 0)
+        estimated_time = data.get('estimated_time', 0)
+        waypoints = data.get('waypoints', [])
+
         if not route_service.connect():
             return jsonify({'error': 'Database connection failed'}), 500
-        
-        success = route_service.associate_pois(route_id, poi_associations)
+
+        success = route_service.associate_pois(
+            route_id,
+            poi_associations,
+            geometry_segments=geometry_segments,
+            total_distance=total_distance,
+            estimated_time=estimated_time,
+            waypoints=waypoints,
+        )
         route_service.disconnect()
-        
+
         if success:
             return jsonify({'message': 'POI associations updated successfully'})
         else:
