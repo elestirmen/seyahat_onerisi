@@ -1393,6 +1393,7 @@
         let searchTimeout = null;
         let associatedPoiIdSet = new Set();
         let associatedPoiOrderedIds = [];
+        let allPoisForAssociation = [];
         let csrfToken = null;
         
         // Rate limiting için
@@ -3785,6 +3786,7 @@
                         });
                     }
                     console.log('Processed all POIs:', allPOIs.length);
+                    allPoisForAssociation = allPOIs.slice();
                 } else {
                     console.error('Failed to load POIs:', poisResponse.status);
                     throw new Error('POI\'ler yüklenemedi');
