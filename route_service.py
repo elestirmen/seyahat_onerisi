@@ -585,10 +585,18 @@ class RouteService:
         
         return False
     
-    def associate_pois(self, route_id: int, poi_associations: List[Dict[str, Any]]) -> bool:
+    def associate_pois(
+        self,
+        route_id: int,
+        poi_associations: List[Dict[str, Any]],
+        geometry_segments: Optional[List[Dict[str, Any]]] = None,
+        total_distance: float = 0,
+        estimated_time: int = 0,
+        waypoints: Optional[List[Dict[str, Any]]] = None,
+    ) -> bool:
         """
-        Rotaya POI'leri ilişkilendir
-        
+        Rotaya POI'leri ilişkilendir ve opsiyonel olarak rota geometrisini kaydet
+
         Args:
             route_id: Rota ID'si
             poi_associations: [
@@ -600,37 +608,41 @@ class RouteService:
                     'notes': str
                 }
             ]
-            
+            geometry_segments: İsteğe bağlı rota segmentleri
+            total_distance: Geometrinin toplam mesafesi (metre)
+            estimated_time: Geometrinin tahmini süresi (saniye)
+            waypoints: Geometrinin waypoint'leri
+
         Returns:
             Başarılıysa True
         """
         logger.info(f"Associating {len(poi_associations)} POIs with route {route_id}")
-        
+
         if not poi_associations:
             logger.info(f"No POIs to associate with route {route_id}, clearing existing associations")
             try:
                 delete_query = "DELETE FROM route_pois WHERE route_id = %s;"
-                result = self._execute_query(delete_query, (route_id,), fetch_all=False)
+                self._execute_query(delete_query, (route_id,), fetch_all=False)
                 logger.info(f"Cleared existing POI associations for route {route_id}")
                 return True
             except Exception as e:
                 logger.error(f"Failed to clear POI associations for route {route_id}: {e}")
                 return False
-        
+
         try:
             # Önce mevcut ilişkileri sil
             delete_query = "DELETE FROM route_pois WHERE route_id = %s;"
             delete_result = self._execute_query(delete_query, (route_id,), fetch_all=False)
             logger.info(f"Deleted {delete_result} existing POI associations for route {route_id}")
-            
+
             # Yeni ilişkileri ekle
             insert_query = """
                 INSERT INTO route_pois (
-                    route_id, poi_id, order_in_route, is_mandatory, 
+                    route_id, poi_id, order_in_route, is_mandatory,
                     estimated_time_at_poi, notes
                 ) VALUES (%s, %s, %s, %s, %s, %s);
             """
-            
+
             for i, association in enumerate(poi_associations):
                 params = (
                     route_id,
@@ -640,13 +652,23 @@ class RouteService:
                     association.get('estimated_time_at_poi', 15),
                     association.get('notes', '')
                 )
-                
+
                 logger.debug(f"Inserting POI association: {params}")
-                result = self._execute_query(insert_query, params, fetch_all=False)
-                logger.debug(f"Insert result: {result}")
-            
+                self._execute_query(insert_query, params, fetch_all=False)
+
             logger.info(f"Successfully associated {len(poi_associations)} POIs with route {route_id}")
-            
+
+            # Eğer geometri verisi sağlanmışsa kaydet
+            geometry_saved = True
+            if geometry_segments:
+                geometry_saved = self.save_route_geometry(
+                    route_id,
+                    geometry_segments,
+                    total_distance,
+                    estimated_time,
+                    waypoints or [],
+                )
+
             # Cache'i temizle
             try:
                 cache_key = f"get_route_by_id_{route_id}"
@@ -657,9 +679,9 @@ class RouteService:
                 logger.debug(f"Cache cleared for route {route_id}")
             except Exception as cache_error:
                 logger.warning(f"Failed to clear cache for route {route_id}: {cache_error}")
-            
-            return True
-            
+
+            return geometry_saved
+
         except Exception as e:
             logger.error(f"Failed to associate POIs with route {route_id}: {e}")
             if self.conn:

@@ -249,8 +249,42 @@ class TestRouteService(unittest.TestCase):
     def test_associate_pois_empty_list(self):
         """Associate POIs with empty list test"""
         result = self.service.associate_pois(1, [])
-        
+
         self.assertTrue(result)
+
+    @patch.object(RouteService, 'save_route_geometry', return_value=True)
+    def test_associate_pois_with_geometry_calls_save(self, mock_save):
+        """associate_pois should save geometry when provided"""
+        poi_associations = [
+            {
+                'poi_id': 1,
+                'order_in_route': 1,
+                'is_mandatory': True,
+                'estimated_time_at_poi': 20
+            }
+        ]
+
+        geometry = [
+            {
+                'coordinates': [
+                    {'lat': 38.0, 'lng': 34.0},
+                    {'lat': 38.1, 'lng': 34.1}
+                ]
+            }
+        ]
+
+        with patch.object(self.service, '_execute_query', side_effect=[1, 1]):
+            result = self.service.associate_pois(
+                1,
+                poi_associations,
+                geometry_segments=geometry,
+                total_distance=1000,
+                estimated_time=600,
+                waypoints=[{'lat': 38.0, 'lng': 34.0}, {'lat': 38.1, 'lng': 34.1}]
+            )
+
+        self.assertTrue(result)
+        mock_save.assert_called_once()
     
     def test_search_routes(self):
         """Search routes test"""
