@@ -1393,6 +1393,7 @@
         let searchTimeout = null;
         let associatedPoiIdSet = new Set();
         let associatedPoiOrderedIds = [];
+        let allPoisForAssociation = [];
         let csrfToken = null;
         
         // Rate limiting için
@@ -3488,6 +3489,11 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-primary" onclick="buildAndSaveRouteFromAssociatedPOIs()">
+                                        <i class="fas fa-route me-1"></i>Rota Hesapla
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -3780,6 +3786,7 @@
                         });
                     }
                     console.log('Processed all POIs:', allPOIs.length);
+                    allPoisForAssociation = allPOIs.slice();
                 } else {
                     console.error('Failed to load POIs:', poisResponse.status);
                     throw new Error('POI\'ler yüklenemedi');
@@ -4271,7 +4278,7 @@
                 showNotification('Rota geometri kaydedildi', 'success');
                 await loadRoutes();
                 // Önizleme için vurgula
-                highlightRouteOnMap(allRoutes.find(r => getRouteId(r) === getRouteId(currentRoute)) || currentRoute);
+                await showSelectedRouteOnMap(allRoutes.find(r => getRouteId(r) === getRouteId(currentRoute)) || currentRoute);
             } catch (e) {
                 console.error('Build route error:', e);
                 showNotification('Rota oluşturma/kaydetme hatası', 'error');

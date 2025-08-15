@@ -13,6 +13,11 @@ from unittest.mock import Mock, patch, MagicMock
 from flask import Flask
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
+import werkzeug
+
+# Compatibility for Werkzeug 3 where __version__ attribute was removed
+if not hasattr(werkzeug, "__version__"):
+    werkzeug.__version__ = "3.1.3"
 
 # Add current directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -413,6 +418,47 @@ class TestAdminRouteAPIEndpoints(unittest.TestCase):
                 self.assertEqual(response.status_code, 200)
                 data = json.loads(response.data)
                 self.assertTrue(data['success'])
+
+    @patch('poi_api.auth_middleware.is_authenticated', return_value=True)
+    def test_admin_associate_pois_with_geometry(self, mock_auth):
+        """POI association should forward geometry data"""
+
+        payload = {
+            'pois': [
+                {'poi_id': 1, 'order_in_route': 1, 'is_mandatory': True}
+            ],
+            'geometry': [
+                {
+                    'coordinates': [
+                        {'lat': 38.0, 'lng': 34.0},
+                        {'lat': 38.1, 'lng': 34.1}
+                    ]
+                }
+            ],
+            'total_distance': 1000,
+            'estimated_time': 600,
+            'waypoints': [
+                {'lat': 38.0, 'lng': 34.0},
+                {'lat': 38.1, 'lng': 34.1}
+            ],
+            'csrf_token': 'test_csrf_token'
+        }
+
+        with patch('poi_api.route_service.connect', return_value=True):
+            with patch('poi_api.route_service.disconnect'):
+                with patch('poi_api.route_service.associate_pois', return_value=True) as mock_assoc:
+                    with patch('poi_api.auth_middleware.validate_csrf_token', return_value=True):
+                        response = self.client.post(
+                            '/api/admin/routes/1/pois',
+                            data=json.dumps(payload),
+                            content_type='application/json',
+                            headers=self.auth_headers
+                        )
+
+                        self.assertEqual(response.status_code, 200)
+                        mock_assoc.assert_called_once()
+                        _, kwargs = mock_assoc.call_args
+                        self.assertEqual(kwargs['geometry_segments'], payload['geometry'])
     
     @patch('poi_api.auth_middleware.require_auth')
     def test_admin_get_route_pois_success(self, mock_auth):
