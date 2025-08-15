@@ -4248,33 +4248,75 @@
             const ids = Array.from(associatedPoiIdSet);
             if (ids.length < 2) { showNotification('Rota için en az 2 POI seçin', 'warning'); return; }
             try {
-                // Build polyline from associated POIs in current order
-                const ordered = ids.map(id => (allPoisForAssociation || []).find(p => getPoiId(p) === id)).filter(Boolean);
-                const coords = ordered.map(p => ({ lat: p.latitude || p.lat, lng: p.longitude || p.lng }));
-                // Distance (Haversine)
-                const R = 6371000; // meters
-                const toRad = d => d * Math.PI / 180;
+                // Build ordered waypoint list
+                const ordered = ids
+                    .map(id => (allPoisForAssociation || []).find(p => getPoiId(p) === id))
+                    .filter(Boolean);
+                const waypoints = ordered.map((p, i) => ({
+                    lat: p.latitude || p.lat,
+                    lng: p.longitude || p.lng,
+                    name: p.name,
+                    order: i + 1
+                }));
+
+                let segments = [];
                 let totalMeters = 0;
-                for (let i = 1; i < coords.length; i++) {
-                    const a = coords[i-1], b = coords[i];
-                    const dLat = toRad(b.lat - a.lat);
-                    const dLon = toRad(b.lng - a.lng);
-                    const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
-                    const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
-                    totalMeters += 2 * R * Math.asin(Math.sqrt(h));
+                let estimatedSeconds = 0;
+
+                try {
+                    // Request smart route so we follow the actual road network
+                    const smartResp = await fetch('/api/route/smart', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ waypoints })
+                    });
+
+                    if (!smartResp.ok) throw new Error('smart route failed');
+                    const routeData = await smartResp.json();
+
+                    // Extract segments and stats from smart route response
+                    const segs = routeData?.route?.segments || [];
+                    segments = segs.map(seg => ({ coordinates: seg.coordinates || seg }));
+                    totalMeters = Math.round((routeData.route?.total_distance || routeData.total_distance || 0) * 1000);
+                    estimatedSeconds = Math.round((routeData.route?.estimated_time || routeData.estimated_time || 0) * 60);
+                } catch (smartErr) {
+                    console.warn('Smart routing failed, falling back to straight lines:', smartErr);
+
+                    // Fallback: simple straight-line polyline
+                    const coords = waypoints.map(wp => ({ lat: wp.lat, lng: wp.lng }));
+                    segments = [{ coordinates: coords }];
+
+                    // Haversine distance calculation
+                    const R = 6371000;
+                    const toRad = d => d * Math.PI / 180;
+                    for (let i = 1; i < coords.length; i++) {
+                        const a = coords[i - 1], b = coords[i];
+                        const dLat = toRad(b.lat - a.lat);
+                        const dLon = toRad(b.lng - a.lng);
+                        const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
+                        const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+                        totalMeters += 2 * R * Math.asin(Math.sqrt(h));
+                    }
+                    estimatedSeconds = Math.round(totalMeters / 1.2); // ~1.2 m/s walking speed
                 }
-                const estimatedSeconds = Math.round((totalMeters / 1.2)); // yürüyüş ~1.2 m/s varsayım
-                const segments = [{ coordinates: coords }];
-                const waypoints = ordered.map((p, i) => ({ name: p.name, latitude: p.latitude || p.lat, longitude: p.longitude || p.lng, order: i+1 }));
 
                 // Save geometry to backend
                 const headers = { 'Content-Type': 'application/json' };
                 if (csrfToken) headers['X-CSRFToken'] = csrfToken;
                 const resp = await fetch(`${apiBase}/admin/routes/${currentRoute.id}/geometry`, {
-                    method: 'POST', headers, credentials: 'include',
-                    body: JSON.stringify({ geometry: segments, total_distance: totalMeters, estimated_time: estimatedSeconds, waypoints })
+                    method: 'POST',
+                    headers,
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        geometry: segments,
+                        total_distance: totalMeters,
+                        estimated_time: estimatedSeconds,
+                        waypoints
+                    })
                 });
                 if (!resp.ok) throw new Error('Geometri kaydedilemedi');
+
                 showNotification('Rota geometri kaydedildi', 'success');
                 await loadRoutes();
                 // Önizleme için vurgula
