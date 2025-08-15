@@ -3107,6 +3107,7 @@
             const routeData = {
                 name: 'Yeni Rota',
                 description: '',
+
                 route_type: 'walking',
                 difficulty_level: 1,
                 is_active: true
@@ -3114,6 +3115,7 @@
 
             try {
                 const response = await fetch(`${apiBase}/admin/routes`, {
+
                     method: 'POST',
                     credentials: 'include',
                     headers: {
