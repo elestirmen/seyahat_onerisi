@@ -4278,7 +4278,7 @@
                 showNotification('Rota geometri kaydedildi', 'success');
                 await loadRoutes();
                 // Önizleme için vurgula
-                highlightRouteOnMap(allRoutes.find(r => getRouteId(r) === getRouteId(currentRoute)) || currentRoute);
+                await showSelectedRouteOnMap(allRoutes.find(r => getRouteId(r) === getRouteId(currentRoute)) || currentRoute);
             } catch (e) {
                 console.error('Build route error:', e);
                 showNotification('Rota oluşturma/kaydetme hatası', 'error');
