@@ -1169,6 +1169,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script src="static/js/map-layer-control.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
         const apiBase = '/api';
@@ -1348,39 +1349,7 @@
         function initMap() {
             map = L.map('map').setView([38.6322, 34.9115], 16); // Ürgüp merkezi
 
-            // Farklı harita katmanları tanımla
-            const baseLayers = {
-                "🗺️ OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors',
-                    maxZoom: 20
-                }),
-
-                "🛰️ Uydu Görüntüsü": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                    attribution: '© Esri, Maxar, Earthstar Geographics',
-                    maxZoom: 19
-                }),
-
-                "🏔️ Topografik": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenTopoMap (CC-BY-SA)',
-                    maxZoom: 17
-                }),
-
-                "🎨 CartoDB Positron": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '© OpenStreetMap © CartoDB',
-                    maxZoom: 19
-                }),
-
-                "🌙 CartoDB Dark": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '© OpenStreetMap © CartoDB',
-                    maxZoom: 19
-                })
-            };
-
-            // Varsayılan katmanı ekle
-            baseLayers["🗺️ OpenStreetMap"].addTo(map);
-
-            // Katman kontrolünü ekle
-            L.control.layers(baseLayers).addTo(map);
+            addBaseLayers(map);
 
             // Haritaya çift tıklama ile POI ekleme
             map.on('dblclick', function (e) {
@@ -4964,9 +4933,7 @@
 
                 routePreviewMap = L.map('routePreviewMap').setView([38.6431, 34.8288], 13);
 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(routePreviewMap);
+                addBaseLayers(routePreviewMap);
 
                 // Harita yüklendikten sonra boyutunu ayarla
                 setTimeout(() => {

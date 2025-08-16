@@ -39,6 +39,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="static/js/map-layer-control.js"></script>
     <script>
         // Haritayı başlat (Ürgüp merkezi)
         const map = L.map('map').setView([38.632, 34.912], 13);
@@ -53,48 +54,8 @@
             statusLog.appendChild(div);
         }
 
-        // Harita katmanları tanımla
-        const baseLayers = {
-            "🗺️ OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 19,
-                subdomains: ['a', 'b', 'c']
-            }),
-
-            "🛰️ Esri Satellite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '© Esri, Maxar, Earthstar Geographics',
-                maxZoom: 19
-            }),
-
-            "🏔️ OpenTopoMap": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-                attribution: '© <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
-                maxZoom: 17,
-                subdomains: ['a', 'b', 'c']
-            }),
-
-            "🎨 CartoDB Positron": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-                maxZoom: 20,
-                subdomains: 'abcd'
-            }),
-
-            "🌙 CartoDB Dark": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-                maxZoom: 20,
-                subdomains: 'abcd'
-            }),
-
-            "🌍 Esri World Street": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '© <a href="https://www.esri.com/">Esri</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 19
-            }),
-
-            "🗺️ OSM Humanitarian": L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a>',
-                maxZoom: 19,
-                subdomains: ['a', 'b']
-            })
-        };
+        // Harita katmanlarını ekle
+        const baseLayers = addBaseLayers(map);
 
         // Her katman için event listener'lar ekle
         Object.keys(baseLayers).forEach(layerName => {
@@ -118,15 +79,8 @@
             });
         });
 
-        // Varsayılan katmanı ekle
-        baseLayers["🗺️ OpenStreetMap"].addTo(map);
+        // Varsayılan katman logu
         addStatus("Varsayılan katman (OpenStreetMap) eklendi", 'success');
-
-        // Katman kontrolünü ekle
-        const layerControl = L.control.layers(baseLayers, null, {
-            position: 'topright',
-            collapsed: false  // Test için açık bırak
-        }).addTo(map);
 
         // Katman değişikliklerini dinle
         map.on('baselayerchange', function(e) {

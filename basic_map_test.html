@@ -25,10 +25,10 @@
         Harita yükleniyor...
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="static/js/map-layer-control.js"></script>
     <script>
         const statusDiv = document.getElementById('status');
-        
+
         function updateStatus(message, color = 'black') {
             statusDiv.innerHTML = message;
             statusDiv.style.color = color;
@@ -38,13 +38,10 @@
             // Haritayı oluştur
             updateStatus('Harita oluşturuluyor...', 'blue');
             const map = L.map('map').setView([38.632, 34.912], 13);
-            
-            // OpenStreetMap katmanını ekle
-            updateStatus('OpenStreetMap katmanı ekleniyor...', 'blue');
-            const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 19
-            });
+
+            // Harita katmanlarını ekle
+            const baseLayers = addBaseLayers(map);
+            const osmLayer = baseLayers["🗺️ OpenStreetMap"];
 
             // Event listener'lar
             osmLayer.on('loading', function() {
@@ -59,9 +56,6 @@
                 updateStatus('❌ Harita yükleme hatası: ' + error.error, 'red');
                 console.error('Tile error:', error);
             });
-
-            // Katmanı haritaya ekle
-            osmLayer.addTo(map);
 
             // Test marker'ı ekle
             const marker = L.marker([38.632, 34.912]).addTo(map);
