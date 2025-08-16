@@ -331,7 +331,7 @@ class RouteDetailsPanel {
         }
 
         // Add all POI stops from routeData waypoints or selectedPOIs
-        const waypoints = routeData.waypoints || selectedPOIs;
+            const waypoints = routeData.waypoints || selectedPOIs;
         waypoints.forEach((poi, index) => {
             const categoryStyle = getCategoryStyle(poi.category);
             const lat = poi.lat || poi.latitude;
@@ -340,7 +340,7 @@ class RouteDetailsPanel {
             stopsHTML += `
                         <div class="stop-item" onclick="RouteDetailsPanel.highlightStop(${lat}, ${lng})">
                             <div class="stop-icon" style="background: ${categoryStyle.color};">
-                                ${categoryStyle.icon}
+                                <i class="${categoryStyle.icon}"></i>
                             </div>
                             <div class="stop-info">
                                 <div class="stop-name">${poi.name}</div>
@@ -4707,12 +4707,12 @@ async function displayRouteOnMap(route) {
                                         font-size: 16px;
                                         position: relative;
                                     ">
-                                        <span style="position: absolute; top: -2px;">${categoryStyle.icon}</span>
+                                        <span style="position: absolute; top: -2px;"><i class="${categoryStyle.icon}"></i></span>
                                         <span style="
-                                            position: absolute; 
-                                            bottom: -8px; 
-                                            right: -8px; 
-                                            background: ${routeColor}; 
+                                            position: absolute;
+                                            bottom: -8px;
+                                            right: -8px;
+                                            background: ${routeColor};
                                             color: white; 
                                             border-radius: 50%; 
                                             width: 18px; 
@@ -4813,12 +4813,12 @@ async function displayRouteOnMap(route) {
                                 font-size: 16px;
                                 position: relative;
                             ">
-                                <span style="position: absolute; top: -2px;">${categoryStyle.icon}</span>
+                                <span style="position: absolute; top: -2px;"><i class="${categoryStyle.icon}"></i></span>
                                 <span style="
-                                    position: absolute; 
-                                    bottom: -8px; 
-                                    right: -8px; 
-                                    background: ${routeColor}; 
+                                    position: absolute;
+                                    bottom: -8px;
+                                    right: -8px;
+                                    background: ${routeColor};
                                     color: white; 
                                     border-radius: 50%; 
                                     width: 18px; 
@@ -4960,11 +4960,11 @@ function createDetailedPOIPopup(poi, stopNumber) {
                     display: flex; 
                     align-items: center; 
                     justify-content: center; 
-                    font-size: 16px; 
+                    font-size: 16px;
                     margin-right: 10px;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
                 ">
-                    ${categoryStyle.icon}
+                    <i class="${categoryStyle.icon}"></i>
                 </div>
                 <div class="poi-popup-title-section" style="flex: 1;">
                     <h4 class="poi-popup-title" style="margin: 0; font-size: 16px; font-weight: 600; color: #333;">${poi.name}</h4>
@@ -5071,6 +5071,13 @@ function createDetailedPOIPopup(poi, stopNumber) {
     return popupHTML;
 }
 
+// Trigger detailed POI information display
+function showPOIDetails(poiId) {
+    const titleEl = document.querySelector(`[data-poi-id="${poiId}"] .poi-title`);
+    const poiName = titleEl ? titleEl.textContent.trim() : '';
+    loadDetailedPOIInfo(poiId, poiName);
+}
+
 // Load detailed POI information (similar to recommendation system)
 async function loadDetailedPOIInfo(poiId, poiName) {
     try {
@@ -5110,7 +5117,7 @@ function showDetailedPOIModal(poi) {
                 <div class="route-detail-modal-header">
                     <h3 class="route-detail-modal-title">
                         <span style="background: ${categoryStyle.color}; padding: 4px 8px; border-radius: 50%; margin-right: 8px;">
-                            ${categoryStyle.icon}
+                            <i class="${categoryStyle.icon}"></i>
                         </span>
                         ${poi.name}
                     </h3>
@@ -5265,12 +5272,12 @@ function displayRouteOnMapFallback(route) {
                                 font-size: 14px;
                                 position: relative;
                             ">
-                                <span style="position: absolute; top: -1px;">${categoryStyle.icon}</span>
+                                <span style="position: absolute; top: -1px;"><i class="${categoryStyle.icon}"></i></span>
                                 <span style="
-                                    position: absolute; 
-                                    bottom: -6px; 
-                                    right: -6px; 
-                                    background: #2563eb; 
+                                    position: absolute;
+                                    bottom: -6px;
+                                    right: -6px;
+                                    background: #2563eb;
                                     color: white; 
                                     border-radius: 50%; 
                                     width: 16px; 
@@ -6522,7 +6529,7 @@ async function displayRoutePOIsOnMap(pois) {
                             transform: rotate(-45deg);
                             position: relative;
                         ">
-                            <span style="transform: rotate(45deg);">${categoryStyle.icon}</span>
+                            <span style="transform: rotate(45deg);"><i class="${categoryStyle.icon}"></i></span>
                             <div style="
                                 position: absolute;
                                 top: -8px;
@@ -8935,7 +8942,7 @@ async function initializeMap(recommendationData) {
                                 ${isLowScore ? 'opacity: 0.9;' : ''}
                             ">
                                 <h6 style="margin: 0; font-size: 16px; font-weight: 600;">
-                                    ${categoryStyle.icon} ${poi.name}
+                                    <i class="${categoryStyle.icon}"></i> ${poi.name}
                                     ${isLowScore ? ' <small style="opacity: 0.7;">(Düşük Uygunluk)</small>' : ''}
                                 </h6>
                                 <small style="opacity: 0.9; font-size: 12px;">
@@ -9147,7 +9154,7 @@ function createModernPOICards(pois, type = 'primary') {
                 <button class="action-btn primary" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})" title="Haritada Göster">
                     <i class="fas fa-map-marker-alt"></i>
                 </button>
-                <button class="action-btn secondary" onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}'))" title="Google Maps'te Aç">
+                <button class="action-btn secondary" onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" title="Google Maps'te Aç">
                     <i class="fab fa-google"></i>
                 </button>
                 <button class="action-btn success" onclick="addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})" title="Rotaya Ekle">
