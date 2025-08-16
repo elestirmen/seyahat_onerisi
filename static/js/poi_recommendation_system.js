@@ -5397,15 +5397,7 @@ function displayPredefinedRoutes(routes) {
     routesList.querySelectorAll('.route-card').forEach((card, index) => {
         card.addEventListener('click', async () => {
             const route = routes[index];
-            
-            // First display route on map
-            if (!predefinedMapInitialized) {
-                await initializePredefinedMap();
-            }
-            await displayRouteOnMap(route);
-            
-            // Then show route details modal
-            showRouteDetails(route);
+            await selectPredefinedRoute(route); // handles map rendering internally
         });
     });
 }
