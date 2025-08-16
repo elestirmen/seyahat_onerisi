@@ -26,6 +26,7 @@
             --poi-radius: 12px;
             --poi-radius-lg: 16px;
             --poi-transition: all 0.3s ease;
+            --map-width: 700px;
         }
 
         * {
@@ -45,9 +46,9 @@
         .poi-management-container {
             display: grid;
             grid-template-areas:
-                "header header header"
-                "sidebar workspace map";
-            grid-template-columns: 350px 1fr 700px;
+                "header header header header"
+                "sidebar workspace resizer map";
+            grid-template-columns: 350px 1fr 5px var(--map-width);
             grid-template-rows: auto 1fr;
             height: calc(100vh - 2rem);
             /* Subtract padding */
@@ -1446,6 +1447,14 @@
         }
 
         /* Map */
+        .poi-resizer {
+            grid-area: resizer;
+            width: 5px;
+            height: 100%;
+            cursor: col-resize;
+            background: var(--poi-border);
+        }
+
         .poi-map-view {
             grid-area: map;
             background: white;
@@ -1476,7 +1485,7 @@
         /* Responsive Design */
         @media (max-width: 1200px) {
             .poi-management-container {
-                grid-template-columns: 300px 1fr 600px;
+                grid-template-columns: 300px 1fr 5px var(--map-width);
             }
         }
 
@@ -1489,6 +1498,10 @@
                     "map";
                 grid-template-columns: 1fr;
                 grid-template-rows: auto auto 1fr 300px;
+            }
+
+            .poi-resizer {
+                display: none;
             }
 
             .poi-header {
@@ -1874,6 +1887,8 @@
             </div>
         </section>
 
+        <div class="poi-resizer" id="mapResizer"></div>
+
         <!-- Map -->
         <section class="poi-map-view">
             <div id="map"></div>
@@ -2149,6 +2164,7 @@
                             this.pois = [];
                         }
 
+                        this.sortPOIs();
                         this.totalItems = (data && data.total) || this.pois.length;
                         this.totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
 
@@ -2210,6 +2226,30 @@
 
                 this.currentPage = 1;
                 this.loadPOIs();
+            }
+
+            sortPOIs() {
+                const sortOption = this.currentFilters.sort;
+                const getDate = (poi) => new Date(poi.created_at || poi.createdAt || poi.created || 0);
+                switch (sortOption) {
+                    case 'name_asc':
+                        this.pois.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                        break;
+                    case 'name_desc':
+                        this.pois.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+                        break;
+                    case 'category_asc':
+                        this.pois.sort((a, b) => (a.category || '').localeCompare(b.category || ''));
+                        break;
+                    case 'created_desc':
+                        this.pois.sort((a, b) => getDate(b) - getDate(a));
+                        break;
+                    case 'created_asc':
+                        this.pois.sort((a, b) => getDate(a) - getDate(b));
+                        break;
+                    default:
+                        break;
+                }
             }
 
             renderPOIList() {
@@ -4142,9 +4182,41 @@
             }
         }
 
+        function initMapResizer() {
+            const resizer = document.getElementById('mapResizer');
+            const root = document.documentElement;
+            if (!resizer) return;
+
+            let startX = 0;
+            let startWidth = parseInt(getComputedStyle(root).getPropertyValue('--map-width'), 10);
+
+            const onMouseMove = (e) => {
+                const dx = startX - e.clientX;
+                let newWidth = startWidth + dx;
+                if (newWidth < 300) newWidth = 300;
+                root.style.setProperty('--map-width', `${newWidth}px`);
+                if (window.poiManager?.map) {
+                    window.poiManager.map.invalidateSize();
+                }
+            };
+
+            const onMouseUp = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+
+            resizer.addEventListener('mousedown', (e) => {
+                startX = e.clientX;
+                startWidth = parseInt(getComputedStyle(root).getPropertyValue('--map-width'), 10);
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        }
+
         // Initialize the application
         document.addEventListener('DOMContentLoaded', () => {
             window.poiManager = new POIManager();
+            initMapResizer();
             // Mark current page for NavigationManager active detection
             if (window.navigationManager) {
                 window.navigationManager.currentPage = 'poi-management';
