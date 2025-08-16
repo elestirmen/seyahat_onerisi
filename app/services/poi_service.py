@@ -284,14 +284,24 @@ class POIService:
                 result = cursor.fetchone()
                 total = result['count'] if isinstance(result, dict) else result[0]
                 
+                # Determine sort order safely
+                order_mapping = {
+                    'name_asc': 'name ASC',
+                    'name_desc': 'name DESC',
+                    'category_asc': 'category ASC, name ASC',
+                    'created_desc': 'created_at DESC',
+                    'created_asc': 'created_at ASC'
+                }
+                order_clause = order_mapping.get(sort, 'name ASC')
+
                 # Get POIs - adapt to actual database schema
                 query = f"""
-                    SELECT id, name, description, category, 
+                    SELECT id, name, description, category,
                            ST_Y(location::geometry) as latitude, ST_X(location::geometry) as longitude,
                            0 as rating, '[]'::text as images, created_at, updated_at
-                    FROM pois 
+                    FROM pois
                     WHERE {where_clause} AND is_active = true
-                    ORDER BY name
+                    ORDER BY {order_clause}
                     LIMIT %s OFFSET %s
                 """
                 cursor.execute(query, params + [limit, offset])
@@ -334,8 +344,17 @@ class POIService:
         if category:
             pois = [poi for poi in pois if poi.get('category', '').lower() == category.lower()]
         
-        # Sort by name
-        pois.sort(key=lambda x: x.get('name', ''))
+        # Sort results
+        if sort == 'name_desc':
+            pois.sort(key=lambda x: x.get('name', ''), reverse=True)
+        elif sort == 'category_asc':
+            pois.sort(key=lambda x: (x.get('category', ''), x.get('name', '')))
+        elif sort == 'created_desc':
+            pois.sort(key=lambda x: x.get('createdAt') or x.get('created_at') or '', reverse=True)
+        elif sort == 'created_asc':
+            pois.sort(key=lambda x: x.get('createdAt') or x.get('created_at') or '')
+        else:
+            pois.sort(key=lambda x: x.get('name', ''))
         
         # Pagination
         total = len(pois)

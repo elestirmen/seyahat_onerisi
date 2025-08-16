@@ -27,6 +27,7 @@ def list_pois():
         - category: Filter by category
         - page: Page number (default: 1)
         - limit: Items per page (default: 20, max: 100)
+        - sort: Sort order (name_asc, name_desc, category_asc, created_desc, created_asc)
     """
     try:
         # Get query parameters
@@ -40,8 +41,8 @@ def list_pois():
         except (ValueError, TypeError):
             raise bad_request("Invalid page or limit parameter")
         
-        # Parse sort parameter (for frontend compatibility)
-        sort = request.args.get('sort', 'name_asc')  # Accept but ignore for now
+        # Parse sort parameter
+        sort = request.args.get('sort', 'name_asc')
         
         # Call service
         result = poi_service.list_pois(
