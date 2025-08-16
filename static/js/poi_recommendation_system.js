@@ -5087,7 +5087,7 @@ async function loadDetailedPOIInfo(poiId, poiName) {
         showNotification('POI detayları yükleniyor...', 'info');
         
         // Fetch detailed POI data
-        const response = await fetch(`${apiBase}/pois/${poiId}`);
+        const response = await fetch(`${apiBase}/poi/${poiId}`);
         if (response.ok) {
             const poiData = await response.json();
             console.log('✅ POI details loaded:', poiData);
