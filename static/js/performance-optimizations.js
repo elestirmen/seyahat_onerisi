@@ -136,7 +136,7 @@ class OptimizedImageLoader {
 }
 
 // Performance monitoring
-class PerformanceMonitor {
+class RoutePerformanceMonitor {
     constructor() {
         this.metrics = {
             routeLoadTime: [],
@@ -180,9 +180,10 @@ class PerformanceMonitor {
 // Initialize optimized components
 const optimizedRouteLoader = new OptimizedRouteLoader();
 const optimizedImageLoader = new OptimizedImageLoader();
-const performanceMonitor = new PerformanceMonitor();
+const routePerformanceMonitor = new RoutePerformanceMonitor();
 
 // Export for global use
 window.OptimizedRouteLoader = OptimizedRouteLoader;
 window.OptimizedImageLoader = OptimizedImageLoader;
-window.PerformanceMonitor = PerformanceMonitor;
+window.RoutePerformanceMonitor = RoutePerformanceMonitor;
+window.routePerformanceMonitor = routePerformanceMonitor;
