@@ -1473,6 +1473,7 @@
         let associatedPoiOrderedIds = [];
         let allPoisForAssociation = [];
         let csrfToken = null;
+        let defaultWorkspaceActionsHTML = '';
         
         // Rate limiting için
         let lastLoadTime = 0;
@@ -1514,6 +1515,8 @@
             loadRoutes();
             setupEventListeners();
             setupResizableMap();
+            const workspaceActionsElem = document.getElementById('workspaceActions');
+            defaultWorkspaceActionsHTML = workspaceActionsElem.innerHTML;
             // Fetch CSRF token for admin POSTs
             fetch('/auth/csrf-token', { credentials: 'include' })
                 .then(r => r.ok ? r.json() : null)
@@ -1947,6 +1950,7 @@
             }
 
             workspaceTitle.textContent = routeDetails.name;
+            workspaceActions.innerHTML = defaultWorkspaceActionsHTML;
             workspaceActions.style.display = 'flex';
 
             workspaceContent.innerHTML = `
