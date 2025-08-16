@@ -195,9 +195,31 @@ function getCategoryColor(category) {
 
 // Get category icon (dynamic)
 function getCategoryIcon(category) {
-    if (categoryData[category]) {
+    // Önce API'den yüklenen kategori ikonunu kullan
+    if (categoryData[category] && categoryData[category].icon) {
         return categoryData[category].icon;
     }
+
+    // Bilinen kategoriler için varsayılan Font Awesome sınıfları
+    const iconMap = {
+        'doga_macera': 'fas fa-tree',
+        'gastronomik': 'fas fa-utensils',
+        'konaklama': 'fas fa-bed',
+        'kulturel': 'fas fa-university',
+        'sanatsal': 'fas fa-palette',
+        'dini': 'fas fa-mosque',
+        'tarihi': 'fas fa-landmark',
+        'mimari': 'fas fa-building',
+        'mezarlik': 'fas fa-cross',
+        'saray_kale': 'fas fa-chess-rook',
+        'diger': 'fas fa-map-marker-alt'
+    };
+
+    if (iconMap[category]) {
+        return iconMap[category];
+    }
+
+    // Son çare olarak emoji tabanlı ikonlara düş
     return fallbackCategoryStyles[category]?.icon || '📍';
 }
 
@@ -1045,6 +1067,10 @@ function createCustomIcon(category, score, isLowScore = false) {
     const scoreBackgroundColor = isLowScore ? '#f9fafb' : 'white';
     const scoreTextColor = isLowScore ? style.color : style.color;
 
+    const iconHTML = style.icon && style.icon.startsWith('fa')
+        ? `<i class="${style.icon}" style="transform: rotate(45deg); opacity: ${isLowScore ? '0.8' : '1'};"></i>`
+        : `<span style="transform: rotate(45deg); opacity: ${isLowScore ? '0.8' : '1'};">${style.icon}</span>`;
+
     return L.divIcon({
         html: `
             <div style="
@@ -1063,7 +1089,7 @@ function createCustomIcon(category, score, isLowScore = false) {
                 opacity: ${opacity};
                 ${isLowScore ? 'filter: grayscale(0.2) brightness(0.9);' : ''}
             ">
-                <span style="transform: rotate(45deg); opacity: ${isLowScore ? '0.8' : '1'};">${style.icon}</span>
+                ${iconHTML}
                 <div style="
                     position: absolute;
                     top: -8px;
@@ -5075,6 +5101,14 @@ function createDetailedPOIPopup(poi, stopNumber) {
 function showPOIDetails(poiId) {
     const titleEl = document.querySelector(`[data-poi-id="${poiId}"] .poi-title`);
     const poiName = titleEl ? titleEl.textContent.trim() : '';
+    // Haritada ilgili POI'ye odaklan
+    const marker = markers.find(m => m.poiData && (m.poiData.id === poiId || m.poiData._id === poiId));
+    if (marker && marker.poiData) {
+        const lat = marker.poiData.latitude || marker.poiData.lat;
+        const lng = marker.poiData.longitude || marker.poiData.lng;
+        focusOnMap(lat, lng);
+    }
+
     loadDetailedPOIInfo(poiId, poiName);
 }
 
@@ -9125,31 +9159,36 @@ function createPOICards(pois) {
 
 // Modern POI Cards for improved UX
 function createModernPOICards(pois, type = 'primary') {
-    return pois.map(poi => `
+    return pois.map(poi => {
+        const icon = getCategoryIcon(poi.category);
+        const iconElement = icon.startsWith('fa')
+            ? `<i class="${icon}"></i>`
+            : `<span>${icon}</span>`;
+        return `
         <div class="modern-poi-card ${type}" data-poi-id="${poi.id || poi._id}">
             <div class="poi-card-header">
                 <div class="poi-category-badge">
-                    <i class="${getCategoryIcon(poi.category)}"></i>
+                    ${iconElement}
                     <span>${getCategoryDisplayName(poi.category)}</span>
                 </div>
                 <div class="poi-score ${poi.recommendationScore >= 45 ? 'high' : 'medium'}">
                     ${poi.recommendationScore}%
                 </div>
             </div>
-            
+
             <div class="poi-card-content">
                 <h4 class="poi-title">${poi.name}</h4>
                 <div class="poi-description">
                     ${poi.description ? poi.description.substring(0, 120) + '...' : 'Keşfetmeye değer bir yer'}
                 </div>
-                
+
                 <div class="poi-features">
-                    ${poi.features ? poi.features.slice(0, 3).map(feature => 
+                    ${poi.features ? poi.features.slice(0, 3).map(feature =>
                         `<span class="feature-tag">${feature}</span>`
                     ).join('') : ''}
                 </div>
             </div>
-            
+
             <div class="poi-card-actions">
                 <button class="action-btn primary" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})" title="Haritada Göster">
                     <i class="fas fa-map-marker-alt"></i>
@@ -9165,7 +9204,8 @@ function createModernPOICards(pois, type = 'primary') {
                 </button>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 // Toggle alternative recommendations
@@ -9203,24 +9243,6 @@ function toggleAlternativeRecommendations() {
         toggleIcon.style.transform = 'rotate(0deg)';
         toggleBtn.classList.remove('active');
     }
-}
-
-// Helper function to get category icon
-function getCategoryIcon(category) {
-    const iconMap = {
-        'doga_macera': 'fas fa-tree',
-        'gastronomik': 'fas fa-utensils',
-        'konaklama': 'fas fa-bed',
-        'kulturel': 'fas fa-university',
-        'sanatsal': 'fas fa-palette',
-        'dini': 'fas fa-mosque',
-        'tarihi': 'fas fa-landmark',
-        'mimari': 'fas fa-building',
-        'mezarlik': 'fas fa-cross',
-        'saray_kale': 'fas fa-chess-rook',
-        'diger': 'fas fa-map-marker-alt'
-    };
-    return iconMap[category] || 'fas fa-map-marker-alt';
 }
 
 // Toggle low score POIs visibility (legacy function for backward compatibility)
