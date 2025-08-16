@@ -2005,7 +2005,6 @@
                     category: '',
                     sort: 'name_asc'
                 };
-                this.selectedCategories = new Set();
                 this.pois = [];
                 this.categories = [];
                 this.selectedPOI = null;
@@ -2120,11 +2119,6 @@
                         sort: this.currentFilters.sort
                     });
 
-                    // Add selected categories to filter
-                    if (this.selectedCategories.size > 0) {
-                        params.set('categories', Array.from(this.selectedCategories).join(','));
-                    }
-
                     const response = await rateLimitedFetch(`/api/pois?${params}`, {
                         credentials: 'include'
                     });
@@ -2206,22 +2200,29 @@
                     chip.textContent = category.display_name || category.name;
                     chip.dataset.categoryId = category.id || category.name;
 
-                    if (this.selectedCategories.has(category.id || category.name)) {
+                    if (this.currentFilters.category === (category.id || category.name)) {
                         chip.classList.add('active');
                     }
 
-                    chip.addEventListener('click', () => this.toggleCategoryChip(category.id || category.name, chip));
+                    chip.addEventListener('click', () => this.toggleCategoryChip(category.id || category.name));
                     categoryChips.appendChild(chip);
                 });
             }
 
-            toggleCategoryChip(categoryId, chipElement) {
-                if (this.selectedCategories.has(categoryId)) {
-                    this.selectedCategories.delete(categoryId);
-                    chipElement.classList.remove('active');
+            toggleCategoryChip(categoryId) {
+                if (this.currentFilters.category === categoryId) {
+                    this.currentFilters.category = '';
                 } else {
-                    this.selectedCategories.add(categoryId);
-                    chipElement.classList.add('active');
+                    this.currentFilters.category = categoryId;
+                }
+
+                document.querySelectorAll('#categoryChips .category-chip').forEach(chip => {
+                    chip.classList.toggle('active', chip.dataset.categoryId === this.currentFilters.category);
+                });
+
+                const categoryFilter = document.getElementById('categoryFilter');
+                if (categoryFilter) {
+                    categoryFilter.value = this.currentFilters.category;
                 }
 
                 this.currentPage = 1;
@@ -2600,6 +2601,9 @@
                 // Category filter
                 document.getElementById('categoryFilter').addEventListener('change', (e) => {
                     this.currentFilters.category = e.target.value;
+                    document.querySelectorAll('#categoryChips .category-chip').forEach(chip => {
+                        chip.classList.toggle('active', chip.dataset.categoryId === this.currentFilters.category);
+                    });
                     this.currentPage = 1;
                     this.loadPOIs();
                 });
