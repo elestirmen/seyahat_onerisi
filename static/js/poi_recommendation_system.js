@@ -1186,7 +1186,7 @@ async function loadPOIMedia(poiId) {
 // Create media gallery HTML
 function createMediaGallery(media, poi = {}) {
     console.log('Creating media gallery with:', media);
-    if (!media || (!media.images?.length && !media.videos?.length && !media.audio?.length)) {
+    if (!media || (!media.images?.length && !media.videos?.length && !media.audio?.length && !media.models?.length)) {
         console.log('No media found or empty arrays');
         return '';
     }
@@ -1228,6 +1228,18 @@ function createMediaGallery(media, poi = {}) {
                 type: 'audio',
                 path: audio.path || audio.filename,
                 title: audio.description || `Ses ${index + 1}`,
+                originalIndex: index
+            });
+        });
+    }
+
+    // Add models to media items
+    if (media.models && media.models.length > 0) {
+        media.models.forEach((model, index) => {
+            allMediaItems.push({
+                type: 'model',
+                path: model.path || model.filename,
+                title: model.description || `Model ${index + 1}`,
                 originalIndex: index
             });
         });
@@ -1309,6 +1321,28 @@ function createMediaGallery(media, poi = {}) {
                         <div style="background: #f0f0f0; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; border: 1px solid #ddd;"
                              onclick="showPOIMediaFromCache('${poiCacheKey}', ${mediaItemIndex})">
                              🎵 ${audio.description || 'Ses'}
+                        </div>
+                    `;
+        });
+
+        galleryHTML += '</div></div>';
+    }
+
+    // Models
+    if (media.models && media.models.length > 0) {
+        galleryHTML += '<div style="margin-bottom: 8px;">';
+        galleryHTML += '<div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 6px;">🧩 3D Modeller</div>';
+        galleryHTML += '<div style="display: flex; gap: 4px;">';
+
+        media.models.slice(0, 2).forEach((model, index) => {
+            const mediaItemIndex = allMediaItems.findIndex(item =>
+                item.type === 'model' && item.originalIndex === index
+            );
+
+            galleryHTML += `
+                        <div style="background: #f0f0f0; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; border: 1px solid #ddd;"
+                             onclick="showPOIMediaFromCache('${poiCacheKey}', ${mediaItemIndex})">
+                             🧩 ${model.description || 'Model'}
                         </div>
                     `;
         });
@@ -1476,6 +1510,12 @@ function loadCurrentMedia() {
                                     <div class="media-progress-bar" id="audioProgressBar"></div>
                                 </div>
                             </div>
+                        </div>
+                    `;
+        } else if (mediaItem.type === 'model') {
+            content = `
+                        <div class="media-display">
+                            <model-viewer src="${mediaPath}" camera-controls auto-rotate style="width: 100%; max-height: 70vh;"></model-viewer>
                         </div>
                     `;
         }
@@ -5116,34 +5156,38 @@ function showPOIDetails(poiId) {
 async function loadDetailedPOIInfo(poiId, poiName) {
     try {
         console.log('🔍 Loading detailed POI info for:', poiId, poiName);
-        
+
         // Show loading notification
         showNotification('POI detayları yükleniyor...', 'info');
-        
+
         // Fetch detailed POI data
         const response = await fetch(`${apiBase}/poi/${poiId}`);
         if (response.ok) {
             const poiData = await response.json();
             console.log('✅ POI details loaded:', poiData);
-            
+
+            // Load media for POI
+            const media = await loadPOIMedia(poiId);
+
             // Create and show detailed POI modal
-            showDetailedPOIModal(poiData);
+            showDetailedPOIModal(poiData, media);
         } else {
             throw new Error(`HTTP ${response.status}`);
         }
     } catch (error) {
         console.error('❌ Error loading POI details:', error);
         showNotification('POI detayları yüklenemedi', 'error');
-        
+
         // Show basic info modal as fallback
         showBasicPOIModal(poiName);
     }
 }
 
 // Show detailed POI modal
-function showDetailedPOIModal(poi) {
+function showDetailedPOIModal(poi, media = { images: [], videos: [], audio: [], models: [] }) {
     const categoryStyle = getCategoryStyle(poi.category || 'diger');
-    
+    const mediaGallery = createMediaGallery(media, poi);
+
     // Create modal HTML (similar to route detail modal)
     const modalHTML = `
         <div id="poiDetailModal" class="route-detail-modal" style="display: flex;">
@@ -5195,7 +5239,9 @@ function showDetailedPOIModal(poi) {
                             <p>${poi.description}</p>
                         </div>
                         ` : ''}
-                        
+
+                        ${mediaGallery}
+
                         <div class="poi-detail-actions">
                             <button class="poi-action-btn poi-action-btn--google" onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')">
                                 <i class="fab fa-google"></i> Google Maps'te Aç
@@ -9165,7 +9211,7 @@ function createModernPOICards(pois, type = 'primary') {
             ? `<i class="${icon}"></i>`
             : `<span>${icon}</span>`;
         return `
-        <div class="modern-poi-card ${type}" data-poi-id="${poi.id || poi._id}">
+        <div class="modern-poi-card ${type}" data-poi-id="${poi.id || poi._id}" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
             <div class="poi-card-header">
                 <div class="poi-category-badge">
                     ${iconElement}
@@ -9190,16 +9236,16 @@ function createModernPOICards(pois, type = 'primary') {
             </div>
 
             <div class="poi-card-actions">
-                <button class="action-btn primary" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})" title="Haritada Göster">
+                <button class="action-btn primary" onclick="event.stopPropagation(); focusOnMap(${poi.latitude}, ${poi.longitude})" title="Haritada Göster">
                     <i class="fas fa-map-marker-alt"></i>
                 </button>
-                <button class="action-btn secondary" onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" title="Google Maps'te Aç">
+                <button class="action-btn secondary" onclick="event.stopPropagation(); openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" title="Google Maps'te Aç">
                     <i class="fab fa-google"></i>
                 </button>
-                <button class="action-btn success" onclick="addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})" title="Rotaya Ekle">
+                <button class="action-btn success" onclick="event.stopPropagation(); addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})" title="Rotaya Ekle">
                     <i class="fas fa-plus"></i>
                 </button>
-                <button class="action-btn info" onclick="showPOIDetails('${poi.id || poi._id}')" title="Detayları Göster">
+                <button class="action-btn info" onclick="event.stopPropagation(); showPOIDetails('${poi.id || poi._id}')" title="Detayları Göster">
                     <i class="fas fa-info"></i>
                 </button>
             </div>
