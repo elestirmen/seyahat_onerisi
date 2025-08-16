@@ -323,6 +323,14 @@ class RouteDetailsPanel {
             panelTitle.textContent = 'Rota Detayları';
         }
 
+        // Show/hide map view button for predefined routes
+        const showInMapBtn = document.getElementById('showInMapBtn');
+        if (routeData.is_predefined && showInMapBtn) {
+            showInMapBtn.style.display = 'flex';
+        } else if (showInMapBtn) {
+            showInMapBtn.style.display = 'none';
+        }
+
         document.getElementById('routeDistance').textContent = `${distance} km`;
         document.getElementById('routeDuration').textContent = `${Math.round(duration / 60)} saat`;
         document.getElementById('routeStops').textContent = `${stops} durak`;
@@ -825,6 +833,429 @@ class RouteDetailsPanel {
                 }
             }
         });
+    }
+
+    static showInFullscreenMap() {
+        console.log('🗺️ === SHOWING ROUTE IN FULLSCREEN MAP ===');
+        const instance = RouteDetailsPanel.getInstance();
+        
+        if (!instance.currentRoute) {
+            console.error('❌ No current route to show in map');
+            showNotification('Önce bir rota seçin.', 'error');
+            return;
+        }
+
+        const route = instance.currentRoute;
+        console.log('🗺️ Route data for fullscreen map:', route);
+
+        // Hide the route details panel
+        instance.hide();
+
+        // Switch to predefined routes tab if not already there
+        if (typeof currentTab !== 'undefined' && currentTab !== 'predefined-routes') {
+            if (typeof switchTab === 'function') {
+                switchTab('predefined-routes');
+            }
+        }
+
+        // Wait a moment for tab switch, then make existing map fullscreen
+        setTimeout(() => {
+            RouteDetailsPanel.makeExistingMapFullscreen(route);
+        }, 300);
+    }
+
+    static makeExistingMapFullscreen(route) {
+        // Find the existing map container
+        const mapContainer = document.querySelector('.routes-map-container');
+        const routesList = document.getElementById('predefinedRoutesList');
+        
+        if (!mapContainer) {
+            console.error('❌ Map container not found');
+            showNotification('Harita bulunamadı', 'error');
+            return;
+        }
+
+        // Create fullscreen overlay
+        const fullscreenOverlay = document.createElement('div');
+        fullscreenOverlay.id = 'fullscreenMapOverlay';
+        fullscreenOverlay.className = 'fullscreen-map-overlay';
+        
+        // Create header
+        const header = document.createElement('div');
+        header.className = 'fullscreen-map-header';
+        header.innerHTML = `
+            <div class="fullscreen-map-title">
+                <i class="fas fa-map"></i>
+                <span>${route.route_name || 'Rota Haritası'}</span>
+            </div>
+            <div class="fullscreen-map-controls">
+                <button class="fullscreen-control-btn" onclick="RouteDetailsPanel.toggleFullscreenMapInfo()" title="Rota Bilgilerini Göster/Gizle">
+                    <i class="fas fa-info-circle"></i>
+                </button>
+                <button class="fullscreen-control-btn" onclick="RouteDetailsPanel.exitFullscreenMap()" title="Tam Ekrandan Çık">
+                    <i class="fas fa-compress"></i>
+                </button>
+            </div>
+        `;
+
+        // Create info panel
+        const infoPanel = document.createElement('div');
+        infoPanel.id = 'fullscreenMapInfo';
+        infoPanel.className = 'fullscreen-map-info';
+        infoPanel.innerHTML = `
+            <div class="fullscreen-route-stats">
+                <div class="fullscreen-stat-item">
+                    <i class="fas fa-route"></i>
+                    <span>${route.total_distance || '0'} km</span>
+                </div>
+                <div class="fullscreen-stat-item">
+                    <i class="fas fa-clock"></i>
+                    <span>${Math.round((route.estimated_time || 0) / 60)} saat</span>
+                </div>
+                <div class="fullscreen-stat-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>${route.waypoints ? route.waypoints.length : 0} durak</span>
+                </div>
+            </div>
+        `;
+
+        // Add elements to overlay
+        fullscreenOverlay.appendChild(header);
+        fullscreenOverlay.appendChild(infoPanel);
+        
+        // Add overlay to body
+        document.body.appendChild(fullscreenOverlay);
+
+        // Hide routes list and make map container fullscreen
+        if (routesList) {
+            routesList.style.display = 'none';
+        }
+        
+        // Store original styles
+        const originalMapStyles = {
+            position: mapContainer.style.position,
+            top: mapContainer.style.top,
+            left: mapContainer.style.left,
+            right: mapContainer.style.right,
+            bottom: mapContainer.style.bottom,
+            width: mapContainer.style.width,
+            height: mapContainer.style.height,
+            zIndex: mapContainer.style.zIndex,
+            gridTemplateColumns: mapContainer.style.gridTemplateColumns
+        };
+        
+        // Store for restoration
+        window.originalMapStyles = originalMapStyles;
+
+        // Apply fullscreen styles to map container
+        mapContainer.style.position = 'fixed';
+        mapContainer.style.top = '60px'; // Below header
+        mapContainer.style.left = '0';
+        mapContainer.style.right = '0';
+        mapContainer.style.bottom = '0';
+        mapContainer.style.width = '100%';
+        mapContainer.style.height = 'calc(100vh - 60px)';
+        mapContainer.style.zIndex = '9999';
+        mapContainer.style.gridTemplateColumns = '1fr'; // Show only map, hide routes list
+        mapContainer.style.background = '#fff';
+
+        // Show overlay with animation
+        setTimeout(() => {
+            fullscreenOverlay.classList.add('show');
+        }, 10);
+
+        // Invalidate map size after transition
+        setTimeout(() => {
+            if (predefinedMap) {
+                predefinedMap.invalidateSize();
+                
+                // Fit to current route if layers exist
+                if (predefinedMapLayers && predefinedMapLayers.length > 0) {
+                    try {
+                        const group = new L.featureGroup(predefinedMapLayers);
+                        if (group.getBounds().isValid()) {
+                            predefinedMap.fitBounds(group.getBounds(), { padding: [20, 20] });
+                        }
+                    } catch (e) {
+                        console.warn('Could not fit bounds:', e);
+                    }
+                }
+            }
+        }, 300);
+
+        // Add escape key listener
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                RouteDetailsPanel.exitFullscreenMap();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+        
+        // Store escape handler for cleanup
+        window.fullscreenEscapeHandler = escapeHandler;
+
+        showNotification('Harita tam ekran modunda', 'success');
+    }
+
+    static exitFullscreenMap() {
+        const overlay = document.getElementById('fullscreenMapOverlay');
+        const mapContainer = document.querySelector('.routes-map-container');
+        const routesList = document.getElementById('predefinedRoutesList');
+
+        if (overlay) {
+            overlay.classList.remove('show');
+            setTimeout(() => {
+                overlay.remove();
+            }, 300);
+        }
+
+        // Restore original map container styles
+        if (mapContainer && window.originalMapStyles) {
+            const styles = window.originalMapStyles;
+            mapContainer.style.position = styles.position || '';
+            mapContainer.style.top = styles.top || '';
+            mapContainer.style.left = styles.left || '';
+            mapContainer.style.right = styles.right || '';
+            mapContainer.style.bottom = styles.bottom || '';
+            mapContainer.style.width = styles.width || '';
+            mapContainer.style.height = styles.height || '';
+            mapContainer.style.zIndex = styles.zIndex || '';
+            mapContainer.style.gridTemplateColumns = styles.gridTemplateColumns || '';
+            mapContainer.style.background = '';
+        }
+
+        // Show routes list again
+        if (routesList) {
+            routesList.style.display = '';
+        }
+
+        // Remove escape handler
+        if (window.fullscreenEscapeHandler) {
+            document.removeEventListener('keydown', window.fullscreenEscapeHandler);
+            window.fullscreenEscapeHandler = null;
+        }
+
+        // Invalidate map size after restoration
+        setTimeout(() => {
+            if (predefinedMap) {
+                predefinedMap.invalidateSize();
+            }
+        }, 300);
+
+        showNotification('Tam ekran modundan çıkıldı', 'info');
+    }
+
+    static createFullscreenMapModal(route) {
+        // Remove existing fullscreen modal if any
+        const existingModal = document.getElementById('fullscreenMapModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Create fullscreen modal HTML
+        const modalHTML = `
+            <div id="fullscreenMapModal" class="fullscreen-map-modal">
+                <div class="fullscreen-map-header">
+                    <div class="fullscreen-map-title">
+                        <i class="fas fa-map"></i>
+                        <span>${route.route_name || 'Rota Haritası'}</span>
+                    </div>
+                    <div class="fullscreen-map-controls">
+                        <button class="fullscreen-control-btn" onclick="RouteDetailsPanel.toggleFullscreenMapInfo()" title="Rota Bilgilerini Göster/Gizle">
+                            <i class="fas fa-info-circle"></i>
+                        </button>
+                        <button class="fullscreen-control-btn" onclick="RouteDetailsPanel.closeFullscreenMap()" title="Kapat">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="fullscreen-map-container">
+                    <div id="fullscreenMap" class="fullscreen-map"></div>
+                    <div id="fullscreenMapInfo" class="fullscreen-map-info">
+                        <div class="fullscreen-route-stats">
+                            <div class="fullscreen-stat-item">
+                                <i class="fas fa-route"></i>
+                                <span>${route.total_distance || '0'} km</span>
+                            </div>
+                            <div class="fullscreen-stat-item">
+                                <i class="fas fa-clock"></i>
+                                <span>${Math.round((route.estimated_time || 0) / 60)} saat</span>
+                            </div>
+                            <div class="fullscreen-stat-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>${route.waypoints ? route.waypoints.length : 0} durak</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Show modal with animation
+        const modal = document.getElementById('fullscreenMapModal');
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
+
+        // Initialize fullscreen map
+        setTimeout(() => {
+            RouteDetailsPanel.initializeFullscreenMap(route);
+        }, 300);
+
+        // Add escape key listener
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                RouteDetailsPanel.closeFullscreenMap();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+    }
+
+    static async initializeFullscreenMap(route) {
+        try {
+            console.log('🗺️ Initializing fullscreen map for route:', route);
+
+            // Create new map instance for fullscreen
+            const fullscreenMap = L.map('fullscreenMap', {
+                center: [38.6436, 34.8128], // Ürgüp center
+                zoom: 12,
+                zoomControl: true,
+                attributionControl: true
+            });
+
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(fullscreenMap);
+
+            // Store map reference
+            window.fullscreenMapInstance = fullscreenMap;
+
+            // Load and display the route
+            if (route.predefined_route) {
+                await RouteDetailsPanel.displayRouteOnFullscreenMap(fullscreenMap, route.predefined_route);
+            }
+
+            // Invalidate size after modal is fully shown
+            setTimeout(() => {
+                fullscreenMap.invalidateSize();
+            }, 100);
+
+        } catch (error) {
+            console.error('Error initializing fullscreen map:', error);
+            showNotification('Tam ekran harita başlatılırken hata oluştu', 'error');
+        }
+    }
+
+    static async displayRouteOnFullscreenMap(map, route) {
+        try {
+            console.log('🗺️ Displaying route on fullscreen map:', route);
+
+            // Create layer group for route
+            const routeLayerGroup = L.layerGroup().addTo(map);
+
+            // Load route geometry if available
+            if (route.id) {
+                try {
+                    const geometryResponse = await fetch(`${apiBase}/routes/${route.id}/geometry`);
+                    if (geometryResponse.ok) {
+                        const geometryData = await geometryResponse.json();
+                        let geometry = geometryData.geometry || geometryData;
+
+                        if (typeof geometry === 'string') {
+                            geometry = JSON.parse(geometry);
+                        }
+
+                        if (geometry && geometry.coordinates) {
+                            // Create polyline from geometry
+                            const coordinates = geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                            const polyline = L.polyline(coordinates, {
+                                color: '#667eea',
+                                weight: 4,
+                                opacity: 0.8
+                            }).addTo(routeLayerGroup);
+
+                            // Fit map to route bounds
+                            map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Could not load route geometry:', error);
+                }
+            }
+
+            // Add POI markers if available
+            if (route.pois && route.pois.length > 0) {
+                route.pois.forEach((poi, index) => {
+                    const lat = poi.lat || poi.latitude;
+                    const lng = poi.lng || poi.lon || poi.longitude;
+
+                    if (lat && lng) {
+                        const marker = L.marker([lat, lng]).addTo(routeLayerGroup);
+                        
+                        const popupContent = `
+                            <div class="poi-popup">
+                                <h4>${poi.name || `Durak ${index + 1}`}</h4>
+                                <p>${poi.description || 'Açıklama bulunmuyor'}</p>
+                                <small>Kategori: ${poi.category || 'Bilinmiyor'}</small>
+                            </div>
+                        `;
+                        marker.bindPopup(popupContent);
+                    }
+                });
+
+                // If no geometry, fit to POI bounds
+                if (route.pois.length > 0) {
+                    const group = new L.featureGroup(routeLayerGroup.getLayers());
+                    if (group.getBounds().isValid()) {
+                        map.fitBounds(group.getBounds(), { padding: [20, 20] });
+                    }
+                }
+            }
+
+            showNotification('Rota tam ekran haritada gösteriliyor', 'success');
+
+        } catch (error) {
+            console.error('Error displaying route on fullscreen map:', error);
+            showNotification('Rota gösterilirken hata oluştu', 'error');
+        }
+    }
+
+    static toggleFullscreenMapInfo() {
+        const infoPanel = document.getElementById('fullscreenMapInfo');
+        if (infoPanel) {
+            infoPanel.classList.toggle('show');
+        }
+    }
+
+    static closeFullscreenMap() {
+        // Check if we're in overlay mode or modal mode
+        const overlay = document.getElementById('fullscreenMapOverlay');
+        const modal = document.getElementById('fullscreenMapModal');
+        
+        if (overlay) {
+            // Exit overlay mode
+            RouteDetailsPanel.exitFullscreenMap();
+        } else if (modal) {
+            // Exit modal mode
+            modal.classList.remove('show');
+            
+            // Clean up map instance
+            if (window.fullscreenMapInstance) {
+                window.fullscreenMapInstance.remove();
+                window.fullscreenMapInstance = null;
+            }
+            
+            setTimeout(() => {
+                modal.remove();
+            }, 300);
+        }
     }
 
     static exportToGoogleMaps() {
@@ -4540,7 +4971,9 @@ function initializePredefinedRoutes() {
     const fitMapBtn = document.getElementById('fitMapBtn');
     
     if (clearMapBtn) {
-        clearMapBtn.addEventListener('click', () => {
+        clearMapBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             clearPredefinedMapContent();
             showNotification('Harita temizlendi', 'success');
         });
