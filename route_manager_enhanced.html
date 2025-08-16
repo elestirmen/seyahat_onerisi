@@ -1266,6 +1266,7 @@
                             if (window.routeElevationChart) {
                                 if (routeDetails.elevation_profile && routeDetails.elevation_profile.points) {
                                     await window.routeElevationChart.loadElevationProfile(routeDetails.elevation_profile);
+
                                 } else {
                                     await window.routeElevationChart.loadRouteElevation({
                                         pois: pois
@@ -1277,6 +1278,7 @@
                                             }))
                                     });
                                 }
+
                             }
                         } else {
                             console.warn('Yeterli POI koordinatı yok');
@@ -1422,6 +1424,7 @@
                             if (routeDetails.elevation_profile && routeDetails.elevation_profile.points) {
                                 await window.routeElevationChart.loadElevationProfile(routeDetails.elevation_profile);
                             } else if (geometry.type === 'LineString' && geometry.coordinates) {
+
                                 await window.routeElevationChart.loadRouteElevation({
                                     geometry: geometry
                                 });
@@ -1441,6 +1444,7 @@
                         }
 
                         console.log('✅ Rota haritaya eklendi:', routeDetails.name);
+
                     } else {
                         console.warn('Hiçbir geometri formatı işlenemedi:', geometry);
                         showNotification('Rota geometrisi işlenemedi', 'warning');
@@ -2047,6 +2051,7 @@
 
             // Load elevation chart for route manager
             if (window.ElevationChart && routeDetails) {
+
                 setTimeout(async () => {
                     if (!window.routeElevationChart) {
                         window.routeElevationChart = new ElevationChart('routeElevationChartContainer', map);
@@ -2055,6 +2060,7 @@
                     if (routeDetails.elevation_profile && routeDetails.elevation_profile.points) {
                         await window.routeElevationChart.loadElevationProfile(routeDetails.elevation_profile);
                     } else if (routeDetails.geometry) {
+
                         await window.routeElevationChart.loadRouteElevation({
                             geometry: routeDetails.geometry
                         });
