@@ -5488,6 +5488,7 @@ async function loadPredefinedRoutes() {
             filteredRoutes = [...routes];
             
             displayPredefinedRoutes(filteredRoutes);
+            updateRouteStats();
         } else {
             console.error('❌ Failed to load predefined routes:', response.status);
             showNoRoutesMessage('Rotalar yüklenirken hata oluştu.');
@@ -5521,11 +5522,24 @@ function displayPredefinedRoutes(routes) {
     routesList.querySelectorAll('.route-card').forEach((card, index) => {
         card.addEventListener('click', async () => {
             const route = routes[index];
-            await selectPredefinedRoute(route); // handles map rendering internally
-            // Show route details after selecting the route
-            showPredefinedRouteDetailsPanel(window.currentSelectedRoute || route);
+            
+            // Add loading state to clicked card
+            card.classList.add('loading');
+            
+            try {
+                await selectPredefinedRoute(route); // handles map rendering internally
+                // Show route details after selecting the route
+                showPredefinedRouteDetailsPanel(window.currentSelectedRoute || route);
+            } catch (error) {
+                console.error('Error selecting route:', error);
+            } finally {
+                card.classList.remove('loading');
+            }
         });
     });
+    
+    // Update route statistics
+    updateRouteStats();
 }
 
 function createRouteCard(route) {
@@ -5594,15 +5608,24 @@ function getRouteTypeDisplayName(routeType) {
 function applyRouteFilters() {
     console.log('🔍 Applying route filters...');
     
-    const routeTypeFilter = document.getElementById('routeTypeFilter');
-    const difficultyFilter = document.getElementById('difficultyFilter');
-    const durationFilter = document.getElementById('durationFilter');
+    // Get filter values from chips (new system) or fallback to old selects
+    let filters;
     
-    const filters = {
-        routeType: routeTypeFilter ? routeTypeFilter.value : '',
-        difficulty: difficultyFilter ? difficultyFilter.value : '',
-        duration: durationFilter ? durationFilter.value : ''
-    };
+    if (document.getElementById('routeTypeChips')) {
+        // New chip system
+        filters = getActiveFilterValues();
+    } else {
+        // Fallback to old system
+        const routeTypeFilter = document.getElementById('routeTypeFilter');
+        const difficultyFilter = document.getElementById('difficultyFilter');
+        const durationFilter = document.getElementById('durationFilter');
+        
+        filters = {
+            routeType: routeTypeFilter ? routeTypeFilter.value : '',
+            difficulty: difficultyFilter ? difficultyFilter.value : '',
+            duration: durationFilter ? durationFilter.value : ''
+        };
+    }
     
     filteredRoutes = predefinedRoutes.filter(route => {
         // Route type filter
@@ -5629,6 +5652,7 @@ function applyRouteFilters() {
     
     console.log(`✅ Filtered routes: ${filteredRoutes.length}/${predefinedRoutes.length}`);
     displayPredefinedRoutes(filteredRoutes);
+    updateRouteStats();
 }
 
 function clearRouteFilters() {
@@ -9976,7 +10000,145 @@ function initializeApp() {
         }
     }
 
+    // Initialize enhanced filter system
+    try {
+        initializeEnhancedFilters();
+    } catch (err) {
+        console.error('Enhanced filters initialization failed:', err);
+    }
+
     console.log('✅ Application components initialized');
+}
+
+// Enhanced Filter System
+function initializeEnhancedFilters() {
+    console.log('🎛️ Initializing enhanced filter system...');
+    
+    // Filter toggle functionality
+    const filtersToggleBtn = document.getElementById('filtersToggleBtn');
+    const filtersContent = document.getElementById('filtersContent');
+    
+    if (filtersToggleBtn && filtersContent) {
+        filtersToggleBtn.addEventListener('click', () => {
+            const isExpanded = filtersContent.classList.contains('expanded');
+            
+            if (isExpanded) {
+                filtersContent.classList.remove('expanded');
+                filtersToggleBtn.classList.remove('expanded');
+            } else {
+                filtersContent.classList.add('expanded');
+                filtersToggleBtn.classList.add('expanded');
+            }
+        });
+    }
+    
+    // Filter chip functionality
+    initializeFilterChips();
+    
+    // Filter action buttons
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+    
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', clearAllFilters);
+    }
+    
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', applyRouteFilters);
+    }
+    
+    // Update route counts
+    updateRouteStats();
+}
+
+function initializeFilterChips() {
+    // Route type chips
+    const routeTypeChips = document.querySelectorAll('#routeTypeChips .filter-chip');
+    routeTypeChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            // Remove active from siblings
+            routeTypeChips.forEach(c => c.classList.remove('active'));
+            // Add active to clicked chip
+            chip.classList.add('active');
+            
+            // Auto-apply filters on mobile
+            if (window.innerWidth <= 768) {
+                setTimeout(applyRouteFilters, 300);
+            }
+        });
+    });
+    
+    // Difficulty chips
+    const difficultyChips = document.querySelectorAll('#difficultyChips .filter-chip');
+    difficultyChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            difficultyChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            
+            if (window.innerWidth <= 768) {
+                setTimeout(applyRouteFilters, 300);
+            }
+        });
+    });
+    
+    // Duration chips
+    const durationChips = document.querySelectorAll('#durationChips .filter-chip');
+    durationChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            durationChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            
+            if (window.innerWidth <= 768) {
+                setTimeout(applyRouteFilters, 300);
+            }
+        });
+    });
+}
+
+function clearAllFilters() {
+    console.log('🧹 Clearing all filters...');
+    
+    // Reset all filter chips to default (first chip active)
+    const chipGroups = ['#routeTypeChips', '#difficultyChips', '#durationChips'];
+    
+    chipGroups.forEach(groupSelector => {
+        const chips = document.querySelectorAll(`${groupSelector} .filter-chip`);
+        chips.forEach((chip, index) => {
+            if (index === 0) {
+                chip.classList.add('active');
+            } else {
+                chip.classList.remove('active');
+            }
+        });
+    });
+    
+    // Apply filters to show all routes
+    applyRouteFilters();
+}
+
+function getActiveFilterValues() {
+    const routeTypeChip = document.querySelector('#routeTypeChips .filter-chip.active');
+    const difficultyChip = document.querySelector('#difficultyChips .filter-chip.active');
+    const durationChip = document.querySelector('#durationChips .filter-chip.active');
+    
+    return {
+        routeType: routeTypeChip ? routeTypeChip.dataset.value : '',
+        difficulty: difficultyChip ? difficultyChip.dataset.value : '',
+        duration: durationChip ? durationChip.dataset.value : ''
+    };
+}
+
+function updateRouteStats() {
+    const totalRoutesCount = document.getElementById('totalRoutesCount');
+    const filteredRoutesCount = document.getElementById('filteredRoutesCount');
+    
+    if (totalRoutesCount) {
+        totalRoutesCount.textContent = predefinedRoutes.length;
+    }
+    
+    if (filteredRoutesCount) {
+        filteredRoutesCount.textContent = filteredRoutes.length;
+    }
 }
 
 // Initialize the application when DOM is loaded

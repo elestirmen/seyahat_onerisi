@@ -391,54 +391,149 @@
             <!-- Predefined Routes Content -->
             <div class="tab-content" id="predefinedRoutesContent">
                 <div class="predefined-routes-section">
-                    <h2 class="section-title">
-                        <i class="fas fa-route"></i>
-                        Hazır Rotalar
-                    </h2>
-                    <p style="color: #666; font-size: 1rem; margin-bottom: 25px; text-align: center; line-height: 1.6;"
-                        class="predefined-routes-description">
-                        Uzmanlar tarafından önceden hazırlanmış rotalar arasından seçim yapın.
-                        Her rota farklı deneyimler ve zorluk seviyeleri sunar.
-                        Rota kartına tıklayarak haritada görüntüleyin ve detaylarını inceleyin.
-                    </p>
+                    <div class="predefined-routes-header">
+                        <div class="section-header-content">
+                            <h2 class="section-title">
+                                <i class="fas fa-route"></i>
+                                Hazır Rotalar
+                            </h2>
+                            <p class="predefined-routes-description">
+                                Uzmanlar tarafından önceden hazırlanmış rotalar arasından seçim yapın.
+                                Her rota farklı deneyimler ve zorluk seviyeleri sunar.
+                            </p>
+                        </div>
+                        
+                        <!-- Quick Stats -->
+                        <div class="routes-quick-stats" id="routesQuickStats">
+                            <div class="quick-stat-item">
+                                <div class="stat-icon">
+                                    <i class="fas fa-route"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <span class="stat-number" id="totalRoutesCount">-</span>
+                                    <span class="stat-label">Toplam Rota</span>
+                                </div>
+                            </div>
+                            <div class="quick-stat-item">
+                                <div class="stat-icon">
+                                    <i class="fas fa-filter"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <span class="stat-number" id="filteredRoutesCount">-</span>
+                                    <span class="stat-label">Filtrelenmiş</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                    <!-- Route Filters -->
-                    <div class="route-filters">
-                        <div class="filter-group">
-                            <label for="routeTypeFilter">Rota Tipi:</label>
-                            <select id="routeTypeFilter" class="filter-select">
-                                <option value="">Tümü</option>
-                                <option value="walking">Yürüyüş</option>
-                                <option value="hiking">Doğa Yürüyüşü</option>
-                                <option value="cycling">Bisiklet</option>
-                                <option value="driving">Araç</option>
-                            </select>
+                    <!-- Enhanced Route Filters -->
+                    <div class="route-filters-enhanced">
+                        <div class="filters-header">
+                            <h3 class="filters-title">
+                                <i class="fas fa-sliders-h"></i>
+                                Filtreler
+                            </h3>
+                            <button class="filters-toggle-btn" id="filtersToggleBtn">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
                         </div>
-                        <div class="filter-group">
-                            <label for="difficultyFilter">Zorluk Seviyesi:</label>
-                            <select id="difficultyFilter" class="filter-select">
-                                <option value="">Tümü</option>
-                                <option value="1">Kolay</option>
-                                <option value="2">Orta</option>
-                                <option value="3">Zor</option>
-                                <option value="4">Çok Zor</option>
-                                <option value="5">Uzman</option>
-                            </select>
+                        
+                        <div class="filters-content" id="filtersContent">
+                            <div class="filter-chips-container">
+                                <div class="filter-chip-group">
+                                    <label class="filter-chip-label">Rota Tipi</label>
+                                    <div class="filter-chips" id="routeTypeChips">
+                                        <button class="filter-chip active" data-value="">
+                                            <i class="fas fa-globe"></i>
+                                            <span>Tümü</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="walking">
+                                            <i class="fas fa-walking"></i>
+                                            <span>Yürüyüş</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="hiking">
+                                            <i class="fas fa-hiking"></i>
+                                            <span>Doğa</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="cycling">
+                                            <i class="fas fa-bicycle"></i>
+                                            <span>Bisiklet</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="driving">
+                                            <i class="fas fa-car"></i>
+                                            <span>Araç</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="filter-chip-group">
+                                    <label class="filter-chip-label">Zorluk</label>
+                                    <div class="filter-chips" id="difficultyChips">
+                                        <button class="filter-chip active" data-value="">
+                                            <i class="fas fa-star"></i>
+                                            <span>Tümü</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="1">
+                                            <i class="fas fa-leaf"></i>
+                                            <span>Kolay</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="2">
+                                            <i class="fas fa-mountain"></i>
+                                            <span>Orta</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="3">
+                                            <i class="fas fa-fire"></i>
+                                            <span>Zor</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="4">
+                                            <i class="fas fa-bolt"></i>
+                                            <span>Çok Zor</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="5">
+                                            <i class="fas fa-crown"></i>
+                                            <span>Uzman</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="filter-chip-group">
+                                    <label class="filter-chip-label">Süre</label>
+                                    <div class="filter-chips" id="durationChips">
+                                        <button class="filter-chip active" data-value="">
+                                            <i class="fas fa-clock"></i>
+                                            <span>Tümü</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="0-60">
+                                            <i class="fas fa-hourglass-start"></i>
+                                            <span>&lt; 1 saat</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="60-180">
+                                            <i class="fas fa-hourglass-half"></i>
+                                            <span>1-3 saat</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="180-360">
+                                            <i class="fas fa-hourglass-end"></i>
+                                            <span>3-6 saat</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="360-999">
+                                            <i class="fas fa-calendar-day"></i>
+                                            <span>6+ saat</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="filters-actions">
+                                <button class="filter-clear-btn" id="clearFiltersBtn">
+                                    <i class="fas fa-times"></i>
+                                    <span>Temizle</span>
+                                </button>
+                                <button class="filter-apply-btn" id="applyFiltersBtn">
+                                    <i class="fas fa-check"></i>
+                                    <span>Uygula</span>
+                                </button>
+                            </div>
                         </div>
-                        <div class="filter-group">
-                            <label for="durationFilter">Süre:</label>
-                            <select id="durationFilter" class="filter-select">
-                                <option value="">Tümü</option>
-                                <option value="0-60">1 saat altı</option>
-                                <option value="60-180">1-3 saat</option>
-                                <option value="180-360">3-6 saat</option>
-                                <option value="360-999">6+ saat</option>
-                            </select>
-                        </div>
-                        <button class="filter-clear-btn" id="clearFiltersBtn">
-                            <i class="fas fa-times"></i>
-                            Filtreleri Temizle
-                        </button>
                     </div>
 
                     <!-- Routes Loading -->
