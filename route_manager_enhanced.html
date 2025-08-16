@@ -1262,6 +1262,7 @@
                                             }))
                                     });
                                 }
+
                             }
                         } else {
                             console.warn('Yeterli POI koordinatı yok');
@@ -1392,6 +1393,7 @@
                             if (route.elevation_profile && route.elevation_profile.points) {
                                 await window.routeElevationChart.loadElevationProfile(route.elevation_profile);
                             } else if (geometry.type === 'LineString' && geometry.coordinates) {
+
                                 await window.routeElevationChart.loadRouteElevation({
                                     geometry: geometry
                                 });
@@ -2011,6 +2013,7 @@
                     if (route.elevation_profile && route.elevation_profile.points) {
                         await window.routeElevationChart.loadElevationProfile(route.elevation_profile);
                     } else if (route.geometry) {
+
                         await window.routeElevationChart.loadRouteElevation({
                             geometry: route.geometry
                         });
