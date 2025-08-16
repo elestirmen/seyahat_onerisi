@@ -1249,15 +1249,20 @@
 
                             // Load elevation profile for POI-based route
                             if (window.routeElevationChart) {
-                                await window.routeElevationChart.loadRouteElevation({
-                                    pois: pois
-                                        .filter(poi => poi.latitude && poi.longitude)
-                                        .map(poi => ({
-                                            name: poi.name,
-                                            latitude: parseFloat(poi.latitude),
-                                            longitude: parseFloat(poi.longitude)
-                                        }))
-                                });
+                                if (route.elevation_profile && route.elevation_profile.points) {
+                                    await window.routeElevationChart.loadElevationProfile(route.elevation_profile);
+                                } else {
+                                    await window.routeElevationChart.loadRouteElevation({
+                                        pois: pois
+                                            .filter(poi => poi.latitude && poi.longitude)
+                                            .map(poi => ({
+                                                name: poi.name,
+                                                latitude: parseFloat(poi.latitude),
+                                                longitude: parseFloat(poi.longitude)
+                                            }))
+                                    });
+                                }
+
                             }
                         } else {
                             console.warn('Yeterli POI koordinatı yok');
@@ -1383,9 +1388,12 @@
                         // Haritayı rotaya odakla
                         map.fitBounds(layer.getBounds(), { padding: [50, 50] });
 
-                        // Load elevation profile based on available geometry data
+                        // Load elevation profile from route or available geometry data
                         if (window.routeElevationChart) {
-                            if (geometry.type === 'LineString' && geometry.coordinates) {
+                            if (route.elevation_profile && route.elevation_profile.points) {
+                                await window.routeElevationChart.loadElevationProfile(route.elevation_profile);
+                            } else if (geometry.type === 'LineString' && geometry.coordinates) {
+
                                 await window.routeElevationChart.loadRouteElevation({
                                     geometry: geometry
                                 });
@@ -2002,7 +2010,10 @@
                         window.routeElevationChart = new ElevationChart('routeElevationChartContainer', map);
                     }
 
-                    if (route.geometry) {
+                    if (route.elevation_profile && route.elevation_profile.points) {
+                        await window.routeElevationChart.loadElevationProfile(route.elevation_profile);
+                    } else if (route.geometry) {
+
                         await window.routeElevationChart.loadRouteElevation({
                             geometry: route.geometry
                         });
