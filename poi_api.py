@@ -3690,11 +3690,32 @@ def create_smart_route():
 def get_recommendations():
     """Get POI recommendations based on user preferences"""
     try:
+        print(f"📥 Request method: {request.method}")
+        print(f"📥 Request content type: {request.content_type}")
+        print(f"📥 Request data: {request.data}")
+        
         data = request.get_json()
+        print(f"📥 Parsed JSON data: {data}")
+        
+        if not data:
+            print("❌ No JSON data received")
+            return jsonify({'error': 'No JSON data provided'}), 400
+            
         preferences = data.get('preferences', {})
+        print(f"📊 Preferences: {preferences}")
+        print(f"📊 Preferences type: {type(preferences)}")
+        print(f"📊 Preferences keys: {list(preferences.keys()) if preferences else 'None'}")
         
         if not preferences:
+            print("❌ No preferences provided")
             return jsonify({'error': 'No preferences provided'}), 400
+        
+        # Check if all preferences are 0 (user wants general recommendations)
+        all_zero = all(value == 0 for value in preferences.values())
+        if all_zero:
+            # For all-zero preferences, we'll still provide recommendations
+            # but with a more general scoring approach
+            print("ℹ️ All preferences are 0, providing general recommendations")
         
         # Get all POIs with their ratings
         db = get_db()
@@ -3742,22 +3763,44 @@ def get_recommendations():
                            'alisveris', 'spor', 'macera', 'rahatlatici', 
                            'yemek', 'gece_hayati']
             
-            for field in rating_fields:
-                user_pref = preferences.get(field, 0)
-                poi_rating = poi.get(field, 0) if poi.get(field) is not None else 0
-                
-                if user_pref > 0 and poi_rating > 0:
-                    # Normalize both values to 0-1 range and calculate weighted score
-                    normalized_pref = user_pref / 100.0
-                    normalized_rating = poi_rating / 100.0
-                    score += normalized_pref * normalized_rating
-                    rating_count += 1
+            # Check if all preferences are zero (general recommendations)
+            all_prefs_zero = all(preferences.get(field, 0) == 0 for field in rating_fields)
             
-            # Only include POIs that have some matching preferences
-            if score > 0 and rating_count > 0:
-                # Average the score
-                final_score = (score / rating_count) * 100
+            if all_prefs_zero:
+                # For general recommendations, use POI's average rating
+                total_rating = 0
+                rating_count = 0
+                for field in rating_fields:
+                    poi_rating = poi.get(field, 0) if poi.get(field) is not None else 0
+                    if poi_rating > 0:
+                        total_rating += poi_rating
+                        rating_count += 1
                 
+                if rating_count > 0:
+                    final_score = (total_rating / rating_count)
+                else:
+                    final_score = 30  # Base score for POIs without ratings
+            else:
+                # Use preference-based scoring
+                for field in rating_fields:
+                    user_pref = preferences.get(field, 0)
+                    poi_rating = poi.get(field, 0) if poi.get(field) is not None else 0
+                    
+                    if user_pref > 0 and poi_rating > 0:
+                        # Normalize both values to 0-1 range and calculate weighted score
+                        normalized_pref = user_pref / 100.0
+                        normalized_rating = poi_rating / 100.0
+                        score += normalized_pref * normalized_rating
+                        rating_count += 1
+                
+                if score > 0 and rating_count > 0:
+                    # Average the score
+                    final_score = (score / rating_count) * 100
+                else:
+                    final_score = 0  # No matching preferences
+            
+            # Include POI if it has a score > 0
+            if final_score > 0:
                 recommendations.append({
                     'id': poi['id'],
                     'name': poi['name'],

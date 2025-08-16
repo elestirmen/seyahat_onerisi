@@ -23,6 +23,43 @@ window.testGeometryAPI = async function(routeId) {
     }
 };
 
+// Test function for debugging
+window.testAPI = async function() {
+    console.log('🧪 Testing API...');
+    try {
+        const testPreferences = {
+            doga: 50,
+            yemek: 25,
+            tarihi: 0,
+            sanat_kultur: 0,
+            eglence: 0,
+            macera: 0,
+            rahatlatici: 0,
+            spor: 0,
+            alisveris: 0,
+            gece_hayati: 0
+        };
+        
+        const response = await fetch('/api/recommendations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ preferences: testPreferences })
+        });
+        
+        console.log('Test response status:', response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Test response data:', data);
+        } else {
+            const errorText = await response.text();
+            console.error('Test error:', errorText);
+        }
+    } catch (error) {
+        console.error('Test failed:', error);
+    }
+};
+
 // Global variables
 let map = null;
 let markers = [];
@@ -7847,7 +7884,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 //         }
 
 function initializeSliders() {
-    console.log('🎚️ Initializing sliders...');
+    console.log('🎚️ Initializing preference sliders...');
 
     Object.keys(ratingCategories).forEach(category => {
         const slider = document.getElementById(category);
@@ -7863,35 +7900,34 @@ function initializeSliders() {
             return;
         }
 
-        const sliderItem = slider.closest('.slider-item');
-        if (!sliderItem) {
-            console.error(`❌ Slider item not found for: ${category}`);
+        const preferenceItem = slider.closest('.preference-item');
+        if (!preferenceItem) {
+            console.error(`❌ Preference item not found for: ${category}`);
             return;
         }
 
-        console.log(`✅ Setting up slider: ${category}`);
+        console.log(`✅ Setting up preference slider: ${category}`);
 
         // Add both input and change events for better compatibility
         const handleSliderChange = function () {
             const value = parseInt(this.value);
-            console.log(`🎚️ Slider ${category} changed to: ${value}`);
-            valueDisplay.textContent = value;
-            updateSliderBackground(this);
-            updateSliderItemState(sliderItem, valueDisplay, value);
+            console.log(`🎚️ Preference slider ${category} changed to: ${value}`);
+            updatePreferenceValue(category, value, valueDisplay, preferenceItem);
         };
 
         slider.addEventListener('input', handleSliderChange);
         slider.addEventListener('change', handleSliderChange);
 
-        // Initialize background and state
+        // Initialize state
         const initialValue = parseInt(slider.value);
         console.log(`ℹ️ Initial value for ${category}: ${initialValue}`);
-        valueDisplay.textContent = initialValue;
-        updateSliderBackground(slider);
-        updateSliderItemState(sliderItem, valueDisplay, initialValue);
+        updatePreferenceValue(category, initialValue, valueDisplay, preferenceItem);
     });
 
-    console.log('✅ All sliders initialized');
+    // Initialize quick selection buttons
+    initializeQuickSelection();
+
+    console.log('✅ All preference sliders initialized');
 }
 
 function updateSliderBackground(slider) {
@@ -7927,7 +7963,80 @@ function updateSliderBackground(slider) {
     }
 }
 
-// Discrete slider value mapping
+// Preference value mapping for new mobile-optimized interface
+const preferenceValues = {
+    0: { text: 'İlgilenmiyorum', value: 0 },
+    1: { text: 'Az İlgim Var', value: 25 },
+    2: { text: 'İlgim Var', value: 50 },
+    3: { text: 'Çok İlgim Var', value: 75 },
+    4: { text: 'Kesinlikle İhtiyacım Var', value: 100 }
+};
+
+// Quick selection presets
+const quickPresets = {
+    'nature-lover': {
+        doga: 4,
+        macera: 3,
+        rahatlatici: 3,
+        spor: 2,
+        yemek: 1,
+        tarihi: 1,
+        sanat_kultur: 1,
+        eglence: 1,
+        alisveris: 0,
+        gece_hayati: 0
+    },
+    'culture-enthusiast': {
+        tarihi: 4,
+        sanat_kultur: 4,
+        doga: 2,
+        yemek: 3,
+        macera: 1,
+        rahatlatici: 2,
+        spor: 1,
+        eglence: 2,
+        alisveris: 1,
+        gece_hayati: 1
+    },
+    'foodie': {
+        yemek: 4,
+        doga: 2,
+        tarihi: 2,
+        sanat_kultur: 2,
+        macera: 1,
+        rahatlatici: 3,
+        spor: 1,
+        eglence: 3,
+        alisveris: 2,
+        gece_hayati: 3
+    },
+    'adventure-seeker': {
+        macera: 4,
+        spor: 4,
+        doga: 4,
+        yemek: 2,
+        tarihi: 1,
+        sanat_kultur: 1,
+        rahatlatici: 1,
+        eglence: 3,
+        alisveris: 0,
+        gece_hayati: 2
+    },
+    'relaxation': {
+        rahatlatici: 4,
+        doga: 3,
+        yemek: 3,
+        tarihi: 2,
+        sanat_kultur: 2,
+        macera: 0,
+        spor: 1,
+        eglence: 2,
+        alisveris: 2,
+        gece_hayati: 1
+    }
+};
+
+// Discrete slider value mapping (for backward compatibility)
 const discreteValues = {
     0: { text: 'İlgilenmiyorum', value: 0 },
     1: { text: 'Az Meraklıyım', value: 25 },
@@ -7967,6 +8076,89 @@ function updateSliderItemState(sliderItem, valueDisplay, value) {
             sliderItem.classList.add('active');
         }
     }
+}
+
+// New mobile-optimized preference functions
+function updatePreferenceValue(category, value, valueDisplay, preferenceItem) {
+    const preferenceValue = preferenceValues[value];
+    if (preferenceValue) {
+        valueDisplay.textContent = preferenceValue.text;
+        
+        // Update visual state
+        preferenceItem.classList.remove('active');
+        if (value > 0) {
+            preferenceItem.classList.add('active');
+        }
+        
+        console.log(`✅ Updated ${category} preference to: ${preferenceValue.text} (${value})`);
+    }
+}
+
+function initializeQuickSelection() {
+    console.log('🚀 Initializing quick selection buttons...');
+    
+    const quickButtons = document.querySelectorAll('.quick-btn');
+    quickButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const preset = this.getAttribute('data-preset');
+            console.log(`🎯 Quick selection clicked: ${preset}`);
+            
+            if (preset === 'reset') {
+                resetAllPreferences();
+            } else if (quickPresets[preset]) {
+                applyPreset(quickPresets[preset]);
+            }
+            
+            // Add visual feedback
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 150);
+        });
+    });
+    
+    console.log('✅ Quick selection buttons initialized');
+}
+
+function applyPreset(preset) {
+    console.log('🎨 Applying preset:', preset);
+    
+    Object.keys(preset).forEach(category => {
+        const slider = document.getElementById(category);
+        const valueDisplay = document.getElementById(category + '-value');
+        const preferenceItem = slider?.closest('.preference-item');
+        
+        if (slider && valueDisplay && preferenceItem) {
+            const value = preset[category];
+            slider.value = value;
+            updatePreferenceValue(category, value, valueDisplay, preferenceItem);
+            
+            // Trigger change event for any additional handlers
+            slider.dispatchEvent(new Event('change'));
+        }
+    });
+    
+    console.log('✅ Preset applied successfully');
+}
+
+function resetAllPreferences() {
+    console.log('🔄 Resetting all preferences...');
+    
+    Object.keys(ratingCategories).forEach(category => {
+        const slider = document.getElementById(category);
+        const valueDisplay = document.getElementById(category + '-value');
+        const preferenceItem = slider?.closest('.preference-item');
+        
+        if (slider && valueDisplay && preferenceItem) {
+            slider.value = 0;
+            updatePreferenceValue(category, 0, valueDisplay, preferenceItem);
+            
+            // Trigger change event
+            slider.dispatchEvent(new Event('change'));
+        }
+    });
+    
+    console.log('✅ All preferences reset');
 }
 
 function setupEventListeners() {
@@ -8083,18 +8275,42 @@ async function getRecommendations() {
 
         const preferences = {};
         Object.keys(ratingCategories).forEach(category => {
-            const sliderValue = parseInt(document.getElementById(category).value);
             const slider = document.getElementById(category);
+            
+            if (!slider) {
+                console.error(`❌ Slider not found for category: ${category}`);
+                return;
+            }
+            
+            const sliderValue = parseInt(slider.value);
+            console.log(`🎚️ ${category}: slider value = ${sliderValue}, classes = ${slider.className}`);
 
+            // Check for both old and new slider types
             if (slider.classList.contains('discrete-slider')) {
-                // Convert discrete slider value to actual preference value
+                // Convert discrete slider value to actual preference value (old interface)
                 preferences[category] = discreteValues[sliderValue].value;
+                console.log(`   → Using discrete value: ${discreteValues[sliderValue].value}`);
+            } else if (slider.classList.contains('preference-slider')) {
+                // Convert preference slider value to actual preference value (new interface)
+                preferences[category] = preferenceValues[sliderValue].value;
+                console.log(`   → Using preference value: ${preferenceValues[sliderValue].value}`);
             } else {
+                // Fallback for direct values
                 preferences[category] = sliderValue;
+                console.log(`   → Using direct value: ${sliderValue}`);
             }
         });
 
         console.log('User preferences:', preferences);
+        console.log('Preferences object keys:', Object.keys(preferences));
+        console.log('Preferences object values:', Object.values(preferences));
+        console.log('Sending to API:', JSON.stringify({ preferences }, null, 2));
+        
+        // Debug: Check if preferences is empty
+        if (Object.keys(preferences).length === 0) {
+            console.error('❌ Preferences object is empty!');
+            throw new Error('Preferences could not be collected');
+        }
 
         // Update progress
         if (window.loadingManager && typeof window.loadingManager.updateProgress === 'function') {
@@ -8105,30 +8321,33 @@ async function getRecommendations() {
             }
         }
 
-        // Use lazy loader for POI data or fallback to regular fetch
-        let poisData;
-        if (window.lazyLoader && typeof window.lazyLoader.loadPOIData === 'function') {
+        // Make API request to get recommendations
+        console.log('🚀 Making API request to:', `${apiBase}/recommendations`);
+        console.log('🚀 Request body:', JSON.stringify({ preferences }));
+        
+        const response = await fetch(`${apiBase}/recommendations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ preferences })
+        });
+        
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response ok:', response.ok);
+        
+        if (!response.ok) {
+            let errorText;
             try {
-                poisData = await window.lazyLoader.loadPOIData(preferences, {
-                    showProgress: false // We're handling progress manually
-                });
-            } catch (error) {
-                console.warn('Lazy loader error, using fallback fetch:', error);
-                // Fallback to regular fetch
-                const response = await fetch(`${apiBase}/pois`);
-                if (!response.ok) {
-                    throw new Error('POI verisi alınamadı');
-                }
-                poisData = await response.json();
+                errorText = await response.text();
+                console.error('❌ API Error Response:', errorText);
+            } catch (e) {
+                console.error('❌ Could not read error response:', e);
+                errorText = 'Unknown error';
             }
-        } else {
-            // Fallback to regular fetch
-            const response = await fetch(`${apiBase}/pois`);
-            if (!response.ok) {
-                throw new Error('POI verisi alınamadı');
-            }
-            poisData = await response.json();
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
+        
+        const apiData = await response.json();
+        console.log('API Response:', apiData);
 
         if (window.loadingManager && typeof window.loadingManager.updateProgress === 'function') {
             try {
@@ -8138,24 +8357,27 @@ async function getRecommendations() {
             }
         }
 
-        // Calculate recommendations with performance monitoring
-        let recommendationData;
-        if (window.loadingManager && window.loadingManager.performanceMonitor && typeof window.loadingManager.performanceMonitor.measureRender === 'function') {
-            try {
-                recommendationData = window.loadingManager.performanceMonitor.measureRender(
-                    'calculateRecommendations',
-                    () => calculateRecommendations(poisData, preferences)
-                );
-            } catch (error) {
-                console.warn('Performance monitoring error:', error);
-                recommendationData = calculateRecommendations(poisData, preferences);
-            }
-        } else {
-            // Fallback without performance monitoring
-            recommendationData = calculateRecommendations(poisData, preferences);
-        }
+        // Transform API response to match our display format
+        const recommendationData = {
+            highScore: apiData.recommendations.filter(poi => poi.score >= 45).map(poi => ({
+                ...poi,
+                recommendationScore: Math.round(poi.score),
+                ratings: poi.ratings || {}
+            })),
+            lowScore: apiData.recommendations.filter(poi => poi.score < 45).map(poi => ({
+                ...poi,
+                recommendationScore: Math.round(poi.score),
+                ratings: poi.ratings || {}
+            })),
+            all: apiData.recommendations.map(poi => ({
+                ...poi,
+                recommendationScore: Math.round(poi.score),
+                ratings: poi.ratings || {}
+            }))
+        };
 
-        console.log('Calculated recommendation data:', recommendationData);
+        console.log('Processed recommendation data:', recommendationData);
+        
         if (window.loadingManager && typeof window.loadingManager.updateProgress === 'function') {
             try {
                 window.loadingManager.updateProgress('loadingIndicator', 90);
@@ -8168,7 +8390,7 @@ async function getRecommendations() {
             console.warn('No recommendations found');
         }
 
-        // Display results with animation - start with high score POIs
+        // Display results with animation
         await displayRecommendations(recommendationData);
 
         if (window.loadingManager && typeof window.loadingManager.updateProgress === 'function') {
@@ -8179,7 +8401,7 @@ async function getRecommendations() {
             }
         }
 
-        // Initialize map with all recommendations (high and low score)
+        // Initialize map with all recommendations
         if (recommendationData.highScore.length > 0 || recommendationData.lowScore.length > 0) {
             console.log('Initializing map with all recommendations...');
             await initializeMap(recommendationData);
@@ -8314,12 +8536,18 @@ async function displayRecommendations(recommendationData) {
     // Check if we have any recommendations
     if (recommendationData.highScore.length === 0 && recommendationData.lowScore.length === 0) {
         container.innerHTML = `
-                    <div class="no-results">
-                        <i class="fas fa-search"></i>
-                        <h3>Öneri bulunamadı</h3>
-                        <p>Tercihlerinize uygun POI bulunamadı. Slider değerlerini değiştirerek tekrar deneyin.</p>
-                    </div>
-                `;
+            <div class="no-results-modern">
+                <div class="no-results-icon">
+                    <i class="fas fa-compass"></i>
+                </div>
+                <h3>Keşfedilecek yerler bulunamadı</h3>
+                <p>Tercihlerinizi değiştirerek farklı deneyimler keşfedebilirsiniz.</p>
+                <button class="retry-btn" onclick="document.querySelector('.quick-btn[data-preset=\\'reset\\']').click()">
+                    <i class="fas fa-redo"></i>
+                    Tercihleri Sıfırla
+                </button>
+            </div>
+        `;
         routeSection.style.display = 'none';
         return;
     }
@@ -8327,51 +8555,78 @@ async function displayRecommendations(recommendationData) {
     // Show route section
     routeSection.style.display = 'block';
 
-    // Create HTML for high score POIs
-    let html = '';
+    // Create modern recommendation display
+    let html = `
+        <div class="recommendations-modern">
+            <div class="recommendations-header">
+                <div class="recommendations-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">${recommendationData.highScore.length + recommendationData.lowScore.length}</span>
+                        <span class="stat-label">Toplam Öneri</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${recommendationData.highScore.length}</span>
+                        <span class="stat-label">Size Özel</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${recommendationData.lowScore.length}</span>
+                        <span class="stat-label">Alternatif</span>
+                    </div>
+                </div>
+            </div>
+    `;
 
     if (recommendationData.highScore.length > 0) {
         html += `
-            <div class="recommendation-section">
-                <h4 style="color: #28a745; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-star"></i>
-                    En Uygun Öneriler (${recommendationData.highScore.length} adet)
-                </h4>
-                <div class="high-score-pois">
-                    ${createPOICards(recommendationData.highScore)}
+            <div class="recommendation-category primary">
+                <div class="category-header">
+                    <div class="category-title">
+                        <i class="fas fa-star"></i>
+                        <h3>Size Özel Öneriler</h3>
+                        <span class="category-badge">${recommendationData.highScore.length}</span>
+                    </div>
+                    <p class="category-description">Tercihlerinize en uygun yerler</p>
+                </div>
+                <div class="recommendations-grid">
+                    ${createModernPOICards(recommendationData.highScore, 'primary')}
                 </div>
             </div>
         `;
     }
 
-    // Add low score POIs section if available
     if (recommendationData.lowScore.length > 0) {
         html += `
-            <div class="recommendation-section" style="margin-top: 30px;">
-                <div class="low-score-header" style="text-align: center; margin-bottom: 20px;">
-                    <h4 style="color: #6c757d; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        <i class="fas fa-eye-slash"></i>
-                        Diğer Seçenekler (${recommendationData.lowScore.length} adet)
-                    </h4>
-                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
-                        Tercihlerinize daha az uygun olan ancak keşfetmek isteyebileceğiniz yerler
-                    </p>
-                    <button id="showLowScoreBtn" class="btn btn--secondary btn--sm" onclick="toggleLowScorePOIs()">
-                        <i class="fas fa-eye"></i> Diğer Seçenekleri Göster
+            <div class="recommendation-category secondary">
+                <div class="category-header">
+                    <div class="category-title">
+                        <i class="fas fa-compass"></i>
+                        <h3>Keşfedebileceğiniz Yerler</h3>
+                        <span class="category-badge secondary">${recommendationData.lowScore.length}</span>
+                    </div>
+                    <p class="category-description">Farklı deneyimler için alternatif seçenekler</p>
+                    <button class="toggle-category-btn" onclick="toggleAlternativeRecommendations()">
+                        <span class="toggle-text">Göster</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
                     </button>
                 </div>
-                <div id="lowScorePOIs" style="display: none;">
-                    ${createPOICards(recommendationData.lowScore)}
+                <div class="recommendations-grid alternative" id="alternativeRecommendations" style="display: none;">
+                    ${createModernPOICards(recommendationData.lowScore, 'secondary')}
                 </div>
             </div>
         `;
     }
 
+    html += `</div>`;
+
     container.innerHTML = html;
+    
+    // Smooth reveal animation
     container.style.opacity = '0';
+    container.style.transform = 'translateY(20px)';
     setTimeout(() => {
-        container.style.transition = 'opacity 0.3s ease';
+        container.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
         container.style.opacity = '1';
+        container.style.transform = 'translateY(0)';
     }, 100);
 
     if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
@@ -8861,7 +9116,107 @@ function createPOICards(pois) {
     `).join('');
 }
 
-// Toggle low score POIs visibility
+// Modern POI Cards for improved UX
+function createModernPOICards(pois, type = 'primary') {
+    return pois.map(poi => `
+        <div class="modern-poi-card ${type}" data-poi-id="${poi.id || poi._id}">
+            <div class="poi-card-header">
+                <div class="poi-category-badge">
+                    <i class="${getCategoryIcon(poi.category)}"></i>
+                    <span>${getCategoryDisplayName(poi.category)}</span>
+                </div>
+                <div class="poi-score ${poi.recommendationScore >= 45 ? 'high' : 'medium'}">
+                    ${poi.recommendationScore}%
+                </div>
+            </div>
+            
+            <div class="poi-card-content">
+                <h4 class="poi-title">${poi.name}</h4>
+                <div class="poi-description">
+                    ${poi.description ? poi.description.substring(0, 120) + '...' : 'Keşfetmeye değer bir yer'}
+                </div>
+                
+                <div class="poi-features">
+                    ${poi.features ? poi.features.slice(0, 3).map(feature => 
+                        `<span class="feature-tag">${feature}</span>`
+                    ).join('') : ''}
+                </div>
+            </div>
+            
+            <div class="poi-card-actions">
+                <button class="action-btn primary" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})" title="Haritada Göster">
+                    <i class="fas fa-map-marker-alt"></i>
+                </button>
+                <button class="action-btn secondary" onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}'))" title="Google Maps'te Aç">
+                    <i class="fab fa-google"></i>
+                </button>
+                <button class="action-btn success" onclick="addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})" title="Rotaya Ekle">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button class="action-btn info" onclick="showPOIDetails('${poi.id || poi._id}')" title="Detayları Göster">
+                    <i class="fas fa-info"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Toggle alternative recommendations
+function toggleAlternativeRecommendations() {
+    const alternativeSection = document.getElementById('alternativeRecommendations');
+    const toggleBtn = document.querySelector('.toggle-category-btn');
+    const toggleText = toggleBtn.querySelector('.toggle-text');
+    const toggleIcon = toggleBtn.querySelector('.toggle-icon');
+    
+    if (alternativeSection.style.display === 'none') {
+        // Show alternatives
+        alternativeSection.style.display = 'grid';
+        alternativeSection.style.opacity = '0';
+        alternativeSection.style.transform = 'translateY(-10px)';
+        
+        setTimeout(() => {
+            alternativeSection.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            alternativeSection.style.opacity = '1';
+            alternativeSection.style.transform = 'translateY(0)';
+        }, 50);
+        
+        toggleText.textContent = 'Gizle';
+        toggleIcon.style.transform = 'rotate(180deg)';
+        toggleBtn.classList.add('active');
+    } else {
+        // Hide alternatives
+        alternativeSection.style.opacity = '0';
+        alternativeSection.style.transform = 'translateY(-10px)';
+        
+        setTimeout(() => {
+            alternativeSection.style.display = 'none';
+        }, 300);
+        
+        toggleText.textContent = 'Göster';
+        toggleIcon.style.transform = 'rotate(0deg)';
+        toggleBtn.classList.remove('active');
+    }
+}
+
+// Helper function to get category icon
+function getCategoryIcon(category) {
+    const iconMap = {
+        'doga_macera': 'fas fa-tree',
+        'gastronomik': 'fas fa-utensils',
+        'konaklama': 'fas fa-bed',
+        'kulturel': 'fas fa-university',
+        'sanatsal': 'fas fa-palette',
+        'dini': 'fas fa-mosque',
+        'tarihi': 'fas fa-landmark',
+        'mimari': 'fas fa-building',
+        'mezarlik': 'fas fa-cross',
+        'saray_kale': 'fas fa-chess-rook',
+        'diger': 'fas fa-map-marker-alt'
+    };
+    return iconMap[category] || 'fas fa-map-marker-alt';
+}
+
+// Toggle low score POIs visibility (legacy function for backward compatibility)
 function toggleLowScorePOIs() {
     const lowScorePOIs = document.getElementById('lowScorePOIs');
     const toggleBtn = document.getElementById('showLowScoreBtn');
@@ -8966,7 +9321,9 @@ function toggleLowScorePOIs() {
         console.log('🗺️ Low score POIs hidden on map');
     }
 }
-// Enhanced Recommend Button Functionality
+// Enhanced Recommend Button Functionality - REMOVED DUPLICATE
+// This was causing conflicts with the main event listener in setupEventListeners()
+/*
 document.addEventListener('DOMContentLoaded', function() {
     const recommendBtn = document.getElementById('recommendBtn');
     
@@ -8992,12 +9349,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     preferences[slider.id] = parseInt(slider.value);
                 });
                 
-                // Validate preferences
-                if (Object.values(preferences).every(val => val === 0)) {
-                    showNotification('⚠️ Lütfen en az bir kategori için tercih belirtin!', 'warning');
-                    resetButton();
-                    return;
-                }
+                // Note: Removed validation - users can get recommendations even with all preferences at 0
+                // This allows for general exploration without forcing specific preferences
                 
                 // Make API request
                 const response = await fetch(`${apiBase}/recommendations`, {
@@ -9517,3 +9870,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Export for global access
 window.RouteContextMenu = RouteContextMenu;
+
+// Close the commented duplicate event listener section
+*/
+
+// Initialize the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM loaded, initializing POI recommendation system...');
+    initializeApp();
+});
+
+// Also initialize if DOM is already loaded
+if (document.readyState === 'loading') {
+    // DOM is still loading, wait for DOMContentLoaded
+    console.log('⏳ DOM is still loading, waiting...');
+} else {
+    // DOM is already loaded
+    console.log('✅ DOM already loaded, initializing immediately...');
+    initializeApp();
+}

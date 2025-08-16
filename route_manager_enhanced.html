@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rota Yönetimi - Gelişmiş Panel</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -33,7 +35,7 @@
         /* Main Layout */
         .route-management-container {
             display: grid;
-            grid-template-areas: 
+            grid-template-areas:
                 "header header header"
                 "sidebar workspace map";
             grid-template-columns: 380px 1fr 600px;
@@ -47,8 +49,10 @@
         /* Resizable Splitter */
         .resize-handle {
             position: absolute;
-            top: 80px; /* Header yüksekliği + padding */
-            right: 620px; /* Map genişliği + gap */
+            top: 80px;
+            /* Header yüksekliği + padding */
+            right: 620px;
+            /* Map genişliği + gap */
             width: 8px;
             height: calc(100vh - 100px);
             background: linear-gradient(90deg, transparent 2px, var(--route-border) 2px, var(--route-border) 6px, transparent 6px);
@@ -76,13 +80,11 @@
             transform: translate(-50%, -50%);
             width: 3px;
             height: 30px;
-            background: repeating-linear-gradient(
-                to bottom,
-                var(--route-secondary) 0px,
-                var(--route-secondary) 3px,
-                transparent 3px,
-                transparent 6px
-            );
+            background: repeating-linear-gradient(to bottom,
+                    var(--route-secondary) 0px,
+                    var(--route-secondary) 3px,
+                    transparent 3px,
+                    transparent 6px);
             opacity: 0.5;
             transition: opacity 0.2s ease;
         }
@@ -435,10 +437,25 @@
             margin-bottom: 0.5rem;
         }
 
-        .route-type-walking { background: #dcfce7; color: #166534; }
-        .route-type-hiking { background: #fef3c7; color: #92400e; }
-        .route-type-cycling { background: #dbeafe; color: #1e40af; }
-        .route-type-driving { background: #fce7f3; color: #be185d; }
+        .route-type-walking {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .route-type-hiking {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .route-type-cycling {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .route-type-driving {
+            background: #fce7f3;
+            color: #be185d;
+        }
 
         .route-stats {
             display: grid;
@@ -630,7 +647,8 @@
         }
 
         .route-map-view.fullscreen #routeMap {
-            min-height: calc(100vh - 60px); /* Header yüksekliği çıkarılmış */
+            min-height: calc(100vh - 60px);
+            /* Header yüksekliği çıkarılmış */
         }
 
         /* Custom POI Map Markers */
@@ -840,22 +858,23 @@
         /* Responsive Design */
         @media (max-width: 1200px) {
             .route-management-container {
-                grid-template-areas: 
+                grid-template-areas:
                     "header header"
                     "sidebar workspace"
                     "map map";
                 grid-template-columns: 350px 1fr;
                 grid-template-rows: auto 1fr 450px;
             }
-            
+
             .resize-handle {
-                display: none; /* Hide splitter on smaller screens */
+                display: none;
+                /* Hide splitter on smaller screens */
             }
         }
 
         @media (max-width: 768px) {
             .route-management-container {
-                grid-template-areas: 
+                grid-template-areas:
                     "header"
                     "sidebar"
                     "workspace"
@@ -903,8 +922,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         /* Notifications */
@@ -940,6 +964,7 @@
                 transform: translateX(100%);
                 opacity: 0;
             }
+
             to {
                 transform: translateX(0);
                 opacity: 1;
@@ -947,11 +972,12 @@
         }
     </style>
 </head>
+
 <body>
     <div class="route-management-container" id="routeContainer">
         <!-- Resizable Splitter -->
         <div class="resize-handle" id="resizeHandle"></div>
-        
+
         <!-- Header -->
         <header class="route-header">
             <h1>
@@ -981,7 +1007,8 @@
                     <i class="fas fa-sync-alt me-1"></i>
                     Yenile
                 </button>
-                <button class="btn btn-outline-warning" onclick="clearMapRoutes()" title="Haritadaki tüm rotaları temizle">
+                <button class="btn btn-outline-warning" onclick="clearMapRoutes()"
+                    title="Haritadaki tüm rotaları temizle">
                     <i class="fas fa-eraser me-1"></i>
                     Haritayı Temizle
                 </button>
@@ -1001,8 +1028,8 @@
             <div class="sidebar-controls">
                 <div class="search-container">
                     <i class="fas fa-search search-icon"></i>
-                    <input type="text" class="search-input" id="routeSearch" 
-                           placeholder="Rota ara..." oninput="handleSearch()">
+                    <input type="text" class="search-input" id="routeSearch" placeholder="Rota ara..."
+                        oninput="handleSearch()">
                 </div>
 
                 <div class="filter-controls">
@@ -1169,13 +1196,14 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="static/js/map-layer-control.js"></script>
     <script src="static/js/rate-limiter.js"></script>
     <script src="static/js/elevation-chart.js"></script>
     <script src="static/js/api-client.js"></script>
     <script src="static/js/navigation-manager.js"></script>
-  <script>
+    <script>
         // Rate limiting bilgilendirme mesajı
         if (window.rateLimiter) {
             console.log('✅ Rate limiting aktif - API çağrıları sınırlandırılacak');
@@ -1223,17 +1251,17 @@
                 const response = await rateLimitedFetch(`${apiBase}/admin/routes/${rid}/pois`, {
                     credentials: 'include'
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     const pois = data.pois || data.results || [];
-                    
+
                     if (pois.length > 0) {
                         // POI koordinatlarını al
                         const latlngs = pois
                             .filter(poi => poi.latitude && poi.longitude)
                             .map(poi => [parseFloat(poi.latitude), parseFloat(poi.longitude)]);
-                        
+
                         if (latlngs.length > 1) {
                             // POI'ler arasında rota çiz
                             const layer = L.polyline(latlngs, {
@@ -1242,9 +1270,9 @@
                                 opacity: 0.8,
                                 dashArray: '8,4' // POI-based rotayı ayırt etmek için
                             }).addTo(map);
-                            
+
                             routeLayers[rid] = layer;
-                            
+
                             // POI marker'larını da ekle
                             pois.forEach((poi, index) => {
                                 if (poi.latitude && poi.longitude) {
@@ -1256,7 +1284,7 @@
                                     poiMarkersLayer.addLayer(marker);
                                 }
                             });
-                            
+
                             // Haritayı rotaya odakla
                             map.fitBounds(layer.getBounds(), { padding: [50, 50] });
 
@@ -1324,16 +1352,16 @@
 
                 // Önce mevcut geometriyi kontrol et
                 let geometry = route.geometry || routeDetails.geometry;
-                
+
                 // Geometri yoksa veya string ise API'den al
                 if (!geometry || typeof geometry === 'string') {
                     console.log(`Rota ${rid} için geometri API'den alınıyor...`);
-                    
+
                     try {
-                        const response = await rateLimitedFetch(`${apiBase}/routes/${rid}/geometry`, { 
-                            credentials: 'include' 
+                        const response = await rateLimitedFetch(`${apiBase}/routes/${rid}/geometry`, {
+                            credentials: 'include'
                         });
-                        
+
                         if (response.ok) {
                             const data = await response.json();
                             if (data.success && data.geometry) {
@@ -1353,7 +1381,7 @@
                 // Hibrit geometri işleme - hem statik hem dinamik rota desteği
                 if (geometry) {
                     console.log('Ham geometri verisi:', geometry);
-                    
+
                     // String ise parse et
                     if (typeof geometry === 'string') {
                         try {
@@ -1367,7 +1395,7 @@
                     // Rota rengini belirle
                     const color = ROUTE_TYPES[routeDetails.route_type]?.color || '#2563eb';
                     let layer = null;
-                    
+
                     // YAKLAŞIM 1: Statik LineString geometrisi (klasik)
                     if (geometry.type === 'LineString' && geometry.coordinates && geometry.coordinates.length > 0) {
                         console.log('📍 Statik LineString geometrisi kullanılıyor');
@@ -1475,7 +1503,7 @@
         let allPoisForAssociation = [];
         let csrfToken = null;
         let defaultWorkspaceActionsHTML = '';
-        
+
         // Rate limiting için
         let lastLoadTime = 0;
         const minLoadInterval = 2000; // 2 saniye minimum aralık
@@ -1511,7 +1539,7 @@
         };
 
         // Initialize application
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             initializeMap();
             loadRoutes();
             setupEventListeners();
@@ -1522,11 +1550,11 @@
             fetch('/auth/csrf-token', { credentials: 'include' })
                 .then(r => r.ok ? r.json() : null)
                 .then(d => { if (d?.csrf_token) csrfToken = d.csrf_token; })
-                .catch(() => {});
+                .catch(() => { });
         });
 
         // Cleanup on page unload
-        window.addEventListener('beforeunload', function() {
+        window.addEventListener('beforeunload', function () {
             if (window.routeElevationChart) {
                 window.routeElevationChart.destroy();
                 window.routeElevationChart = null;
@@ -1553,13 +1581,13 @@
                         if (g && g.geometry) {
                             let geo = g.geometry;
                             if (typeof geo === 'string') {
-                                try { geo = JSON.parse(geo); } catch(e) { /* ignore */ }
+                                try { geo = JSON.parse(geo); } catch (e) { /* ignore */ }
                             }
                             r.geometry = geo || r.geometry;
                             if (g.total_distance != null) r.total_distance = g.total_distance;
                             if (g.estimated_duration != null) r.estimated_duration = g.estimated_duration;
                         }
-                    } catch(e) { /* ignore per route */ }
+                    } catch (e) { /* ignore per route */ }
                 });
                 await Promise.all(tasks);
             } catch (e) {
@@ -1572,7 +1600,7 @@
             console.log('Initializing map...');
             const mapContainer = document.getElementById('routeMap');
             console.log('Map container:', mapContainer, 'Visible:', mapContainer ? mapContainer.offsetHeight : 'N/A');
-            
+
             map = L.map('routeMap').setView([38.7312, 34.4547], 10);
             console.log('Map object created:', map);
 
@@ -1584,7 +1612,7 @@
             if (window.ElevationChart) {
                 window.routeElevationChart = new ElevationChart('routeElevationChartContainer', map);
             }
-            
+
             // Force map size invalidation after a short delay
             setTimeout(() => {
                 if (map) {
@@ -1594,7 +1622,7 @@
             }, 100);
 
             // Add map click handler
-            map.on('click', function(e) {
+            map.on('click', function (e) {
                 // Handle map interactions
             });
         }
@@ -1603,7 +1631,7 @@
         function setupEventListeners() {
             // Search input with debouncing
             document.getElementById('routeSearch').addEventListener('input', handleSearch);
-            
+
             // Filter change handlers
             document.getElementById('typeFilter').addEventListener('change', applyFilters);
             document.getElementById('difficultyFilter').addEventListener('change', applyFilters);
@@ -1619,15 +1647,15 @@
             //     console.log('Rota yükleme rate limit nedeniyle atlandı');
             //     return;
             // }
-            
+
             // loadingInProgress = true;  // Geliştirme için devre dışı
             // lastLoadTime = now;
-            
+
             try {
                 showLoading();
                 const response = await rateLimitedFetch(`${apiBase}/admin/routes`, { credentials: 'include' });
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     if (Array.isArray(data)) {
                         allRoutes = data;
@@ -1642,14 +1670,14 @@
                             if (Array.isArray(val)) allRoutes = allRoutes.concat(val);
                         });
                     }
-                    console.log('Loaded routes:', allRoutes.map(r => ({id: getRouteId(r), name: r.name})));
+                    console.log('Loaded routes:', allRoutes.map(r => ({ id: getRouteId(r), name: r.name })));
                     filteredRoutes = [...allRoutes];
-                    console.log('Filtered routes:', filteredRoutes.map(r => ({id: getRouteId(r), name: r.name})));
+                    console.log('Filtered routes:', filteredRoutes.map(r => ({ id: getRouteId(r), name: r.name })));
                     displayRoutes();
                     // Rotaları otomatik olarak haritaya yükleme - devre dışı bırakıldı
                     // await attachGeometriesToRoutes(filteredRoutes);
                     // updateMapRoutes();
-                    
+
                     // Auto-focus sadece seçili rota varsa
                     // setTimeout(() => {
                     //     if (Object.keys(routeLayers).length > 0) {
@@ -1670,7 +1698,7 @@
         // Display routes in sidebar
         function displayRoutes() {
             const container = document.getElementById('routeListContainer');
-            
+
             if (filteredRoutes.length === 0) {
                 container.innerHTML = `
                     <div class="empty-workspace">
@@ -1757,7 +1785,7 @@
             // Filter routes
             filteredRoutes = allRoutes.filter(route => {
                 // Search filter
-                if (searchTerm && !route.name.toLowerCase().includes(searchTerm) && 
+                if (searchTerm && !route.name.toLowerCase().includes(searchTerm) &&
                     !route.description?.toLowerCase().includes(searchTerm) &&
                     !route.tags?.toLowerCase().includes(searchTerm)) {
                     return false;
@@ -1781,15 +1809,15 @@
                 return true;
             });
 
-        // --- Helpers: ID and parsing ---
-        function getRouteId(route) {
-            return route?.id ?? route?._id ?? route?.route_id ?? null;
-        }
+            // --- Helpers: ID and parsing ---
+            function getRouteId(route) {
+                return route?.id ?? route?._id ?? route?.route_id ?? null;
+            }
 
-        function getPoiId(poi) {
-            // Try different ID field names in order of preference
-            return poi?.id ?? poi?._id ?? poi?.poi_id ?? null;
-        }
+            function getPoiId(poi) {
+                // Try different ID field names in order of preference
+                return poi?.id ?? poi?._id ?? poi?.poi_id ?? null;
+            }
 
             // Sort routes
             filteredRoutes.sort((a, b) => {
@@ -1818,7 +1846,7 @@
             displayRoutes();
             // Filtreleme sırasında da otomatik harita güncelleme devre dışı
             // await attachGeometriesToRoutes(filteredRoutes);
-            
+
             // Sadece seçili rota varsa haritayı güncelle
             // if (!currentRoute) {
             //     updateMapRoutes();
@@ -1849,13 +1877,13 @@
         // Toggle route selection for bulk operations
         function toggleRouteSelection(event, routeId) {
             event.stopPropagation();
-            
+
             if (selectedRoutes.has(routeId)) {
                 selectedRoutes.delete(routeId);
             } else {
                 selectedRoutes.add(routeId);
             }
-            
+
             updateBulkActions();
             displayRoutes();
             // When checkboxes change, redraw map for selected set
@@ -1866,7 +1894,7 @@
         function updateBulkActions() {
             const bulkActions = document.getElementById('bulkActions');
             const bulkCount = document.getElementById('bulkCount');
-            
+
             if (selectedRoutes.size > 0) {
                 bulkActions.classList.add('show');
                 bulkCount.textContent = `${selectedRoutes.size} rota seçildi`;
@@ -1885,15 +1913,15 @@
         // Clear route selection and show all routes
         function clearRouteSelection() {
             currentRoute = null;
-            
+
             // Update map title
             updateMapTitle();
-            
+
             // Remove UI selection
             document.querySelectorAll('.route-item').forEach(item => {
                 item.classList.remove('selected');
             });
-            
+
             // Reset all route styles to normal
             Object.entries(routeLayers).forEach(([id, layer]) => {
                 const routeData = allRoutes.find(r => String(getRouteId(r)) === String(id));
@@ -1906,12 +1934,12 @@
                     });
                 }
             });
-            
+
             // Clear POI markers
             if (poiMarkersLayer) {
                 poiMarkersLayer.clearLayers();
             }
-            
+
             // Show empty workspace
             document.getElementById('workspaceContent').innerHTML = `
                 <div class="empty-workspace">
@@ -1920,10 +1948,10 @@
                     <p>Detayları görüntülemek için sol taraftan bir rota seçin</p>
                 </div>
             `;
-            
+
             // Hide workspace actions
             document.getElementById('workspaceActions').style.display = 'none';
-            
+
             // Fit map to all routes
             fitMapToRoutes();
         }
@@ -2017,8 +2045,8 @@
                             <h5><i class="fas fa-tags me-2"></i>Etiketler</h5>
                             <div class="tags-container">
                                 ${routeDetails.tags.split(',').map(tag =>
-                                    `<span class="tag-chip">${escapeHtml(tag.trim())}</span>`
-                                ).join('')}
+                `<span class="tag-chip">${escapeHtml(tag.trim())}</span>`
+            ).join('')}
                             </div>
                         </div>
                     ` : ''}
@@ -2171,9 +2199,9 @@
                                         <div class="route-tags-section">
                                             <h6><i class="fas fa-tags me-2"></i>Etiketler</h6>
                                             <div class="tags-container">
-                                                ${route.tags.split(',').map(tag => 
-                                                    `<span class="tag-chip">${escapeHtml(tag.trim())}</span>`
-                                                ).join('')}
+                                                ${route.tags.split(',').map(tag =>
+                `<span class="tag-chip">${escapeHtml(tag.trim())}</span>`
+            ).join('')}
                                             </div>
                                         </div>
                                     ` : ''}
@@ -2233,7 +2261,7 @@
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('routeDetailsModal'));
             if (modal) modal.hide();
-            
+
             // Select the route
             selectRoute(routeId);
         }
@@ -2389,7 +2417,7 @@
             console.log('filteredRoutes count:', filteredRoutes.length);
             console.log('map object:', map);
             console.log('routeLayers before clear:', Object.keys(routeLayers));
-            
+
             // Clear existing route layers
             Object.values(routeLayers).forEach(layer => {
                 map.removeLayer(layer);
@@ -2413,26 +2441,26 @@
                         if (typeof geo === 'string') {
                             try { geo = JSON.parse(geo); } catch (e) { console.warn('geometry not JSON string:', e); }
                         }
-                        
+
                         // Handle nested geometry structure from API
                         if (geo && geo.geometry && geo.geometry.type && geo.geometry.coordinates) {
                             geo = geo.geometry; // Extract the actual GeoJSON
                         }
-                        
+
                         console.log('Parsed geometry:', geo);
                         if (geo && typeof geo === 'object' && !Array.isArray(geo) && geo.type && geo.coordinates) {
                             // Valid GeoJSON object
                             console.log('Attempting L.geoJSON with valid GeoJSON:', geo);
                             layer = L.geoJSON(geo, { style: { color, weight: 3, opacity: 0.7 } });
                             console.log('L.geoJSON layer created:', layer ? 'SUCCESS' : 'FAILED');
-                            
+
                             if (layer) {
                                 layer.bindPopup(`
                                     <strong>${escapeHtml(route.name)}</strong><br>
                                     ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
                                     ${route.estimated_duration || 0} dakika
                                 `);
-                                
+
                                 const rid = getRouteId(route);
                                 routeLayers[rid] = layer;
                                 layer.addTo(map);
@@ -2484,75 +2512,75 @@
                                                         name: p.name
                                                     }))
                                                     .filter(wp => Number.isFinite(wp.lat) && Number.isFinite(wp.lng));
-                                                    
+
                                                 console.log('Creating smart route with waypoints:', waypoints);
-                                                
+
                                                 const routeResponse = await fetch('/api/route/smart', {
                                                     method: 'POST',
                                                     headers: { 'Content-Type': 'application/json' },
                                                     credentials: 'include',
                                                     body: JSON.stringify({ waypoints })
                                                 });
-                                                
+
                                                 if (routeResponse.ok) {
-                                    const routeData = await routeResponse.json();
-                                    console.log('Smart route response:', routeData);
-                                    console.log('Route data structure:', Object.keys(routeData));
-                                    console.log('Route.route structure:', routeData.route ? Object.keys(routeData.route) : 'no route key');
-                                    
-                                    // Check ALL possible response structures
-                                    let allCoords = [];
-                                    
-                                    // Prefer route.segments[].coordinates [{lat,lng}, ...]
-                                    if (routeData.route && Array.isArray(routeData.route.segments) && routeData.route.segments.length > 0) {
-                                        routeData.route.segments.forEach(seg => {
-                                            if (Array.isArray(seg?.coordinates) && seg.coordinates.length > 0) {
-                                                seg.coordinates.forEach(pt => {
-                                                    const lat = Number(pt.lat);
-                                                    const lng = Number(pt.lng);
-                                                    if (Number.isFinite(lat) && Number.isFinite(lng)) allCoords.push([lat, lng]);
-                                                });
-                                            }
-                                        });
-                                        console.log('Using route.segments.coordinates:', allCoords.length);
-                                    } else if (routeData.route && routeData.route.geometry && Array.isArray(routeData.route.geometry)) {
-                                        allCoords = routeData.route.geometry;
-                                        console.log('Using route.geometry:', allCoords.length);
-                                    } else if (routeData.route && routeData.route.coordinates && Array.isArray(routeData.route.coordinates)) {
-                                        allCoords = routeData.route.coordinates;
-                                        console.log('Using route.coordinates:', allCoords.length);
-                                    } else if (routeData.segments && Array.isArray(routeData.segments)) {
-                                        routeData.segments.forEach(segment => {
-                                            if (Array.isArray(segment)) allCoords.push(...segment);
-                                        });
-                                        console.log('Using segments:', allCoords.length);
-                                    } else if (routeData.route && routeData.route.segments && Array.isArray(routeData.route.segments)) {
-                                        routeData.route.segments.forEach(segment => {
-                                            if (Array.isArray(segment)) allCoords.push(...segment);
-                                        });
-                                        console.log('Using route.segments (array arrays):', allCoords.length);
-                                    } else {
-                                        console.log('No recognized route format found, trying fallback to waypoints');
-                                        // Fallback: use original waypoints
-                                        allCoords = waypoints.map(wp => [wp.lat, wp.lng]);
-                                    }
-                                    
-                                    if (allCoords.length >= 2) {
-                                        layer = L.polyline(allCoords, { color, weight: 4, opacity: 0.8 });
-                                        layer.bindPopup(`
+                                                    const routeData = await routeResponse.json();
+                                                    console.log('Smart route response:', routeData);
+                                                    console.log('Route data structure:', Object.keys(routeData));
+                                                    console.log('Route.route structure:', routeData.route ? Object.keys(routeData.route) : 'no route key');
+
+                                                    // Check ALL possible response structures
+                                                    let allCoords = [];
+
+                                                    // Prefer route.segments[].coordinates [{lat,lng}, ...]
+                                                    if (routeData.route && Array.isArray(routeData.route.segments) && routeData.route.segments.length > 0) {
+                                                        routeData.route.segments.forEach(seg => {
+                                                            if (Array.isArray(seg?.coordinates) && seg.coordinates.length > 0) {
+                                                                seg.coordinates.forEach(pt => {
+                                                                    const lat = Number(pt.lat);
+                                                                    const lng = Number(pt.lng);
+                                                                    if (Number.isFinite(lat) && Number.isFinite(lng)) allCoords.push([lat, lng]);
+                                                                });
+                                                            }
+                                                        });
+                                                        console.log('Using route.segments.coordinates:', allCoords.length);
+                                                    } else if (routeData.route && routeData.route.geometry && Array.isArray(routeData.route.geometry)) {
+                                                        allCoords = routeData.route.geometry;
+                                                        console.log('Using route.geometry:', allCoords.length);
+                                                    } else if (routeData.route && routeData.route.coordinates && Array.isArray(routeData.route.coordinates)) {
+                                                        allCoords = routeData.route.coordinates;
+                                                        console.log('Using route.coordinates:', allCoords.length);
+                                                    } else if (routeData.segments && Array.isArray(routeData.segments)) {
+                                                        routeData.segments.forEach(segment => {
+                                                            if (Array.isArray(segment)) allCoords.push(...segment);
+                                                        });
+                                                        console.log('Using segments:', allCoords.length);
+                                                    } else if (routeData.route && routeData.route.segments && Array.isArray(routeData.route.segments)) {
+                                                        routeData.route.segments.forEach(segment => {
+                                                            if (Array.isArray(segment)) allCoords.push(...segment);
+                                                        });
+                                                        console.log('Using route.segments (array arrays):', allCoords.length);
+                                                    } else {
+                                                        console.log('No recognized route format found, trying fallback to waypoints');
+                                                        // Fallback: use original waypoints
+                                                        allCoords = waypoints.map(wp => [wp.lat, wp.lng]);
+                                                    }
+
+                                                    if (allCoords.length >= 2) {
+                                                        layer = L.polyline(allCoords, { color, weight: 4, opacity: 0.8 });
+                                                        layer.bindPopup(`
                                             <strong>${escapeHtml(route.name)}</strong><br>
                                             ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
                                             ${Math.round(routeData.total_distance || 0)} km<br>
                                             ${Math.round(routeData.estimated_time || 0)} dakika<br>
                                             <small>Yol ağından hesaplandı</small>
                                         `);
-                                        routeLayers[rid] = layer;
-                                        layer.addTo(map);
-                                        console.log('Smart route added for:', route.name);
-                                    }
-                                } else {
-                                    throw new Error('Smart route API failed');
-                                }
+                                                        routeLayers[rid] = layer;
+                                                        layer.addTo(map);
+                                                        console.log('Smart route added for:', route.name);
+                                                    }
+                                                } else {
+                                                    throw new Error('Smart route API failed');
+                                                }
                                             } catch (smartRouteError) {
                                                 console.warn('Smart route failed, falling back to simple polyline:', smartRouteError);
                                                 // Fallback to simple polyline
@@ -2574,7 +2602,7 @@
                                 console.warn('Direct POI fallback failed:', e);
                             }
                         }
-                        
+
                         // Original geometry fetch fallback
                         // Try lazy fetch of geometry and retry once
                         try {
@@ -2588,7 +2616,7 @@
                                     if (g && g.geometry) {
                                         let geo = g.geometry;
                                         if (typeof geo === 'string') {
-                                            try { geo = JSON.parse(geo); } catch(e) {}
+                                            try { geo = JSON.parse(geo); } catch (e) { }
                                         }
                                         route.geometry = geo;
                                         // Retry build
@@ -2601,13 +2629,13 @@
                                                 ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
                                                 ${route.estimated_duration || 0} dakika
                                             `);
-                                } else if (res.status === 404) {
-                                    console.warn(`Route ${rid} geometry not found (404) - skipping map display`);
-                                    // Route has no geometry, skip adding to map but don't show error
-                                    continue;
-                                } else {
-                                    console.error(`Failed to fetch geometry for route ${rid}: ${res.status}`);
-                                    continue;
+                                        } else if (res.status === 404) {
+                                            console.warn(`Route ${rid} geometry not found (404) - skipping map display`);
+                                            // Route has no geometry, skip adding to map but don't show error
+                                            continue;
+                                        } else {
+                                            console.error(`Failed to fetch geometry for route ${rid}: ${res.status}`);
+                                            continue;
                                             const rid2 = getRouteId(route);
                                             routeLayers[rid2] = layer;
                                             layer.addTo(map);
@@ -2650,14 +2678,14 @@
                                                     name: p.name
                                                 }))
                                                 .filter(wp => Number.isFinite(wp.lat) && Number.isFinite(wp.lng));
-                                                
+
                                             const routeResponse = await fetch('/api/route/smart', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 credentials: 'include',
                                                 body: JSON.stringify({ waypoints })
                                             });
-                                            
+
                                             if (routeResponse.ok) {
                                                 const routeData = await routeResponse.json();
                                                 if (routeData.route && Array.isArray(routeData.route.segments)) {
@@ -2717,7 +2745,7 @@
                 console.log('Map fitted to route bounds');
             } else {
                 console.log('No route layers to display, invalidating map size');
-                setTimeout(() => { try { map.invalidateSize(); } catch(e) {} }, 100);
+                setTimeout(() => { try { map.invalidateSize(); } catch (e) { } }, 100);
             }
         }
 
@@ -2742,7 +2770,7 @@
         // Highlight and focus on selected route - sadece seçili rotayı göster
         async function highlightAndFocusRoute(route) {
             console.log('Highlighting and focusing on route:', route.name);
-            
+
             const rid = getRouteId(route);
             if (!rid) {
                 console.warn('No route ID found');
@@ -2754,10 +2782,10 @@
 
             // Önce tüm rotaları haritadan kaldır
             clearAllRoutesFromMap();
-            
+
             // Sadece seçili rotayı haritaya ekle
             await showSingleRouteOnMap(route);
-            
+
             // Seçili rotanın POI'lerini yükle ve göster
             setTimeout(async () => {
                 await loadAndDisplayRoutePOIs(rid);
@@ -2767,32 +2795,32 @@
         // Load and display POI markers for a specific route
         async function loadAndDisplayRoutePOIs(routeId) {
             if (!poiMarkersLayer) return;
-            
+
             // Clear existing POI markers
             poiMarkersLayer.clearLayers();
-            
+
             try {
                 const routeDetailResp = await fetch(`${apiBase}/admin/routes/${routeId}`, { credentials: 'include' });
-                
+
                 if (routeDetailResp.ok) {
                     const routeDetail = await routeDetailResp.json();
                     const pois = Array.isArray(routeDetail?.pois) ? routeDetail.pois : [];
-                    
+
                     if (pois.length > 0) {
                         console.log('Adding POI markers for route:', pois.length);
-                        
+
                         // Sort POIs by order
                         const sortedPois = pois.sort((a, b) => (a.order_in_route || 0) - (b.order_in_route || 0));
-                        
+
                         // Add POI markers with category icons
                         sortedPois.forEach((poi, index) => {
                             const lat = Number(poi.lat || poi.latitude);
                             const lng = Number(poi.lon || poi.longitude);
-                            
+
                             if (Number.isFinite(lat) && Number.isFinite(lng)) {
                                 // Get category info for custom icon
-                                const category = POI_CATEGORIES[poi.category] || { 
-                                    icon: 'map-marker-alt', 
+                                const category = POI_CATEGORIES[poi.category] || {
+                                    icon: 'map-marker-alt',
                                     color: '#2563eb',
                                     name: poi.category || 'Kategori yok'
                                 };
@@ -2815,7 +2843,7 @@
                                     icon: customIcon,
                                     title: poi.name || `POI ${index + 1}`
                                 });
-                                
+
                                 marker.bindPopup(`
                                     <div class="poi-popup">
                                         <div class="poi-popup-header">
@@ -2827,7 +2855,7 @@
                                         <div class="poi-popup-order">Sıra: ${poi.order_in_route || index + 1}</div>
                                     </div>
                                 `);
-                                
+
                                 poiMarkersLayer.addLayer(marker);
                             }
                         });
@@ -2842,7 +2870,7 @@
         async function showSelectedRouteOnMap(route) {
             console.log('=== showSelectedRouteOnMap called ===');
             console.log('Selected route:', route.name, 'ID:', getRouteId(route));
-            
+
             const rid = getRouteId(route);
             if (!rid) {
                 console.warn('No route ID found');
@@ -2851,7 +2879,7 @@
 
             // Clear existing route layers to show only selected route
             Object.values(routeLayers).forEach(layer => {
-                try { map.removeLayer(layer); } catch (e) {}
+                try { map.removeLayer(layer); } catch (e) { }
             });
             routeLayers = {};
 
@@ -2868,12 +2896,12 @@
                 if (route.geometry) {
                     let geo = route.geometry;
                     if (typeof geo === 'string') {
-                        try { geo = JSON.parse(geo); } catch(e) { console.warn('geometry not JSON:', e); }
+                        try { geo = JSON.parse(geo); } catch (e) { console.warn('geometry not JSON:', e); }
                     }
-                    
+
                     if (geo && typeof geo === 'object' && geo.type && geo.coordinates) {
-                        routeLayer = L.geoJSON(geo, { 
-                            style: { color, weight: 4, opacity: 0.9 } 
+                        routeLayer = L.geoJSON(geo, {
+                            style: { color, weight: 4, opacity: 0.9 }
                         });
                         console.log('Route created from existing geometry');
                     }
@@ -2883,7 +2911,7 @@
                 if (!routeLayer) {
                     console.log('No geometry found, trying POI-based route');
                     const routeDetailResp = await fetch(`${apiBase}/admin/routes/${rid}`, { credentials: 'include' });
-                    
+
                     if (routeDetailResp.ok) {
                         const routeDetail = await routeDetailResp.json();
                         const pois = Array.isArray(routeDetail?.pois) ? routeDetail.pois : [];
@@ -2892,7 +2920,7 @@
                         if (pois.length >= 2) {
                             // Sort POIs by order
                             const sortedPois = pois.sort((a, b) => (a.order_in_route || 0) - (b.order_in_route || 0));
-                            
+
                             // Create waypoints for smart routing
                             const waypoints = sortedPois
                                 .map(p => ({
@@ -2919,7 +2947,7 @@
                                         console.log('Smart route response:', routeData);
 
                                         let allCoords = [];
-                                        
+
                                         // Extract coordinates from smart route response
                                         if (routeData.route && Array.isArray(routeData.route.segments)) {
                                             routeData.route.segments.forEach(seg => {
@@ -2936,8 +2964,8 @@
                                         }
 
                                         if (allCoords.length >= 2) {
-                                            routeLayer = L.polyline(allCoords, { 
-                                                color, weight: 4, opacity: 0.9 
+                                            routeLayer = L.polyline(allCoords, {
+                                                color, weight: 4, opacity: 0.9
                                             });
                                             console.log('Smart route layer created');
                                         }
@@ -2949,8 +2977,8 @@
                                 // Fallback to simple polyline if smart routing failed
                                 if (!routeLayer) {
                                     const simpleCoords = waypoints.map(wp => [wp.lat, wp.lng]);
-                                    routeLayer = L.polyline(simpleCoords, { 
-                                        color, weight: 4, opacity: 0.9 
+                                    routeLayer = L.polyline(simpleCoords, {
+                                        color, weight: 4, opacity: 0.9
                                     });
                                     console.log('Fallback polyline created');
                                 }
@@ -2960,11 +2988,11 @@
                             sortedPois.forEach((poi, index) => {
                                 const lat = Number(poi.lat || poi.latitude);
                                 const lng = Number(poi.lon || poi.longitude);
-                                
+
                                 if (Number.isFinite(lat) && Number.isFinite(lng)) {
                                     // Get category info for custom icon
-                                    const category = POI_CATEGORIES[poi.category] || { 
-                                        icon: 'map-marker-alt', 
+                                    const category = POI_CATEGORIES[poi.category] || {
+                                        icon: 'map-marker-alt',
                                         color: '#2563eb',
                                         name: poi.category || 'Kategori yok'
                                     };
@@ -2987,7 +3015,7 @@
                                         icon: customIcon,
                                         title: poi.name || `POI ${index + 1}`
                                     });
-                                    
+
                                     marker.bindPopup(`
                                         <div class="poi-popup">
                                             <div class="poi-popup-header">
@@ -2999,7 +3027,7 @@
                                             <div class="poi-popup-order">Sıra: ${poi.order_in_route || index + 1}</div>
                                         </div>
                                     `);
-                                    
+
                                     poiMarkersLayer.addLayer(marker);
                                 }
                             });
@@ -3014,7 +3042,7 @@
                         ${ROUTE_TYPES[route.route_type]?.name || route.route_type}<br>
                         ${route.estimated_duration || 0} dakika
                     `);
-                    
+
                     routeLayers[rid] = routeLayer;
                     routeLayer.addTo(map);
                     console.log('Route layer added to map');
@@ -3045,7 +3073,7 @@
         // Render POI markers for a route on the map
         async function renderRoutePoisOnMap(routeId) {
             if (!poiMarkersLayer) return;
-            try { poiMarkersLayer.clearLayers(); } catch (e) {}
+            try { poiMarkersLayer.clearLayers(); } catch (e) { }
 
             try {
                 const resp = await fetch(`${apiBase}/admin/routes/${routeId}/pois`, { credentials: 'include' });
@@ -3116,9 +3144,9 @@
                     <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.parentElement.remove()"></button>
                 </div>
             `;
-            
+
             document.body.appendChild(notification);
-            
+
             setTimeout(() => {
                 if (notification.parentNode) {
                     notification.remove();
@@ -3149,13 +3177,13 @@
 
                 const deltaX = startX - e.clientX; // Reversed because we're moving from right
                 const newMapWidth = Math.max(400, Math.min(800, startMapWidth + deltaX));
-                
+
                 // Update grid template columns
                 container.style.gridTemplateColumns = `380px 1fr ${newMapWidth}px`;
-                
+
                 // Update resize handle position
                 resizeHandle.style.right = `${newMapWidth + 20}px`;
-                
+
                 // Invalidate map size
                 if (map) {
                     setTimeout(() => map.invalidateSize(), 10);
@@ -3168,7 +3196,7 @@
                     resizeHandle.classList.remove('dragging');
                     document.body.style.cursor = '';
                     document.body.style.userSelect = '';
-                    
+
                     // Final map size invalidation
                     if (map) {
                         setTimeout(() => map.invalidateSize(), 100);
@@ -3256,7 +3284,7 @@
             const mapView = document.querySelector('.route-map-view');
             const fullscreenBtn = document.getElementById('fullscreenBtn');
             const icon = fullscreenBtn.querySelector('i');
-            
+
             if (mapView.classList.contains('fullscreen')) {
                 // Exit fullscreen
                 mapView.classList.remove('fullscreen');
@@ -3270,7 +3298,7 @@
                 icon.className = 'fas fa-compress';
                 fullscreenBtn.title = 'Tam Ekrandan Çık';
             }
-            
+
             // Invalidate map size after transition
             setTimeout(() => {
                 if (map) map.invalidateSize();
@@ -3288,14 +3316,14 @@
                 if (currentRoute && routeLayers[getRouteId(currentRoute)]) {
                     const selectedLayer = routeLayers[getRouteId(currentRoute)];
                     const layers = [selectedLayer];
-                    
+
                     // Include POI markers if they exist
                     if (poiMarkersLayer && poiMarkersLayer.getLayers().length > 0) {
                         layers.push(poiMarkersLayer);
                     }
-                    
+
                     const group = new L.featureGroup(layers);
-                    map.fitBounds(group.getBounds(), { 
+                    map.fitBounds(group.getBounds(), {
                         padding: [30, 30],
                         maxZoom: 14,
                         animate: true,
@@ -3305,7 +3333,7 @@
                 } else {
                     // Show all routes
                     const group = new L.featureGroup(Object.values(routeLayers));
-                    map.fitBounds(group.getBounds(), { 
+                    map.fitBounds(group.getBounds(), {
                         padding: [20, 20],
                         animate: true,
                         duration: 0.8
@@ -3494,7 +3522,7 @@
 
             // Add CSS for edit form
             addRouteEditFormStyles();
-            
+
             // Load POIs for association
             loadPOIsForAssociation(getRouteId(route));
         }
@@ -3722,12 +3750,12 @@
         // Load POIs for association
         async function loadPOIsForAssociation(routeId) {
             console.log('Loading POIs for association with route:', routeId);
-            
+
             try {
                 // Show loading state
                 const availableContainer = document.getElementById('availablePOIsList');
                 const associatedContainer = document.getElementById('associatedPOIsList');
-                
+
                 if (availableContainer) {
                     availableContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
                 }
@@ -3738,11 +3766,11 @@
                 // Load all POIs
                 const poisResponse = await fetch(`${apiBase}/pois`, { credentials: 'include' });
                 let allPOIs = [];
-                
+
                 if (poisResponse.ok) {
                     const raw = await poisResponse.json();
                     console.log('All POIs response:', raw);
-                    
+
                     if (Array.isArray(raw)) {
                         allPOIs = raw;
                     } else if (Array.isArray(raw.pois)) {
@@ -3751,8 +3779,8 @@
                         allPOIs = raw.results;
                     } else {
                         // Handle categorized POIs
-                        Object.values(raw || {}).forEach(v => { 
-                            if (Array.isArray(v)) allPOIs = allPOIs.concat(v); 
+                        Object.values(raw || {}).forEach(v => {
+                            if (Array.isArray(v)) allPOIs = allPOIs.concat(v);
                         });
                     }
                     console.log('Processed all POIs:', allPOIs.length);
@@ -3761,15 +3789,15 @@
                     console.error('Failed to load POIs:', poisResponse.status);
                     throw new Error('POI\'ler yüklenemedi');
                 }
-                
+
                 // Load route detail with associated POIs
                 const routeDetailResp = await fetch(`${apiBase}/admin/routes/${routeId}`, { credentials: 'include' });
                 let associatedPOIs = [];
-                
+
                 if (routeDetailResp.ok) {
                     const routeDetail = await routeDetailResp.json();
                     console.log('Route detail response:', routeDetail);
-                    
+
                     if (Array.isArray(routeDetail?.pois)) {
                         associatedPOIs = routeDetail.pois;
                     }
@@ -3777,11 +3805,11 @@
                 } else {
                     console.error('Failed to load route detail:', routeDetailResp.status);
                 }
-                
+
                 // Process associated POIs and update global state
                 const assocList = associatedPOIs.slice();
                 assocList.sort((a, b) => (a.order_in_route || 0) - (b.order_in_route || 0));
-                
+
                 associatedPoiOrderedIds = assocList
                     .map(p => {
                         // Handle different POI ID formats
@@ -3789,39 +3817,39 @@
                         return id ? parseInt(id) : null;
                     })
                     .filter(id => id != null && Number.isFinite(id));
-                
+
                 associatedPoiIdSet = new Set(associatedPoiOrderedIds);
-                
+
                 console.log('Associated POI IDs (ordered):', associatedPoiOrderedIds);
                 console.log('Associated POI ID set:', Array.from(associatedPoiIdSet));
-                
+
                 // Separate available and associated POIs
                 const associatedPOIIds = new Set(associatedPoiOrderedIds);
                 const availablePOIs = allPOIs.filter(poi => {
                     const poiId = parseInt(getPoiId(poi));
                     return Number.isFinite(poiId) && !associatedPOIIds.has(poiId);
                 });
-                
+
                 // Get associated POI objects in correct order
                 const orderedAssociatedPOIs = associatedPoiOrderedIds
                     .map(id => allPOIs.find(poi => parseInt(getPoiId(poi)) === id))
                     .filter(poi => poi != null);
-                
+
                 console.log('Available POIs:', availablePOIs.length);
                 console.log('Ordered associated POIs:', orderedAssociatedPOIs.length);
-                
+
                 // Display POI lists
                 displayAvailablePOIs(availablePOIs);
                 displayAssociatedPOIs(orderedAssociatedPOIs);
-                
+
             } catch (error) {
                 console.error('Error loading POIs for association:', error);
                 showNotification("POI'ler yüklenirken hata oluştu: " + error.message, 'error');
-                
+
                 // Show error state
                 const availableContainer = document.getElementById('availablePOIsList');
                 const associatedContainer = document.getElementById('associatedPOIsList');
-                
+
                 if (availableContainer) {
                     availableContainer.innerHTML = '<p class="text-danger">POI\'ler yüklenemedi</p>';
                 }
@@ -3834,14 +3862,14 @@
         // Display available POIs
         function displayAvailablePOIs(pois) {
             const container = document.getElementById('availablePOIsList');
-            
+
             console.log('Displaying', pois.length, 'available POIs');
-            
+
             if (!container) {
                 console.warn('Available POIs container not found');
                 return;
             }
-            
+
             if (pois.length === 0) {
                 console.log('No available POIs to display, showing empty message');
                 container.innerHTML = '<p class="text-muted">İlişkilendirilecek POI bulunamadı</p>';
@@ -3856,10 +3884,10 @@
                     console.warn('POI without ID:', poi);
                     return '';
                 }
-                
+
                 // Get category info for icon
-                const category = POI_CATEGORIES[poi.category] || { 
-                    icon: 'map-marker-alt', 
+                const category = POI_CATEGORIES[poi.category] || {
+                    icon: 'map-marker-alt',
                     color: '#2563eb',
                     name: poi.category || 'Kategori yok'
                 };
@@ -3881,21 +3909,21 @@
                     </div>
                 `;
             }).filter(html => html).join('');
-            
+
             console.log('Available POIs displayed successfully');
         }
 
         // Display associated POIs
         function displayAssociatedPOIs(pois) {
             const container = document.getElementById('associatedPOIsList');
-            
+
             console.log('Displaying', pois.length, 'associated POIs');
-            
+
             if (!container) {
                 console.warn('Associated POIs container not found');
                 return;
             }
-            
+
             if (pois.length === 0) {
                 console.log('No POIs to display, showing empty message');
                 container.innerHTML = '<p class="text-muted">İlişkilendirilmiş POI bulunmuyor</p>';
@@ -3910,10 +3938,10 @@
                     console.warn('Associated POI without ID:', poi);
                     return '';
                 }
-                
+
                 // Get category info for icon
-                const category = POI_CATEGORIES[poi.category] || { 
-                    icon: 'map-marker-alt', 
+                const category = POI_CATEGORIES[poi.category] || {
+                    icon: 'map-marker-alt',
                     color: '#2563eb',
                     name: poi.category || 'Kategori yok'
                 };
@@ -3938,7 +3966,7 @@
                     </div>
                 `;
             }).filter(html => html).join('');
-            
+
             console.log('Associated POIs displayed successfully');
         }
 
@@ -3947,11 +3975,11 @@
             const searchTerm = document.getElementById('poiSearchInput').value.toLowerCase();
             const availableItems = document.querySelectorAll('#availablePOIsList .poi-item-small');
             const associatedItems = document.querySelectorAll('#associatedPOIsList .poi-item-small');
-            
+
             [...availableItems, ...associatedItems].forEach(item => {
                 const name = item.querySelector('.poi-item-name').textContent.toLowerCase();
                 const category = item.querySelector('.poi-item-category').textContent.toLowerCase();
-                
+
                 if (name.includes(searchTerm) || category.includes(searchTerm)) {
                     item.style.display = 'flex';
                 } else {
@@ -3966,20 +3994,20 @@
                 showNotification('Önce bir rota seçin', 'warning');
                 return;
             }
-            
+
             try {
                 console.log('Associating POI:', poiId, 'with route:', getRouteId(currentRoute));
-                
+
                 const headers = { 'Content-Type': 'application/json' };
                 if (csrfToken) headers['X-CSRFToken'] = csrfToken;
-                
+
                 const idInt = parseInt(poiId);
                 if (!Number.isFinite(idInt)) {
                     console.error('Invalid POI ID:', poiId);
                     showNotification('Geçersiz POI ID', 'error');
                     return;
                 }
-                
+
                 // Add to current set and preserve order
                 if (!associatedPoiIdSet.has(idInt)) {
                     associatedPoiOrderedIds.push(idInt);
@@ -3988,63 +4016,63 @@
                 } else {
                     console.log('POI already in set, skipping local add');
                 }
-                
+
                 // Send updated POI list to backend
-                const payloadPois = associatedPoiOrderedIds.map((id, idx) => ({ 
-                    poi_id: id, 
-                    order_in_route: idx + 1 
+                const payloadPois = associatedPoiOrderedIds.map((id, idx) => ({
+                    poi_id: id,
+                    order_in_route: idx + 1
                 }));
-                
+
                 console.log('Sending POI payload:', payloadPois);
-                
+
                 const url = `${apiBase}/admin/routes/${getRouteId(currentRoute)}/pois`;
                 console.log('API URL:', url);
-                
-                const requestBody = { 
-                    csrf_token: csrfToken || '', 
-                    pois: payloadPois 
+
+                const requestBody = {
+                    csrf_token: csrfToken || '',
+                    pois: payloadPois
                 };
                 console.log('Request body:', requestBody);
-                
+
                 const response = await fetch(url, {
                     method: 'POST',
                     headers,
                     credentials: 'include',
                     body: JSON.stringify(requestBody)
                 });
-                
+
                 console.log('Response status:', response.status);
                 console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-                
+
                 if (response.ok) {
                     const result = await response.json();
                     console.log('POI association response:', result);
                     showNotification('POI başarıyla ilişkilendirildi', 'success');
-                    
+
                     // Reload POI lists to reflect changes
                     console.log('Reloading POI lists...');
                     await loadPOIsForAssociation(getRouteId(currentRoute));
-                    
+
                     // Update route visualization on map
                     console.log('Updating route visualization...');
                     await showSelectedRouteOnMap(currentRoute);
                 } else {
                     const responseText = await response.text();
                     console.error('POI association failed:', response.status, responseText);
-                    
+
                     let errorData = {};
                     try {
                         errorData = JSON.parse(responseText);
                     } catch (e) {
                         errorData = { error: responseText };
                     }
-                    
+
                     throw new Error(errorData.error || 'POI ilişkilendirilemedi');
                 }
             } catch (error) {
                 console.error('POI association error:', error);
                 showNotification('POI ilişkilendirilirken hata oluştu: ' + error.message, 'error');
-                
+
                 // Revert local changes on error
                 const idInt = parseInt(poiId);
                 if (associatedPoiIdSet.has(idInt)) {
@@ -4061,55 +4089,55 @@
                 showNotification('Önce bir rota seçin', 'warning');
                 return;
             }
-            
+
             try {
                 console.log('Disassociating POI:', poiId, 'from route:', getRouteId(currentRoute));
-                
+
                 const headers = { 'Content-Type': 'application/json' };
                 if (csrfToken) headers['X-CSRFToken'] = csrfToken;
-                
+
                 const idInt = parseInt(poiId);
                 if (!Number.isFinite(idInt)) {
                     showNotification('Geçersiz POI ID', 'error');
                     return;
                 }
-                
+
                 // Store original state for rollback
                 const originalOrderedIds = [...associatedPoiOrderedIds];
                 const originalIdSet = new Set(associatedPoiIdSet);
-                
+
                 // Remove from both ordered list and set
                 associatedPoiOrderedIds = associatedPoiOrderedIds.filter(id => id !== idInt);
                 associatedPoiIdSet.delete(idInt);
-                
+
                 console.log('Removed POI from local set. New order:', associatedPoiOrderedIds);
-                
+
                 // Send updated POI list to backend
-                const payloadPois = associatedPoiOrderedIds.map((id, idx) => ({ 
-                    poi_id: id, 
-                    order_in_route: idx + 1 
+                const payloadPois = associatedPoiOrderedIds.map((id, idx) => ({
+                    poi_id: id,
+                    order_in_route: idx + 1
                 }));
-                
+
                 console.log('Sending updated POI payload:', payloadPois);
-                
+
                 const response = await fetch(`${apiBase}/admin/routes/${getRouteId(currentRoute)}/pois`, {
                     method: 'POST',
                     headers,
                     credentials: 'include',
-                    body: JSON.stringify({ 
-                        csrf_token: csrfToken || '', 
-                        pois: payloadPois 
+                    body: JSON.stringify({
+                        csrf_token: csrfToken || '',
+                        pois: payloadPois
                     })
                 });
-                
+
                 if (response.ok) {
                     const result = await response.json();
                     console.log('POI disassociation response:', result);
                     showNotification('POI başarıyla kaldırıldı', 'success');
-                    
+
                     // Reload POI lists to reflect changes
                     await loadPOIsForAssociation(getRouteId(currentRoute));
-                    
+
                     // Update route visualization on map
                     await showSelectedRouteOnMap(currentRoute);
                 } else {
@@ -4120,7 +4148,7 @@
             } catch (error) {
                 console.error('POI disassociation error:', error);
                 showNotification('POI kaldırılırken hata oluştu: ' + error.message, 'error');
-                
+
                 // Revert local changes on error
                 const idInt = parseInt(poiId);
                 if (!associatedPoiIdSet.has(idInt)) {
@@ -4138,59 +4166,59 @@
                 showNotification('Önce bir rota seçin', 'warning');
                 return;
             }
-            
+
             console.log('Reordering POI:', poiId, 'delta:', delta);
-            
+
             const idInt = parseInt(poiId);
             const ids = associatedPoiOrderedIds.slice();
             const idx = ids.indexOf(idInt);
-            
+
             if (idx < 0) {
                 console.warn('POI not found in ordered list:', poiId);
                 return;
             }
-            
+
             const swapIdx = idx + delta;
             if (swapIdx < 0 || swapIdx >= ids.length) {
                 console.warn('Invalid swap index:', swapIdx);
                 return;
             }
-            
+
             // Swap positions
             [ids[idx], ids[swapIdx]] = [ids[swapIdx], ids[idx]];
-            
+
             // Update global state
             associatedPoiOrderedIds = ids;
             associatedPoiIdSet = new Set(ids);
-            
+
             console.log('New POI order:', associatedPoiOrderedIds);
-            
+
             try {
                 // Persist new order to backend
                 const headers = { 'Content-Type': 'application/json' };
                 if (csrfToken) headers['X-CSRFToken'] = csrfToken;
-                
-                const payloadPois = ids.map((id, i) => ({ 
-                    poi_id: id, 
-                    order_in_route: i + 1 
+
+                const payloadPois = ids.map((id, i) => ({
+                    poi_id: id,
+                    order_in_route: i + 1
                 }));
-                
+
                 const response = await fetch(`${apiBase}/admin/routes/${getRouteId(currentRoute)}/pois`, {
-                    method: 'POST', 
-                    headers, 
+                    method: 'POST',
+                    headers,
                     credentials: 'include',
-                    body: JSON.stringify({ 
-                        csrf_token: csrfToken || '', 
-                        pois: payloadPois 
+                    body: JSON.stringify({
+                        csrf_token: csrfToken || '',
+                        pois: payloadPois
                     })
                 });
-                
+
                 if (response.ok) {
                     showNotification('POI sıralaması güncellendi', 'success');
-                    
+
                     // Reload POI lists to show new order
                     await loadPOIsForAssociation(getRouteId(currentRoute));
-                    
+
                     // Update route visualization on map
                     await showSelectedRouteOnMap(currentRoute);
                 } else {
@@ -4201,7 +4229,7 @@
             } catch (error) {
                 console.error('POI reorder error:', error);
                 showNotification('Sıralama hatası: ' + error.message, 'error');
-                
+
                 // Revert local changes on error
                 const originalIdx = ids.indexOf(idInt);
                 if (originalIdx >= 0) {
@@ -4265,7 +4293,7 @@
                         const dLat = toRad(b.lat - a.lat);
                         const dLon = toRad(b.lng - a.lng);
                         const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
-                        const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+                        const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
                         totalMeters += 2 * R * Math.asin(Math.sqrt(h));
                     }
                     estimatedSeconds = Math.round(totalMeters / 1.2); // ~1.2 m/s walking speed
@@ -4306,7 +4334,7 @@
             if (!map) return;
             // Remove old preview if exists
             if (routeLayers['__preview__']) {
-                try { map.removeLayer(routeLayers['__preview__']); } catch(e) {}
+                try { map.removeLayer(routeLayers['__preview__']); } catch (e) { }
             }
             const layer = L.polyline(latlngs, { color: '#10b981', weight: 4, opacity: 0.9, dashArray: '6,4' }).addTo(map);
             routeLayers['__preview__'] = layer;
@@ -4317,15 +4345,15 @@
         async function findNearbyPOIs() {
             console.log('🔍 findNearbyPOIs çağrıldı');
             console.log('currentRoute:', currentRoute);
-            
+
             if (!currentRoute) {
                 console.warn('❌ currentRoute null');
                 showNotification('Önce bir rota seçin', 'warning');
                 return;
             }
-            
+
             console.log('✅ currentRoute mevcut, ID:', currentRoute.id);
-            
+
             // Rate limiting kontrolü - Geliştirme için devre dışı
             // const now = Date.now();
             // if ((now - lastLoadTime) < minLoadInterval) {
@@ -4333,16 +4361,16 @@
             //     showNotification('Çok sık istek gönderiyorsunuz, lütfen bekleyin', 'warning');
             //     return;
             // }
-            
+
             try {
                 showNotification('Yakın POI\'ler aranıyor...', 'info');
-                
+
                 const response = await fetch(`${apiBase}/routes/${currentRoute.id}/nearby-pois`, {
                     credentials: 'include'
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.success) {
                     const nearbyPois = data.nearby_pois || [];
                     const effectiveMax = (data.parameters && data.parameters.max_distance_meters) ? data.parameters.max_distance_meters : undefined;
@@ -4365,15 +4393,15 @@
         async function autoAssociateNearbyPOIs() {
             console.log('🚀 autoAssociateNearbyPOIs çağrıldı');
             console.log('currentRoute:', currentRoute);
-            
+
             if (!currentRoute) {
                 console.warn('❌ currentRoute null');
                 showNotification('Önce bir rota seçin', 'warning');
                 return;
             }
-            
+
             console.log('✅ currentRoute mevcut, ID:', currentRoute.id);
-            
+
             // Rate limiting kontrolü - Geliştirme için devre dışı
             // const now = Date.now();
             // if ((now - lastLoadTime) < minLoadInterval) {
@@ -4381,14 +4409,14 @@
             //     showNotification('Çok sık istek gönderiyorsunuz, lütfen bekleyin', 'warning');
             //     return;
             // }
-            
+
             try {
                 showNotification('Yakın POI\'ler otomatik ekleniyor...', 'info');
-                
+
                 const requestData = {
                     auto_confirm: true
                 };
-                
+
                 const response = await fetch(`${apiBase}/routes/${currentRoute.id}/auto-associate-pois`, {
                     method: 'POST',
                     headers: {
@@ -4397,9 +4425,9 @@
                     credentials: 'include',
                     body: JSON.stringify(requestData)
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.success) {
                     const associatedCount = data.associated_count || 0;
                     if (associatedCount > 0) {
@@ -4476,16 +4504,16 @@
                     </div>
                 </div>
             `;
-            
+
             // Remove existing modal if any
             const existingModal = document.getElementById('nearbyPoisModal');
             if (existingModal) {
                 existingModal.remove();
             }
-            
+
             // Add modal to body
             document.body.insertAdjacentHTML('beforeend', modalHtml);
-            
+
             // Show modal
             const modal = new bootstrap.Modal(document.getElementById('nearbyPoisModal'));
             modal.show();
@@ -4494,10 +4522,10 @@
         // Add all nearby POIs to route
         async function addAllNearbyPOIs(poiIds) {
             if (!currentRoute || !poiIds.length) return;
-            
+
             try {
                 showNotification(`${poiIds.length} POI rotaya ekleniyor...`, 'info');
-                
+
                 let addedCount = 0;
                 for (const poiId of poiIds) {
                     try {
@@ -4507,7 +4535,7 @@
                         console.warn(`POI ${poiId} eklenemedi:`, error);
                     }
                 }
-                
+
                 if (addedCount > 0) {
                     showNotification(`${addedCount} POI başarıyla eklendi`, 'success');
                     // Close modal
@@ -4516,7 +4544,7 @@
                 } else {
                     showNotification('Hiçbir POI eklenemedi', 'warning');
                 }
-                
+
             } catch (error) {
                 console.error('Bulk POI add error:', error);
                 showError('POI\'ler eklenirken hata oluştu');
@@ -4528,38 +4556,38 @@
             console.log('🧪 TEST: Yakın POI özelliği test ediliyor');
             console.log('currentRoute:', currentRoute);
             console.log('apiBase:', apiBase);
-            
+
             if (!currentRoute) {
                 alert('❌ currentRoute null! Önce bir rota seçin.');
                 return;
             }
-            
+
             alert(`✅ Test başarılı!\nSeçili rota: ${currentRoute.name}\nID: ${currentRoute.id}\nAPI Base: ${apiBase}`);
-            
+
             // Test API call
             fetch(`${apiBase}/routes/${currentRoute.id}/nearby-pois`, {
                 credentials: 'include'
             })
-            .then(response => response.json())
-            .then(data => {
-                console.log('🔍 API Test Sonucu:', data);
-                if (data.success) {
-                    const eff = data.parameters && data.parameters.max_distance_meters ? ` (radar: ${data.parameters.max_distance_meters}m)` : '';
-                    alert(`🎉 API Test Başarılı!\n${data.total_found} POI bulundu${eff}.`);
-                } else {
-                    alert(`❌ API Test Başarısız!\nHata: ${data.error}`);
-                }
-            })
-            .catch(error => {
-                console.error('API Test Hatası:', error);
-                alert(`❌ API Test Hatası!\n${error.message}`);
-            });
+                .then(response => response.json())
+                .then(data => {
+                    console.log('🔍 API Test Sonucu:', data);
+                    if (data.success) {
+                        const eff = data.parameters && data.parameters.max_distance_meters ? ` (radar: ${data.parameters.max_distance_meters}m)` : '';
+                        alert(`🎉 API Test Başarılı!\n${data.total_found} POI bulundu${eff}.`);
+                    } else {
+                        alert(`❌ API Test Başarısız!\nHata: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('API Test Hatası:', error);
+                    alert(`❌ API Test Hatası!\n${error.message}`);
+                });
         }
 
         // Save route changes (with CSRF)
         async function saveRouteChanges() {
             if (!currentRoute) return;
-            
+
             try {
                 const formData = {
                     name: document.getElementById('editRouteName').value,
@@ -4572,7 +4600,7 @@
                     tags: document.getElementById('editTags').value,
                     is_circular: document.getElementById('editIsCircular').checked
                 };
-                
+
                 const headers = { 'Content-Type': 'application/json' };
                 if (csrfToken) headers['X-CSRFToken'] = csrfToken;
                 const response = await fetch(`${apiBase}/admin/routes/${currentRoute.id}`, {
@@ -4581,21 +4609,21 @@
                     credentials: 'include',
                     body: JSON.stringify(formData)
                 });
-                
+
                 if (response.ok) {
                     showNotification('Rota başarıyla güncellendi', 'success');
-                    
+
                     // Update current route data
                     Object.assign(currentRoute, formData);
-                    
+
                     // Refresh routes list
                     await loadRoutes();
-                    
+
                     // Return to detail view
                     displayRouteDetails(currentRoute);
                 } else {
                     let message = 'Rota güncellenemedi';
-                    try { const errorData = await response.json(); if (errorData?.error) message = errorData.error; } catch(e) {}
+                    try { const errorData = await response.json(); if (errorData?.error) message = errorData.error; } catch (e) { }
                     throw new Error(message);
                 }
             } catch (error) {
@@ -4660,7 +4688,7 @@
         function printRouteDetails(routeId) {
             const route = allRoutes.find(r => r.id === routeId);
             if (!route) return;
-            
+
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
                 <html>
@@ -4736,14 +4764,14 @@
 
         async function deleteCurrentRoute() {
             if (!currentRoute) return;
-            
+
             const routeId = getRouteId(currentRoute);
             const routeName = currentRoute.name;
-            
+
             if (confirm(`"${routeName}" rotasını silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz!`)) {
                 try {
                     showNotification('Rota siliniyor...', 'info');
-                    
+
                     const response = await fetch(`${apiBase}/admin/routes/${routeId}`, {
                         method: 'DELETE',
                         headers: {
@@ -4755,49 +4783,49 @@
                             csrf_token: csrfToken
                         })
                     });
-                    
+
                     if (response.ok) {
                         const data = await response.json();
                         if (data.success) {
                             showNotification(`"${routeName}" rotası başarıyla silindi`, 'success');
-                            
+
                             // Remove from UI
                             allRoutes = allRoutes.filter(r => getRouteId(r) !== routeId);
                             filteredRoutes = filteredRoutes.filter(r => getRouteId(r) !== routeId);
-                            
+
                             // Remove from map
                             if (routeLayers[routeId]) {
                                 map.removeLayer(routeLayers[routeId]);
                                 delete routeLayers[routeId];
                             }
-                            
+
                             // Clear selection
                             clearSelection();
-                            
+
                             // Update UI
                             displayRoutes();
                             updateBulkActions();
-                            
+
                         } else {
                             showNotification(`Rota silinemedi: ${data.error}`, 'error');
                         }
                     } else if (response.status === 404) {
                         // Route already deleted
                         showNotification(`"${routeName}" rotası zaten silinmiş`, 'warning');
-                        
+
                         // Remove from UI anyway
                         allRoutes = allRoutes.filter(r => getRouteId(r) !== routeId);
                         filteredRoutes = filteredRoutes.filter(r => getRouteId(r) !== routeId);
-                        
+
                         // Remove from map
                         if (routeLayers[routeId]) {
                             map.removeLayer(routeLayers[routeId]);
                             delete routeLayers[routeId];
                         }
-                        
+
                         // Clear selection
                         clearSelection();
-                        
+
                         // Update UI
                         displayRoutes();
                         updateBulkActions();
@@ -4837,9 +4865,9 @@
             const routeIds = Array.from(selectedRoutes);
             let successCount = 0;
             let errorCount = 0;
-            
+
             showNotification(`${routeIds.length} rota siliniyor...`, 'info');
-            
+
             for (const routeId of routeIds) {
                 try {
                     const response = await fetch(`${apiBase}/admin/routes/${routeId}`, {
@@ -4853,23 +4881,23 @@
                             csrf_token: csrfToken
                         })
                     });
-                    
+
                     if (response.ok) {
                         const data = await response.json();
                         if (data.message && !data.error) {
                             // Success response has 'message' field
                             successCount++;
-                            
+
                             // Remove from UI
                             allRoutes = allRoutes.filter(r => getRouteId(r) !== routeId);
                             filteredRoutes = filteredRoutes.filter(r => getRouteId(r) !== routeId);
-                            
+
                             // Remove from map
                             if (routeLayers[routeId]) {
                                 map.removeLayer(routeLayers[routeId]);
                                 delete routeLayers[routeId];
                             }
-                            
+
                             // Clear selection if this route was selected
                             if (currentRoute && getRouteId(currentRoute) === routeId) {
                                 clearSelection();
@@ -4882,17 +4910,17 @@
                         // Route already deleted, treat as success
                         successCount++;
                         console.warn(`Route ${routeId} already deleted (404)`);
-                        
+
                         // Remove from UI anyway
                         allRoutes = allRoutes.filter(r => getRouteId(r) !== routeId);
                         filteredRoutes = filteredRoutes.filter(r => getRouteId(r) !== routeId);
-                        
+
                         // Remove from map
                         if (routeLayers[routeId]) {
                             map.removeLayer(routeLayers[routeId]);
                             delete routeLayers[routeId];
                         }
-                        
+
                         // Clear selection if this route was selected
                         if (currentRoute && getRouteId(currentRoute) === routeId) {
                             clearSelection();
@@ -4906,14 +4934,14 @@
                     console.error(`Error deleting route ${routeId}:`, error);
                 }
             }
-            
+
             // Clear selection
             selectedRoutes.clear();
-            
+
             // Update UI
             displayRoutes();
             updateBulkActions();
-            
+
             // Show result notification
             if (successCount > 0 && errorCount === 0) {
                 showNotification(`${successCount} rota başarıyla silindi`, 'success');
@@ -4937,4 +4965,5 @@
         }
     </script>
 </body>
+
 </html>

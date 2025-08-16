@@ -68,106 +68,271 @@
                         arasından seçim yapın.
                     </p>
 
-                <div class="slider-container">
-                    <div class="grid grid-auto-fit gap-6">
-                        <div class="slider-item" data-category="doga">
-                            <div class="slider-label">
-                                <i class="fas fa-tree"></i>
-                                <span>Doğa</span>
+                <div class="preferences-container">
+                    <!-- Mobile-optimized preference sliders -->
+                    <div class="preferences-grid">
+                        <div class="preference-item" data-category="doga">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-tree"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Doğa</span>
+                                    <span class="preference-value" id="doga-value">İlgilenmiyorum</span>
+                                </div>
                             </div>
-                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
-                                id="doga">
-                            <div class="slider-value" id="doga-value">İlgilenmiyorum</div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="doga">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="slider-item" data-category="yemek">
-                            <div class="slider-label">
+                        <div class="preference-item" data-category="yemek">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-utensils"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Yemek</span>
+                                    <span class="preference-value" id="yemek-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="yemek">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="tarihi">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-landmark"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Tarih</span>
+                                    <span class="preference-value" id="tarihi-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="tarihi">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="eglence">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-gamepad"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Eğlence</span>
+                                    <span class="preference-value" id="eglence-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="eglence">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="sanat_kultur">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-palette"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Sanat & Kültür</span>
+                                    <span class="preference-value" id="sanat_kultur-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="sanat_kultur">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="macera">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-mountain"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Macera</span>
+                                    <span class="preference-value" id="macera-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="macera">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="rahatlatici">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-spa"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Rahatlatıcı</span>
+                                    <span class="preference-value" id="rahatlatici-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="rahatlatici">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="spor">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-running"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Spor</span>
+                                    <span class="preference-value" id="spor-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="spor">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="alisveris">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-shopping-bag"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Alışveriş</span>
+                                    <span class="preference-value" id="alisveris-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="alisveris">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="gece_hayati">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-moon"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Gece Hayatı</span>
+                                    <span class="preference-value" id="gece_hayati-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="gece_hayati">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Selection Buttons -->
+                    <div class="quick-selection-section">
+                        <h3 class="quick-selection-title">
+                            <i class="fas fa-magic"></i>
+                            Hızlı Seçim
+                        </h3>
+                        <div class="quick-selection-buttons">
+                            <button class="quick-btn" data-preset="nature-lover">
+                                <i class="fas fa-leaf"></i>
+                                <span>Doğa Sever</span>
+                            </button>
+                            <button class="quick-btn" data-preset="culture-enthusiast">
+                                <i class="fas fa-university"></i>
+                                <span>Kültür Meraklısı</span>
+                            </button>
+                            <button class="quick-btn" data-preset="foodie">
                                 <i class="fas fa-utensils"></i>
-                                <span>Yemek</span>
-                            </div>
-                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
-                                id="yemek">
-                            <div class="slider-value" id="yemek-value">İlgilenmiyorum</div>
-                        </div>
-
-                        <div class="slider-item" data-category="tarihi">
-                            <div class="slider-label">
-                                <i class="fas fa-landmark"></i>
-                                <span>Tarih</span>
-                            </div>
-                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
-                                id="tarihi">
-                            <div class="slider-value" id="tarihi-value">İlgilenmiyorum</div>
-                        </div>
-
-                        <div class="slider-item" data-category="eglence">
-                            <div class="slider-label">
-                                <i class="fas fa-gamepad"></i>
-                                <span>Eğlence</span>
-                            </div>
-                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
-                                id="eglence">
-                            <div class="slider-value" id="eglence-value">İlgilenmiyorum</div>
-                        </div>
-
-                        <div class="slider-item" data-category="sanat_kultur">
-                            <div class="slider-label">
-                                <i class="fas fa-palette"></i>
-                                <span>Sanat & Kültür</span>
-                            </div>
-                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
-                                id="sanat_kultur">
-                            <div class="slider-value" id="sanat_kultur-value">İlgilenmiyorum</div>
-                        </div>
-
-                        <div class="slider-item" data-category="macera">
-                            <div class="slider-label">
+                                <span>Lezzet Avcısı</span>
+                            </button>
+                            <button class="quick-btn" data-preset="adventure-seeker">
                                 <i class="fas fa-mountain"></i>
-                                <span>Macera</span>
-                            </div>
-                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
-                                id="macera">
-                            <div class="slider-value" id="macera-value">İlgilenmiyorum</div>
-                        </div>
-
-                        <div class="slider-item" data-category="rahatlatici">
-                            <div class="slider-label">
+                                <span>Macera Arayan</span>
+                            </button>
+                            <button class="quick-btn" data-preset="relaxation">
                                 <i class="fas fa-spa"></i>
-                                <span>Rahatlatıcı</span>
-                            </div>
-                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
-                                id="rahatlatici">
-                            <div class="slider-value" id="rahatlatici-value">İlgilenmiyorum</div>
-                        </div>
-
-                        <div class="slider-item" data-category="spor">
-                            <div class="slider-label">
-                                <i class="fas fa-running"></i>
-                                <span>Spor</span>
-                            </div>
-                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
-                                id="spor">
-                            <div class="slider-value" id="spor-value">İlgilenmiyorum</div>
-                        </div>
-
-                        <div class="slider-item" data-category="alisveris">
-                            <div class="slider-label">
-                                <i class="fas fa-shopping-bag"></i>
-                                <span>Alışveriş</span>
-                            </div>
-                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
-                                id="alisveris">
-                            <div class="slider-value" id="alisveris-value">İlgilenmiyorum</div>
-                        </div>
-
-                        <div class="slider-item" data-category="gece_hayati">
-                            <div class="slider-label">
-                                <i class="fas fa-moon"></i>
-                                <span>Gece Hayatı</span>
-                            </div>
-                            <input type="range" min="0" max="4" value="0" step="1" class="slider discrete-slider"
-                                id="gece_hayati">
-                            <div class="slider-value" id="gece_hayati-value">İlgilenmiyorum</div>
+                                <span>Dinlenmek İsteyen</span>
+                            </button>
+                            <button class="quick-btn" data-preset="reset">
+                                <i class="fas fa-undo"></i>
+                                <span>Sıfırla</span>
+                            </button>
                         </div>
                     </div>
                 </div>
