@@ -5398,6 +5398,8 @@ function displayPredefinedRoutes(routes) {
         card.addEventListener('click', async () => {
             const route = routes[index];
             await selectPredefinedRoute(route); // handles map rendering internally
+            // Show route details after selecting the route
+            showPredefinedRouteDetailsPanel(window.currentSelectedRoute || route);
         });
     });
 }
