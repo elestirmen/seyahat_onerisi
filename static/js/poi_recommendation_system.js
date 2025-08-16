@@ -9949,6 +9949,36 @@ window.RouteContextMenu = RouteContextMenu;
 // Close the commented duplicate event listener section
 */
 
+function initializeApp() {
+    console.log('🔧 Initializing application components...');
+
+    if (typeof initializeTouchSupport === 'function') {
+        try {
+            initializeTouchSupport();
+        } catch (err) {
+            console.error('Touch support initialization failed:', err);
+        }
+    }
+
+    if (typeof initializeRouteTabs === 'function') {
+        try {
+            initializeRouteTabs();
+        } catch (err) {
+            console.error('Route tabs initialization failed:', err);
+        }
+    }
+
+    if (typeof initializeMainMap === 'function') {
+        try {
+            initializeMainMap();
+        } catch (err) {
+            console.error('Main map initialization failed:', err);
+        }
+    }
+
+    console.log('✅ Application components initialized');
+}
+
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 DOM loaded, initializing POI recommendation system...');
