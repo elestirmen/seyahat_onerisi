@@ -70,6 +70,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="static/js/map-layer-control.js"></script>
     <script src="static/js/elevation-chart.js"></script>
     <script>
         let map;
@@ -78,10 +79,8 @@
         // Initialize map
         function initMap() {
             map = L.map('mapContainer').setView([38.6436, 34.8128], 12);
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
+
+            addBaseLayers(map);
             
             // Initialize elevation chart
             elevationChart = new ElevationChart('elevationChartContainer', map);

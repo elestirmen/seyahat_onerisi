@@ -36,13 +36,14 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="static/js/map-layer-control.js"></script>
     <script>
         // Haritayı başlat (Ürgüp merkezi)
         const map = L.map('map').setView([38.632, 34.912], 13);
-        
+
         // Status log elementi
         const statusLog = document.getElementById('status-log');
-        
+
         function addStatus(message, type = 'info') {
             const div = document.createElement('div');
             div.className = `status ${type}`;
@@ -50,59 +51,28 @@
             statusLog.appendChild(div);
         }
 
-        // Çalışan harita katmanları (test edilmiş URL'ler)
-        const baseLayers = {
-            "🗺️ OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 19,
-                subdomains: ['a', 'b', 'c']
-            }),
-
-            "🎨 CartoDB Positron": L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-                maxZoom: 19,
-                subdomains: ['a', 'b', 'c', 'd']
-            }),
-
-            "🌙 CartoDB Dark": L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-                maxZoom: 19,
-                subdomains: ['a', 'b', 'c', 'd']
-            }),
-
-            "🛰️ Esri Satellite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '© <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics',
-                maxZoom: 18
-            })
-        };
+        // Harita katmanlarını ekle
+        const baseLayers = addBaseLayers(map);
 
         // Her katman için event listener'lar ekle
         Object.keys(baseLayers).forEach(layerName => {
             const layer = baseLayers[layerName];
-            
+
             layer.on('loading', function() {
                 addStatus(`${layerName} yükleniyor...`, 'warning');
             });
-            
+
             layer.on('load', function() {
                 addStatus(`${layerName} başarıyla yüklendi`, 'success');
             });
-            
+
             layer.on('tileerror', function(error) {
                 addStatus(`${layerName} yükleme hatası: ${error.error?.message || 'Bilinmeyen hata'}`, 'error');
                 console.error(`Tile error for ${layerName}:`, error);
             });
         });
 
-        // Varsayılan katmanı ekle
-        baseLayers["🗺️ OpenStreetMap"].addTo(map);
         addStatus("Varsayılan katman (OpenStreetMap) eklendi", 'success');
-
-        // Katman kontrolünü ekle
-        const layerControl = L.control.layers(baseLayers, null, {
-            position: 'topright',
-            collapsed: false  // Test için açık bırak
-        }).addTo(map);
 
         // Katman değişikliklerini dinle
         map.on('baselayerchange', function(e) {

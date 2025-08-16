@@ -87,11 +87,8 @@ class EnhancedMapManager {
             attributionControl: true
         });
 
-        // Add base tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: this.options.maxZoom
-        }).addTo(this.map);
+        // Add base tile layers with control
+        addBaseLayers(this.map);
 
         // Wait for map to be ready
         return new Promise((resolve) => {

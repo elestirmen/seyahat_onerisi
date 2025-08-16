@@ -1970,6 +1970,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="static/js/map-layer-control.js"></script>
     <script src="static/js/rate-limiter.js"></script>
     <script>
         // Rate limiting bilgilendirme mesajı
@@ -2023,9 +2024,7 @@
             async initializeMap() {
                 this.map = L.map('map').setView([38.6431, 34.8331], 11);
 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(this.map);
+                addBaseLayers(this.map);
 
                 // Add double-click handler for creating new POIs
                 this.map.on('dblclick', (e) => {

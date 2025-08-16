@@ -4485,11 +4485,8 @@ async function initializePredefinedMap() {
                 attributionControl: true
             });
             
-            // Add tile layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 18
-            }).addTo(predefinedMap);
+            // Add base layers
+            addBaseLayers(predefinedMap);
             
             console.log('✅ Predefined map created successfully');
         }
@@ -6744,17 +6741,8 @@ async function performMainMapInitialization() {
             markerZoomAnimation: true // Enable marker zoom animations
         }).setView([38.632, 34.912], 13);
         
-        // Add optimized tile layer
-        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19,
-            subdomains: ['a', 'b', 'c'], // Use multiple subdomains for faster loading
-            keepBuffer: 2, // Keep tiles in buffer for smoother panning
-            updateWhenZooming: false, // Don't update tiles while zooming
-            updateWhenIdle: true // Update tiles when interaction stops
-        });
-        
-        tileLayer.addTo(map);
+        // Add base layers
+        addBaseLayers(map);
         
         // Clear markers array
         markers = [];
@@ -6925,10 +6913,8 @@ async function initializeRoutePreviewMap(mapId, routeId, pois) {
             attributionControl: false
         });
         
-        // Add tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: ''
-        }).addTo(previewMap);
+        // Add base layers
+        addBaseLayers(previewMap);
         
         // Store the map
         previewMaps.set(mapId, previewMap);
@@ -8572,10 +8558,8 @@ async function initializeEmptyMap() {
         maxBoundsViscosity: 0.0
     }).setView([38.632, 34.912], 13);
 
-    // Add tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+    // Add base layers
+    addBaseLayers(map);
 
     // Add map controls
     if (L.Control.Fullscreen) {
@@ -8641,10 +8625,8 @@ async function initializeMap(recommendationData) {
         maxBoundsViscosity: 0.0
     }).setView([38.632, 34.912], 13);
 
-    // Add tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+    // Add base layers
+    addBaseLayers(map);
 
     // Add map controls
     if (L.Control.Fullscreen) {
