@@ -1201,8 +1201,23 @@
         async function createRouteFromPOIs(route, color) {
             const rid = getRouteId(route);
             console.log('POI\'lerden rota oluşturuluyor:', route.name);
-            
+
             try {
+                // Rota detaylarını al (elevation_profile için)
+                let routeDetails = route;
+                if (!route.elevation_profile) {
+                    try {
+                        const detailResp = await rateLimitedFetch(`${apiBase}/admin/routes/${rid}`, {
+                            credentials: 'include'
+                        });
+                        if (detailResp.ok) {
+                            routeDetails = await detailResp.json();
+                        }
+                    } catch (detailErr) {
+                        console.warn('Rota detayları alınamadı:', detailErr);
+                    }
+                }
+
                 // Rotanın POI'lerini al
                 const response = await rateLimitedFetch(`${apiBase}/admin/routes/${rid}/pois`, {
                     credentials: 'include'
@@ -1249,8 +1264,9 @@
 
                             // Load elevation profile for POI-based route
                             if (window.routeElevationChart) {
-                                if (route.elevation_profile && route.elevation_profile.points) {
-                                    await window.routeElevationChart.loadElevationProfile(route.elevation_profile);
+                                if (routeDetails.elevation_profile && routeDetails.elevation_profile.points) {
+                                    await window.routeElevationChart.loadElevationProfile(routeDetails.elevation_profile);
+
                                 } else {
                                     await window.routeElevationChart.loadRouteElevation({
                                         pois: pois
@@ -1290,8 +1306,23 @@
             }
 
             try {
+                // Rota detaylarını al (elevation_profile için)
+                let routeDetails = route;
+                if (!route.elevation_profile || !route.geometry) {
+                    try {
+                        const detailResp = await rateLimitedFetch(`${apiBase}/admin/routes/${rid}`, {
+                            credentials: 'include'
+                        });
+                        if (detailResp.ok) {
+                            routeDetails = await detailResp.json();
+                        }
+                    } catch (detailErr) {
+                        console.warn('Rota detayları alınamadı:', detailErr);
+                    }
+                }
+
                 // Önce mevcut geometriyi kontrol et
-                let geometry = route.geometry;
+                let geometry = route.geometry || routeDetails.geometry;
                 
                 // Geometri yoksa veya string ise API'den al
                 if (!geometry || typeof geometry === 'string') {
@@ -1333,7 +1364,7 @@
                     }
 
                     // Rota rengini belirle
-                    const color = ROUTE_TYPES[route.route_type]?.color || '#2563eb';
+                    const color = ROUTE_TYPES[routeDetails.route_type]?.color || '#2563eb';
                     let layer = null;
                     
                     // YAKLAŞIM 1: Statik LineString geometrisi (klasik)
@@ -1376,7 +1407,7 @@
                     // YAKLAŞIM 4: Rota POI'lerinden dinamik rota oluştur
                     else {
                         console.log('📍 Rota POI\'lerinden dinamik rota oluşturuluyor');
-                        await createRouteFromPOIs(route, color);
+                        await createRouteFromPOIs(routeDetails, color);
                         return; // createRouteFromPOIs kendi layer'ını oluşturacak
                     }
 
@@ -1390,8 +1421,8 @@
 
                         // Load elevation profile from route or available geometry data
                         if (window.routeElevationChart) {
-                            if (route.elevation_profile && route.elevation_profile.points) {
-                                await window.routeElevationChart.loadElevationProfile(route.elevation_profile);
+                            if (routeDetails.elevation_profile && routeDetails.elevation_profile.points) {
+                                await window.routeElevationChart.loadElevationProfile(routeDetails.elevation_profile);
                             } else if (geometry.type === 'LineString' && geometry.coordinates) {
 
                                 await window.routeElevationChart.loadRouteElevation({
@@ -1412,13 +1443,14 @@
                             }
                         }
 
-                        console.log('✅ Rota haritaya eklendi:', route.name);
+                        console.log('✅ Rota haritaya eklendi:', routeDetails.name);
+
                     } else {
                         console.warn('Hiçbir geometri formatı işlenemedi:', geometry);
                         showNotification('Rota geometrisi işlenemedi', 'warning');
                     }
                 } else {
-                    console.warn('Rota geometrisi bulunamadı:', route.name);
+                    console.warn('Rota geometrisi bulunamadı:', routeDetails.name);
                     showNotification('Bu rotanın geometrisi bulunamadı', 'warning');
                 }
             } catch (error) {
@@ -1895,30 +1927,44 @@
         }
 
         // Display route details in workspace
-        function displayRouteDetails(route) {
+        async function displayRouteDetails(route) {
             const workspaceTitle = document.getElementById('workspaceTitle');
             const workspaceActions = document.getElementById('workspaceActions');
             const workspaceContent = document.getElementById('workspaceContent');
 
-            workspaceTitle.textContent = route.name;
+            const rid = getRouteId(route);
+            let routeDetails = route;
+            if (!route.elevation_profile || !route.pois || !route.geometry) {
+                try {
+                    const resp = await fetch(`${apiBase}/admin/routes/${rid}`, { credentials: 'include' });
+                    if (resp.ok) {
+                        routeDetails = await resp.json();
+                        currentRoute = routeDetails;
+                    }
+                } catch (err) {
+                    console.warn('Rota detayları alınamadı:', err);
+                }
+            }
+
+            workspaceTitle.textContent = routeDetails.name;
             workspaceActions.style.display = 'flex';
 
             workspaceContent.innerHTML = `
                 <div class="route-detail-view">
                     <div class="route-detail-header">
-                        <div class="route-type-badge route-type-${route.route_type}">
-                            ${ROUTE_TYPES[route.route_type]?.icon || '🗺️'} 
-                            ${ROUTE_TYPES[route.route_type]?.name || route.route_type}
+                        <div class="route-type-badge route-type-${routeDetails.route_type}">
+                            ${ROUTE_TYPES[routeDetails.route_type]?.icon || '🗺️'}
+                            ${ROUTE_TYPES[routeDetails.route_type]?.name || routeDetails.route_type}
                         </div>
                         <div class="difficulty-display">
-                            <span class="difficulty-stars">${getDifficultyStars(route.difficulty_level)}</span>
-                            <span class="difficulty-text">Zorluk: ${route.difficulty_level}/5</span>
+                            <span class="difficulty-stars">${getDifficultyStars(routeDetails.difficulty_level)}</span>
+                            <span class="difficulty-text">Zorluk: ${routeDetails.difficulty_level}/5</span>
                         </div>
                     </div>
 
                     <div class="route-description-full">
                         <h5><i class="fas fa-info-circle me-2"></i>Açıklama</h5>
-                        <p>${escapeHtml(route.description || 'Açıklama bulunmuyor')}</p>
+                        <p>${escapeHtml(routeDetails.description || 'Açıklama bulunmuyor')}</p>
                     </div>
 
                     <div class="route-statistics">
@@ -1929,7 +1975,7 @@
                                     <i class="fas fa-clock"></i>
                                 </div>
                                 <div class="stat-info">
-                                    <div class="stat-value">${route.estimated_duration || 0}</div>
+                                    <div class="stat-value">${routeDetails.estimated_duration || 0}</div>
                                     <div class="stat-label">Dakika</div>
                                 </div>
                             </div>
@@ -1938,7 +1984,7 @@
                                     <i class="fas fa-route"></i>
                                 </div>
                                 <div class="stat-info">
-                                    <div class="stat-value">${(route.total_distance || 0).toFixed(2)}</div>
+                                    <div class="stat-value">${(routeDetails.total_distance || 0).toFixed(2)}</div>
                                     <div class="stat-label">Kilometre</div>
                                 </div>
                             </div>
@@ -1947,7 +1993,7 @@
                                     <i class="fas fa-mountain"></i>
                                 </div>
                                 <div class="stat-info">
-                                    <div class="stat-value">${route.elevation_gain || 0}</div>
+                                    <div class="stat-value">${routeDetails.elevation_gain || 0}</div>
                                     <div class="stat-label">Yükselti (m)</div>
                                 </div>
                             </div>
@@ -1956,18 +2002,18 @@
                                     <i class="fas fa-map-marker-alt"></i>
                                 </div>
                                 <div class="stat-info">
-                                    <div class="stat-value">${route.poi_count || 0}</div>
+                                    <div class="stat-value">${routeDetails.poi_count || 0}</div>
                                     <div class="stat-label">POI Sayısı</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    ${route.tags ? `
+                    ${routeDetails.tags ? `
                         <div class="route-tags-section">
                             <h5><i class="fas fa-tags me-2"></i>Etiketler</h5>
                             <div class="tags-container">
-                                ${route.tags.split(',').map(tag => 
+                                ${routeDetails.tags.split(',').map(tag =>
                                     `<span class="tag-chip">${escapeHtml(tag.trim())}</span>`
                                 ).join('')}
                             </div>
@@ -1979,20 +2025,20 @@
                         <div class="metadata-grid">
                             <div class="metadata-item">
                                 <strong>Oluşturulma:</strong>
-                                <span>${formatDate(route.created_at)}</span>
+                                <span>${formatDate(routeDetails.created_at)}</span>
                             </div>
                             <div class="metadata-item">
                                 <strong>Güncellenme:</strong>
-                                <span>${formatDate(route.updated_at)}</span>
+                                <span>${formatDate(routeDetails.updated_at)}</span>
                             </div>
                             <div class="metadata-item">
                                 <strong>Dairesel Rota:</strong>
-                                <span>${route.is_circular ? 'Evet' : 'Hayır'}</span>
+                                <span>${routeDetails.is_circular ? 'Evet' : 'Hayır'}</span>
                             </div>
-                            ${route.import_source ? `
+                            ${routeDetails.import_source ? `
                                 <div class="metadata-item">
                                     <strong>Import Kaynağı:</strong>
-                                    <span>${escapeHtml(route.import_source)}</span>
+                                    <span>${escapeHtml(routeDetails.import_source)}</span>
                                 </div>
                             ` : ''}
                         </div>
@@ -2002,24 +2048,25 @@
 
             // Add CSS for route detail view
             addRouteDetailStyles();
-            
+
             // Load elevation chart for route manager
-            if (window.ElevationChart && route) {
+            if (window.ElevationChart && routeDetails) {
+
                 setTimeout(async () => {
                     if (!window.routeElevationChart) {
                         window.routeElevationChart = new ElevationChart('routeElevationChartContainer', map);
                     }
 
-                    if (route.elevation_profile && route.elevation_profile.points) {
-                        await window.routeElevationChart.loadElevationProfile(route.elevation_profile);
-                    } else if (route.geometry) {
+                    if (routeDetails.elevation_profile && routeDetails.elevation_profile.points) {
+                        await window.routeElevationChart.loadElevationProfile(routeDetails.elevation_profile);
+                    } else if (routeDetails.geometry) {
 
                         await window.routeElevationChart.loadRouteElevation({
-                            geometry: route.geometry
+                            geometry: routeDetails.geometry
                         });
-                    } else if (route.pois && route.pois.length > 0) {
+                    } else if (routeDetails.pois && routeDetails.pois.length > 0) {
                         await window.routeElevationChart.loadRouteElevation({
-                            pois: route.pois.map(poi => ({
+                            pois: routeDetails.pois.map(poi => ({
                                 name: poi.name,
                                 latitude: poi.latitude || poi.lat,
                                 longitude: poi.longitude || poi.lng || poi.lon
@@ -2031,8 +2078,16 @@
         }
 
         // Show route details in a popup modal
-        function showRouteDetailsPopup(routeId) {
-            const route = allRoutes.find(r => getRouteId(r) === routeId);
+        async function showRouteDetailsPopup(routeId) {
+            let route = allRoutes.find(r => getRouteId(r) === routeId);
+            try {
+                const resp = await fetch(`${apiBase}/admin/routes/${routeId}`, { credentials: 'include' });
+                if (resp.ok) {
+                    route = await resp.json();
+                }
+            } catch (err) {
+                console.warn('Rota detayları alınamadı:', err);
+            }
             if (!route) {
                 console.error('Route not found:', routeId);
                 return;
