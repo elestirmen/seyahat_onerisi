@@ -6247,6 +6247,50 @@ ute Preview Map Styles */
     display: none;
 }
 
+/* === Predefined routes flex layout and card visuals === */
+.predefined-routes-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.predefined-routes-list .route-card {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 300px;
+}
+
+.route-card-image {
+    width: 100%;
+    height: 180px;
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+}
+
+.route-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.route-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.route-card-meta .route-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.route-card-meta .route-meta-item i {
+    color: #667eea;
+}
+
 /* Route selection highlighting on map */
 .route-on-map {
     cursor: pointer;
