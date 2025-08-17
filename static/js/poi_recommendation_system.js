@@ -5009,81 +5009,48 @@ let mapInitialized = false;
 
 async function initializePredefinedMap() {
     console.log('🗺️ Initializing predefined routes map...');
-    
+
     const mapContainer = document.getElementById('predefinedRoutesMap');
-    
     if (!mapContainer) {
         console.error('❌ Predefined map container not found');
         return false;
     }
-    
-    try {
-        // Ensure container is ready
-        mapContainer.classList.remove('loading');
-        mapContainer.classList.add('loaded');
-        mapContainer.style.pointerEvents = 'auto';
-        
-        // Create map if it doesn't exist
-        if (!predefinedMap) {
-            predefinedMap = L.map('predefinedRoutesMap', {
-                center: [38.6436, 34.8128], // Ürgüp center
-                zoom: 12,
-                zoomControl: true,
-                attributionControl: true,
-                scrollWheelZoom: true,
-                doubleClickZoom: true,
-                touchZoom: true,
-                dragging: true,
-                tap: true,
-                tapTolerance: 15,
-                preferCanvas: true,
-                renderer: L.canvas(),
-                zoomAnimation: true,
-                fadeAnimation: true,
-                markerZoomAnimation: true
-            });
 
-            // Add base layers
+    // Ensure container is interactive before creating the map
+    mapContainer.classList.remove('loading');
+    mapContainer.classList.add('loaded');
+    mapContainer.style.pointerEvents = 'auto';
+
+    try {
+        if (!predefinedMap) {
+            // Replicate the simple map setup from route_manager_enhanced.html
+            predefinedMap = L.map('predefinedRoutesMap').setView([38.6436, 34.8128], 12);
             addBaseLayers(predefinedMap);
 
-            // CRITICAL: Force enable all interactions immediately after creation
-            predefinedMap.dragging.enable();
-            predefinedMap.touchZoom.enable();
-            predefinedMap.scrollWheelZoom.enable();
-            predefinedMap.doubleClickZoom.enable();
-            predefinedMap.boxZoom.enable();
-            predefinedMap.keyboard.enable();
+            // Initialize elevation chart if available
+            if (window.ElevationChart) {
+                predefinedElevationChart = new ElevationChart('predefinedElevationChartContainer', predefinedMap);
+            }
 
-            console.log('✅ Predefined map created successfully with interactions enabled');
+            console.log('✅ Predefined map created');
         }
-        
-        // Initialize map layers array
+
         predefinedMapLayers = [];
         predefinedMapInitialized = true;
-        
-        // Hide loading state
-        addTimeout(() => {
-            finalizePredefinedMapLoading();
 
-            // Invalidate size to ensure proper rendering
+        finalizePredefinedMapLoading();
+
+        // Ensure map renders correctly after being shown
+        setTimeout(() => {
             if (predefinedMap) {
                 predefinedMap.invalidateSize();
             }
-            
-            // AGGRESSIVE FIX: Force reset interactions after initialization
-            setTimeout(() => {
-                window.resetMapInteractions();
-            }, 100);
-        }, 500);
-        
+        }, 100);
+
         return true;
-        
     } catch (error) {
         console.error('❌ Error initializing predefined map:', error);
-
-        // Hide loading state on error
         finalizePredefinedMapLoading();
-
         return false;
     }
 }
