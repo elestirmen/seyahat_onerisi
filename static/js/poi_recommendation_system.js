@@ -4950,6 +4950,21 @@ async function displayRouteOnMap(route) {
             display: mapContainer.style.display,
             visibility: mapContainer.style.visibility
         });
+        // Hide any loading overlay that might block interactions
+        const loadingElement = document.getElementById('predefinedMapLoading');
+        if (loadingElement) {
+            loadingElement.style.display = 'none';
+        }
+
+        // Reset state classes to guarantee interactivity
+        mapContainer.classList.remove('loading');
+        mapContainer.classList.add('loaded');
+
+        // Ensure container and its parent can receive pointer events
+        mapContainer.style.pointerEvents = 'auto';
+        if (mapContainer.parentElement) {
+            mapContainer.parentElement.style.pointerEvents = 'auto';
+        }
     }
 
     // Ensure all map interaction handlers are enabled
@@ -5824,8 +5839,6 @@ function displayPredefinedRoutes(routes) {
             
             try {
                 await selectPredefinedRoute(route); // handles map rendering internally
-                // Show route details after selecting the route
-                showPredefinedRouteDetailsPanel(window.currentSelectedRoute || route);
             } catch (error) {
                 console.error('Error selecting route:', error);
             } finally {
