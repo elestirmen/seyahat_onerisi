@@ -1203,7 +1203,17 @@
     <script src="static/js/elevation-chart.js"></script>
     <script src="static/js/api-client.js"></script>
     <script src="static/js/navigation-manager.js"></script>
+    <script src="static/js/route-admin-manager.js"></script>
     <script>
+        // Yönetim arayüzü için RouteAdminManager'ı başlat
+        if (window.RouteAdminManager) {
+            window.routeAdminManager = new RouteAdminManager('routeContainer');
+
+            // Eski kod ile uyumluluk için loadRouteMedia fonksiyonunu yayınla
+            window.loadRouteMedia = (routeId) =>
+                window.routeAdminManager.loadRouteMedia(routeId);
+        }
+
         // Rate limiting bilgilendirme mesajı
         if (window.rateLimiter) {
             console.log('✅ Rate limiting aktif - API çağrıları sınırlandırılacak');
@@ -3534,6 +3544,11 @@
             // Load existing media for route
             if (typeof loadRouteMedia === 'function') {
                 loadRouteMedia(getRouteId(route));
+            }
+
+            // Fotoğraf yükleme butonunun çalışması için medya dinleyicilerini kur
+            if (window.routeAdminManager) {
+                window.routeAdminManager.setupMediaHandlers();
             }
         }
 
