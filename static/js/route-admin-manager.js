@@ -13,6 +13,13 @@ class RouteAdminManager {
         this.currentRoute = null;
         this.isLoading = false;
         this.isDirty = false; // Track unsaved changes
+
+        // Route media management
+        this.pendingMediaFile = null;
+        this.routeMedia = [];
+        this.mediaMarkers = [];
+        this.handleMapClickBound = null;
+        this.map = null;
         
         // API base URL
         this.apiBase = window.apiBase || '/api';
@@ -300,6 +307,134 @@ class RouteAdminManager {
         this.populateForm(route);
         this.showForm();
         this.renderSelectedPOIs();
+        this.setupMediaHandlers();
+        this.loadRouteMedia(routeId);
+        if (this.handleMapClickBound && this.map) {
+            this.map.off('click', this.handleMapClickBound);
+        }
+        if (window.map) {
+            this.map = window.map;
+            this.handleMapClickBound = this.handleMapClick.bind(this);
+            this.map.on('click', this.handleMapClickBound);
+        }
+    }
+
+    /**
+     * Setup media upload handlers
+     */
+    setupMediaHandlers() {
+        const addBtn = this.container.querySelector('#addRouteImageBtn');
+        const fileInput = this.container.querySelector('#routeImageInput');
+        if (addBtn && fileInput) {
+            addBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => {
+                this.pendingMediaFile = e.target.files[0];
+                if (this.pendingMediaFile) {
+                    this.showNotification('Fotoğraf konumu için haritadan bir nokta seçin', 'info');
+                }
+            });
+        }
+    }
+
+    /**
+     * Handle map click for media placement
+     */
+    async handleMapClick(e) {
+        if (!this.pendingMediaFile || !this.currentRoute) return;
+        const routeId = this.currentRoute.id;
+        const formData = new FormData();
+        formData.append('file', this.pendingMediaFile);
+        formData.append('lat', e.latlng.lat);
+        formData.append('lng', e.latlng.lng);
+        try {
+            const res = await fetch(`/admin/routes/${routeId}/media`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data && (data.media || data)) {
+                const media = data.media || data;
+                this.routeMedia.push(media);
+                this.addMediaMarker(media);
+                this.renderMediaList();
+            }
+        } catch (err) {
+            console.error('Media upload error:', err);
+            this.showNotification('Medya yüklenemedi', 'error');
+        } finally {
+            this.pendingMediaFile = null;
+            const fileInput = this.container.querySelector('#routeImageInput');
+            if (fileInput) fileInput.value = '';
+        }
+    }
+
+    /**
+     * Load existing media for a route
+     */
+    async loadRouteMedia(routeId) {
+        try {
+            const res = await fetch(`/admin/routes/${routeId}/media`, { credentials: 'include' });
+            const data = await res.json();
+            const mediaList = data.media || data || [];
+            this.routeMedia = Array.isArray(mediaList) ? mediaList : [];
+            this.mediaMarkers.forEach(m => this.map && this.map.removeLayer(m.marker));
+            this.mediaMarkers = [];
+            this.routeMedia.forEach(m => this.addMediaMarker(m));
+            this.renderMediaList();
+        } catch (err) {
+            console.error('Media load error:', err);
+        }
+    }
+
+    /**
+     * Add marker for media item
+     */
+    addMediaMarker(media) {
+        if (!this.map) return;
+        const marker = L.marker([media.latitude, media.longitude]).addTo(this.map);
+        if (media.url) {
+            marker.bindPopup(`<img src="${media.url}" alt="route media" style="max-width:150px;">`);
+        }
+        this.mediaMarkers.push({ id: media.id, marker });
+    }
+
+    /**
+     * Render media list panel
+     */
+    renderMediaList() {
+        const listEl = this.container.querySelector('#routeMediaList');
+        if (!listEl) return;
+        listEl.innerHTML = '';
+        this.routeMedia.forEach(media => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.innerHTML = `<span>${media.filename || media.id}</span>` +
+                `<i class="fas fa-trash text-danger delete-media" data-id="${media.id}"></i>`;
+            listEl.appendChild(li);
+        });
+        listEl.querySelectorAll('.delete-media').forEach(el => {
+            el.addEventListener('click', () => this.deleteMedia(el.dataset.id));
+        });
+    }
+
+    /**
+     * Delete media item
+     */
+    async deleteMedia(mediaId) {
+        if (!this.currentRoute) return;
+        try {
+            await window.apiClient.delete(`/admin/routes/${this.currentRoute.id}/media/${mediaId}`);
+            this.routeMedia = this.routeMedia.filter(m => m.id !== mediaId);
+            const markerObj = this.mediaMarkers.find(m => m.id == mediaId);
+            if (markerObj && this.map) {
+                this.map.removeLayer(markerObj.marker);
+                this.mediaMarkers = this.mediaMarkers.filter(m => m.id != mediaId);
+            }
+            this.renderMediaList();
+        } catch (err) {
+            console.error('Delete media error:', err);
+        }
     }
 
     /**
