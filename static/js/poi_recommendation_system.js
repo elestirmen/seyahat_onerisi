@@ -6696,13 +6696,6 @@ async function selectPredefinedRoute(route) {
          console.log('🔎 Contains "patika"?', route.name?.toLowerCase().includes('patika'));
          console.log('🗺️ Full route object:', route);
          
-         // Simple approach: Always show single Google Maps button
-         showNotificationWithAction(
-             `✅ "${route.name}" rotası haritada gösteriliyor!`,
-             'success',
-             'Google Maps\'te Aç',
-             () => exportPredefinedRouteToGoogleMaps(route.id || route._id)
-         );
          
          // Add navigation route from current location to route start
          addNavigationToRoute(route);
@@ -7888,8 +7881,6 @@ async function expandRoutePreview(routeId, routeName) {
         // Show route on predefined routes map (left side)
         await displayRouteOnMap(route);
         
-        // Show notification
-        showNotification(`📍 "${routeName}" rotası haritada gösteriliyor`, 'success');
         
     } catch (error) {
         console.error('❌ Error expanding route preview:', error);
