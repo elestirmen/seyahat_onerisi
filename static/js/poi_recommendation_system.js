@@ -5998,15 +5998,16 @@ function displayPredefinedRoutes(routes) {
     if (noRoutesMessage) noRoutesMessage.style.display = 'none';
     
     routesList.innerHTML = routes.map(route => createRouteCard(route)).join('');
-    
-    // Add click event listeners to route cards
+
+    // Add event listeners to route cards and favorite buttons
     routesList.querySelectorAll('.route-card').forEach((card, index) => {
+        const route = routes[index];
+
+        // Route card click -> select route
         card.addEventListener('click', async () => {
-            const route = routes[index];
-            
             // Add loading state to clicked card
             card.classList.add('loading');
-            
+
             try {
                 await selectPredefinedRoute(route); // handles map rendering internally
                 // Show route details after selecting the route
@@ -6017,6 +6018,27 @@ function displayPredefinedRoutes(routes) {
                 card.classList.remove('loading');
             }
         });
+
+        // Favorite button click -> toggle favorite state
+        const favBtn = card.querySelector('.favorite-btn');
+        if (favBtn) {
+            // Initialize button state from storage
+            if (isRouteFavorite(route.id)) {
+                favBtn.classList.add('active');
+            }
+
+            favBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent card click
+                toggleFavoriteRoute(route.id);
+                favBtn.classList.toggle('active');
+
+                // Re-apply filters if favorites filter is active
+                const favoriteChip = document.querySelector('#favoriteChips .filter-chip.active');
+                if (favoriteChip && favoriteChip.dataset.value === 'favorites') {
+                    applyRouteFilters();
+                }
+            });
+        }
     });
     
     // Update route statistics
@@ -6043,6 +6065,9 @@ function createRouteCard(route) {
             </div>
             <div class="route-card-header">
                 <h3 class="route-card-title">${route.name || 'İsimsiz Rota'}</h3>
+                <button class="favorite-btn" data-route-id="${route.id}" aria-label="Favorilere ekle">
+                    <i class="fas fa-star"></i>
+                </button>
                 <p class="route-card-description">${route.description || 'Açıklama bulunmuyor.'}</p>
             </div>
             <div class="route-card-meta">
@@ -6061,6 +6086,36 @@ function createRouteCard(route) {
             </div>
         </div>
     `;
+}
+
+// Favori rota yönetimi
+function getFavoriteRoutes() {
+    try {
+        const stored = localStorage.getItem('favoriteRoutes');
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        console.warn('Favorite routes could not be loaded:', e);
+        return [];
+    }
+}
+
+function saveFavoriteRoutes(routes) {
+    localStorage.setItem('favoriteRoutes', JSON.stringify(routes));
+}
+
+function isRouteFavorite(routeId) {
+    return getFavoriteRoutes().includes(routeId);
+}
+
+function toggleFavoriteRoute(routeId) {
+    const favorites = getFavoriteRoutes();
+    const index = favorites.indexOf(routeId);
+    if (index === -1) {
+        favorites.push(routeId);
+    } else {
+        favorites.splice(index, 1);
+    }
+    saveFavoriteRoutes(favorites);
 }
 
 function createDifficultyStars(level) {
@@ -6109,12 +6164,12 @@ function applyRouteFilters() {
         if (filters.routeType && route.route_type !== filters.routeType) {
             return false;
         }
-        
+
         // Difficulty filter
         if (filters.difficulty && route.difficulty_level !== parseInt(filters.difficulty)) {
             return false;
         }
-        
+
         // Duration filter
         if (filters.duration) {
             const duration = route.estimated_duration || 0;
@@ -6123,7 +6178,12 @@ function applyRouteFilters() {
                 return false;
             }
         }
-        
+
+        // Favorites filter
+        if (filters.favorites === 'favorites' && !isRouteFavorite(route.id)) {
+            return false;
+        }
+
         return true;
     });
     
@@ -10540,38 +10600,48 @@ function initializeFilterChips() {
     const routeTypeChips = document.querySelectorAll('#routeTypeChips .filter-chip');
     routeTypeChips.forEach(chip => {
         chip.addEventListener('click', () => {
-            // Remove active from siblings
             routeTypeChips.forEach(c => c.classList.remove('active'));
-            // Add active to clicked chip
             chip.classList.add('active');
-            
-            // Auto-apply filters on mobile
+
             if (window.innerWidth <= 768) {
                 setTimeout(applyRouteFilters, 300);
             }
         });
     });
-    
+
     // Difficulty chips
     const difficultyChips = document.querySelectorAll('#difficultyChips .filter-chip');
     difficultyChips.forEach(chip => {
         chip.addEventListener('click', () => {
             difficultyChips.forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
-            
+
             if (window.innerWidth <= 768) {
                 setTimeout(applyRouteFilters, 300);
             }
         });
     });
-    
+
     // Duration chips
     const durationChips = document.querySelectorAll('#durationChips .filter-chip');
     durationChips.forEach(chip => {
         chip.addEventListener('click', () => {
             durationChips.forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
-            
+
+            if (window.innerWidth <= 768) {
+                setTimeout(applyRouteFilters, 300);
+            }
+        });
+    });
+
+    // Favorite chips
+    const favoriteChips = document.querySelectorAll('#favoriteChips .filter-chip');
+    favoriteChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            favoriteChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+
             if (window.innerWidth <= 768) {
                 setTimeout(applyRouteFilters, 300);
             }
@@ -10583,7 +10653,7 @@ function clearAllFilters() {
     console.log('🧹 Clearing all filters...');
     
     // Reset all filter chips to default (first chip active)
-    const chipGroups = ['#routeTypeChips', '#difficultyChips', '#durationChips'];
+    const chipGroups = ['#routeTypeChips', '#difficultyChips', '#durationChips', '#favoriteChips'];
     
     chipGroups.forEach(groupSelector => {
         const chips = document.querySelectorAll(`${groupSelector} .filter-chip`);
@@ -10604,11 +10674,13 @@ function getActiveFilterValues() {
     const routeTypeChip = document.querySelector('#routeTypeChips .filter-chip.active');
     const difficultyChip = document.querySelector('#difficultyChips .filter-chip.active');
     const durationChip = document.querySelector('#durationChips .filter-chip.active');
-    
+    const favoriteChip = document.querySelector('#favoriteChips .filter-chip.active');
+
     return {
         routeType: routeTypeChip ? routeTypeChip.dataset.value : '',
         difficulty: difficultyChip ? difficultyChip.dataset.value : '',
-        duration: durationChip ? durationChip.dataset.value : ''
+        duration: durationChip ? durationChip.dataset.value : '',
+        favorites: favoriteChip ? favoriteChip.dataset.value : ''
     };
 }
 

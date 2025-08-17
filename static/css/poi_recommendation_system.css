@@ -1257,6 +1257,27 @@
             z-index: 2;
         }
 
+        .favorite-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: transparent;
+            border: none;
+            color: #cbd5e0;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+        }
+
+        .favorite-btn.active {
+            color: #f6ad55;
+        }
+
+        .favorite-btn:focus {
+            outline: none;
+            color: #f6ad55;
+        }
+
         .route-card-title {
             font-size: 1.2rem;
             font-weight: 700;
