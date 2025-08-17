@@ -4908,6 +4908,7 @@ async function initializePredefinedMap() {
                 window.touchOptimizer.enhanceMapTouch(predefinedMap);
             }
 
+
             console.log('✅ Predefined map created successfully');
         }
         
@@ -4961,12 +4962,15 @@ async function displayRouteOnMap(route) {
     });
 
     // Ensure map container is visible and invalidate size for proper rendering
+
     const mapContainer = document.getElementById('predefinedRoutesMap');
+    const loadingElement = document.getElementById('predefinedMapLoading');
     if (mapContainer) {
         mapContainer.style.display = 'block';
         mapContainer.style.visibility = 'visible';
         mapContainer.style.opacity = '1';
         finalizePredefinedMapLoading();
+
         predefinedMap.invalidateSize();
         console.log('🔄 Map container visibility and size refreshed');
         console.log('🔍 Map container dimensions:', {
