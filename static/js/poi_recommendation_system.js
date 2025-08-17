@@ -6151,6 +6151,20 @@ function clearRouteFilters() {
     displayPredefinedRoutes(filteredRoutes);
 }
 
+function setupRouteSearch() {
+    const searchInput = document.getElementById('routeSearchInput');
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.trim().toLowerCase();
+        filteredRoutes = predefinedRoutes.filter(route =>
+            route.name && route.name.toLowerCase().includes(query)
+        );
+        displayPredefinedRoutes(filteredRoutes);
+        updateRouteStats();
+    });
+}
+
 function showNoRoutesMessage(message = 'Seçilen kriterlere uygun rota bulunamadı.') {
     const routesList = document.getElementById('predefinedRoutesList');
     const noRoutesMessage = document.getElementById('noRoutesMessage');
@@ -10514,9 +10528,12 @@ function initializeEnhancedFilters() {
     if (applyFiltersBtn) {
         applyFiltersBtn.addEventListener('click', applyRouteFilters);
     }
-    
+
     // Update route counts
     updateRouteStats();
+
+    // Initialize route search
+    setupRouteSearch();
 }
 
 function initializeFilterChips() {
