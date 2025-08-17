@@ -7,6 +7,7 @@ class TouchOptimizer {
     constructor() {
         this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         this.isSmallScreen = window.innerWidth <= 768;
+        this.optimizedMaps = new WeakSet();
         this.init();
     }
 
@@ -128,37 +129,41 @@ class TouchOptimizer {
     }
 
     optimizeMapControls() {
-        // Wait for map to be initialized
-        const checkMap = () => {
-            if (typeof map !== 'undefined' && map) {
-                this.enhanceMapTouch();
-            } else {
-                setTimeout(checkMap, 100);
+        const checkMaps = () => {
+            const maps = [];
+            if (typeof map !== 'undefined' && map) maps.push(map);
+            if (typeof predefinedMap !== 'undefined' && predefinedMap) maps.push(predefinedMap);
+
+            if (maps.length === 0) {
+                setTimeout(checkMaps, 100);
+                return;
             }
+
+            maps.forEach(m => {
+                if (!this.optimizedMaps.has(m)) {
+                    this.enhanceMapTouch(m);
+                    this.optimizedMaps.add(m);
+                }
+            });
+
+            setTimeout(checkMaps, 1000);
         };
-        checkMap();
+        checkMaps();
     }
 
-    enhanceMapTouch() {
-        if (typeof L === 'undefined' || !map) return;
+    enhanceMapTouch(mapInstance) {
+        if (typeof L === 'undefined' || !mapInstance) return;
 
-        // Add custom touch-friendly zoom controls
-        this.addTouchZoomControls();
-        
-        // Enhance map gestures for mobile
-        this.enhanceMapGestures();
-        
-        // Add touch-friendly legend toggle
-        this.addTouchLegendToggle();
+        this.addTouchZoomControls(mapInstance);
+        this.enhanceMapGestures(mapInstance);
+        this.addTouchLegendToggle(mapInstance);
     }
 
-    addTouchZoomControls() {
-        // Remove default zoom control
-        map.zoomControl.remove();
+    addTouchZoomControls(mapInstance) {
+        mapInstance.zoomControl.remove();
 
-        // Create custom touch-friendly zoom controls
         const zoomControls = L.control({ position: 'topright' });
-        
+
         zoomControls.onAdd = function(map) {
             const container = L.DomUtil.create('div', 'map-controls');
             
@@ -225,48 +230,39 @@ class TouchOptimizer {
             return container;
         };
 
-        zoomControls.addTo(map);
+            zoomControls.addTo(mapInstance);
     }
 
-    enhanceMapGestures() {
-        // Improve touch gestures for mobile
+    enhanceMapGestures(mapInstance) {
         if (this.isSmallScreen) {
-            // Adjust map options for better mobile experience
-            map.options.zoomSnap = 0.5;
-            map.options.zoomDelta = 0.5;
-            
-            // Add momentum scrolling
-            map.options.inertia = true;
-            map.options.inertiaDeceleration = 2000;
-            map.options.inertiaMaxSpeed = 1000;
+            mapInstance.options.zoomSnap = 0.5;
+            mapInstance.options.zoomDelta = 0.5;
+            mapInstance.options.inertia = true;
+            mapInstance.options.inertiaDeceleration = 2000;
+            mapInstance.options.inertiaMaxSpeed = 1000;
         }
 
-        // Add double-tap to zoom
         let lastTap = 0;
-        map.on('click', (e) => {
+        mapInstance.on('click', (e) => {
             const currentTime = new Date().getTime();
             const tapLength = currentTime - lastTap;
-            
+
             if (tapLength < 500 && tapLength > 0) {
-                // Double tap detected
-                map.setZoomAround(e.latlng, map.getZoom() + 1);
-                // Add haptic feedback
+                mapInstance.setZoomAround(e.latlng, mapInstance.getZoom() + 1);
                 if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
             }
-            
+
             lastTap = currentTime;
         });
 
-        // Improve pinch-to-zoom sensitivity
-        if (map.touchZoom) {
-            map.touchZoom.options.bounceAtZoomLimits = true;
+        if (mapInstance.touchZoom) {
+            mapInstance.touchZoom.options.bounceAtZoomLimits = true;
         }
     }
 
-    addTouchLegendToggle() {
-        // Create touch-friendly legend toggle
+    addTouchLegendToggle(mapInstance) {
         const legendToggle = L.control({ position: 'bottomleft' });
-        
+
         legendToggle.onAdd = function(map) {
             const container = L.DomUtil.create('div', 'map-legend-toggle');
             container.innerHTML = '<i class="fas fa-list"></i><span>Lejant</span>';
@@ -297,7 +293,7 @@ class TouchOptimizer {
             return container;
         };
 
-        legendToggle.addTo(map);
+        legendToggle.addTo(mapInstance);
     }
 
     addTouchFeedback() {
@@ -344,12 +340,16 @@ class TouchOptimizer {
     }
 
     handleOrientationChange() {
-        // Recalculate layout after orientation change
-        if (typeof map !== 'undefined' && map) {
+        // Recalculate layout after orientation change for all maps
+        const maps = [];
+        if (typeof map !== 'undefined' && map) maps.push(map);
+        if (typeof predefinedMap !== 'undefined' && predefinedMap) maps.push(predefinedMap);
+
+        maps.forEach(m => {
             setTimeout(() => {
-                map.invalidateSize();
+                try { m.invalidateSize(); } catch (e) {}
             }, 100);
-        }
+        });
 
         // Update screen size class
         this.isSmallScreen = window.innerWidth <= 768;
@@ -379,7 +379,7 @@ class TouchOptimizer {
 
 // Initialize touch optimizations when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new TouchOptimizer();
+    window.touchOptimizer = new TouchOptimizer();
 });
 
 // Export for use in other modules
