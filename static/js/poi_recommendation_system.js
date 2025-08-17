@@ -6129,12 +6129,26 @@ function createRouteCard(route) {
 }
 
 function renderRouteMiniMaps(routes) {
-    routes.forEach(route => {
+    routes.forEach(async route => {
+
         const container = document.getElementById(`mini-map-${route.id}`);
         if (!container) return;
 
         let geometry = route.geometry;
-        if (!geometry) return;
+
+        // Fetch geometry from API if not already present
+        if (!geometry) {
+            try {
+                const response = await fetch(`${apiBase}/routes/${route.id}/geometry`);
+                if (!response.ok) return;
+                const data = await response.json();
+                geometry = data && data.geometry;
+            } catch (error) {
+                console.error(`Failed to load geometry for route ${route.id}:`, error);
+                return;
+            }
+        }
+
 
         // Parse geometry if provided as string
         if (typeof geometry === 'string') {
