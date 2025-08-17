@@ -3298,13 +3298,8 @@ function calculateTotalDistance(waypoints) {
 
 // Function to show predefined route options popup when clicking on route
 function showPredefinedRouteOptionsPopup(latlng, route) {
-    const popup = L.popup({
-        maxWidth: 320,
-        className: 'route-options-popup predefined-route-popup'
-    })
-    .setLatLng(latlng)
-    .setContent(createPredefinedRouteOptionsContent(route))
-    .openOn(predefinedMap);
+    // Popup disabled for better readability
+    return;
 }
 
 // Show route details panel for predefined routes (similar to personal routes)
@@ -3377,82 +3372,30 @@ function attachPredefinedRouteEvents(layer, route) {
         if (e.originalEvent) {
             e.originalEvent.preventDefault();
         }
-        showPredefinedRouteOptionsPopup(e.latlng, route);
+        // Popup removed for better readability
     });
 }
 
 // Create content for predefined route options popup
 function createPredefinedRouteOptionsContent(route) {
-    const routeType = route.route_type === 'walking' ? '🚶 Yürüyüş' : 
-                      route.route_type === 'hiking' ? '🥾 Doğa Yürüyüşü' :
-                      route.route_type === 'cycling' ? '🚴 Bisiklet' : 
-                      route.route_type === 'driving' ? '🚗 Araç' : route.route_type || 'Bilinmeyen';
-    
-    const poiCount = route.pois ? route.pois.length : 0;
-    
-    return `
-        <div style="text-align: center; font-family: 'Segoe UI', sans-serif; min-width: 280px;">
-            <h6 style="margin: 0 0 12px 0; color: #2c5aa0; font-size: 16px;">🗺️ ${route.name}</h6>
-            
-            <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                    <span style="color: #666; font-size: 12px;">🚶 Tip:</span>
-                    <span style="font-weight: 600; font-size: 12px;">${routeType}</span>
-                </div>
-                ${route.total_distance ? `
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                    <span style="color: #666; font-size: 12px;">📏 Mesafe:</span>
-                    <span style="font-weight: 600; font-size: 12px;">${route.total_distance.toFixed(1)} km</span>
-                </div>` : ''}
-                ${route.estimated_duration ? `
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                    <span style="color: #666; font-size: 12px;">⏱️ Süre:</span>
-                    <span style="font-weight: 600; font-size: 12px;">${route.estimated_duration} dk</span>
-                </div>` : ''}
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #666; font-size: 12px;">📍 POI Sayısı:</span>
-                    <span style="font-weight: 600; font-size: 12px;">${poiCount} nokta</span>
-                </div>
-            </div>
-            
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <button onclick="exportPredefinedRouteToGoogleMaps('${route.id || route._id}'); predefinedMap.closePopup();" 
-                        style="background: #4285f4; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    🗺️ Google Maps'te Aç
-                </button>
-                
-                <button onclick="showRouteDetail('${route.id || route._id}'); predefinedMap.closePopup();" 
-                        style="background: #667eea; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    📋 Detaylı Bilgi
-                </button>
-                
-                <button onclick="copyRouteToPersonalRoute('${route.id || route._id}'); predefinedMap.closePopup();" 
-                        style="background: #f39c12; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    📝 Kişisel Rotaya Kopyala
-                </button>
-                
-                <div style="display: flex; gap: 6px;">
-                    <button onclick="zoomToRoute('${route.id || route._id}'); predefinedMap.closePopup();" 
-                            style="background: #27ae60; color: white; border: none; padding: 8px 12px; border-radius: 12px; font-size: 11px; cursor: pointer; flex: 1;">
-                        🎯 Rotaya Yakınlaştır
-                    </button>
-                    <button onclick="clearPredefinedMapContent(); predefinedMap.closePopup();" 
-                            style="background: #e74c3c; color: white; border: none; padding: 8px 12px; border-radius: 12px; font-size: 11px; cursor: pointer; flex: 1;">
-                        🗑️ Haritayı Temizle
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
+    // Popup content disabled for better readability
+    return '';
 }
 
 // Export predefined route to Google Maps
 function exportPredefinedRouteToGoogleMaps(routeId) {
+    console.log('🔍 === EXPORT PREDEFINED ROUTE DEBUG ===');
+    console.log('🔍 Route ID:', routeId);
+    console.log('🔍 Available routes:', predefinedRoutes.map(r => ({id: r.id || r._id, name: r.name})));
+    
     const route = predefinedRoutes.find(r => (r.id || r._id) === routeId);
     if (!route) {
+        console.error('❌ Route not found with ID:', routeId);
         showNotification('❌ Rota bulunamadı', 'error');
         return;
     }
+    
+    console.log('✅ Found route:', route.name);
 
     let waypoints = [];
     let origin, destination;
@@ -3597,7 +3540,13 @@ function exportPredefinedRouteToGoogleMaps(routeId) {
     console.log('🗺️ Route name:', route.name);
     console.log('🗺️ Generated URL:', url);
 
-    window.open(url, '_blank');
+    try {
+        window.open(url, '_blank');
+        console.log('✅ Successfully opened Google Maps URL');
+    } catch (error) {
+        console.error('❌ Error opening Google Maps:', error);
+        showNotification('❌ Google Maps açılırken hata oluştu', 'error');
+    }
 }
 
 // Add navigation route from current location to route start
@@ -3644,7 +3593,7 @@ async function addNavigationToRoute(route) {
                 const distanceKm = (distance / 1000).toFixed(1);
                 
                 if (distance < 100) { // Less than 100 meters
-                    showNotification('🎯 Zaten rota başlangıcında bulunuyorsunuz!', 'success');
+                    // Notification removed for better user experience
                     return;
                 }
                 

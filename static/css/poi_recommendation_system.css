@@ -1189,6 +1189,30 @@
             box-shadow: 0 6px 16px rgba(72, 187, 120, 0.4);
         }
 
+        .filter-map-clear-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 44px;
+            touch-action: manipulation;
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            border: 2px solid #e53e3e;
+            color: white;
+            box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+        }
+
+        .filter-map-clear-btn:hover {
+            background: linear-gradient(135deg, #c53030 0%, #9c2626 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(229, 62, 62, 0.4);
+        }
+
         .predefined-routes-list {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -2000,7 +2024,8 @@
             }
 
             .filter-clear-btn,
-            .filter-apply-btn {
+            .filter-apply-btn,
+            .filter-map-clear-btn {
                 width: 100%;
                 justify-content: center;
                 padding: 16px 20px;
@@ -2133,7 +2158,8 @@
             }
 
             .filter-clear-btn,
-            .filter-apply-btn {
+            .filter-apply-btn,
+            .filter-map-clear-btn {
                 padding: 14px 16px;
                 font-size: 0.9rem;
                 min-height: 44px;
@@ -6184,10 +6210,10 @@ ute Preview Map Styles */
 
 .map-controls {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    bottom: 10px;
+    left: 10px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 8px;
     z-index: 1000;
 }
@@ -6223,6 +6249,22 @@ ute Preview Map Styles */
         grid-template-columns: 1fr;
         gap: 15px;
     }
+
+    .map-controls {
+        bottom: 15px;
+        left: 15px;
+        gap: 6px;
+    }
+
+    .map-control-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .map-control-btn i {
+        font-size: 12px;
+    }
+}
     
     .predefined-map-container {
         min-height: 350px;
