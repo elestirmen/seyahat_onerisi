@@ -6071,7 +6071,10 @@ function displayPredefinedRoutes(routes) {
             });
         }
     });
-    
+
+    // Render mini maps for each route
+    renderRouteMiniMaps(routes);
+
     // Update route statistics
     updateRouteStats();
 }
@@ -6120,8 +6123,63 @@ function createRouteCard(route) {
                     <div class="difficulty-stars">${difficultyStars}</div>
                 </div>
             </div>
+            <div class="route-mini-map" id="mini-map-${route.id}"></div>
         </div>
     `;
+}
+
+function renderRouteMiniMaps(routes) {
+    routes.forEach(async route => {
+        const container = document.getElementById(`mini-map-${route.id}`);
+        if (!container) return;
+
+        let geometry = route.geometry;
+
+        // Fetch geometry from API if not already present
+        if (!geometry) {
+            try {
+                const response = await fetch(`${apiBase}/routes/${route.id}/geometry`);
+                if (!response.ok) return;
+                const data = await response.json();
+                geometry = data && data.geometry;
+            } catch (error) {
+                console.error(`Failed to load geometry for route ${route.id}:`, error);
+                return;
+            }
+        }
+
+        // Parse geometry if provided as string
+        if (typeof geometry === 'string') {
+            try {
+                geometry = JSON.parse(geometry);
+            } catch {
+                return;
+            }
+        }
+
+        const coords = geometry.coordinates || (geometry.geometry && geometry.geometry.coordinates);
+        if (!coords || coords.length === 0) return;
+
+        const latlngs = coords.map(c => [c[1], c[0]]);
+
+        const map = L.map(container, {
+            attributionControl: false,
+            dragging: false,
+            zoomControl: false,
+            scrollWheelZoom: false,
+            doubleClickZoom: false,
+            boxZoom: false,
+            keyboard: false,
+            touchZoom: false
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18
+        }).addTo(map);
+
+        const line = L.polyline(latlngs, { interactive: false }).addTo(map);
+        map.fitBounds(line.getBounds());
+    });
 }
 
 function handleImageError(event) {
