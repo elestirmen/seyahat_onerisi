@@ -54,7 +54,7 @@ class MediaService:
         self.thumbnails_path = self.base_path / "thumbnails"
         self.previews_path = self.base_path / "previews"
         self._ensure_directories()
-    
+
     def _ensure_directories(self):
         """Ensure all required directories exist."""
         try:
@@ -73,6 +73,24 @@ class MediaService:
         except Exception as e:
             logger.error(f"Error creating media directories: {e}")
             raise APIError("Failed to initialize media directories", "MEDIA_DIR_ERROR", 500)
+
+    def generate_thumbnail(self, source_path: Union[str, Path], size: Tuple[int, int] = (300, 200)) -> Optional[str]:
+        """Generate a thumbnail for the given image file."""
+        try:
+            from PIL import Image
+
+            source = Path(source_path)
+            thumb_path = source.with_name(f"{source.stem}_thumb{source.suffix}")
+            thumb_path.parent.mkdir(parents=True, exist_ok=True)
+
+            with Image.open(source) as img:
+                img.thumbnail(size)
+                img.save(thumb_path)
+
+            return str(thumb_path)
+        except Exception as e:
+            logger.warning(f"Thumbnail generation failed: {e}")
+            return None
     
     def validate_file(self, file: FileStorage, media_type: str = None) -> Dict[str, Any]:
         """
