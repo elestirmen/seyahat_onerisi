@@ -195,32 +195,42 @@ function getCategoryColor(category) {
 
 // Get category icon (dynamic)
 function getCategoryIcon(category) {
+    let icon;
+
     // Önce API'den yüklenen kategori ikonunu kullan
     if (categoryData[category] && categoryData[category].icon) {
-        return categoryData[category].icon;
+        icon = categoryData[category].icon;
+    } else {
+        // Bilinen kategoriler için varsayılan Font Awesome sınıfları
+        const iconMap = {
+            'doga_macera': 'fas fa-tree',
+            'gastronomik': 'fas fa-utensils',
+            'konaklama': 'fas fa-bed',
+            'kulturel': 'fas fa-university',
+            'sanatsal': 'fas fa-palette',
+            'dini': 'fas fa-mosque',
+            'tarihi': 'fas fa-landmark',
+            'mimari': 'fas fa-building',
+            'mezarlik': 'fas fa-cross',
+            'saray_kale': 'fas fa-chess-rook',
+            'diger': 'fas fa-map-marker-alt'
+        };
+
+        if (iconMap[category]) {
+            icon = iconMap[category];
+        } else {
+            // Son çare olarak emoji tabanlı ikonlara düş
+            icon = fallbackCategoryStyles[category]?.icon || '📍';
+        }
     }
 
-    // Bilinen kategoriler için varsayılan Font Awesome sınıfları
-    const iconMap = {
-        'doga_macera': 'fas fa-tree',
-        'gastronomik': 'fas fa-utensils',
-        'konaklama': 'fas fa-bed',
-        'kulturel': 'fas fa-university',
-        'sanatsal': 'fas fa-palette',
-        'dini': 'fas fa-mosque',
-        'tarihi': 'fas fa-landmark',
-        'mimari': 'fas fa-building',
-        'mezarlik': 'fas fa-cross',
-        'saray_kale': 'fas fa-chess-rook',
-        'diger': 'fas fa-map-marker-alt'
-    };
-
-    if (iconMap[category]) {
-        return iconMap[category];
+    // Font Awesome sınıfları için <i> etiketi oluştur
+    if (typeof icon === 'string' && /^(fas|far|fab)\s/.test(icon)) {
+        return `<i class="${icon}"></i>`;
     }
 
-    // Son çare olarak emoji tabanlı ikonlara düş
-    return fallbackCategoryStyles[category]?.icon || '📍';
+    // Emoji veya ham HTML'i doğrudan döndür
+    return icon;
 }
 
 // Get category style (dynamic)
@@ -370,7 +380,7 @@ class RouteDetailsPanel {
             stopsHTML += `
                         <div class="stop-item" onclick="RouteDetailsPanel.highlightStop(${lat}, ${lng})">
                             <div class="stop-icon" style="background: ${categoryStyle.color};">
-                                <i class="${categoryStyle.icon}"></i>
+                                ${categoryStyle.icon}
                             </div>
                             <div class="stop-info">
                                 <div class="stop-name">${poi.name}</div>
@@ -1498,8 +1508,8 @@ function createCustomIcon(category, score, isLowScore = false) {
     const scoreBackgroundColor = isLowScore ? '#f9fafb' : 'white';
     const scoreTextColor = isLowScore ? style.color : style.color;
 
-    const iconHTML = style.icon && style.icon.startsWith('fa')
-        ? `<i class="${style.icon}" style="transform: rotate(45deg); opacity: ${isLowScore ? '0.8' : '1'};"></i>`
+    const iconHTML = style.icon && style.icon.includes('<i')
+        ? style.icon.replace('<i', `<i style="transform: rotate(45deg); opacity: ${isLowScore ? '0.8' : '1'};"`)
         : `<span style="transform: rotate(45deg); opacity: ${isLowScore ? '0.8' : '1'};">${style.icon}</span>`;
 
     return L.divIcon({
@@ -5205,7 +5215,7 @@ async function displayRouteOnMap(route) {
                                         font-size: 16px;
                                         position: relative;
                                     ">
-                                        <span style="position: absolute; top: -2px;"><i class="${categoryStyle.icon}"></i></span>
+                                        <span style="position: absolute; top: -2px;">${categoryStyle.icon}</span>
                                         <span style="
                                             position: absolute;
                                             bottom: -8px;
@@ -5311,7 +5321,7 @@ async function displayRouteOnMap(route) {
                                 font-size: 16px;
                                 position: relative;
                             ">
-                                <span style="position: absolute; top: -2px;"><i class="${categoryStyle.icon}"></i></span>
+                                <span style="position: absolute; top: -2px;">${categoryStyle.icon}</span>
                                 <span style="
                                     position: absolute;
                                     bottom: -8px;
@@ -5450,19 +5460,19 @@ function createDetailedPOIPopup(poi, stopNumber) {
         <div class="poi-popup-detailed" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 280px;">
             <div class="poi-popup-header" style="display: flex; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
                 <div class="poi-popup-icon" style="
-                    background: ${categoryStyle.color}; 
-                    color: white; 
-                    width: 35px; 
-                    height: 35px; 
-                    border-radius: 50%; 
-                    display: flex; 
-                    align-items: center; 
-                    justify-content: center; 
+                    background: ${categoryStyle.color};
+                    color: white;
+                    width: 35px;
+                    height: 35px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                     font-size: 16px;
                     margin-right: 10px;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
                 ">
-                    <i class="${categoryStyle.icon}"></i>
+                    ${categoryStyle.icon}
                 </div>
                 <div class="poi-popup-title-section" style="flex: 1;">
                     <h4 class="poi-popup-title" style="margin: 0; font-size: 16px; font-weight: 600; color: #333;">${poi.name}</h4>
@@ -5627,7 +5637,7 @@ function showDetailedPOIModal(poi, media = { images: [], videos: [], audio: [], 
                 <div class="route-detail-modal-header">
                     <h3 class="route-detail-modal-title">
                         <span style="background: ${categoryStyle.color}; padding: 4px 8px; border-radius: 50%; margin-right: 8px;">
-                            <i class="${categoryStyle.icon}"></i>
+                            ${categoryStyle.icon}
                         </span>
                         ${poi.name}
                     </h3>
@@ -5784,7 +5794,7 @@ function displayRouteOnMapFallback(route) {
                                 font-size: 14px;
                                 position: relative;
                             ">
-                                <span style="position: absolute; top: -1px;"><i class="${categoryStyle.icon}"></i></span>
+                                <span style="position: absolute; top: -1px;">${categoryStyle.icon}</span>
                                 <span style="
                                     position: absolute;
                                     bottom: -6px;
@@ -7057,7 +7067,7 @@ async function displayRoutePOIsOnMap(pois) {
                             transform: rotate(-45deg);
                             position: relative;
                         ">
-                            <span style="transform: rotate(45deg);"><i class="${categoryStyle.icon}"></i></span>
+                            <span style="transform: rotate(45deg);">${categoryStyle.icon}</span>
                             <div style="
                                 position: absolute;
                                 top: -8px;
@@ -9467,7 +9477,7 @@ async function initializeMap(recommendationData) {
                                 ${isLowScore ? 'opacity: 0.9;' : ''}
                             ">
                                 <h6 style="margin: 0; font-size: 16px; font-weight: 600;">
-                                    <i class="${categoryStyle.icon}"></i> ${poi.name}
+                                    ${categoryStyle.icon} ${poi.name}
                                     ${isLowScore ? ' <small style="opacity: 0.7;">(Düşük Uygunluk)</small>' : ''}
                                 </h6>
                                 <small style="opacity: 0.9; font-size: 12px;">
@@ -9652,9 +9662,7 @@ function createPOICards(pois) {
 function createModernPOICards(pois, type = 'primary') {
     return pois.map(poi => {
         const icon = getCategoryIcon(poi.category);
-        const iconElement = icon.startsWith('fa')
-            ? `<i class="${icon}"></i>`
-            : `<span>${icon}</span>`;
+        const iconElement = icon.includes('<i') ? icon : `<span>${icon}</span>`;
         return `
         <div class="modern-poi-card ${type}" data-poi-id="${poi.id || poi._id}" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
             <div class="poi-card-header">
