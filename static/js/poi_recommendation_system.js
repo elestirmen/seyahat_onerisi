@@ -6316,6 +6316,11 @@ function setupRouteSearch() {
     const searchInput = document.getElementById('routeSearchInput');
     if (!searchInput) return;
 
+    // Ensure the search input is always editable
+    searchInput.removeAttribute('disabled');
+    searchInput.removeAttribute('readonly');
+    searchInput.style.pointerEvents = 'auto';
+
     const handleRouteSearch = () => {
         const query = searchInput.value.trim().toLowerCase();
         filteredRoutes = predefinedRoutes.filter(route =>
