@@ -10493,19 +10493,22 @@ function initializeEnhancedFilters() {
     console.log('🎛️ Initializing enhanced filter system...');
     
     // Filter toggle functionality
+    const openFiltersBtn = document.getElementById('openFiltersBtn');
     const filtersToggleBtn = document.getElementById('filtersToggleBtn');
     const filtersContent = document.getElementById('filtersContent');
-    
+
+    if (openFiltersBtn && filtersContent) {
+        openFiltersBtn.addEventListener('click', () => {
+            filtersContent.classList.add('active');
+            openFiltersBtn.style.display = 'none';
+        });
+    }
+
     if (filtersToggleBtn && filtersContent) {
         filtersToggleBtn.addEventListener('click', () => {
-            const isExpanded = filtersContent.classList.contains('expanded');
-            
-            if (isExpanded) {
-                filtersContent.classList.remove('expanded');
-                filtersToggleBtn.classList.remove('expanded');
-            } else {
-                filtersContent.classList.add('expanded');
-                filtersToggleBtn.classList.add('expanded');
+            filtersContent.classList.remove('active');
+            if (openFiltersBtn) {
+                openFiltersBtn.style.display = '';
             }
         });
     }
