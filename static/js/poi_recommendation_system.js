@@ -4936,12 +4936,20 @@ async function displayRouteOnMap(route) {
         layersCount: predefinedMapLayers.length
     });
     
-    // Ensure map container is visible and invalidate size for proper rendering
+    // Ensure map container is visible and ready for interaction
     const mapContainer = document.getElementById('predefinedRoutesMap');
+    const loadingElement = document.getElementById('predefinedMapLoading');
     if (mapContainer) {
         mapContainer.style.display = 'block';
         mapContainer.style.visibility = 'visible';
         mapContainer.style.opacity = '1';
+        // If a loading overlay is present, hide it and restore pointer events
+        if (loadingElement) {
+            loadingElement.style.display = 'none';
+        }
+        mapContainer.classList.remove('loading');
+        mapContainer.classList.add('loaded');
+        mapContainer.style.pointerEvents = 'auto';
         predefinedMap.invalidateSize();
         console.log('🔄 Map container visibility and size refreshed');
         console.log('🔍 Map container dimensions:', {
