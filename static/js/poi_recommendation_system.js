@@ -140,8 +140,14 @@ async function loadCategories() {
     try {
         console.log('📋 Kategoriler API\'den yükleniyor...');
         const response = await fetch(`${apiBase}/categories`);
-        
+
         if (response.ok) {
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                console.warn('⚠️ Beklenmeyen içerik türü alındı:', contentType);
+                return false;
+            }
+
             const categories = await response.json();
             console.log('✅ Kategoriler yüklendi:', categories);
             
@@ -168,7 +174,7 @@ async function loadCategories() {
             console.log('✅ Kategori verileri güncellendi:', categoryData);
             return true;
         } else {
-            console.warn('⚠️ Kategoriler yüklenemedi, fallback kullanılacak');
+            console.warn(`⚠️ Kategoriler yüklenemedi, fallback kullanılacak (status: ${response.status})`);
             return false;
         }
     } catch (error) {
