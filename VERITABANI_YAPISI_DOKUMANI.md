@@ -134,9 +134,63 @@ CREATE TABLE poi_3d_models (
 );
 ```
 
+### 6. Rota Medya Dosyaları (`route_media`)
+
+Rotalara ait görsel medya dosyalarını konum bilgileri ile birlikte saklar. Konum bilgisi opsiyoneldir.
+
+```sql
+CREATE TABLE route_media (
+    id SERIAL PRIMARY KEY,
+    route_id INTEGER NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
+    file_path VARCHAR(255) NOT NULL,        -- sunucuda saklanan dosya yolu
+    thumbnail_path VARCHAR(255),            -- küçük boyutlu önizleme yolu
+    lat DOUBLE PRECISION,                   -- fotoğrafın çekildiği enlem (opsiyonel)
+    lng DOUBLE PRECISION,                   -- fotoğrafın çekildiği boylam (opsiyonel)
+    caption TEXT,                           -- fotoğraf açıklaması
+    is_primary BOOLEAN DEFAULT FALSE,       -- kartlarda gösterilecek ana görsel
+    media_type VARCHAR(20) DEFAULT 'photo', -- medya tipi
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Constraints
+    CONSTRAINT valid_coordinates CHECK (
+        (lat IS NULL AND lng IS NULL) OR 
+        (lat IS NOT NULL AND lng IS NOT NULL AND lat BETWEEN -90 AND 90 AND lng BETWEEN -180 AND 180)
+    ),
+    CONSTRAINT valid_file_path CHECK (
+        file_path IS NOT NULL AND LENGTH(file_path) > 0
+    ),
+    CONSTRAINT valid_media_type CHECK (
+        media_type IN ('photo', 'promotional', 'thumbnail', 'cover')
+    )
+);
+```
+
+**Alanlar:**
+- `file_path`: Sunucuda saklanan dosyanın fiziksel yolu
+- `thumbnail_path`: Küçük boyutlu önizleme dosyasının yolu
+- `lat/lng`: Fotoğrafın çekildiği GPS koordinatları (opsiyonel)
+- `caption`: Fotoğraf açıklaması
+- `is_primary`: Rota kartlarında gösterilecek ana görsel işareti
+- `media_type`: Medya tipi (photo, promotional, thumbnail, cover)
+
+**Medya Tipleri:**
+- `photo`: Rota üzerinde çekilen fotoğraf (konum bilgisi ile)
+- `promotional`: Rota tanıtım görseli (konum bilgisi olmadan)
+- `thumbnail`: Küçük boyutlu önizleme
+- `cover`: Kapak görseli
+
+**İndeksler:**
+```sql
+CREATE INDEX idx_route_media_route_id ON route_media(route_id);
+CREATE INDEX idx_route_media_primary ON route_media(is_primary) WHERE is_primary = TRUE;
+CREATE INDEX idx_route_media_location ON route_media(lat, lng) WHERE lat IS NOT NULL AND lng IS NOT NULL;
+CREATE INDEX idx_route_media_uploaded_at ON route_media(uploaded_at);
+CREATE INDEX idx_route_media_type ON route_media(media_type);
+```
+
 ## Rota Yönetimi Tabloları
 
-### 6. Rotalar (`routes`)
+### 7. Rotalar (`routes`)
 
 Önceden tanımlanmış seyahat rotalarını saklar.
 
@@ -165,6 +219,7 @@ CREATE TABLE routes (
     file_waypoints JSONB,
     import_date TIMESTAMP,
     imported_by VARCHAR(100),
+    preview_image VARCHAR(255),             -- ana görsel yolu (hızlı erişim için)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT true
@@ -177,7 +232,7 @@ CREATE TABLE routes (
 - `cycling`: Bisiklet rotası
 - `driving`: Araç rotası
 
-### 7. Rota-POI İlişkileri (`route_pois`)
+### 8. Rota-POI İlişkileri (`route_pois`)
 
 Rotalar ile POI'ler arasındaki ilişkileri tanımlar.
 
@@ -194,7 +249,7 @@ CREATE TABLE route_pois (
 );
 ```
 
-### 8. Rota Puanlamaları (`route_ratings`)
+### 9. Rota Puanlamaları (`route_ratings`)
 
 Rotalar için kategori bazlı puanlama sistemi.
 
@@ -218,7 +273,7 @@ CREATE TABLE route_ratings (
 
 ## Dosya İçe Aktarma Tabloları
 
-### 9. Rota İçe Aktarmaları (`route_imports`)
+### 10. Rota İçe Aktarmaları (`route_imports`)
 
 GPX, KML dosyalarından rota içe aktarma işlemlerini takip eder.
 
@@ -245,7 +300,7 @@ CREATE TABLE route_imports (
 );
 ```
 
-### 10. Rota-POI İlişkilendirmeleri (`route_poi_associations`)
+### 11. Rota-POI İlişkilendirmeleri (`route_poi_associations`)
 
 Gelişmiş rota-POI ilişkilendirme sistemi.
 
@@ -272,7 +327,7 @@ CREATE TABLE route_poi_associations (
 );
 ```
 
-### 11. Şema Migrasyonları (`schema_migrations`)
+### 12. Şema Migrasyonları (`schema_migrations`)
 
 Veritabanı şema değişikliklerini takip eder.
 
@@ -356,6 +411,49 @@ END;
 $$ LANGUAGE plpgsql;
 ```
 
+### 4. Rota Ana Görseli Alma
+
+```sql
+CREATE OR REPLACE FUNCTION get_route_primary_image(route_id_param INTEGER)
+RETURNS VARCHAR(255) AS $$
+DECLARE
+    primary_image VARCHAR(255);
+BEGIN
+    SELECT file_path INTO primary_image
+    FROM route_media 
+    WHERE route_id = route_id_param 
+    AND is_primary = TRUE 
+    LIMIT 1;
+    
+    RETURN primary_image;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### 5. Rota Önizleme Görseli Senkronizasyonu
+
+```sql
+CREATE OR REPLACE FUNCTION sync_route_preview_image(route_id_param INTEGER)
+RETURNS VOID AS $$
+DECLARE
+    primary_image VARCHAR(255);
+BEGIN
+    -- Get primary image from route_media
+    SELECT file_path INTO primary_image
+    FROM route_media 
+    WHERE route_id = route_id_param 
+    AND is_primary = TRUE 
+    LIMIT 1;
+    
+    -- Update routes table
+    UPDATE routes 
+    SET preview_image = primary_image,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = route_id_param;
+END;
+$$ LANGUAGE plpgsql;
+```
+
 ## Tetikleyiciler (Triggers)
 
 ### Otomatik Güncelleme Zamanı
@@ -381,6 +479,52 @@ CREATE TRIGGER update_route_poi_associations_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 ```
 
+### Rota Medya Yönetimi Tetikleyicileri
+
+```sql
+-- Tek ana görsel garantisi
+CREATE OR REPLACE FUNCTION ensure_single_primary_image()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- If setting this image as primary, unset others for the same route
+    IF NEW.is_primary = TRUE THEN
+        UPDATE route_media 
+        SET is_primary = FALSE 
+        WHERE route_id = NEW.route_id 
+        AND id != NEW.id 
+        AND is_primary = TRUE;
+        
+        -- Sync preview_image in routes table
+        PERFORM sync_route_preview_image(NEW.route_id);
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_ensure_single_primary_image
+    BEFORE INSERT OR UPDATE ON route_media
+    FOR EACH ROW
+    EXECUTE FUNCTION ensure_single_primary_image();
+
+-- Rota güncelleme tetikleyicisi
+CREATE OR REPLACE FUNCTION update_route_on_media_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE routes 
+    SET updated_at = CURRENT_TIMESTAMP 
+    WHERE id = COALESCE(NEW.route_id, OLD.route_id);
+    
+    RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_route_on_media_change
+    AFTER INSERT OR UPDATE OR DELETE ON route_media
+    FOR EACH ROW
+    EXECUTE FUNCTION update_route_on_media_change();
+```
+
 ## Performans Optimizasyonları
 
 ### Kritik İndeksler
@@ -402,10 +546,20 @@ CREATE INDEX idx_routes_active ON routes(is_active);
 CREATE INDEX idx_poi_attributes ON pois USING GIN(attributes);
 CREATE INDEX idx_routes_waypoints ON routes USING GIN(waypoints);
 
+-- Metin arama için (trigram)
+CREATE INDEX idx_routes_name_trgm ON routes USING GIN (name gin_trgm_ops);
+CREATE INDEX idx_routes_description_trgm ON routes USING GIN (description gin_trgm_ops);
+
 -- İlişki tabloları için
 CREATE INDEX idx_route_pois_route_id ON route_pois(route_id);
 CREATE INDEX idx_route_pois_order ON route_pois(route_id, order_in_route);
 CREATE INDEX idx_poi_ratings_poi_id ON poi_ratings(poi_id);
+
+-- Rota medya indeksleri
+CREATE INDEX idx_route_media_route_id ON route_media(route_id);
+CREATE INDEX idx_route_media_primary ON route_media(is_primary) WHERE is_primary = TRUE;
+CREATE INDEX idx_route_media_location ON route_media(lat, lng);
+CREATE INDEX idx_route_media_uploaded_at ON route_media(uploaded_at);
 ```
 
 ### Sorgu Optimizasyonları
@@ -414,6 +568,8 @@ CREATE INDEX idx_poi_ratings_poi_id ON poi_ratings(poi_id);
 2. **Kategori Filtreleme**: B-tree indeksi ile hızlı kategori araması
 3. **JSON Arama**: GIN indeksi ile attributes alanında arama
 4. **Rota Geometrisi**: PostGIS optimizasyonları ile coğrafi hesaplamalar
+5. **Metin Arama**: Trigram indeksleri ile hızlı fuzzy text search
+6. **Medya Filtreleme**: Ana görsel ve konum bazlı hızlı filtreleme
 
 ## Veri Bütünlüğü
 
@@ -446,11 +602,12 @@ CHECK (difficulty_level BETWEEN 1 AND 5);
 
 ```bash
 # PostgreSQL ve PostGIS kurulumu
-sudo apt-get install postgresql-12 postgresql-12-postgis-3
+sudo apt-get install postgresql-12 postgresql-12-postgis-3 postgresql-contrib
 
 # Veritabanı oluşturma
 createdb poi_db
 psql poi_db -c "CREATE EXTENSION postgis;"
+psql poi_db -c "CREATE EXTENSION pg_trgm;"
 
 # Python bağımlılıkları
 pip install psycopg2-binary
@@ -467,6 +624,39 @@ python setup_routes_database.py
 
 # Admin panel migrasyonu
 python database_schema_migration_admin_panel.py
+
+# Rota medya geliştirmeleri
+python database_migration_route_media.py
+```
+
+## Veritabanı Görünümleri (Views)
+
+### Ana Görselli Rotalar Görünümü
+
+```sql
+CREATE OR REPLACE VIEW routes_with_primary_image AS
+SELECT 
+    r.*,
+    rm.file_path as primary_image_path,
+    rm.thumbnail_path as primary_thumbnail_path,
+    rm.caption as primary_image_caption
+FROM routes r
+LEFT JOIN route_media rm ON r.id = rm.route_id AND rm.is_primary = TRUE;
+```
+
+### Rota Bilgili Medya Görünümü
+
+```sql
+CREATE OR REPLACE VIEW route_media_with_route_info AS
+SELECT 
+    rm.*,
+    r.name as route_name,
+    r.description as route_description,
+    r.route_type,
+    r.difficulty_level
+FROM route_media rm
+JOIN routes r ON rm.route_id = r.id
+WHERE r.is_active = TRUE;
 ```
 
 ## API Entegrasyonu
