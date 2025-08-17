@@ -135,6 +135,34 @@ const fallbackCategoryStyles = {
     'diger': { color: '#708090', icon: '📍' }
 };
 
+// Default Font Awesome icon classes for known categories
+const iconMap = {
+    'doga_macera': 'fas fa-tree',
+    'gastronomik': 'fas fa-utensils',
+    'konaklama': 'fas fa-bed',
+    'kulturel': 'fas fa-university',
+    'sanatsal': 'fas fa-palette',
+    'dini': 'fas fa-mosque',
+    'tarihi': 'fas fa-landmark',
+    'mimari': 'fas fa-building',
+    'mezarlik': 'fas fa-cross',
+    'saray_kale': 'fas fa-chess-rook',
+    'diger': 'fas fa-map-marker-alt'
+};
+
+// Map rating category keys to icon map categories
+const categoryIconAliases = {
+    'doga': 'doga_macera',
+    'macera': 'doga_macera',
+    'yemek': 'gastronomik',
+    'sanat_kultur': 'kulturel',
+    'eglence': 'diger',
+    'rahatlatici': 'diger',
+    'spor': 'diger',
+    'alisveris': 'diger',
+    'gece_hayati': 'diger'
+};
+
 // Load categories from API
 async function loadCategories() {
     try {
@@ -179,10 +207,11 @@ async function loadCategories() {
 
 // Get category display name (dynamic)
 function getCategoryDisplayName(category) {
+    const mapped = categoryIconAliases[category] || category;
     if (categoryData[category]) {
         return categoryData[category].display_name;
     }
-    return fallbackCategoryNames[category] || category;
+    return fallbackCategoryNames[mapped] || mapped;
 }
 
 // Get category color (dynamic)
@@ -190,7 +219,8 @@ function getCategoryColor(category) {
     if (categoryData[category]) {
         return categoryData[category].color;
     }
-    return fallbackCategoryStyles[category]?.color || '#666666';
+    const mapped = categoryIconAliases[category] || category;
+    return fallbackCategoryStyles[mapped]?.color || '#666666';
 }
 
 // Get category icon (dynamic)
@@ -200,27 +230,17 @@ function getCategoryIcon(category) {
     // Önce API'den yüklenen kategori ikonunu kullan
     if (categoryData[category] && categoryData[category].icon) {
         icon = categoryData[category].icon;
+    } else if (ratingCategories[category]?.icon) {
+        // Sonra ratingCategories'teki ikonlara bak
+        icon = ratingCategories[category].icon;
     } else {
-        // Bilinen kategoriler için varsayılan Font Awesome sınıfları
-        const iconMap = {
-            'doga_macera': 'fas fa-tree',
-            'gastronomik': 'fas fa-utensils',
-            'konaklama': 'fas fa-bed',
-            'kulturel': 'fas fa-university',
-            'sanatsal': 'fas fa-palette',
-            'dini': 'fas fa-mosque',
-            'tarihi': 'fas fa-landmark',
-            'mimari': 'fas fa-building',
-            'mezarlik': 'fas fa-cross',
-            'saray_kale': 'fas fa-chess-rook',
-            'diger': 'fas fa-map-marker-alt'
-        };
+        const mapped = categoryIconAliases[category] || category;
 
-        if (iconMap[category]) {
-            icon = iconMap[category];
+        if (iconMap[mapped]) {
+            icon = iconMap[mapped];
         } else {
             // Son çare olarak emoji tabanlı ikonlara düş
-            icon = fallbackCategoryStyles[category]?.icon || '📍';
+            icon = fallbackCategoryStyles[mapped]?.icon || '📍';
         }
     }
 
@@ -1207,13 +1227,32 @@ class RouteDetailsPanel {
                     const lng = poi.lng || poi.lon || poi.longitude;
 
                     if (lat && lng) {
-                        const marker = L.marker([lat, lng]).addTo(routeLayerGroup);
-                        
+                        const categoryStyle = getCategoryStyle(poi.category || 'diger');
+
+                        const marker = L.marker([lat, lng], {
+                            icon: L.divIcon({
+                                className: 'route-poi-marker',
+                                html: `<div style="
+                                    background: ${categoryStyle.color};
+                                    color: white;
+                                    width: 30px;
+                                    height: 30px;
+                                    border-radius: 50%;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-size: 16px;
+                                ">${categoryStyle.icon}</div>`,
+                                iconSize: [30, 30],
+                                iconAnchor: [15, 15]
+                            })
+                        }).addTo(routeLayerGroup);
+
                         const popupContent = `
                             <div class="poi-popup">
                                 <h4>${poi.name || `Durak ${index + 1}`}</h4>
                                 <p>${poi.description || 'Açıklama bulunmuyor'}</p>
-                                <small>Kategori: ${poi.category || 'Bilinmiyor'}</small>
+                                <small>Kategori: ${getCategoryDisplayName(poi.category || 'diger')}</small>
                             </div>
                         `;
                         marker.bindPopup(popupContent);
