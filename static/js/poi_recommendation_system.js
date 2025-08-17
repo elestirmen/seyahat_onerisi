@@ -4871,12 +4871,23 @@ async function initializePredefinedMap() {
                 center: [38.6436, 34.8128], // Ürgüp center
                 zoom: 12,
                 zoomControl: true,
-                attributionControl: true
+                attributionControl: true,
+                scrollWheelZoom: true,
+                doubleClickZoom: true,
+                touchZoom: true,
+                dragging: true,
+                tap: true,
+                tapTolerance: 15,
+                preferCanvas: true,
+                renderer: L.canvas(),
+                zoomAnimation: true,
+                fadeAnimation: true,
+                markerZoomAnimation: true
             });
-            
+
             // Add base layers
             addBaseLayers(predefinedMap);
-            
+
             console.log('✅ Predefined map created successfully');
         }
         
