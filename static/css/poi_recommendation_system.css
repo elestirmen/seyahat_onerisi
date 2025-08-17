@@ -6184,7 +6184,7 @@ ute Preview Map Styles */
 
 .map-controls {
     position: absolute;
-    top: 10px;
+    top: 60px;
     right: 10px;
     display: flex;
     flex-direction: column;
