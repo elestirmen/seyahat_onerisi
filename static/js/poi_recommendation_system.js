@@ -5003,11 +5003,13 @@ async function initializePredefinedMap() {
                 predefinedElevationChart = new ElevationChart('predefinedElevationChartContainer', predefinedMap);
             }
 
+
             console.log('✅ Predefined map created');
         }
 
         predefinedMapLayers = [];
         predefinedMapInitialized = true;
+
 
         // Ensure map renders correctly after being shown
         setTimeout(() => {
@@ -5020,6 +5022,7 @@ async function initializePredefinedMap() {
         return true;
     } catch (error) {
         console.error('❌ Error initializing predefined map:', error);
+
         return false;
     }
 }
