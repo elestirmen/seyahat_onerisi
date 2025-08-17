@@ -4843,6 +4843,21 @@ let predefinedMap = null;
 let predefinedMapLayers = [];
 let predefinedMapInitialized = false;
 
+// Fully clear loading overlay and restore interactions
+function finalizePredefinedMapLoading() {
+    const mapContainer = document.getElementById('predefinedRoutesMap');
+    const loadingElement = document.getElementById('predefinedMapLoading');
+
+    if (loadingElement && loadingElement.parentNode) {
+        loadingElement.parentNode.removeChild(loadingElement);
+    }
+    if (mapContainer) {
+        mapContainer.classList.remove('loading');
+        mapContainer.classList.add('loaded');
+        mapContainer.style.pointerEvents = 'auto';
+    }
+}
+
 // Map initialization state management
 let mapInitializationPromise = null;
 let mapInitialized = false;
@@ -4897,12 +4912,8 @@ async function initializePredefinedMap() {
         
         // Hide loading state
         addTimeout(() => {
-            if (loadingElement) {
-                loadingElement.style.display = 'none';
-            }
-            mapContainer.classList.remove('loading');
-            mapContainer.classList.add('loaded');
-            
+            finalizePredefinedMapLoading();
+
             // Invalidate size to ensure proper rendering
             if (predefinedMap) {
                 predefinedMap.invalidateSize();
@@ -4913,13 +4924,10 @@ async function initializePredefinedMap() {
         
     } catch (error) {
         console.error('❌ Error initializing predefined map:', error);
-        
+
         // Hide loading state on error
-        if (loadingElement) {
-            loadingElement.style.display = 'none';
-        }
-        mapContainer.classList.remove('loading');
-        
+        finalizePredefinedMapLoading();
+
         return false;
     }
 }
@@ -4946,21 +4954,17 @@ async function displayRouteOnMap(route) {
         mapInitialized: predefinedMapInitialized,
         layersCount: predefinedMapLayers.length
     });
-    
-    // Ensure map container is visible and ready for interaction
+
+    // Ensure map container is visible and invalidate size for proper rendering
+
     const mapContainer = document.getElementById('predefinedRoutesMap');
     const loadingElement = document.getElementById('predefinedMapLoading');
     if (mapContainer) {
         mapContainer.style.display = 'block';
         mapContainer.style.visibility = 'visible';
         mapContainer.style.opacity = '1';
-        // If a loading overlay is present, hide it and restore pointer events
-        if (loadingElement) {
-            loadingElement.style.display = 'none';
-        }
-        mapContainer.classList.remove('loading');
-        mapContainer.classList.add('loaded');
-        mapContainer.style.pointerEvents = 'auto';
+        finalizePredefinedMapLoading();
+
         predefinedMap.invalidateSize();
         console.log('🔄 Map container visibility and size refreshed');
         console.log('🔍 Map container dimensions:', {
