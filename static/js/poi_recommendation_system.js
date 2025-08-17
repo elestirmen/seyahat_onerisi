@@ -4975,115 +4975,51 @@ let predefinedMap = null;
 let predefinedMapLayers = [];
 let predefinedMapInitialized = false;
 
-// Fully clear loading overlay and restore interactions
-function finalizePredefinedMapLoading() {
-    const mapContainer = document.getElementById('predefinedRoutesMap');
-
-    if (mapContainer) {
-        // SIMPLE FIX: Just ensure the container is interactive
-        mapContainer.classList.remove('loading');
-        mapContainer.classList.add('loaded');
-        mapContainer.style.pointerEvents = 'auto';
-        mapContainer.style.opacity = '1';
-        
-        console.log('🔧 Map container made interactive');
-    }
-    
-    // CRITICAL FIX: Ensure map interactions are enabled
-    if (predefinedMap) {
-        predefinedMap.dragging.enable();
-        predefinedMap.touchZoom.enable();
-        predefinedMap.scrollWheelZoom.enable();
-        predefinedMap.doubleClickZoom.enable();
-        predefinedMap.boxZoom.enable();
-        predefinedMap.keyboard.enable();
-        
-        predefinedMap.invalidateSize();
-        console.log('🔧 Map interactions enabled');
-    }
-}
-
 // Map initialization state management
 let mapInitializationPromise = null;
 let mapInitialized = false;
 
 async function initializePredefinedMap() {
     console.log('🗺️ Initializing predefined routes map...');
-    
+
     const mapContainer = document.getElementById('predefinedRoutesMap');
-    
     if (!mapContainer) {
         console.error('❌ Predefined map container not found');
         return false;
     }
-    
-    try {
-        // Ensure container is ready
-        mapContainer.classList.remove('loading');
-        mapContainer.classList.add('loaded');
-        mapContainer.style.pointerEvents = 'auto';
-        
-        // Create map if it doesn't exist
-        if (!predefinedMap) {
-            predefinedMap = L.map('predefinedRoutesMap', {
-                center: [38.6436, 34.8128], // Ürgüp center
-                zoom: 12,
-                zoomControl: true,
-                attributionControl: true,
-                scrollWheelZoom: true,
-                doubleClickZoom: true,
-                touchZoom: true,
-                dragging: true,
-                tap: true,
-                tapTolerance: 15,
-                preferCanvas: true,
-                renderer: L.canvas(),
-                zoomAnimation: true,
-                fadeAnimation: true,
-                markerZoomAnimation: true
-            });
 
-            // Add base layers
+    // Ensure container is visible
+    mapContainer.classList.remove('loading');
+    mapContainer.classList.add('loaded');
+
+    try {
+        if (!predefinedMap) {
+            // Mirror the simple setup from route_manager_enhanced.html
+            predefinedMap = L.map('predefinedRoutesMap').setView([38.6436, 34.8128], 12);
             addBaseLayers(predefinedMap);
 
-            // CRITICAL: Force enable all interactions immediately after creation
-            predefinedMap.dragging.enable();
-            predefinedMap.touchZoom.enable();
-            predefinedMap.scrollWheelZoom.enable();
-            predefinedMap.doubleClickZoom.enable();
-            predefinedMap.boxZoom.enable();
-            predefinedMap.keyboard.enable();
+            // Initialize elevation chart if available
+            if (window.ElevationChart) {
+                predefinedElevationChart = new ElevationChart('predefinedElevationChartContainer', predefinedMap);
+            }
 
-            console.log('✅ Predefined map created successfully with interactions enabled');
+            console.log('✅ Predefined map created');
         }
-        
-        // Initialize map layers array
+
         predefinedMapLayers = [];
         predefinedMapInitialized = true;
-        
-        // Hide loading state
-        addTimeout(() => {
-            finalizePredefinedMapLoading();
 
-            // Invalidate size to ensure proper rendering
+        // Ensure map renders correctly after being shown
+        setTimeout(() => {
             if (predefinedMap) {
                 predefinedMap.invalidateSize();
+                console.log('Map size invalidated');
             }
-            
-            // AGGRESSIVE FIX: Force reset interactions after initialization
-            setTimeout(() => {
-                window.resetMapInteractions();
-            }, 100);
-        }, 500);
-        
+        }, 100);
+
         return true;
-        
     } catch (error) {
         console.error('❌ Error initializing predefined map:', error);
-
-        // Hide loading state on error
-        finalizePredefinedMapLoading();
-
         return false;
     }
 }
@@ -5111,20 +5047,13 @@ async function displayRouteOnMap(route) {
         layersCount: predefinedMapLayers.length
     });
 
-    // Ensure map container is visible and invalidate size for proper rendering
-
+    // Ensure map container is visible and map interactions remain active
     const mapContainer = document.getElementById('predefinedRoutesMap');
     if (mapContainer) {
-        // SIMPLE FIX: Just ensure container is interactive
-        mapContainer.style.pointerEvents = 'auto';
         mapContainer.classList.remove('loading');
         mapContainer.classList.add('loaded');
-        
-        predefinedMap.invalidateSize();
-        console.log('🔄 Map container made interactive and size refreshed');
     }
 
-    // Ensure all map interaction handlers are enabled
     if (predefinedMap) {
         predefinedMap.dragging.enable();
         predefinedMap.touchZoom.enable();
@@ -5132,15 +5061,7 @@ async function displayRouteOnMap(route) {
         predefinedMap.doubleClickZoom.enable();
         predefinedMap.boxZoom.enable();
         predefinedMap.keyboard.enable();
-        
-        console.log('✅ Map interactions enabled:', {
-            dragging: predefinedMap.dragging.enabled(),
-            touchZoom: predefinedMap.touchZoom.enabled(),
-            scrollWheelZoom: predefinedMap.scrollWheelZoom.enabled(),
-            doubleClickZoom: predefinedMap.doubleClickZoom.enabled(),
-            boxZoom: predefinedMap.boxZoom.enabled(),
-            keyboard: predefinedMap.keyboard.enabled()
-        });
+        predefinedMap.invalidateSize();
     }
 
     try {
