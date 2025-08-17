@@ -6130,6 +6130,7 @@ function createRouteCard(route) {
 
 function renderRouteMiniMaps(routes) {
     routes.forEach(async route => {
+
         const container = document.getElementById(`mini-map-${route.id}`);
         if (!container) return;
 
@@ -6147,6 +6148,7 @@ function renderRouteMiniMaps(routes) {
                 return;
             }
         }
+
 
         // Parse geometry if provided as string
         if (typeof geometry === 'string') {
