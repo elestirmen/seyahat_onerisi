@@ -6146,10 +6146,25 @@ ute Preview Map Styles */
 
 /* Predefined Routes Map Styles */
 .routes-map-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
     margin-top: 20px;
+}
+
+#mapView {
+    display: none;
+}
+
+@media (min-width: 992px) {
+    .routes-map-container {
+        display: flex;
+        gap: 20px;
+    }
+    #mapView,
+    #listView {
+        flex: 1;
+    }
+    #mapView {
+        display: block;
+    }
 }
 
 .predefined-map-container {
@@ -6219,22 +6234,12 @@ ute Preview Map Styles */
 
 /* Mobile responsiveness for map container */
 @media (max-width: 768px) {
-    .routes-map-container {
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
-    
     .predefined-map-container {
         min-height: 350px;
-        order: 2;
     }
-    
+
     .predefined-routes-map {
         height: 350px;
-    }
-    
-    .predefined-routes-list {
-        order: 1;
     }
 }
 

@@ -10629,6 +10629,34 @@ function updateRouteStats() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 DOM loaded, initializing POI recommendation system...');
     initializeApp();
+
+    // Toggle map visibility on mobile
+    if (window.innerWidth < 992) {
+        const mapView = document.getElementById('mapView');
+        const container = document.querySelector('.routes-map-container');
+
+        if (mapView && container) {
+            const toggleBtn = document.createElement('button');
+            toggleBtn.id = 'toggleMapBtn';
+            toggleBtn.className = 'btn btn-outline-primary w-100 mb-3';
+            toggleBtn.textContent = 'Haritayı Göster';
+            container.insertBefore(toggleBtn, mapView);
+
+            toggleBtn.addEventListener('click', () => {
+                const isHidden = mapView.style.display === 'none' || getComputedStyle(mapView).display === 'none';
+                if (isHidden) {
+                    mapView.style.display = 'block';
+                    toggleBtn.textContent = 'Haritayı Gizle';
+                    if (typeof predefinedMap !== 'undefined' && predefinedMap) {
+                        predefinedMap.invalidateSize();
+                    }
+                } else {
+                    mapView.style.display = 'none';
+                    toggleBtn.textContent = 'Haritayı Göster';
+                }
+            });
+        }
+    }
 });
 
 // Also initialize if DOM is already loaded
