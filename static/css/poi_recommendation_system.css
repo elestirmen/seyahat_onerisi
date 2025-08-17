@@ -950,7 +950,16 @@
 
         .predefined-routes-header .route-search {
             position: relative;
-            z-index: 1;
+            z-index: 3;
+            margin-top: 16px;
+            pointer-events: auto;
+        }
+
+        .predefined-routes-header .route-search input {
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            pointer-events: auto;
         }
 
         .section-header-content {
@@ -6179,6 +6188,33 @@ ute Preview Map Styles */
 
 #mapView {
     display: none;
+}
+
+/* Mobile filter drawer and open button */
+.filters-open-btn {
+    display: none;
+}
+
+@media (max-width: 991.98px) {
+    .filters-open-btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 16px;
+    }
+
+    .route-filters-enhanced .filters-content {
+        display: none;
+    }
+
+    .route-filters-enhanced .filters-content.expanded {
+        display: block;
+    }
+}
+
+@media (min-width: 992px) {
+    .route-filters-enhanced .filters-content {
+        display: block;
+    }
 }
 
 @media (min-width: 992px) {

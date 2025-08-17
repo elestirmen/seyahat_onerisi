@@ -6316,6 +6316,11 @@ function setupRouteSearch() {
     const searchInput = document.getElementById('routeSearchInput');
     if (!searchInput) return;
 
+    // Ensure the search input is always editable
+    searchInput.removeAttribute('disabled');
+    searchInput.removeAttribute('readonly');
+    searchInput.style.pointerEvents = 'auto';
+
     const handleRouteSearch = () => {
         const query = searchInput.value.trim().toLowerCase();
         filteredRoutes = predefinedRoutes.filter(route =>
@@ -10667,14 +10672,14 @@ function initializeEnhancedFilters() {
 
     if (openFiltersBtn && filtersContent) {
         openFiltersBtn.addEventListener('click', () => {
-            filtersContent.classList.add('active');
+            filtersContent.classList.add('expanded');
             openFiltersBtn.style.display = 'none';
         });
     }
 
     if (filtersToggleBtn && filtersContent) {
         filtersToggleBtn.addEventListener('click', () => {
-            filtersContent.classList.remove('active');
+            filtersContent.classList.remove('expanded');
             if (openFiltersBtn) {
                 openFiltersBtn.style.display = '';
             }
