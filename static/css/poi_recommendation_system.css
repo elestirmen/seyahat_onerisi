@@ -6186,27 +6186,49 @@ ute Preview Map Styles */
     overflow: hidden;
     background: white;
     box-shadow: var(--card-shadow);
+    pointer-events: auto !important;
+}
+
+.predefined-map-container * {
+    pointer-events: auto !important;
 }
 
 .predefined-routes-map {
     width: 100%;
     height: 500px;
     position: relative;
+    pointer-events: auto !important;
+    z-index: auto;
+    background: #f8f9fa;
 }
 
-.map-loading {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.9);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
+.predefined-routes-map * {
+    pointer-events: auto !important;
 }
+
+/* Force Leaflet map to be interactive */
+.predefined-routes-map .leaflet-container {
+    pointer-events: auto !important;
+    cursor: grab !important;
+}
+
+.predefined-routes-map .leaflet-container:active {
+    cursor: grabbing !important;
+}
+
+.predefined-routes-map .leaflet-interactive {
+    pointer-events: auto !important;
+}
+
+.predefined-routes-map .leaflet-zoom-box {
+    pointer-events: auto !important;
+}
+
+.predefined-routes-map .leaflet-control-container {
+    pointer-events: auto !important;
+}
+
+/* Map loading removed - handled by JavaScript */
 
 .map-controls {
     position: absolute;
@@ -6283,10 +6305,50 @@ ute Preview Map Styles */
 /* Map state classes */
 .predefined-routes-map.loading {
     opacity: 0.7;
+    pointer-events: none;
+}
+
+.predefined-routes-map.loaded {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .predefined-routes-map.loaded .map-loading {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+/* Elevation Chart Styles */
+.elevation-chart-hidden {
     display: none;
+}
+
+.elevation-chart-visible {
+    display: block;
+    pointer-events: auto !important;
+    background: white;
+    border-radius: 8px;
+    margin-top: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#predefinedElevationChartContainer {
+    pointer-events: auto !important;
+    z-index: auto;
+}
+
+#predefinedElevationChartContainer canvas {
+    pointer-events: auto !important;
+}
+
+#elevationChartContainer {
+    pointer-events: auto !important;
+    z-index: auto;
+}
+
+#elevationChartContainer canvas {
+    pointer-events: auto !important;
 }
 
 /* Route selection highlighting on map */

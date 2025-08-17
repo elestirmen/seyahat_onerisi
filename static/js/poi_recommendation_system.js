@@ -71,6 +71,120 @@ let startLocation = null;
 const apiBase = '/api';
 window.apiBase = apiBase; // Make it globally accessible
 
+// DEBUG: Add global function to check map interactions
+window.debugMapInteractions = function() {
+    if (predefinedMap) {
+        console.log('🔍 PREDEFINED MAP INTERACTIONS DEBUG:', {
+            dragging: predefinedMap.dragging.enabled(),
+            touchZoom: predefinedMap.touchZoom.enabled(),
+            scrollWheelZoom: predefinedMap.scrollWheelZoom.enabled(),
+            doubleClickZoom: predefinedMap.doubleClickZoom.enabled(),
+            boxZoom: predefinedMap.boxZoom.enabled(),
+            keyboard: predefinedMap.keyboard.enabled(),
+            mapExists: !!predefinedMap,
+            mapInitialized: predefinedMapInitialized,
+            layersCount: predefinedMapLayers.length
+        });
+    } else {
+        console.log('🔍 Predefined map not initialized');
+    }
+    
+    if (map) {
+        console.log('🔍 DYNAMIC MAP INTERACTIONS DEBUG:', {
+            dragging: map.dragging.enabled(),
+            touchZoom: map.touchZoom.enabled(),
+            scrollWheelZoom: map.scrollWheelZoom.enabled(),
+            doubleClickZoom: map.doubleClickZoom.enabled(),
+            boxZoom: map.boxZoom.enabled(),
+            keyboard: map.keyboard.enabled(),
+            mapExists: !!map
+        });
+    } else {
+        console.log('🔍 Dynamic map not initialized');
+    }
+};
+
+// DEBUG: Add global function to force enable map interactions
+window.forceEnableMapInteractions = function() {
+    if (predefinedMap) {
+        // Remove any blocking overlays
+        const mapContainer = document.getElementById('predefinedRoutesMap');
+        if (mapContainer) {
+            const overlays = mapContainer.querySelectorAll('.map-loading, .loading');
+            overlays.forEach(overlay => {
+                overlay.remove();
+                console.log('🔧 Removed blocking overlay');
+            });
+            
+            mapContainer.style.pointerEvents = 'auto';
+            mapContainer.classList.remove('loading');
+            mapContainer.classList.add('loaded');
+        }
+        
+        predefinedMap.dragging.enable();
+        predefinedMap.touchZoom.enable();
+        predefinedMap.scrollWheelZoom.enable();
+        predefinedMap.doubleClickZoom.enable();
+        predefinedMap.boxZoom.enable();
+        predefinedMap.keyboard.enable();
+        predefinedMap.invalidateSize();
+        console.log('🔧 FORCED ENABLE - Predefined map interactions enabled');
+        window.debugMapInteractions();
+    }
+    
+    if (map) {
+        map.dragging.enable();
+        map.touchZoom.enable();
+        map.scrollWheelZoom.enable();
+        map.doubleClickZoom.enable();
+        map.boxZoom.enable();
+        map.keyboard.enable();
+        map.invalidateSize();
+        console.log('🔧 FORCED ENABLE - Dynamic map interactions enabled');
+    }
+};
+
+// Add global function to completely reset map interactions
+window.resetMapInteractions = function() {
+    console.log('🔄 RESETTING MAP INTERACTIONS...');
+    
+    const mapContainer = document.getElementById('predefinedRoutesMap');
+    if (mapContainer) {
+        // Remove all possible blocking elements
+        const blockingElements = mapContainer.querySelectorAll('.map-loading, .loading, .overlay');
+        blockingElements.forEach(el => el.remove());
+        
+        // Reset all styles
+        mapContainer.style.pointerEvents = 'auto';
+        mapContainer.style.opacity = '1';
+        mapContainer.style.position = 'relative';
+        mapContainer.style.zIndex = 'auto';
+        mapContainer.classList.remove('loading');
+        mapContainer.classList.add('loaded');
+        
+        console.log('🔧 Map container reset complete');
+    }
+    
+    if (predefinedMap) {
+        // Force enable all interactions
+        predefinedMap.dragging.enable();
+        predefinedMap.touchZoom.enable();
+        predefinedMap.scrollWheelZoom.enable();
+        predefinedMap.doubleClickZoom.enable();
+        predefinedMap.boxZoom.enable();
+        predefinedMap.keyboard.enable();
+        
+        // Invalidate size multiple times to ensure proper rendering
+        predefinedMap.invalidateSize();
+        setTimeout(() => predefinedMap.invalidateSize(), 100);
+        setTimeout(() => predefinedMap.invalidateSize(), 500);
+        
+        console.log('🔧 Map interactions force-enabled');
+    }
+    
+    window.debugMapInteractions();
+};
+
 // Route tabs management
 let currentTab = 'dynamic-routes';
 let predefinedRoutes = [];
@@ -4762,6 +4876,24 @@ async function switchTab(tabName) {
                 addTimeout(() => {
                     if (predefinedMap) {
                         predefinedMap.invalidateSize();
+                        
+                        // CRITICAL: Re-enable interactions after tab switch
+                        predefinedMap.dragging.enable();
+                        predefinedMap.touchZoom.enable();
+                        predefinedMap.scrollWheelZoom.enable();
+                        predefinedMap.doubleClickZoom.enable();
+                        predefinedMap.boxZoom.enable();
+                        predefinedMap.keyboard.enable();
+                        
+                        // Ensure container is interactive
+                        const mapContainer = document.getElementById('predefinedRoutesMap');
+                        if (mapContainer) {
+                            mapContainer.style.pointerEvents = 'auto';
+                            mapContainer.classList.add('loaded');
+                            mapContainer.classList.remove('loading');
+                        }
+                        
+                        console.log('🔧 Map interactions re-enabled after tab switch');
                     }
                 }, 100);
             }
@@ -4846,15 +4978,28 @@ let predefinedMapInitialized = false;
 // Fully clear loading overlay and restore interactions
 function finalizePredefinedMapLoading() {
     const mapContainer = document.getElementById('predefinedRoutesMap');
-    const loadingElement = document.getElementById('predefinedMapLoading');
 
-    if (loadingElement && loadingElement.parentNode) {
-        loadingElement.parentNode.removeChild(loadingElement);
-    }
     if (mapContainer) {
+        // SIMPLE FIX: Just ensure the container is interactive
         mapContainer.classList.remove('loading');
         mapContainer.classList.add('loaded');
         mapContainer.style.pointerEvents = 'auto';
+        mapContainer.style.opacity = '1';
+        
+        console.log('🔧 Map container made interactive');
+    }
+    
+    // CRITICAL FIX: Ensure map interactions are enabled
+    if (predefinedMap) {
+        predefinedMap.dragging.enable();
+        predefinedMap.touchZoom.enable();
+        predefinedMap.scrollWheelZoom.enable();
+        predefinedMap.doubleClickZoom.enable();
+        predefinedMap.boxZoom.enable();
+        predefinedMap.keyboard.enable();
+        
+        predefinedMap.invalidateSize();
+        console.log('🔧 Map interactions enabled');
     }
 }
 
@@ -4866,7 +5011,6 @@ async function initializePredefinedMap() {
     console.log('🗺️ Initializing predefined routes map...');
     
     const mapContainer = document.getElementById('predefinedRoutesMap');
-    const loadingElement = document.getElementById('predefinedMapLoading');
     
     if (!mapContainer) {
         console.error('❌ Predefined map container not found');
@@ -4874,11 +5018,10 @@ async function initializePredefinedMap() {
     }
     
     try {
-        // Show loading state
-        if (loadingElement) {
-            loadingElement.style.display = 'flex';
-        }
-        mapContainer.classList.add('loading');
+        // Ensure container is ready
+        mapContainer.classList.remove('loading');
+        mapContainer.classList.add('loaded');
+        mapContainer.style.pointerEvents = 'auto';
         
         // Create map if it doesn't exist
         if (!predefinedMap) {
@@ -4903,7 +5046,15 @@ async function initializePredefinedMap() {
             // Add base layers
             addBaseLayers(predefinedMap);
 
-            console.log('✅ Predefined map created successfully');
+            // CRITICAL: Force enable all interactions immediately after creation
+            predefinedMap.dragging.enable();
+            predefinedMap.touchZoom.enable();
+            predefinedMap.scrollWheelZoom.enable();
+            predefinedMap.doubleClickZoom.enable();
+            predefinedMap.boxZoom.enable();
+            predefinedMap.keyboard.enable();
+
+            console.log('✅ Predefined map created successfully with interactions enabled');
         }
         
         // Initialize map layers array
@@ -4918,6 +5069,11 @@ async function initializePredefinedMap() {
             if (predefinedMap) {
                 predefinedMap.invalidateSize();
             }
+            
+            // AGGRESSIVE FIX: Force reset interactions after initialization
+            setTimeout(() => {
+                window.resetMapInteractions();
+            }, 100);
         }, 500);
         
         return true;
@@ -4958,21 +5114,14 @@ async function displayRouteOnMap(route) {
     // Ensure map container is visible and invalidate size for proper rendering
 
     const mapContainer = document.getElementById('predefinedRoutesMap');
-    const loadingElement = document.getElementById('predefinedMapLoading');
     if (mapContainer) {
-        mapContainer.style.display = 'block';
-        mapContainer.style.visibility = 'visible';
-        mapContainer.style.opacity = '1';
-        finalizePredefinedMapLoading();
-
+        // SIMPLE FIX: Just ensure container is interactive
+        mapContainer.style.pointerEvents = 'auto';
+        mapContainer.classList.remove('loading');
+        mapContainer.classList.add('loaded');
+        
         predefinedMap.invalidateSize();
-        console.log('🔄 Map container visibility and size refreshed');
-        console.log('🔍 Map container dimensions:', {
-            width: mapContainer.offsetWidth,
-            height: mapContainer.offsetHeight,
-            display: mapContainer.style.display,
-            visibility: mapContainer.style.visibility
-        });
+        console.log('🔄 Map container made interactive and size refreshed');
     }
 
     // Ensure all map interaction handlers are enabled
@@ -4983,6 +5132,15 @@ async function displayRouteOnMap(route) {
         predefinedMap.doubleClickZoom.enable();
         predefinedMap.boxZoom.enable();
         predefinedMap.keyboard.enable();
+        
+        console.log('✅ Map interactions enabled:', {
+            dragging: predefinedMap.dragging.enabled(),
+            touchZoom: predefinedMap.touchZoom.enabled(),
+            scrollWheelZoom: predefinedMap.scrollWheelZoom.enabled(),
+            doubleClickZoom: predefinedMap.doubleClickZoom.enabled(),
+            boxZoom: predefinedMap.boxZoom.enabled(),
+            keyboard: predefinedMap.keyboard.enabled()
+        });
     }
 
     try {
@@ -5308,6 +5466,73 @@ async function displayRouteOnMap(route) {
     } catch (error) {
         console.error('❌ Error displaying route on map:', error);
         showNotification('Rota haritada gösterilirken hata oluştu', 'error');
+    } finally {
+        // CRITICAL FIX: Ensure map interactions remain enabled after route display
+        if (predefinedMap) {
+            // Add a small delay to ensure all operations are complete
+            setTimeout(() => {
+                predefinedMap.dragging.enable();
+                predefinedMap.touchZoom.enable();
+                predefinedMap.scrollWheelZoom.enable();
+                predefinedMap.doubleClickZoom.enable();
+                predefinedMap.boxZoom.enable();
+                predefinedMap.keyboard.enable();
+                
+                // Force map to be interactive
+                predefinedMap.invalidateSize();
+                
+                // Ensure container is interactive
+                const mapContainer = document.getElementById('predefinedRoutesMap');
+                if (mapContainer) {
+                    mapContainer.style.pointerEvents = 'auto';
+                    mapContainer.classList.remove('loading');
+                    mapContainer.classList.add('loaded');
+                }
+                
+                console.log('🔧 FINAL CHECK - Map interactions status:', {
+                    dragging: predefinedMap.dragging.enabled(),
+                    touchZoom: predefinedMap.touchZoom.enabled(),
+                    scrollWheelZoom: predefinedMap.scrollWheelZoom.enabled(),
+                    doubleClickZoom: predefinedMap.doubleClickZoom.enabled(),
+                    boxZoom: predefinedMap.boxZoom.enabled(),
+                    keyboard: predefinedMap.keyboard.enabled()
+                });
+                
+                // AGGRESSIVE FIX: Force reset map interactions multiple times
+                setTimeout(() => {
+                    if (window.resetMapInteractions) window.resetMapInteractions();
+                }, 100);
+                setTimeout(() => {
+                    if (window.resetMapInteractions) window.resetMapInteractions();
+                }, 500);
+                setTimeout(() => {
+                    if (window.resetMapInteractions) window.resetMapInteractions();
+                }, 1000);
+                
+                // Set up a more aggressive watchdog
+                if (!window.mapInteractionWatchdog) {
+                    window.mapInteractionWatchdog = setInterval(() => {
+                        if (predefinedMap && predefinedMapInitialized) {
+                            // Force enable interactions every second
+                            predefinedMap.dragging.enable();
+                            predefinedMap.touchZoom.enable();
+                            predefinedMap.scrollWheelZoom.enable();
+                            predefinedMap.doubleClickZoom.enable();
+                            predefinedMap.boxZoom.enable();
+                            predefinedMap.keyboard.enable();
+                            
+                            // Ensure container is interactive
+                            const mapContainer = document.getElementById('predefinedRoutesMap');
+                            if (mapContainer) {
+                                mapContainer.style.pointerEvents = 'auto';
+                                mapContainer.classList.add('loaded');
+                                mapContainer.classList.remove('loading');
+                            }
+                        }
+                    }, 1000);
+                }
+            }, 100);
+        }
     }
 }
 
@@ -5324,6 +5549,16 @@ function clearPredefinedMapContent() {
         });
         predefinedMapLayers = [];
         console.log('✅ Predefined map content cleared');
+        
+        // CRITICAL FIX: Ensure map interactions remain enabled after clearing
+        predefinedMap.dragging.enable();
+        predefinedMap.touchZoom.enable();
+        predefinedMap.scrollWheelZoom.enable();
+        predefinedMap.doubleClickZoom.enable();
+        predefinedMap.boxZoom.enable();
+        predefinedMap.keyboard.enable();
+        
+        console.log('🔧 Map interactions re-enabled after clearing');
     }
 }
 
@@ -8212,6 +8447,24 @@ document.addEventListener('DOMContentLoaded', async function () {
             await initializeMainMap();
         }
     }, 1000); // Wait 1 second after page load
+    
+    // CRITICAL FIX: Set up periodic map interaction enabler
+    setInterval(() => {
+        if (predefinedMap && predefinedMapInitialized) {
+            // Silently ensure interactions are enabled
+            predefinedMap.dragging.enable();
+            predefinedMap.touchZoom.enable();
+            predefinedMap.scrollWheelZoom.enable();
+            predefinedMap.doubleClickZoom.enable();
+            predefinedMap.boxZoom.enable();
+            predefinedMap.keyboard.enable();
+            
+            const mapContainer = document.getElementById('predefinedRoutesMap');
+            if (mapContainer) {
+                mapContainer.style.pointerEvents = 'auto';
+            }
+        }
+    }, 2000); // Check every 2 seconds
 
     // Feature detection for touch support
     const supportsTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
