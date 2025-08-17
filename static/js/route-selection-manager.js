@@ -422,6 +422,9 @@ class RouteSelectionManager {
 
         // Add event listeners
         this.attachModalListeners(modal, route);
+
+        // Load route media and map markers
+        this.loadRouteMediaMap(route);
     }
 
     /**
@@ -567,6 +570,61 @@ class RouteSelectionManager {
             }
         };
         document.addEventListener('keydown', handleEscape);
+    }
+
+    /**
+     * Load route media and display markers on map
+     */
+    async loadRouteMediaMap(route) {
+        try {
+            const modal = document.getElementById('routeDetailsModal');
+            if (!modal) return;
+
+            // Replace placeholder with map container
+            const placeholder = modal.querySelector('.route-map-placeholder');
+            if (!placeholder) return;
+            const mapContainer = document.createElement('div');
+            mapContainer.id = 'routeMediaMap';
+            mapContainer.style.height = '300px';
+            placeholder.replaceWith(mapContainer);
+
+            // Initialize map
+            const map = L.map(mapContainer).setView([38.6247, 34.7145], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            const markers = [];
+
+            // Fetch route media
+            const mediaData = await window.apiClient.get(`/routes/${route.id}/media`);
+            if (mediaData.success && Array.isArray(mediaData.media)) {
+                mediaData.media.forEach(media => {
+                    if (media.latitude && media.longitude) {
+                        const marker = L.marker([media.latitude, media.longitude]).addTo(map);
+                        let imgSrc = media.thumbnail_path || media.file_path || '';
+                        let popupContent = '';
+                        if (imgSrc) {
+                            popupContent += `<img src="${imgSrc}" alt="Media" style="max-width:150px;max-height:100px;">`;
+                        }
+                        if (media.caption) {
+                            popupContent += `<p>${media.caption}</p>`;
+                        }
+                        if (popupContent) {
+                            marker.bindPopup(popupContent);
+                        }
+                        markers.push(marker);
+                    }
+                });
+            }
+
+            if (markers.length > 0) {
+                const group = L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        } catch (error) {
+            console.error('❌ Error loading route media:', error);
+        }
     }
 
     /**

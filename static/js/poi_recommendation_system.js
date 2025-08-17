@@ -6086,7 +6086,7 @@ function createRouteCard(route) {
     const stopCount = route.poi_count || (route.waypoints ? route.waypoints.length : 0);
     const distance = ensureRouteDistance(route).toFixed(1);
     const placeholderImage = 'https://via.placeholder.com/400x200?text=Rota';
-    const imageUrl = route.preview_image_url || route.image_url || placeholderImage;
+    const imageUrl = route.preview_image || placeholderImage;
     
     console.log('🏷️ Creating route card:', {
         name: route.name,
