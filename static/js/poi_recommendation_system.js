@@ -1271,35 +1271,34 @@ class RouteDetailsPanel {
         console.log('🔍 Current route:', instance.currentRoute);
         console.log('🔍 Global currentSelectedRoute:', window.currentSelectedRoute);
         console.log('🔍 PredefinedRoutes array:', predefinedRoutes);
-        
+
         if (!instance.currentRoute) {
             console.log('❌ No current route in panel instance');
             showNotification('❌ Aktif rota bulunamadı', 'error');
             return;
         }
+        let waypoints = [];
+        let waypointNames = [];
 
         if (selectedPOIs.length === 0) {
             // Try to use route data from panel if available
             if (instance.currentRoute && instance.currentRoute.waypoints && instance.currentRoute.waypoints.length > 0) {
-                // Use route panel data instead of selectedPOIs
                 console.log('🗺️ Using route panel waypoints instead of selectedPOIs');
                 waypoints = instance.currentRoute.waypoints.map(wp => `${wp.latitude},${wp.longitude}`);
                 waypointNames = instance.currentRoute.waypoints.map(wp => wp.name || 'POI');
             } else if (instance.currentRoute && instance.currentRoute.is_predefined) {
                 // For predefined routes, use the current selected route data
                 console.log('🗺️ Predefined route detected in panel');
-                
-                // Try to find the route in predefinedRoutes global array
+
                 let routeToExport = null;
                 if (instance.currentRoute.predefined_route) {
                     routeToExport = instance.currentRoute.predefined_route;
                 } else if (window.currentSelectedRoute) {
                     routeToExport = window.currentSelectedRoute;
                 } else if (instance.currentRoute.route_name) {
-                    // Try to find by name in predefinedRoutes
                     routeToExport = predefinedRoutes.find(r => r.name === instance.currentRoute.route_name);
                 }
-                
+
                 if (routeToExport) {
                     console.log('🗺️ Found route to export:', routeToExport.name);
                     const routeId = routeToExport.id || routeToExport._id;
@@ -1318,30 +1317,26 @@ class RouteDetailsPanel {
                 // Fallback to default Cappadocia route
                 const defaultOrigin = '38.6427,34.8283'; // Göreme
                 const defaultDestination = '38.6436,34.8128'; // Ürgüp
-                
                 const url = `https://www.google.com/maps/dir/?api=1&origin=${defaultOrigin}&destination=${defaultDestination}&travelmode=walking&dir_action=navigate`;
-                
+
                 console.log('🗺️ No POIs or route data, opening default Cappadocia route');
                 window.open(url, '_blank');
                 showNotification('🗺️ Varsayılan Kapadokya rotası Google Maps\'te açıldı!', 'info');
                 return;
             }
+        } else {
+            // Add start location with name
+            if (startLocation) {
+                waypoints.push(`${startLocation.latitude},${startLocation.longitude}`);
+                waypointNames.push(encodeURIComponent(startLocation.name || 'Başlangıç Noktası'));
+            }
+
+            // Add all POIs with names
+            selectedPOIs.forEach(poi => {
+                waypoints.push(`${poi.latitude},${poi.longitude}`);
+                waypointNames.push(encodeURIComponent(poi.name));
+            });
         }
-
-        let waypoints = [];
-        let waypointNames = [];
-
-        // Add start location with name
-        if (startLocation) {
-            waypoints.push(`${startLocation.latitude},${startLocation.longitude}`);
-            waypointNames.push(encodeURIComponent(startLocation.name || 'Başlangıç Noktası'));
-        }
-
-        // Add all POIs with names
-        selectedPOIs.forEach(poi => {
-            waypoints.push(`${poi.latitude},${poi.longitude}`);
-            waypointNames.push(encodeURIComponent(poi.name));
-        });
 
         if (waypoints.length < 2) {
             showNotification('❌ En az 2 nokta gerekli', 'error');
@@ -2843,33 +2838,7 @@ async function createSimpleRoute(waypoints) {
         className: 'simple-route-line'
     }).addTo(map);
 
-    // Enhanced route click functionality
-    window.simpleRouteLayer.on('click', function(e) {
-        e.originalEvent.stopPropagation();
-        showRouteOptionsPopup(e.latlng, waypoints);
-    });
-
-    // Add popup to explain this is a simple route
-    window.simpleRouteLayer.bindPopup(
-        `
-                <div style="text-align: center; font-family: 'Segoe UI', sans-serif;">
-                    <h6 style="margin: 0 0 8px 0; color: #667eea;">📏 Basit Rota</h6>
-                    <p style="margin: 0; font-size: 12px; color: #666;">
-                        Düz çizgi bağlantıları<br>
-                        <small>(Gerçek yol rotası değil)</small>
-                    </p>
-                    <div style="margin-top: 8px;">
-                        <button onclick="exportToGoogleMaps(); event.stopPropagation();" style="background: #4285f4; color: white; border: none; padding: 6px 12px; border-radius: 12px; font-size: 11px; cursor: pointer;">
-                            🗺️ Google Maps'te Aç
-                        </button>
-                    </div>
-                </div>
-                `,
-        { autoPan: false }
-    );
-
-    // Add route details panel click event
-    // Enhanced click/touch event for simple route
+    // Show route details panel when simple route is clicked
     window.simpleRouteLayer.on('click', function (e) {
         // Prevent popup from opening
         e.originalEvent.stopPropagation();
@@ -3229,77 +3198,6 @@ function addStartEndMarkers(waypoints) {
         );
 
     console.log('✅ Start and end markers added to map');
-}
-
-// Function to show route options popup when clicking on route
-function showRouteOptionsPopup(latlng, waypoints) {
-    const popup = L.popup({
-        maxWidth: 300,
-        className: 'route-options-popup'
-    })
-    .setLatLng(latlng)
-    .setContent(createRouteOptionsContent(waypoints))
-    .openOn(map);
-}
-
-// Create content for route options popup
-function createRouteOptionsContent(waypoints) {
-    const totalDistance = calculateTotalDistance(waypoints);
-    const estimatedTime = Math.round(totalDistance * 12); // 12 minutes per km
-    
-    return `
-        <div style="text-align: center; font-family: 'Segoe UI', sans-serif; min-width: 250px;">
-            <h6 style="margin: 0 0 12px 0; color: #667eea; font-size: 16px;">🗺️ Rota Seçenekleri</h6>
-            
-            <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 12px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                    <span style="color: #666; font-size: 12px;">📏 Mesafe:</span>
-                    <span style="font-weight: 600; font-size: 12px;">${totalDistance.toFixed(2)} km</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                    <span style="color: #666; font-size: 12px;">⏱️ Tahmini Süre:</span>
-                    <span style="font-weight: 600; font-size: 12px;">${estimatedTime} dk</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #666; font-size: 12px;">📍 Duraklar:</span>
-                    <span style="font-weight: 600; font-size: 12px;">${waypoints.length} nokta</span>
-                </div>
-            </div>
-            
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <button onclick="exportToGoogleMaps(); map.closePopup();" 
-                        style="background: #4285f4; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    🗺️ Google Maps'te Aç
-                </button>
-                
-                <button onclick="optimizeRoute(); map.closePopup();" 
-                        style="background: #f39c12; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    ⚡ Rotayı Optimize Et
-                </button>
-                
-                <button onclick="RouteDetailsPanel.show({total_distance: ${totalDistance.toFixed(2)}, estimated_time: ${estimatedTime * 60}, route_type: 'düz çizgi', waypoints: selectedPOIs, segments: []}); map.closePopup();" 
-                        style="background: #667eea; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    📋 Detaylı Bilgi
-                </button>
-                
-                <button onclick="clearRoute(); map.closePopup();" 
-                        style="background: #e74c3c; color: white; border: none; padding: 8px 12px; border-radius: 12px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    🗑️ Rotayı Temizle
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-// Helper function to calculate total distance
-function calculateTotalDistance(waypoints) {
-    let totalDistance = 0;
-    for (let i = 0; i < waypoints.length - 1; i++) {
-        const current = waypoints[i];
-        const next = waypoints[i + 1];
-        totalDistance += getDistance(current.lat, current.lng, next.lat, next.lng);
-    }
-    return totalDistance;
 }
 
 // Function to show predefined route options popup when clicking on route
