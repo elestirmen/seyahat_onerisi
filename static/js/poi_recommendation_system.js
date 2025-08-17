@@ -4951,7 +4951,17 @@ async function displayRouteOnMap(route) {
             visibility: mapContainer.style.visibility
         });
     }
-    
+
+    // Ensure all map interaction handlers are enabled
+    if (predefinedMap) {
+        predefinedMap.dragging.enable();
+        predefinedMap.touchZoom.enable();
+        predefinedMap.scrollWheelZoom.enable();
+        predefinedMap.doubleClickZoom.enable();
+        predefinedMap.boxZoom.enable();
+        predefinedMap.keyboard.enable();
+    }
+
     try {
         // Clear existing route layers
         clearPredefinedMapContent();
