@@ -4965,6 +4965,7 @@ async function displayRouteOnMap(route) {
         if (mapContainer.parentElement) {
             mapContainer.parentElement.style.pointerEvents = 'auto';
         }
+
     }
 
     // Ensure all map interaction handlers are enabled
