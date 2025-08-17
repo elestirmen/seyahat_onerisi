@@ -3370,8 +3370,8 @@
             `;
 
             workspaceContent.innerHTML = `
-                <div class="route-edit-form">
-                    <form id="routeEditForm">
+                <div class="route-edit-form d-flex gap-3">
+                    <form id="routeEditForm" class="flex-grow-1">
                         <div class="form-section">
                             <h5><i class="fas fa-info-circle me-2"></i>Temel Bilgiler</h5>
                             <div class="form-grid">
@@ -3517,6 +3517,11 @@
                             </div>
                         </div>
                     </form>
+                    <div class="route-media-panel flex-grow-1">
+                        <button type="button" id="addRouteImageBtn" class="btn btn-secondary mb-2">Fotoğraf Ekle</button>
+                        <input type="file" id="routeImageInput" accept="image/*" style="display:none">
+                        <ul id="routeMediaList" class="list-group"></ul>
+                    </div>
                 </div>
             `;
 
@@ -3525,6 +3530,11 @@
 
             // Load POIs for association
             loadPOIsForAssociation(getRouteId(route));
+
+            // Load existing media for route
+            if (typeof loadRouteMedia === 'function') {
+                loadRouteMedia(getRouteId(route));
+            }
         }
 
         // Add styles for route edit form
