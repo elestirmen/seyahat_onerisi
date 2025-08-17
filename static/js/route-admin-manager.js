@@ -23,6 +23,9 @@ class RouteAdminManager {
         
         // API base URL
         this.apiBase = window.apiBase || '/api';
+        if (window.apiClient) {
+            window.apiClient.baseURL = this.apiBase;
+        }
         
         // Form validation rules
         this.validationRules = {
