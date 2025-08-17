@@ -6326,6 +6326,22 @@ ute Preview Map Styles */
     color: #667eea;
 }
 
+.route-distance {
+    display: inline-flex;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.route-distance::before {
+    content: "\f4d7";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    margin-right: 4px;
+    color: #667eea;
+}
+
 /* Route selection highlighting on map */
 .route-on-map {
     cursor: pointer;

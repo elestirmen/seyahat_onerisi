@@ -5949,6 +5949,31 @@ function fitAllRoutesOnMap() {
     }
 }
 
+// Calculate distance of a polyline geometry in kilometers
+function calculatePolylineDistance(geometry) {
+    if (!geometry || !geometry.coordinates || geometry.coordinates.length < 2) return 0;
+    let total = 0;
+    const coords = geometry.coordinates;
+    for (let i = 0; i < coords.length - 1; i++) {
+        const [lon1, lat1] = coords[i];
+        const [lon2, lat2] = coords[i + 1];
+        total += getDistance(lat1, lon1, lat2, lon2);
+    }
+    return total;
+}
+
+// Ensure a route has a distance value, calculating from geometry when missing
+function ensureRouteDistance(route) {
+    if (route.total_distance || route.distance || route.length) {
+        route.total_distance = route.total_distance || route.distance || route.length;
+    } else if (route.geometry && route.geometry.coordinates) {
+        route.total_distance = calculatePolylineDistance(route.geometry);
+    } else {
+        route.total_distance = 0;
+    }
+    return route.total_distance;
+}
+
 async function loadPredefinedRoutes() {
     console.log('📋 Loading predefined routes...');
     
@@ -5969,7 +5994,8 @@ async function loadPredefinedRoutes() {
             
             // API returns {success: true, routes: [...], count: ...}
             const routes = data.routes || [];
-            
+            routes.forEach(ensureRouteDistance);
+
             predefinedRoutes = routes;
             filteredRoutes = [...routes];
             
@@ -6055,6 +6081,7 @@ function createRouteCard(route) {
     const difficultyStars = createDifficultyStars(difficultyLevel);
     const duration = Math.round((route.estimated_duration || 0) / 60);
     const stopCount = route.poi_count || (route.waypoints ? route.waypoints.length : 0);
+    const distance = ensureRouteDistance(route).toFixed(1);
     const placeholderImage = 'https://via.placeholder.com/400x200?text=Rota';
     const imageUrl = route.preview_image_url || route.image_url || placeholderImage;
     
@@ -6077,6 +6104,9 @@ function createRouteCard(route) {
                 <p class="route-card-description">${route.description || 'Açıklama bulunmuyor.'}</p>
             </div>
             <div class="route-card-meta">
+                <div class="route-meta-item" aria-label="Mesafe: ${distance} km">
+                    <span class="route-distance">${distance} km</span>
+                </div>
                 <div class="route-meta-item" aria-label="Süre: ${duration} saat">
                     <i class="fas fa-clock" aria-hidden="true"></i>
                     <span>${duration} saat</span>
