@@ -8,11 +8,18 @@ import json
 import math
 import hashlib
 import time
+import uuid
+import os
+from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 
+from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
+
 from app.config.database import get_db_connection
 from app.middleware.error_handler import APIError, bad_request, not_found, internal_error
+from app.services.media_service import media_service
 
 logger = logging.getLogger(__name__)
 
@@ -426,6 +433,78 @@ class RouteService:
             'total': len(results),
             'query': query
         }
+
+    def add_route_media(self, route_id: int, file: FileStorage, lat: float, lng: float,
+                        caption: Optional[str], is_primary: bool = False) -> Dict[str, Any]:
+        """Add media file for a route."""
+        if not file or not file.filename:
+            raise bad_request("File is required")
+
+        filename = secure_filename(file.filename)
+        extension = Path(filename).suffix
+        unique_name = f"{uuid.uuid4().hex}{extension}"
+
+        media_dir = Path("poi_media") / "route_media" / str(route_id)
+        media_dir.mkdir(parents=True, exist_ok=True)
+
+        file_path = media_dir / unique_name
+        file.save(str(file_path))
+
+        thumbnail_path = media_service.generate_thumbnail(str(file_path))
+
+        conn_context = self._get_database_connection()
+        if conn_context is None:
+            raise APIError("Database connection failed", "DB_CONN_ERROR")
+
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                query = (
+                    "INSERT INTO route_media (route_id, file_path, thumbnail_path, lat, lng, caption, is_primary) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s) "
+                    "RETURNING id, route_id, file_path, thumbnail_path, lat, lng, caption, is_primary, uploaded_at"
+                )
+                cursor.execute(query, (
+                    route_id,
+                    str(file_path),
+                    thumbnail_path,
+                    lat,
+                    lng,
+                    caption,
+                    is_primary
+                ))
+                result = cursor.fetchone()
+
+        media_record = dict(result)
+        if media_record.get('uploaded_at'):
+            media_record['uploaded_at'] = media_record['uploaded_at'].isoformat()
+        return media_record
+
+    def list_route_media(self, route_id: int) -> List[Dict[str, Any]]:
+        """List media files for a route."""
+        conn_context = self._get_database_connection()
+        if conn_context is None:
+            raise APIError("Database connection failed", "DB_CONN_ERROR")
+
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                query = """
+                    SELECT id, route_id, file_path, thumbnail_path, lat, lng,
+                           caption, is_primary, media_type, uploaded_at
+                    FROM route_media
+                    WHERE route_id = %s
+                    ORDER BY is_primary DESC, uploaded_at DESC
+                """
+                cursor.execute(query, (route_id,))
+                rows = cursor.fetchall()
+
+        media_list = []
+        for row in rows:
+            item = dict(row)
+            if item.get('uploaded_at'):
+                item['uploaded_at'] = item['uploaded_at'].isoformat()
+            media_list.append(item)
+
+        return media_list
     
     def get_route_statistics(self) -> Dict[str, Any]:
         """Get route statistics."""

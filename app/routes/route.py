@@ -183,6 +183,26 @@ def get_route_geometry(route_id):
         raise APIError("Internal server error", "INTERNAL_ERROR", 500)
 
 
+# Route media endpoints
+
+
+@route_bp.route('/routes/<int:route_id>/media', methods=['GET'])
+def list_route_media(route_id):
+    """Get media files for a route."""
+    try:
+        if not route_id:
+            raise bad_request("Route ID is required")
+
+        media = route_service.list_route_media(route_id)
+        return jsonify({'route_id': route_id, 'media': media}), 200
+
+    except APIError:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in list_route_media: {e}")
+        raise APIError("Internal server error", "INTERNAL_ERROR", 500)
+
+
 # Admin endpoints (require authentication)
 @route_bp.route('/admin/routes', methods=['GET'])
 @auth_middleware.require_auth
@@ -254,6 +274,44 @@ def admin_get_route(route_id):
         raise
     except Exception as e:
         logger.error(f"Unexpected error in admin_get_route: {e}")
+        raise APIError("Internal server error", "INTERNAL_ERROR", 500)
+
+
+@route_bp.route('/admin/routes/<int:route_id>/media', methods=['POST'])
+@auth_middleware.require_auth
+def admin_add_route_media(route_id):
+    """Admin: Upload media for a route."""
+    try:
+        if 'file' not in request.files:
+            raise bad_request("File is required")
+
+        file = request.files['file']
+        caption = request.form.get('caption')
+        is_primary = request.form.get('is_primary', 'false').lower() in ('true', '1', 'yes')
+        lat = request.form.get('lat')
+        lng = request.form.get('lng')
+
+        if lat or lng:
+            if not (lat and lng):
+                raise bad_request("lat and lng must be provided together")
+            try:
+                lat_val = float(lat)
+                lng_val = float(lng)
+            except (TypeError, ValueError):
+                raise bad_request("Invalid lat or lng")
+            if not (-90 <= lat_val <= 90 and -180 <= lng_val <= 180):
+                raise bad_request("lat/lng out of range")
+            lat, lng = lat_val, lng_val
+        else:
+            lat = lng = None
+
+        result = route_service.add_route_media(route_id, file, lat, lng, caption, is_primary)
+        return jsonify(result), 201
+
+    except APIError:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in admin_add_route_media: {e}")
         raise APIError("Internal server error", "INTERNAL_ERROR", 500)
 
 
