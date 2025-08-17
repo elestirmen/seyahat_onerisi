@@ -588,7 +588,7 @@
                             <template id="predefinedRouteCardTemplate">
                                 <div class="route-card">
                                     <div class="route-card-image">
-                                        <img src="https://via.placeholder.com/400x200?text=Rota" alt="Rota önizlemesi" data-placeholder="https://via.placeholder.com/400x200?text=Rota">
+                                        <img src="https://via.placeholder.com/400x200?text=Rota" alt="Rota önizlemesi" data-placeholder="https://via.placeholder.com/400x200?text=Rota" onerror="handleImageError(event)">
                                     </div>
                                     <div class="route-card-content">
                                         <div class="route-card-header">
@@ -599,6 +599,9 @@
                                             <p class="route-card-description"></p>
                                         </div>
                                         <div class="route-card-meta">
+                                            <div class="route-meta-item" aria-label="Mesafe">
+                                                <span class="route-distance">0 km</span>
+                                            </div>
                                             <div class="route-meta-item" aria-label="Süre">
                                                 <i class="fas fa-clock"></i>
                                                 <span></span>
