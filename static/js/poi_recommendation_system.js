@@ -4941,7 +4941,12 @@ async function switchTab(tabName) {
     } else if (tabName === 'predefined-routes') {
         predefinedTab.classList.add('active');
         predefinedContent.classList.add('active');
-        
+
+        const searchInput = document.getElementById('routeSearchInput');
+        if (searchInput) {
+            searchInput.focus();
+        }
+
         // Load predefined routes if not already loaded
         if (predefinedRoutes.length === 0) {
             await loadPredefinedRoutes();
@@ -6211,14 +6216,17 @@ function setupRouteSearch() {
     const searchInput = document.getElementById('routeSearchInput');
     if (!searchInput) return;
 
-    searchInput.addEventListener('input', () => {
+    const handleRouteSearch = () => {
         const query = searchInput.value.trim().toLowerCase();
         filteredRoutes = predefinedRoutes.filter(route =>
             route.name && route.name.toLowerCase().includes(query)
         );
         displayPredefinedRoutes(filteredRoutes);
         updateRouteStats();
-    });
+    };
+
+    // React to input events so the list updates as the user types
+    searchInput.addEventListener('input', handleRouteSearch);
 }
 
 function showNoRoutesMessage(message = 'Seçilen kriterlere uygun rota bulunamadı.') {
