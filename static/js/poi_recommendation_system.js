@@ -5032,6 +5032,7 @@ async function initializePredefinedMap() {
             L.DomEvent.disableClickPropagation(container);
             L.DomEvent.disableScrollPropagation(container);
 
+
             // Initialize elevation chart if available
             if (window.ElevationChart) {
                 predefinedElevationChart = new ElevationChart('predefinedElevationChartContainer', predefinedMap);
