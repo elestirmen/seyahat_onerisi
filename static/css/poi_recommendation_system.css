@@ -1203,9 +1203,9 @@
         }
 
         .route-card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 24px;
+            background: #f9fafb;
+            border: 1px solid #d1d5db;
+            border-radius: 16px;
             overflow: hidden;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
@@ -6299,6 +6299,8 @@ ute Preview Map Styles */
     background-size: cover;
     background-position: center;
     overflow: hidden;
+    background-color: #e5e7eb;
+    border-bottom: 1px solid #d1d5db;
 }
 
 .route-card-image img {

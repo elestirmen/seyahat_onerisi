@@ -6055,7 +6055,8 @@ function createRouteCard(route) {
     const difficultyStars = createDifficultyStars(difficultyLevel);
     const duration = Math.round((route.estimated_duration || 0) / 60);
     const stopCount = route.poi_count || (route.waypoints ? route.waypoints.length : 0);
-    const imageUrl = route.preview_image_url || route.image_url || 'https://via.placeholder.com/400x200?text=Rota';
+    const placeholderImage = 'https://via.placeholder.com/400x200?text=Rota';
+    const imageUrl = route.preview_image_url || route.image_url || placeholderImage;
     
     console.log('🏷️ Creating route card:', {
         name: route.name,
@@ -6066,7 +6067,7 @@ function createRouteCard(route) {
     return `
         <div class="route-card" data-route-id="${route.id}">
             <div class="route-card-image">
-                <img src="${imageUrl}" alt="${route.name || 'Rota görseli'}">
+                <img src="${imageUrl}" alt="${route.name || 'Rota görseli'}" data-placeholder="${placeholderImage}" onerror="handleImageError(event)">
             </div>
             <div class="route-card-header">
                 <h3 class="route-card-title">${route.name || 'İsimsiz Rota'}</h3>
@@ -6091,6 +6092,15 @@ function createRouteCard(route) {
             </div>
         </div>
     `;
+}
+
+function handleImageError(event) {
+    const img = event.target;
+    const placeholder = img.dataset.placeholder;
+    if (placeholder && img.src !== placeholder) {
+        img.onerror = null;
+        img.src = placeholder;
+    }
 }
 
 // Favori rota yönetimi
