@@ -5027,6 +5027,12 @@ async function initializePredefinedMap() {
             predefinedMap = L.map('predefinedRoutesMap').setView([38.6436, 34.8128], 12);
             addBaseLayers(predefinedMap);
 
+            // Prevent outer listeners from blocking map interactions
+            const container = predefinedMap.getContainer();
+            L.DomEvent.disableClickPropagation(container);
+            L.DomEvent.disableScrollPropagation(container);
+
+
             // Initialize elevation chart if available
             if (window.ElevationChart) {
                 predefinedElevationChart = new ElevationChart('predefinedElevationChartContainer', predefinedMap);
