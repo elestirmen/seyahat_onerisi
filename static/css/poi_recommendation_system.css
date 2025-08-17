@@ -6342,6 +6342,16 @@ ute Preview Map Styles */
     color: #667eea;
 }
 
+/* Mini map container within route cards */
+.route-mini-map {
+    width: 100px;
+    height: 100px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
 /* Route selection highlighting on map */
 .route-on-map {
     cursor: pointer;
