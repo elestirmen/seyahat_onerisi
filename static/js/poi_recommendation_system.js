@@ -1265,12 +1265,15 @@ class RouteDetailsPanel {
         console.log('🔍 Current route:', instance.currentRoute);
         console.log('🔍 Global currentSelectedRoute:', window.currentSelectedRoute);
         console.log('🔍 PredefinedRoutes array:', predefinedRoutes);
-        
+
         if (!instance.currentRoute) {
             console.log('❌ No current route in panel instance');
             showNotification('❌ Aktif rota bulunamadı', 'error');
             return;
         }
+
+        let waypoints = [];
+        let waypointNames = [];
 
         if (selectedPOIs.length === 0) {
             // Try to use route data from panel if available
@@ -1282,7 +1285,7 @@ class RouteDetailsPanel {
             } else if (instance.currentRoute && instance.currentRoute.is_predefined) {
                 // For predefined routes, use the current selected route data
                 console.log('🗺️ Predefined route detected in panel');
-                
+
                 // Try to find the route in predefinedRoutes global array
                 let routeToExport = null;
                 if (instance.currentRoute.predefined_route) {
@@ -1293,7 +1296,7 @@ class RouteDetailsPanel {
                     // Try to find by name in predefinedRoutes
                     routeToExport = predefinedRoutes.find(r => r.name === instance.currentRoute.route_name);
                 }
-                
+
                 if (routeToExport) {
                     console.log('🗺️ Found route to export:', routeToExport.name);
                     const routeId = routeToExport.id || routeToExport._id;
@@ -1312,34 +1315,31 @@ class RouteDetailsPanel {
                 // Fallback to default Cappadocia route
                 const defaultOrigin = '38.6427,34.8283'; // Göreme
                 const defaultDestination = '38.6436,34.8128'; // Ürgüp
-                
+
                 const url = `https://www.google.com/maps/dir/?api=1&origin=${defaultOrigin}&destination=${defaultDestination}&travelmode=walking&dir_action=navigate`;
-                
+
                 console.log('🗺️ No POIs or route data, opening default Cappadocia route');
                 window.open(url, '_blank');
                 showNotification('🗺️ Varsayılan Kapadokya rotası Google Maps\'te açıldı!', 'info');
                 return;
             }
-        }
+        } else {
+            // Add start location with name
+            if (startLocation) {
+                waypoints.push(`${startLocation.latitude},${startLocation.longitude}`);
+                waypointNames.push(encodeURIComponent(startLocation.name || 'Başlangıç Noktası'));
+            }
 
-        let waypoints = [];
-        let waypointNames = [];
+            // Add all POIs with names
+            selectedPOIs.forEach(poi => {
+                waypoints.push(`${poi.latitude},${poi.longitude}`);
+                waypointNames.push(encodeURIComponent(poi.name));
+            });
 
-        // Add start location with name
-        if (startLocation) {
-            waypoints.push(`${startLocation.latitude},${startLocation.longitude}`);
-            waypointNames.push(encodeURIComponent(startLocation.name || 'Başlangıç Noktası'));
-        }
-
-        // Add all POIs with names
-        selectedPOIs.forEach(poi => {
-            waypoints.push(`${poi.latitude},${poi.longitude}`);
-            waypointNames.push(encodeURIComponent(poi.name));
-        });
-
-        if (waypoints.length < 2) {
-            showNotification('❌ En az 2 nokta gerekli', 'error');
-            return;
+            if (waypoints.length < 2) {
+                showNotification('❌ En az 2 nokta gerekli', 'error');
+                return;
+            }
         }
 
         // Use simple coordinate-based approach for reliability
