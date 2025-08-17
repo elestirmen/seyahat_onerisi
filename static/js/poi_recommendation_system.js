@@ -6024,42 +6024,38 @@ function displayPredefinedRoutes(routes) {
 }
 
 function createRouteCard(route) {
-    const difficultyStars = createDifficultyStars(route.difficulty_level || 1);
+    const difficultyLevel = route.difficulty_level || 1;
+    const difficultyStars = createDifficultyStars(difficultyLevel);
     const duration = Math.round((route.estimated_duration || 0) / 60);
-    const distance = (route.total_distance || 0).toFixed(2);
-    const poiCount = route.poi_count || 0;
+    const stopCount = route.poi_count || (route.waypoints ? route.waypoints.length : 0);
+    const imageUrl = route.preview_image_url || route.image_url || 'https://via.placeholder.com/400x200?text=Rota';
     
     console.log('🏷️ Creating route card:', {
         name: route.name,
-        poiCount: poiCount,
+        stopCount: stopCount,
         rawPoiCount: route.poi_count
     });
-    
+
     return `
         <div class="route-card" data-route-id="${route.id}">
+            <div class="route-card-image">
+                <img src="${imageUrl}" alt="${route.name || 'Rota görseli'}">
+            </div>
             <div class="route-card-header">
                 <h3 class="route-card-title">${route.name || 'İsimsiz Rota'}</h3>
                 <p class="route-card-description">${route.description || 'Açıklama bulunmuyor.'}</p>
             </div>
             <div class="route-card-meta">
-                <div class="route-meta-item">
-                    <i class="fas fa-route"></i>
-                    <span>${getRouteTypeDisplayName(route.route_type)}</span>
-                </div>
-                <div class="route-meta-item">
-                    <i class="fas fa-clock"></i>
+                <div class="route-meta-item" aria-label="Süre: ${duration} saat">
+                    <i class="fas fa-clock" aria-hidden="true"></i>
                     <span>${duration} saat</span>
                 </div>
-                <div class="route-meta-item">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>${distance} km</span>
+                <div class="route-meta-item" aria-label="Durak sayısı: ${stopCount}">
+                    <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+                    <span>${stopCount} durak</span>
                 </div>
-                <div class="route-meta-item">
-                    <i class="fas fa-map-marked-alt"></i>
-                    <span>${poiCount} yer</span>
-                </div>
-                <div class="route-meta-item route-difficulty">
-                    <i class="fas fa-mountain"></i>
+                <div class="route-meta-item route-difficulty" aria-label="Zorluk seviyesi: ${difficultyLevel}">
+                    <i class="fas fa-mountain" aria-hidden="true"></i>
                     <div class="difficulty-stars">${difficultyStars}</div>
                 </div>
             </div>
