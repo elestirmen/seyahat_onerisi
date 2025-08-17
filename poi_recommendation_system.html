@@ -548,8 +548,8 @@
 
                     <!-- Map and Routes Container -->
                     <div class="routes-map-container">
-                        <!-- Map Container -->
-                        <div class="predefined-map-container">
+                        <!-- Map View -->
+                        <div id="mapView" class="predefined-map-container">
                             <div id="predefinedRoutesMap" class="predefined-routes-map">
                                 <div class="map-loading" id="predefinedMapLoading">
                                     <div class="loading__spinner"></div>
@@ -569,35 +569,37 @@
                             </div>
                         </div>
 
-                        <!-- Routes List -->
-                        <template id="predefinedRouteCardTemplate">
-                            <div class="route-card">
-                                <div class="route-card-image">
-                                    <img src="" alt="">
-                                </div>
-                                <div class="route-card-content">
-                                    <div class="route-card-header">
-                                        <h3 class="route-card-title"></h3>
-                                        <p class="route-card-description"></p>
+                        <!-- List View -->
+                        <div id="listView">
+                            <template id="predefinedRouteCardTemplate">
+                                <div class="route-card">
+                                    <div class="route-card-image">
+                                        <img src="" alt="">
                                     </div>
-                                    <div class="route-card-meta">
-                                        <div class="route-meta-item" aria-label="Süre">
-                                            <i class="fas fa-clock"></i>
-                                            <span></span>
+                                    <div class="route-card-content">
+                                        <div class="route-card-header">
+                                            <h3 class="route-card-title"></h3>
+                                            <p class="route-card-description"></p>
                                         </div>
-                                        <div class="route-meta-item" aria-label="Durak sayısı">
-                                            <i class="fas fa-map-marker-alt"></i>
-                                            <span></span>
-                                        </div>
-                                        <div class="route-meta-item" aria-label="Zorluk">
-                                            <i class="fas fa-mountain"></i>
-                                            <div class="difficulty-stars"></div>
+                                        <div class="route-card-meta">
+                                            <div class="route-meta-item" aria-label="Süre">
+                                                <i class="fas fa-clock"></i>
+                                                <span></span>
+                                            </div>
+                                            <div class="route-meta-item" aria-label="Durak sayısı">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                                <span></span>
+                                            </div>
+                                            <div class="route-meta-item" aria-label="Zorluk">
+                                                <i class="fas fa-mountain"></i>
+                                                <div class="difficulty-stars"></div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </template>
-                        <div id="predefinedRoutesList" class="predefined-routes-list" aria-live="polite"></div>
+                            </template>
+                            <div id="predefinedRoutesList" class="predefined-routes-list" aria-live="polite"></div>
+                        </div>
                     </div>
 
                     <!-- No Routes Message -->
