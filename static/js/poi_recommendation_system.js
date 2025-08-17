@@ -10672,14 +10672,14 @@ function initializeEnhancedFilters() {
 
     if (openFiltersBtn && filtersContent) {
         openFiltersBtn.addEventListener('click', () => {
-            filtersContent.classList.add('active');
+            filtersContent.classList.add('expanded');
             openFiltersBtn.style.display = 'none';
         });
     }
 
     if (filtersToggleBtn && filtersContent) {
         filtersToggleBtn.addEventListener('click', () => {
-            filtersContent.classList.remove('active');
+            filtersContent.classList.remove('expanded');
             if (openFiltersBtn) {
                 openFiltersBtn.style.display = '';
             }

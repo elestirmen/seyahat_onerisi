@@ -6190,6 +6190,33 @@ ute Preview Map Styles */
     display: none;
 }
 
+/* Mobile filter drawer and open button */
+.filters-open-btn {
+    display: none;
+}
+
+@media (max-width: 991.98px) {
+    .filters-open-btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 16px;
+    }
+
+    .route-filters-enhanced .filters-content {
+        display: none;
+    }
+
+    .route-filters-enhanced .filters-content.expanded {
+        display: block;
+    }
+}
+
+@media (min-width: 992px) {
+    .route-filters-enhanced .filters-content {
+        display: block;
+    }
+}
+
 @media (min-width: 992px) {
     .routes-map-container {
         display: flex;
