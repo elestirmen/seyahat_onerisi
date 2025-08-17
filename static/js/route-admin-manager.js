@@ -23,6 +23,9 @@ class RouteAdminManager {
         
         // API base URL
         this.apiBase = window.apiBase || '/api';
+        if (window.apiClient) {
+            window.apiClient.baseURL = this.apiBase;
+        }
         
         // Form validation rules
         this.validationRules = {
@@ -104,14 +107,15 @@ class RouteAdminManager {
         try {
             console.log('📥 Loading routes for admin...');
             const data = await window.apiClient.get('/admin/routes');
-            
-            if (data.success) {
-                this.routes = data.routes || [];
+
+            if (data && Array.isArray(data.routes)) {
+                this.routes = data.routes;
                 console.log(`✅ Loaded ${this.routes.length} routes for admin`);
-                
+
                 this.renderRoutesTable();
             } else {
-                throw new Error(data.error?.message || 'Failed to load routes');
+                const errorMsg = data?.error?.message || 'Failed to load routes';
+                throw new Error(errorMsg);
             }
 
         } catch (error) {
@@ -130,14 +134,21 @@ class RouteAdminManager {
         try {
             console.log('📥 Loading available POIs...');
             const data = await window.apiClient.get('/pois');
-            
-            if (data.success) {
-                this.availablePOIs = data.pois || [];
+
+            const poiData = data?.pois || data;
+            if (poiData) {
+                if (Array.isArray(poiData)) {
+                    this.availablePOIs = poiData;
+                } else if (typeof poiData === 'object') {
+                    this.availablePOIs = Object.values(poiData).flat();
+                } else {
+                    this.availablePOIs = [];
+                }
+
                 console.log(`✅ Loaded ${this.availablePOIs.length} available POIs`);
-                
                 this.renderPOIsList();
             } else {
-                throw new Error(data.error?.message || 'Failed to load POIs');
+                throw new Error('Failed to load POIs');
             }
 
         } catch (error) {
@@ -347,12 +358,7 @@ class RouteAdminManager {
         formData.append('lat', e.latlng.lat);
         formData.append('lng', e.latlng.lng);
         try {
-            const res = await fetch(`/admin/routes/${routeId}/media`, {
-                method: 'POST',
-                body: formData,
-                credentials: 'include'
-            });
-            const data = await res.json();
+            const data = await window.apiClient.upload(`/admin/routes/${routeId}/media`, formData);
             if (data && (data.media || data)) {
                 const media = data.media || data;
                 this.routeMedia.push(media);
@@ -374,8 +380,7 @@ class RouteAdminManager {
      */
     async loadRouteMedia(routeId) {
         try {
-            const res = await fetch(`/admin/routes/${routeId}/media`, { credentials: 'include' });
-            const data = await res.json();
+            const data = await window.apiClient.get(`/routes/${routeId}/media`);
             const mediaList = data.media || data || [];
             this.routeMedia = Array.isArray(mediaList) ? mediaList : [];
             this.mediaMarkers.forEach(m => this.map && this.map.removeLayer(m.marker));
