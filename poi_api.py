@@ -4029,7 +4029,8 @@ def get_route_media(route_id: int):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         try:
-            cur.execute("SELECT 1 FROM routes WHERE id=%s", (route_id,))
+            cur.execute("SELECT 1 FROM public.routes WHERE id=%s", (route_id,))
+
             if cur.fetchone() is None:
                 abort(404, "Route not found")
 
@@ -4046,7 +4047,8 @@ def get_route_media(route_id: int):
                     is_primary,
                     media_type,
                     uploaded_at
-                FROM route_media
+                FROM public.route_media
+
                 WHERE route_id=%s
                 ORDER BY is_primary DESC, uploaded_at DESC, id DESC
                 """,
@@ -4071,6 +4073,10 @@ def get_route_media(route_id: int):
             return jsonify(out)
         finally:
             cur.close()
+    except psycopg2.Error as e:
+        logger.error(f"Database error fetching route media {route_id}: {e}")
+        abort(500, "Database error")
+
     finally:
         conn.close()
 
