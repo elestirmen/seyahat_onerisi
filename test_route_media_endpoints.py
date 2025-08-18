@@ -32,8 +32,11 @@ def test_route_media_endpoints():
     if test_image_path:
         try:
             # Upload test
+            # The backend expects the uploaded file under the 'file' key.
+            # Using a different key causes the server to return a 404/HTML response
+            # which then fails JSON parsing on the client.
             files = {
-                'media': ('test_image.jpg', open(test_image_path, 'rb'), 'image/jpeg')
+                'file': ('test_image.jpg', open(test_image_path, 'rb'), 'image/jpeg')
             }
             
             data = {
