@@ -953,13 +953,34 @@
             z-index: 3;
             margin-top: 16px;
             pointer-events: auto;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
         }
 
         .predefined-routes-header .route-search input {
             width: 100%;
             max-width: 300px;
-            margin: 0 auto;
+            margin: 0;
             pointer-events: auto;
+        }
+
+        .predefined-routes-header .route-search .btn {
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .predefined-routes-header .route-search .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
         }
 
         .section-header-content {
@@ -6418,6 +6439,92 @@ ute Preview Map Styles */
 .route-preview-loading i {
     margin-right: 6px;
     animation: spin 1s linear infinite;
+}
+
+/* Route card media overlay styles */
+.route-card-media-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    z-index: 2;
+}
+
+.route-card-media-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+}
+
+.route-card-media-loading i {
+    font-size: 20px;
+    color: #667eea;
+}
+
+.route-card-media-loading span {
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.route-card-image {
+    position: relative;
+}
+
+.route-card-main-image {
+    transition: opacity 0.3s ease;
+}
+
+.route-card-main-image.loading {
+    opacity: 0.6;
+}
+
+/* Route card actions layout */
+.route-card-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.route-media-refresh-btn {
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    color: #667eea;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.route-media-refresh-btn:hover {
+    background: rgba(102, 126, 234, 0.2);
+    border-color: rgba(102, 126, 234, 0.5);
+    transform: scale(1.1);
+}
+
+.route-media-refresh-btn:active {
+    transform: scale(0.95);
+}
+
+.route-media-refresh-btn i {
+    transition: transform 0.3s ease;
+}
+
+.route-media-refresh-btn:hover i {
+    transform: rotate(180deg);
 }
 
 /* Route Options Popup Styles */

@@ -6001,6 +6001,15 @@ async function loadPredefinedRoutes() {
             
             displayPredefinedRoutes(filteredRoutes);
             updateRouteStats();
+            
+            // Load media for all routes in the background
+            console.log('📸 Loading media for all predefined routes...');
+            routes.forEach(route => {
+                // Load media asynchronously without blocking the UI
+                loadRouteMediaForCard(route).catch(error => {
+                    console.warn(`Failed to load media for route ${route.id}:`, error);
+                });
+            });
         } else {
             console.error('❌ Failed to load predefined routes:', response.status);
             showNoRoutesMessage('Rotalar yüklenirken hata oluştu.');
@@ -6029,6 +6038,11 @@ function displayPredefinedRoutes(routes) {
     if (noRoutesMessage) noRoutesMessage.style.display = 'none';
     
     routesList.innerHTML = routes.map(route => createRouteCard(route)).join('');
+
+    // Load media for each route card
+    routes.forEach(route => {
+        loadRouteMediaForCard(route);
+    });
 
     // Add event listeners to route cards and favorite buttons
     routesList.querySelectorAll('.route-card').forEach((card, index) => {
@@ -6097,13 +6111,24 @@ function createRouteCard(route) {
     return `
         <div class="route-card" data-route-id="${route.id}">
             <div class="route-card-image">
-                <img src="${imageUrl}" alt="${route.name || 'Rota görseli'}" data-placeholder="${placeholderImage}" onerror="handleImageError(event)">
+                <img src="${imageUrl}" alt="${route.name || 'Rota görseli'}" data-placeholder="${placeholderImage}" onerror="handleImageError(event)" class="route-card-main-image">
+                <div class="route-card-media-overlay" id="route-media-overlay-${route.id}">
+                    <div class="route-card-media-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Medya yükleniyor...</span>
+                    </div>
+                </div>
             </div>
             <div class="route-card-header">
                 <h3 class="route-card-title">${route.name || 'İsimsiz Rota'}</h3>
-                <button class="favorite-btn" data-route-id="${route.id}" aria-label="Favorilere ekle">
-                    <i class="fas fa-star"></i>
-                </button>
+                <div class="route-card-actions">
+                    <button class="route-media-refresh-btn" onclick="refreshRouteMedia(${route.id})" title="Medyayı yenile" aria-label="Medyayı yenile">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="favorite-btn" data-route-id="${route.id}" aria-label="Favorilere ekle">
+                        <i class="fas fa-star"></i>
+                    </button>
+                </div>
                 <p class="route-card-description">${route.description || 'Açıklama bulunmuyor.'}</p>
             </div>
             <div class="route-card-meta">
@@ -6127,6 +6152,143 @@ function createRouteCard(route) {
         </div>
     `;
 }
+
+// Load route media for display in route cards
+async function loadRouteMediaForCard(route) {
+    if (!route || !route.id) {
+        console.warn('loadRouteMediaForCard: Invalid route data');
+        return;
+    }
+
+    console.log('📸 Loading media for route card:', route.id);
+    
+    try {
+        const response = await fetch(`${apiBase}/admin/routes/${route.id}/media`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            console.warn(`Failed to load media for route ${route.id}:`, response.status);
+            return;
+        }
+
+        const data = await response.json();
+        console.log(`Media data for route ${route.id}:`, data);
+        
+        // Handle different possible response formats
+        let mediaFiles = [];
+        if (Array.isArray(data)) {
+            mediaFiles = data;
+        } else if (Array.isArray(data.media)) {
+            mediaFiles = data.media;
+        } else if (Array.isArray(data.files)) {
+            mediaFiles = data.files;
+        } else if (data && typeof data === 'object') {
+            // Try to find any array in the response
+            Object.values(data).forEach(value => {
+                if (Array.isArray(value)) {
+                    mediaFiles = value;
+                }
+            });
+        }
+
+        if (mediaFiles.length > 0) {
+            // Find the primary image or first image
+            const primaryImage = mediaFiles.find(media => 
+                media.is_primary || 
+                media.media_type === 'image' || 
+                (media.path && media.path.match(/\.(jpg|jpeg|png|gif|webp)$/i))
+            ) || mediaFiles[0];
+
+            if (primaryImage) {
+                updateRouteCardImage(route.id, primaryImage);
+            }
+        }
+    } catch (error) {
+        console.error(`Error loading media for route ${route.id}:`, error);
+    }
+}
+
+// Update route card image with loaded media
+function updateRouteCardImage(routeId, mediaFile) {
+    const card = document.querySelector(`[data-route-id="${routeId}"]`);
+    if (!card) {
+        console.warn(`Route card not found for ID: ${routeId}`);
+        return;
+    }
+
+    const imageContainer = card.querySelector('.route-card-image');
+    const mainImage = card.querySelector('.route-card-main-image');
+    const mediaOverlay = card.querySelector(`#route-media-overlay-${routeId}`);
+    
+    if (!imageContainer || !mainImage || !mediaOverlay) {
+        console.warn(`Image elements not found for route: ${routeId}`);
+        return;
+    }
+
+    // Get the image path
+    const imagePath = mediaFile.path || mediaFile.file_path || mediaFile.url || '';
+    if (!imagePath) {
+        console.warn(`No image path found for media:`, mediaFile);
+        return;
+    }
+
+    // Update the main image
+    mainImage.src = `/${imagePath}`;
+    mainImage.alt = mediaFile.caption || `Rota görseli - ${mediaFile.filename || ''}`;
+    
+    // Hide the loading overlay
+    mediaOverlay.style.display = 'none';
+    
+    console.log(`✅ Updated route card image for route ${routeId}:`, imagePath);
+}
+
+// Manual refresh function for route media
+window.refreshRouteMedia = async function(routeId) {
+    if (!routeId) {
+        console.warn('refreshRouteMedia: No route ID provided');
+        return;
+    }
+    
+    console.log('🔄 Manually refreshing media for route:', routeId);
+    
+    const route = predefinedRoutes.find(r => r.id === routeId);
+    if (!route) {
+        console.warn(`Route not found for ID: ${routeId}`);
+        return;
+    }
+    
+    try {
+        await loadRouteMediaForCard(route);
+        console.log(`✅ Media refreshed for route ${routeId}`);
+    } catch (error) {
+        console.error(`❌ Failed to refresh media for route ${routeId}:`, error);
+    }
+};
+
+// Global refresh function for all route media
+window.refreshAllRouteMedia = async function() {
+    console.log('🔄 Refreshing media for all routes...');
+    
+    if (!predefinedRoutes || predefinedRoutes.length === 0) {
+        console.warn('No routes available to refresh');
+        return;
+    }
+    
+    const refreshPromises = predefinedRoutes.map(route => 
+        loadRouteMediaForCard(route).catch(error => {
+            console.warn(`Failed to refresh media for route ${route.id}:`, error);
+            return null;
+        })
+    );
+    
+    try {
+        await Promise.allSettled(refreshPromises);
+        console.log('✅ All route media refresh completed');
+    } catch (error) {
+        console.error('❌ Error during global media refresh:', error);
+    }
+};
 
 function renderRouteMiniMaps(routes) {
     routes.forEach(async route => {
@@ -7076,6 +7238,14 @@ async function selectPredefinedRoute(route) {
          
         // Add navigation route from current location to route start
         addNavigationToRoute(route);
+        
+        // Refresh route media for the selected route
+        try {
+            console.log('📸 Refreshing route media for selected route:', route.id);
+            await loadRouteMediaForCard(route);
+        } catch (mediaError) {
+            console.warn('⚠️ Could not refresh route media:', mediaError);
+        }
     
     // Ensure predefined map is initialized with multiple attempts
     let mapInitAttempts = 0;
