@@ -3439,7 +3439,10 @@
             }
 
             const formData = new FormData();
-            formData.append('media', file);
+            // Backend API expects the uploaded file under the 'file' field name
+            // Using a different key results in the server thinking no file was provided
+            // and returning a 404/HTML error page which then breaks JSON parsing
+            formData.append('file', file);
             formData.append('caption', mediaCaption);
             formData.append('is_primary', isPrimary);
 
