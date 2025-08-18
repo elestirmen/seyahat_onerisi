@@ -384,31 +384,21 @@ class RouteAdminManager {
      * Load existing media for a route
      */
     async loadRouteMedia(routeId) {
-        const endpoints = [
-            `${this.apiBase}/admin/routes/${routeId}/media`,
-            `${this.apiBase}/routes/${routeId}/media`
-        ];
-
-        for (const url of endpoints) {
-            try {
-                const data = await this.apiClient.get(url);
-                const mediaList = data.media || data || [];
-                this.routeMedia = Array.isArray(mediaList) ? mediaList : [];
-                this.mediaMarkers.forEach(m => this.map && this.map.removeLayer(m.marker));
-                this.mediaMarkers = [];
-                this.routeMedia.forEach(m => this.addMediaMarker(m));
-                this.renderMediaList();
-                return;
-            } catch (err) {
-                if (err.status !== 404) {
-                    console.error('Media load error:', err);
-                    return;
-                }
+        const url = `${this.apiBase}/routes/${routeId}/media`;
+        try {
+            const data = await this.apiClient.get(url);
+            const mediaList = data.media || data || [];
+            this.routeMedia = Array.isArray(mediaList) ? mediaList : [];
+        } catch (err) {
+            if (err.status !== 404) {
+                console.error('Media load error:', err);
             }
-
+            this.routeMedia = [];
         }
 
-        this.routeMedia = [];
+        this.mediaMarkers.forEach(m => this.map && this.map.removeLayer(m.marker));
+        this.mediaMarkers = [];
+        this.routeMedia.forEach(m => this.addMediaMarker(m));
         this.renderMediaList();
     }
 
