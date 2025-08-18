@@ -3472,8 +3472,35 @@
                 document.getElementById('routeMediaPrimary').checked = false;
                 mediaTypeSelect.value = 'auto';
 
-                // Reload media
-                await loadRouteMediaForEdit(getRouteId(currentRoute));
+                // Wait a moment for the server to process the upload
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Reload media with retry logic
+                let retryCount = 0;
+                const maxRetries = 3;
+                
+                while (retryCount < maxRetries) {
+                    try {
+                        console.log(`Reloading media, attempt ${retryCount + 1}`);
+                        await loadRouteMediaForEdit(getRouteId(currentRoute));
+                        break;
+                    } catch (error) {
+                        retryCount++;
+                        console.warn(`Media reload attempt ${retryCount} failed:`, error);
+                        if (retryCount < maxRetries) {
+                            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                        }
+                    }
+                }
+
+                // Also try to reload via the old function if it exists
+                if (typeof loadRouteMedia === 'function') {
+                    try {
+                        await loadRouteMedia(getRouteId(currentRoute));
+                    } catch (e) {
+                        console.warn('Old loadRouteMedia failed:', e);
+                    }
+                }
 
             } catch (error) {
                 console.error('Media upload error:', error);
@@ -3503,36 +3530,76 @@
         }
 
         async function loadRouteMediaForEdit(routeId) {
-            if (!routeId) return;
+            if (!routeId) {
+                console.warn('loadRouteMediaForEdit: No routeId provided');
+                return;
+            }
+
+            console.log('Loading media for route:', routeId);
 
             try {
                 const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
                     credentials: 'include'
                 });
+                
+                console.log('Media API response status:', response.status);
+                
                 const container = document.getElementById('routeCurrentMedia');
+                if (!container) {
+                    console.error('Media container not found: routeCurrentMedia');
+                    return;
+                }
+
                 if (!response.ok) {
-                    if (container) {
-                        container.innerHTML = '<div class="text-center text-muted py-3">Medya bilgileri yüklenemedi.</div>';
-                    }
+                    console.error('Media API error:', response.status, response.statusText);
+                    container.innerHTML = '<div class="text-center text-muted py-3">Medya bilgileri yüklenemedi. HTTP: ' + response.status + '</div>';
                     return;
                 }
 
                 const data = await response.json();
-                const mediaFiles = data.media || [];
+                console.log('Media API response data:', data);
+                
+                // Handle different possible response formats
+                let mediaFiles = [];
+                if (Array.isArray(data)) {
+                    mediaFiles = data;
+                } else if (Array.isArray(data.media)) {
+                    mediaFiles = data.media;
+                } else if (Array.isArray(data.files)) {
+                    mediaFiles = data.files;
+                } else if (data && typeof data === 'object') {
+                    // Try to find any array in the response
+                    Object.values(data).forEach(value => {
+                        if (Array.isArray(value)) {
+                            mediaFiles = value;
+                        }
+                    });
+                }
+
+                console.log('Processed media files:', mediaFiles);
 
                 // Update edit form current media
                 displayRouteCurrentMedia(mediaFiles, routeId);
 
             } catch (error) {
                 console.error('Error loading route media:', error);
+                const container = document.getElementById('routeCurrentMedia');
+                if (container) {
+                    container.innerHTML = '<div class="text-center text-danger py-3">Medya yüklenirken hata oluştu: ' + error.message + '</div>';
+                }
             }
         }
 
         function displayRouteCurrentMedia(mediaFiles, routeId) {
             const container = document.getElementById('routeCurrentMedia');
-            if (!container) return;
+            if (!container) {
+                console.error('Media container not found in displayRouteCurrentMedia');
+                return;
+            }
 
-            if (mediaFiles.length === 0) {
+            console.log('Displaying media files:', mediaFiles);
+
+            if (!Array.isArray(mediaFiles) || mediaFiles.length === 0) {
                 container.innerHTML = '<div class="text-center text-muted py-3">Henüz medya dosyası eklenmemiş.</div>';
                 return;
             }
@@ -3540,10 +3607,14 @@
             // Group media by type
             const groupedMedia = {};
             mediaFiles.forEach(media => {
-                const type = media.media_type || 'unknown';
+                if (!media) return; // Skip null/undefined items
+                
+                const type = media.media_type || media.type || 'unknown';
                 if (!groupedMedia[type]) groupedMedia[type] = [];
                 groupedMedia[type].push(media);
             });
+
+            console.log('Grouped media:', groupedMedia);
 
             let mediaHtml = '';
 
@@ -3564,10 +3635,15 @@
                 `;
 
                 groupedMedia[mediaType].forEach(media => {
-                    const rawPath = media.path || media.file_path || '';
-                    const filename = media.filename || rawPath.split('/').pop();
-                    const previewPath = media.preview_path || media.thumbnail_path || rawPath;
+                    if (!media) return;
+                    
+                    // Handle different path field names
+                    const rawPath = media.path || media.file_path || media.url || '';
+                    const filename = media.filename || media.name || rawPath.split('/').pop() || 'Unknown file';
+                    const previewPath = media.preview_path || media.thumbnail_path || media.thumb_path || rawPath;
                     const isImage = mediaType === 'image';
+
+                    console.log('Processing media item:', { media, rawPath, filename, previewPath, isImage });
 
                     mediaHtml += `
                         <div class="media-item-card">
@@ -3601,6 +3677,7 @@
             });
 
             container.innerHTML = mediaHtml;
+            console.log('Media display HTML set');
         }
 
         async function deleteRouteMediaFile(routeId, filename) {
@@ -4499,7 +4576,17 @@
 
                             <!-- Current Media Files -->
                             <div class="current-media-container">
-                                <h5><i class="fas fa-folder-open"></i> Mevcut Medya Dosyaları</h5>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="mb-0"><i class="fas fa-folder-open"></i> Mevcut Medya Dosyaları</h5>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshRouteMedia()" title="Medya listesini yenile">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="testMediaLoading()" title="Medya yükleme testi">
+                                            <i class="fas fa-bug"></i>
+                                        </button>
+                                    </div>
+                                </div>
                                 <div id="routeCurrentMedia" class="current-media-grid">
                                     <div class="loading-spinner">
                                         <div class="spinner"></div>
@@ -4518,18 +4605,20 @@
             // Load POIs for association
             loadPOIsForAssociation(getRouteId(route));
 
-            // Load existing media for route
-            if (typeof loadRouteMedia === 'function') {
-                loadRouteMedia(getRouteId(route));
-            }
+                    // Load existing media for route
+        if (typeof loadRouteMedia === 'function') {
+            loadRouteMedia(getRouteId(route));
+        }
 
-                    // Fotoğraf yükleme butonunun çalışması için medya dinleyicilerini kur
+        // Fotoğraf yükleme butonunun çalışması için medya dinleyicilerini kur
         if (window.routeAdminManager) {
             window.routeAdminManager.setupMediaHandlers();
         }
 
-        // Load existing media for route
-        loadRouteMediaForEdit(getRouteId(route));
+        // Load existing media for route - with delay to ensure DOM is ready
+        setTimeout(() => {
+            loadRouteMediaForEdit(getRouteId(route));
+        }, 100);
         
         // Load existing coordinates for route
         loadRouteCoordinates(getRouteId(route));
@@ -5070,6 +5159,16 @@
                     border-radius: 20px;
                     font-size: 0.85rem;
                     font-weight: 500;
+                }
+
+                .current-media-container .btn-group {
+                    gap: 0.25rem;
+                }
+
+                .current-media-container .btn-group .btn {
+                    min-width: auto;
+                    padding: 0.25rem 0.5rem;
+                    font-size: 0.8rem;
                 }
 
                 @media (max-width: 768px) {
@@ -5898,6 +5997,31 @@
             }
         }
 
+        // Refresh route media
+        async function refreshRouteMedia() {
+            if (!currentRoute) {
+                showNotification('Önce bir rota seçin', 'warning');
+                return;
+            }
+
+            const routeId = getRouteId(currentRoute);
+            console.log('Refreshing media for route:', routeId);
+            
+            // Show loading state
+            const container = document.getElementById('routeCurrentMedia');
+            if (container) {
+                container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Medya dosyaları yenileniyor...</p></div>';
+            }
+
+            try {
+                await loadRouteMediaForEdit(routeId);
+                showNotification('Medya listesi yenilendi', 'success');
+            } catch (error) {
+                console.error('Error refreshing media:', error);
+                showNotification('Medya yenilenirken hata oluştu', 'error');
+            }
+        }
+
         // Test function for debugging
         function testNearbyFeature() {
             console.log('🧪 TEST: Yakın POI özelliği test ediliyor');
@@ -5929,6 +6053,52 @@
                     console.error('API Test Hatası:', error);
                     alert(`❌ API Test Hatası!\n${error.message}`);
                 });
+        }
+
+        // Test media loading function
+        async function testMediaLoading() {
+            if (!currentRoute) {
+                alert('❌ currentRoute null! Önce bir rota seçin.');
+                return;
+            }
+
+            const routeId = getRouteId(currentRoute);
+            console.log('🧪 TEST: Media loading test for route:', routeId);
+
+            try {
+                const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
+                    credentials: 'include'
+                });
+
+                console.log('Media API response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: Object.fromEntries(response.headers.entries())
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Media API data:', data);
+                    
+                    // Test the display function
+                    const container = document.getElementById('routeCurrentMedia');
+                    if (container) {
+                        console.log('Media container found:', container);
+                        displayRouteCurrentMedia(data.media || data || [], routeId);
+                    } else {
+                        console.error('Media container not found');
+                    }
+                    
+                    alert(`🎉 Media Test Başarılı!\nResponse: ${JSON.stringify(data, null, 2)}`);
+                } else {
+                    const errorText = await response.text();
+                    console.error('Media API error:', errorText);
+                    alert(`❌ Media API Error: ${response.status}\n${errorText}`);
+                }
+            } catch (error) {
+                console.error('Media Test Error:', error);
+                alert(`❌ Media Test Error:\n${error.message}`);
+            }
         }
 
         // Save route changes (with CSRF)
