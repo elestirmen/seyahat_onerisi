@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Test Route Media Endpoints
-Rota medya yönetimi endpoint'lerini test etmek için
+Test script for route media endpoints
 """
 
 import requests
@@ -11,189 +10,216 @@ import os
 from pathlib import Path
 
 # Test configuration
-BASE_URL = "http://localhost:5560"
-API_BASE = f"{BASE_URL}/api"
+BASE_URL = "http://127.0.0.1:5560"  # Adjust this to your backend URL
+TEST_ROUTE_ID = 153  # Use the route ID from your error message
 
 def test_route_media_endpoints():
-    """Rota medya endpoint'lerini test et"""
-    print("🧪 Rota Medya Endpoint Testleri Başlatılıyor...")
-    print(f"📍 Test URL: {BASE_URL}")
-    print("=" * 60)
+    """Test all route media endpoints"""
+    print("🧪 Testing Route Media Endpoints")
+    print("=" * 50)
     
-    # Test 1: Route media upload endpoint
-    print("\n1️⃣ Route Media Upload Endpoint Testi")
-    print("-" * 40)
+    # Test 1: Check if route exists
+    print(f"\n1️⃣ Testing route existence...")
+    try:
+        response = requests.get(f"{BASE_URL}/api/routes/{TEST_ROUTE_ID}")
+        if response.status_code == 200:
+            route_data = response.json()
+            print(f"✅ Route {TEST_ROUTE_ID} exists: {route_data.get('name', 'Unknown')}")
+        else:
+            print(f"❌ Route {TEST_ROUTE_ID} not found (Status: {response.status_code})")
+            return
+    except Exception as e:
+        print(f"❌ Error checking route: {e}")
+        return
     
-    test_route_id = "153"  # Test için kullanılan rota ID
+    # Test 2: Test GET endpoint for route media
+    print(f"\n2️⃣ Testing GET /api/routes/{TEST_ROUTE_ID}/media...")
+    try:
+        response = requests.get(f"{BASE_URL}/api/routes/{TEST_ROUTE_ID}/media")
+        print(f"Status: {response.status_code}")
+        if response.status_code == 200:
+            media_data = response.json()
+            print(f"✅ GET endpoint working. Found {len(media_data)} media items")
+            if media_data:
+                print(f"   First item: {media_data[0]}")
+        else:
+            print(f"❌ GET endpoint failed: {response.text}")
+    except Exception as e:
+        print(f"❌ Error testing GET endpoint: {e}")
     
-    # Test dosyası oluştur
-    test_image_path = create_test_image()
+    # Test 3: Test admin GET endpoint for route media
+    print(f"\n3️⃣ Testing GET /api/admin/routes/{TEST_ROUTE_ID}/media...")
+    try:
+        response = requests.get(f"{BASE_URL}/api/admin/routes/{TEST_ROUTE_ID}/media")
+        print(f"Status: {response.status_code}")
+        if response.status_code == 200:
+            media_data = response.json()
+            print(f"✅ Admin GET endpoint working. Found {len(media_data)} media items")
+            if media_data:
+                print(f"   First item: {media_data[0]}")
+        else:
+            print(f"❌ Admin GET endpoint failed: {response.text}")
+    except Exception as e:
+        print(f"❌ Error testing admin GET endpoint: {e}")
     
-    if test_image_path:
+    # Test 4: Test POST endpoint for uploading route media
+    print(f"\n4️⃣ Testing POST /api/admin/routes/{TEST_ROUTE_ID}/media...")
+    
+    # Create a test image file
+    test_image_path = "test_route_image.jpg"
+    try:
+        # Create a simple test image using PIL if available
         try:
-            # Upload test
-            # The backend expects the uploaded file under the 'file' key.
-            # Using a different key causes the server to return a 404/HTML response
-            # which then fails JSON parsing on the client.
-            files = {
-                'file': ('test_image.jpg', open(test_image_path, 'rb'), 'image/jpeg')
-            }
-            
+            from PIL import Image
+            # Create a simple test image
+            img = Image.new('RGB', (100, 100), color='red')
+            img.save(test_image_path, 'JPEG')
+            print(f"✅ Created test image: {test_image_path}")
+        except ImportError:
+            # If PIL is not available, create a dummy file
+            with open(test_image_path, 'wb') as f:
+                f.write(b'fake image data')
+            print(f"✅ Created dummy test file: {test_image_path}")
+        
+        # Test file upload
+        with open(test_image_path, 'rb') as f:
+            files = {'file': (test_image_path, f, 'image/jpeg')}
             data = {
-                'caption': 'Test route media',
+                'caption': 'Test route media upload',
                 'is_primary': 'false',
-                'lat': '38.7312',
-                'lng': '34.4547'
+                'lat': '38.6295',
+                'lng': '34.7146'
             }
             
             response = requests.post(
-                f"{API_BASE}/admin/routes/{test_route_id}/media",
+                f"{BASE_URL}/api/admin/routes/{TEST_ROUTE_ID}/media",
                 files=files,
                 data=data
             )
             
-            print(f"📤 Upload Response Status: {response.status_code}")
-            print(f"📤 Upload Response: {response.text[:200]}...")
-            
-            if response.status_code == 201:
-                print("✅ Upload endpoint çalışıyor!")
-            elif response.status_code == 404:
-                print("⚠️ Upload endpoint henüz aktif değil (404)")
+            print(f"Status: {response.status_code}")
+            if response.status_code == 200:
+                result = response.json()
+                print(f"✅ POST endpoint working. Media uploaded successfully")
+                print(f"   Media info: {result.get('media', {})}")
             else:
-                print(f"❌ Upload endpoint hatası: {response.status_code}")
+                print(f"❌ POST endpoint failed: {response.text}")
                 
-        except Exception as e:
-            print(f"❌ Upload test hatası: {e}")
-        finally:
-            # Test dosyasını temizle
-            if os.path.exists(test_image_path):
-                os.remove(test_image_path)
+    except Exception as e:
+        print(f"❌ Error testing POST endpoint: {e}")
     
-    # Test 2: Route media get endpoint
-    print("\n2️⃣ Route Media Get Endpoint Testi")
-    print("-" * 40)
+    finally:
+        # Clean up test file
+        if os.path.exists(test_image_path):
+            os.remove(test_image_path)
+            print(f"🧹 Cleaned up test file: {test_image_path}")
     
+    # Test 5: Test DELETE endpoint (if we have media to delete)
+    print(f"\n5️⃣ Testing DELETE endpoint...")
     try:
-        response = requests.get(f"{API_BASE}/admin/routes/{test_route_id}/media")
-        
-        print(f"📥 Get Response Status: {response.status_code}")
-        print(f"📥 Get Response: {response.text[:200]}...")
-        
+        # First get the media to see what we can delete
+        response = requests.get(f"{BASE_URL}/api/admin/routes/{TEST_ROUTE_ID}/media")
         if response.status_code == 200:
-            print("✅ Get endpoint çalışıyor!")
-        elif response.status_code == 404:
-            print("⚠️ Get endpoint henüz aktif değil (404)")
+            media_data = response.json()
+            if media_data:
+                # Try to delete the first media item
+                first_media = media_data[0]
+                filename = first_media.get('filename', '')
+                if filename:
+                    print(f"   Attempting to delete: {filename}")
+                    delete_response = requests.delete(
+                        f"{BASE_URL}/api/admin/routes/{TEST_ROUTE_ID}/media/{filename}"
+                    )
+                    print(f"   Delete status: {delete_response.status_code}")
+                    if delete_response.status_code == 200:
+                        print(f"✅ DELETE endpoint working")
+                    else:
+                        print(f"❌ DELETE endpoint failed: {delete_response.text}")
+                else:
+                    print("   No filename found in media data")
+            else:
+                print("   No media items to delete")
         else:
-            print(f"❌ Get endpoint hatası: {response.status_code}")
-            
+            print("   Could not fetch media for deletion test")
     except Exception as e:
-        print(f"❌ Get test hatası: {e}")
+        print(f"❌ Error testing DELETE endpoint: {e}")
     
-    # Test 3: Route media delete endpoint
-    print("\n3️⃣ Route Media Delete Endpoint Testi")
-    print("-" * 40)
-    
-    test_media_id = "test123"
-    
-    try:
-        response = requests.delete(f"{API_BASE}/admin/routes/{test_route_id}/media/{test_media_id}")
-        
-        print(f"🗑️ Delete Response Status: {response.status_code}")
-        print(f"🗑️ Delete Response: {response.text[:200]}...")
-        
-        if response.status_code == 200:
-            print("✅ Delete endpoint çalışıyor!")
-        elif response.status_code == 404:
-            print("⚠️ Delete endpoint henüz aktif değil (404)")
-        else:
-            print(f"❌ Delete endpoint hatası: {response.status_code}")
-            
-    except Exception as e:
-        print(f"❌ Delete test hatası: {e}")
-    
-    print("\n" + "=" * 60)
-    print("🏁 Test tamamlandı!")
-
-def create_test_image():
-    """Test için basit bir JPEG dosyası oluştur"""
-    try:
-        from PIL import Image
-        
-        # 100x100 boyutunda basit bir test görseli oluştur
-        img = Image.new('RGB', (100, 100), color='red')
-        
-        # Test dosyası yolu
-        test_path = "test_route_image.jpg"
-        
-        # JPEG olarak kaydet
-        img.save(test_path, 'JPEG', quality=85)
-        
-        print(f"📸 Test görseli oluşturuldu: {test_path}")
-        return test_path
-        
-    except ImportError:
-        print("⚠️ PIL kütüphanesi bulunamadı, test görseli oluşturulamadı")
-        return None
-    except Exception as e:
-        print(f"❌ Test görseli oluşturma hatası: {e}")
-        return None
+    print(f"\n🎯 Route Media Endpoint Tests Complete!")
+    print("=" * 50)
 
 def test_media_manager():
-    """Media manager'ın rota medya fonksiyonlarını test et"""
-    print("\n🔧 Media Manager Rota Fonksiyonları Testi")
-    print("-" * 50)
+    """Test the POIMediaManager directly"""
+    print("\n🔧 Testing POIMediaManager Directly")
+    print("=" * 50)
     
     try:
         from poi_media_manager import POIMediaManager
         
-        # Media manager instance'ı oluştur
+        # Initialize media manager
         manager = POIMediaManager()
+        print("✅ POIMediaManager initialized successfully")
         
-        # Klasör yapısını kontrol et
-        print("📁 Klasör yapısı kontrol ediliyor...")
+        # Test directory creation
+        print("\n📁 Testing directory creation...")
+        manager.ensure_directories()
         
-        base_path = Path(manager.base_path)
-        route_media_dir = base_path / "by_route_id"
-        
-        if route_media_dir.exists():
-            print(f"✅ Route media klasörü mevcut: {route_media_dir}")
+        # Check if route directories exist
+        route_dir = manager.base_path / "by_route_id"
+        if route_dir.exists():
+            print(f"✅ Route directory exists: {route_dir}")
         else:
-            print(f"❌ Route media klasörü bulunamadı: {route_media_dir}")
+            print(f"❌ Route directory missing: {route_dir}")
         
-        # Test rota ID'si için klasör oluştur
-        test_route_dir = route_media_dir / "test123"
-        test_route_dir.mkdir(parents=True, exist_ok=True)
+        # Test route media methods
+        print("\n📸 Testing route media methods...")
         
-        if test_route_dir.exists():
-            print(f"✅ Test rota klasörü oluşturuldu: {test_route_dir}")
-        else:
-            print(f"❌ Test rota klasörü oluşturulamadı")
+        # Test get_route_media
+        route_media = manager.get_route_media(TEST_ROUTE_ID)
+        print(f"✅ get_route_media returned {len(route_media)} items")
         
-        # Test klasörünü temizle
-        import shutil
-        if test_route_dir.exists():
-            shutil.rmtree(test_route_dir)
-            print(f"🧹 Test klasörü temizlendi")
+        # Test add_route_media with a dummy file
+        test_file = "test_route_media.txt"
+        try:
+            with open(test_file, 'w') as f:
+                f.write("Test content")
+            
+            media_info = manager.add_route_media(
+                route_id=TEST_ROUTE_ID,
+                route_name="Test Route",
+                media_file_path=test_file,
+                caption="Test caption",
+                is_primary=False
+            )
+            
+            if media_info:
+                print(f"✅ add_route_media working: {media_info.get('filename', 'Unknown')}")
+                
+                # Test delete_route_media
+                if manager.delete_route_media(TEST_ROUTE_ID, media_info['filename']):
+                    print(f"✅ delete_route_media working")
+                else:
+                    print(f"❌ delete_route_media failed")
+            else:
+                print(f"❌ add_route_media failed")
+                
+        finally:
+            # Clean up test file
+            if os.path.exists(test_file):
+                os.remove(test_file)
+                print(f"🧹 Cleaned up test file: {test_file}")
         
-        print("✅ Media manager rota fonksiyonları test edildi")
-        
-    except ImportError as e:
-        print(f"❌ Media manager import hatası: {e}")
     except Exception as e:
-        print(f"❌ Media manager test hatası: {e}")
+        print(f"❌ Error testing POIMediaManager: {e}")
 
 if __name__ == "__main__":
-    print("🚀 Rota Medya Endpoint Testleri")
-    print("=" * 60)
+    print("🚀 Starting Route Media Endpoint Tests")
+    print(f"📍 Base URL: {BASE_URL}")
+    print(f"📍 Test Route ID: {TEST_ROUTE_ID}")
     
-    # Media manager testi
+    # Test the media manager directly
     test_media_manager()
     
-    # Endpoint testleri
+    # Test the API endpoints
     test_route_media_endpoints()
     
-    print("\n📋 Test Sonuçları:")
-    print("✅ 200: Endpoint çalışıyor")
-    print("⚠️ 404: Endpoint henüz aktif değil")
-    print("❌ Diğer: Endpoint hatası")
-    print("\n💡 404 hatası alıyorsanız, backend'i yeniden başlatın")
+    print("\n✨ All tests completed!")

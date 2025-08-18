@@ -13,6 +13,7 @@ from typing import List, Dict, Optional, Tuple, Union
 import uuid
 from pathlib import Path
 import mimetypes
+from datetime import datetime
 
 class POIMediaManager:
     # Desteklenen medya formatları
@@ -50,15 +51,20 @@ class POIMediaManager:
         self.ensure_directories()
     
     def ensure_directories(self):
-        """Gerekli klasörleri oluştur - Sadece POI ID bazlı yapı"""
+        """Gerekli klasörleri oluştur - POI ID ve Route ID bazlı yapı"""
         self.base_path.mkdir(exist_ok=True)
         self.thumbnails_path.mkdir(exist_ok=True)
         self.previews_path.mkdir(exist_ok=True)
         
-        # POI ID bazlı klasörleri oluştur (tek kullanılan yapı)
+        # POI ID bazlı klasörleri oluştur
         (self.base_path / "by_poi_id").mkdir(exist_ok=True)
         (self.thumbnails_path / "by_poi_id").mkdir(exist_ok=True)
         (self.previews_path / "by_poi_id").mkdir(exist_ok=True)
+        
+        # Route ID bazlı klasörleri oluştur
+        (self.base_path / "by_route_id").mkdir(exist_ok=True)
+        (self.thumbnails_path / "by_route_id").mkdir(exist_ok=True)
+        (self.previews_path / "by_route_id").mkdir(exist_ok=True)
     
     def cleanup_unused_directories(self):
         """Kullanılmayan eski medya türü klasörlerini temizle"""
@@ -536,6 +542,393 @@ class POIMediaManager:
                 info['image_error'] = str(e)
         
         return info
+
+    # --- Route Media Management Methods ---
+    
+    def add_route_media(self, route_id: int, route_name: str, media_file_path: str, 
+                        caption: str = '', is_primary: bool = False, lat: float = None, lng: float = None) -> Optional[Dict]:
+        """
+        Rota için medya dosyası ekle
+        
+        Args:
+            route_id: Rota ID'si
+            route_name: Rota adı (klasör oluşturmak için)
+            media_file_path: Medya dosyasının yolu
+            caption: Medya açıklaması
+            is_primary: Ana medya mı?
+            lat: Enlem (opsiyonel)
+            lng: Boylam (opsiyonel)
+            
+        Returns:
+            Başarılı olursa medya bilgileri, başarısız olursa None
+        """
+        try:
+            if not os.path.exists(media_file_path):
+                print(f"❌ Medya dosyası bulunamadı: {media_file_path}")
+                return None
+            
+            # Medya türünü tespit et
+            media_type = self.detect_media_type(media_file_path)
+            if not media_type:
+                print(f"❌ Desteklenmeyen medya formatı: {media_file_path}")
+                return None
+            
+            # Dosya boyutunu kontrol et
+            file_size = os.path.getsize(media_file_path)
+            max_size = self.SUPPORTED_FORMATS[media_type]['max_size']
+            if file_size > max_size:
+                print(f"❌ Dosya boyutu çok büyük: {file_size/1024/1024:.1f}MB > {max_size/1024/1024:.0f}MB")
+                return None
+            
+            # Rota klasörlerini oluştur
+            route_folder = f"route_{route_id}_{route_name.replace(' ', '_')}"
+            base_route_dir = self.base_path / "by_route_id" / route_folder
+            base_thumb_dir = self.thumbnails_path / "by_route_id" / route_folder
+            base_preview_dir = self.previews_path / "by_route_id" / route_folder
+            
+            base_route_dir.mkdir(parents=True, exist_ok=True)
+            base_thumb_dir.mkdir(parents=True, exist_ok=True)
+            base_preview_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Medya türü klasörünü oluştur
+            media_type_folder = self.SUPPORTED_FORMATS[media_type]['folder']
+            media_dir = base_route_dir / media_type_folder
+            thumb_dir = base_thumb_dir / media_type_folder
+            preview_dir = base_preview_dir / media_type_folder
+            
+            media_dir.mkdir(exist_ok=True)
+            thumb_dir.mkdir(exist_ok=True)
+            preview_dir.mkdir(exist_ok=True)
+            
+            # Dosyayı kopyala
+            filename = Path(media_file_path).name
+            safe_filename = self._generate_safe_filename(filename, media_dir)
+            destination_path = media_dir / safe_filename
+            
+            shutil.copy2(media_file_path, destination_path)
+            print(f"✅ Medya dosyası kopyalandı: {destination_path}")
+            
+            # Thumbnail ve preview oluştur
+            thumbnail_path = None
+            preview_path = None
+            
+            if media_type == 'image':
+                thumbnail_path = self._create_image_thumbnail(destination_path, thumb_dir)
+                preview_path = self._create_image_preview(destination_path, preview_dir)
+            elif media_type == 'video':
+                thumbnail_path = self._create_video_thumbnail(destination_path, thumb_dir)
+                preview_path = self._create_video_preview(destination_path, preview_dir)
+            elif media_type == 'audio':
+                thumbnail_path = self._create_audio_thumbnail(destination_path, thumb_dir)
+                preview_path = self._create_audio_preview(destination_path, preview_dir)
+            elif media_type == 'model_3d':
+                thumbnail_path = self._create_3d_model_thumbnail(destination_path, thumb_dir)
+                preview_path = self._create_3d_model_preview(destination_path, preview_dir)
+            
+            # Medya bilgilerini döndür
+            media_info = {
+                'id': str(uuid.uuid4()),
+                'route_id': route_id,
+                'file_path': str(destination_path),
+                'thumbnail_path': str(thumbnail_path) if thumbnail_path else None,
+                'preview_path': str(preview_path) if preview_path else None,
+                'filename': safe_filename,
+                'original_filename': filename,
+                'media_type': media_type,
+                'file_size': file_size,
+                'caption': caption,
+                'is_primary': is_primary,
+                'lat': lat,
+                'lng': lng,
+                'uploaded_at': datetime.now().isoformat(),
+                'compression_ratio': "0%"  # Route media doesn't have compression
+            }
+            
+            print(f"✅ Rota medyası başarıyla eklendi: {media_info['filename']}")
+            return media_info
+            
+        except Exception as e:
+            print(f"❌ Rota medyası ekleme hatası: {e}")
+            return None
+    
+    def get_route_media(self, route_id: int) -> List[Dict]:
+        """
+        Rota için tüm medya dosyalarını getir
+        
+        Args:
+            route_id: Rota ID'si
+            
+        Returns:
+            Medya dosyalarının listesi
+        """
+        try:
+            route_media = []
+            
+            # Rota klasörünü bul
+            base_route_dir = self.base_path / "by_route_id"
+            if not base_route_dir.exists():
+                return []
+            
+            # Rota ID'si ile başlayan klasörleri ara
+            for route_folder in base_route_dir.iterdir():
+                if route_folder.name.startswith(f"route_{route_id}_"):
+                    # Her medya türü klasöründe dosyaları ara
+                    for media_type, config in self.SUPPORTED_FORMATS.items():
+                        media_dir = route_folder / config['folder']
+                        if media_dir.exists():
+                            for media_file in media_dir.iterdir():
+                                if media_file.is_file():
+                                    # Thumbnail ve preview yollarını bul
+                                    file_stem = media_file.stem
+                                    thumb_dir = self.thumbnails_path / "by_route_id" / route_folder.name / config['folder']
+                                    preview_dir = self.previews_path / "by_route_id" / route_folder.name / config['folder']
+                                    
+                                    thumbnail_path = None
+                                    preview_path = None
+                                    
+                                    if media_type == 'image':
+                                        thumb_file = thumb_dir / f"thumb_{file_stem}.webp"
+                                        if thumb_file.exists():
+                                            thumbnail_path = str(thumb_file)
+                                        preview_file = preview_dir / f"preview_{file_stem}.webp"
+                                        if preview_file.exists():
+                                            preview_path = str(preview_file)
+                                    else:
+                                        thumb_file = thumb_dir / f"thumb_{file_stem}.png"
+                                        if thumb_file.exists():
+                                            thumbnail_path = str(thumb_file)
+                                        preview_file = preview_dir / f"preview_{file_stem}.png"
+                                        if preview_file.exists():
+                                            preview_path = str(preview_file)
+                                    
+                                    media_info = {
+                                        'id': str(uuid.uuid4()),  # Generate new ID for each request
+                                        'route_id': route_id,
+                                        'file_path': str(media_file),
+                                        'thumbnail_path': thumbnail_path,
+                                        'preview_path': preview_path,
+                                        'filename': media_file.name,
+                                        'media_type': media_type,
+                                        'file_size': media_file.stat().st_size,
+                                        'caption': '',  # Route media doesn't store captions in filename
+                                        'is_primary': False,  # Route media doesn't have primary flag
+                                        'lat': None,  # Route media doesn't store coordinates
+                                        'lng': None,
+                                        'uploaded_at': datetime.fromtimestamp(media_file.stat().st_mtime).isoformat()
+                                    }
+                                    route_media.append(media_info)
+            
+            return route_media
+            
+        except Exception as e:
+            print(f"❌ Rota medyası getirme hatası: {e}")
+            return []
+    
+    def delete_route_media(self, route_id: int, filename: str) -> bool:
+        """
+        Rota medyasını sil
+        
+        Args:
+            route_id: Rota ID'si
+            filename: Silinecek dosya adı
+            
+        Returns:
+            Başarılı olursa True, başarısız olursa False
+        """
+        try:
+            # Rota klasörünü bul
+            base_route_dir = self.base_path / "by_route_id"
+            if not base_route_dir.exists():
+                return False
+            
+            # Rota ID'si ile başlayan klasörleri ara
+            for route_folder in base_route_dir.iterdir():
+                if route_folder.name.startswith(f"route_{route_id}_"):
+                    # Her medya türü klasöründe dosyayı ara
+                    for media_type, config in self.SUPPORTED_FORMATS.items():
+                        media_dir = route_folder / config['folder']
+                        media_path = media_dir / filename
+                        
+                        if media_path.exists() and media_path.is_file():
+                            # Ana dosyayı sil
+                            media_path.unlink()
+                            print(f"✅ Rota medyası silindi: {media_path}")
+                            
+                            # Thumbnail ve preview dosyalarını da sil
+                            file_stem = Path(filename).stem
+                            thumb_dir = self.thumbnails_path / "by_route_id" / route_folder.name / config['folder']
+                            preview_dir = self.previews_path / "by_route_id" / route_folder.name / config['folder']
+                            
+                            if media_type == 'image':
+                                thumb_file = thumb_dir / f"thumb_{file_stem}.webp"
+                                preview_file = preview_dir / f"preview_{file_stem}.webp"
+                            else:
+                                thumb_file = thumb_dir / f"thumb_{file_stem}.png"
+                                preview_file = preview_dir / f"preview_{file_stem}.png"
+                            
+                            if thumb_file.exists():
+                                thumb_file.unlink()
+                                print(f"✅ Thumbnail silindi: {thumb_file}")
+                            
+                            if preview_file.exists():
+                                preview_file.unlink()
+                                print(f"✅ Preview silindi: {preview_file}")
+                            
+                            return True
+            
+            print(f"⚠️ Silinecek rota medyası bulunamadı: {filename}")
+            return False
+            
+        except Exception as e:
+            print(f"❌ Rota medyası silme hatası: {e}")
+            return False
+
+    def _generate_safe_filename(self, filename: str, directory: Path) -> str:
+        """Güvenli dosya adı oluştur (çakışma olmaması için)"""
+        base_name = Path(filename).stem
+        extension = Path(filename).suffix
+        counter = 1
+        
+        new_filename = filename
+        while (directory / new_filename).exists():
+            new_filename = f"{base_name}_{counter}{extension}"
+            counter += 1
+        
+        return new_filename
+
+    def _create_image_thumbnail(self, image_path: Path, thumb_dir: Path) -> Optional[Path]:
+        """Görsel için thumbnail oluştur"""
+        try:
+            with Image.open(image_path) as img:
+                # Thumbnail boyutunu ayarla
+                img.thumbnail((200, 200), Image.Resampling.LANCZOS)
+                
+                # Thumbnail dosya adını oluştur
+                thumb_filename = f"thumb_{image_path.stem}.webp"
+                thumb_path = thumb_dir / thumb_filename
+                
+                # WebP formatında kaydet
+                img.save(thumb_path, 'WEBP', quality=85, optimize=True)
+                print(f"✅ Thumbnail oluşturuldu: {thumb_path}")
+                return thumb_path
+        except Exception as e:
+            print(f"❌ Thumbnail oluşturma hatası: {e}")
+            return None
+
+    def _create_image_preview(self, image_path: Path, preview_dir: Path) -> Optional[Path]:
+        """Görsel için preview oluştur"""
+        try:
+            with Image.open(image_path) as img:
+                # Preview boyutunu ayarla
+                img.thumbnail((800, 600), Image.Resampling.LANCZOS)
+                
+                # Preview dosya adını oluştur
+                preview_filename = f"preview_{image_path.stem}.webp"
+                preview_path = preview_dir / preview_filename
+                
+                # WebP formatında kaydet
+                img.save(preview_path, 'WEBP', quality=90, optimize=True)
+                print(f"✅ Preview oluşturuldu: {preview_path}")
+                return preview_path
+        except Exception as e:
+            print(f"❌ Preview oluşturma hatası: {e}")
+            return None
+
+    def _create_video_thumbnail(self, video_path: Path, thumb_dir: Path) -> Optional[Path]:
+        """Video için thumbnail oluştur (basit placeholder)"""
+        try:
+            # Video thumbnail için basit bir placeholder oluştur
+            thumb_filename = f"thumb_{video_path.stem}.png"
+            thumb_path = thumb_dir / thumb_filename
+            
+            # Basit bir placeholder görsel oluştur
+            img = Image.new('RGB', (200, 200), color='#2563eb')
+            img.save(thumb_path, 'PNG')
+            print(f"✅ Video thumbnail oluşturuldu: {thumb_path}")
+            return thumb_path
+        except Exception as e:
+            print(f"❌ Video thumbnail oluşturma hatası: {e}")
+            return None
+
+    def _create_video_preview(self, video_path: Path, preview_dir: Path) -> Optional[Path]:
+        """Video için preview oluştur (basit placeholder)"""
+        try:
+            # Video preview için basit bir placeholder oluştur
+            preview_filename = f"preview_{video_path.stem}.png"
+            preview_path = preview_dir / preview_filename
+            
+            # Basit bir placeholder görsel oluştur
+            img = Image.new('RGB', (800, 600), color='#2563eb')
+            img.save(preview_path, 'PNG')
+            print(f"✅ Video preview oluşturuldu: {preview_path}")
+            return preview_path
+        except Exception as e:
+            print(f"❌ Video preview oluşturma hatası: {e}")
+            return None
+
+    def _create_audio_thumbnail(self, audio_path: Path, thumb_dir: Path) -> Optional[Path]:
+        """Ses dosyası için thumbnail oluştur (basit placeholder)"""
+        try:
+            # Ses dosyası thumbnail için basit bir placeholder oluştur
+            thumb_filename = f"thumb_{audio_path.stem}.png"
+            thumb_path = thumb_dir / thumb_filename
+            
+            # Basit bir placeholder görsel oluştur
+            img = Image.new('RGB', (200, 200), color='#059669')
+            img.save(thumb_path, 'PNG')
+            print(f"✅ Ses dosyası thumbnail oluşturuldu: {thumb_path}")
+            return thumb_path
+        except Exception as e:
+            print(f"❌ Ses dosyası thumbnail oluşturma hatası: {e}")
+            return None
+
+    def _create_audio_preview(self, audio_path: Path, preview_dir: Path) -> Optional[Path]:
+        """Ses dosyası için preview oluştur (basit placeholder)"""
+        try:
+            # Ses dosyası preview için basit bir placeholder oluştur
+            preview_filename = f"preview_{audio_path.stem}.png"
+            preview_path = preview_dir / preview_filename
+            
+            # Basit bir placeholder görsel oluştur
+            img = Image.new('RGB', (800, 600), color='#059669')
+            img.save(preview_path, 'PNG')
+            print(f"✅ Ses dosyası preview oluşturuldu: {preview_path}")
+            return preview_path
+        except Exception as e:
+            print(f"❌ Ses dosyası preview oluşturma hatası: {e}")
+            return None
+
+    def _create_3d_model_thumbnail(self, model_path: Path, thumb_dir: Path) -> Optional[Path]:
+        """3D model için thumbnail oluştur (basit placeholder)"""
+        try:
+            # 3D model thumbnail için basit bir placeholder oluştur
+            thumb_filename = f"thumb_{model_path.stem}.png"
+            thumb_path = thumb_dir / thumb_filename
+            
+            # Basit bir placeholder görsel oluştur
+            img = Image.new('RGB', (200, 200), color='#dc2626')
+            img.save(thumb_path, 'PNG')
+            print(f"✅ 3D model thumbnail oluşturuldu: {thumb_path}")
+            return thumb_path
+        except Exception as e:
+            print(f"❌ 3D model thumbnail oluşturma hatası: {e}")
+            return None
+
+    def _create_3d_model_preview(self, model_path: Path, preview_dir: Path) -> Optional[Path]:
+        """3D model için preview oluştur (basit placeholder)"""
+        try:
+            # 3D model preview için basit bir placeholder oluştur
+            preview_filename = f"preview_{model_path.stem}.png"
+            preview_path = preview_dir / preview_filename
+            
+            # Basit bir placeholder görsel oluştur
+            img = Image.new('RGB', (800, 600), color='#dc2626')
+            img.save(preview_path, 'PNG')
+            print(f"✅ 3D model preview oluşturuldu: {preview_path}")
+            return preview_path
+        except Exception as e:
+            print(f"❌ 3D model preview oluşturma hatası: {e}")
+            return None
 
 
 # Geriye uyumluluk için POIImageManager takma adı

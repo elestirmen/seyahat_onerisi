@@ -4029,62 +4029,219 @@ def get_route_geometry(route_id):
 @app.get('/api/routes/<int:route_id>/media')
 def get_route_media(route_id: int):
     """Return media items for a route."""
-    conn = None
     try:
-        conn = get_db_conn()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        # Check if route exists
+        conn = None
         try:
+            conn = get_db_conn()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("SELECT 1 FROM public.routes WHERE id=%s", (route_id,))
             if cur.fetchone() is None:
                 abort(404, description="Route not found")
-
-
-            cur.execute(
-                """
-                SELECT
-                    id,
-                    route_id,
-                    file_path,
-                    thumbnail_path,
-                    lat,
-                    lng,
-                    caption,
-                    is_primary,
-                    media_type,
-                    uploaded_at
-                FROM public.route_media
-
-                WHERE route_id=%s
-                ORDER BY is_primary DESC, uploaded_at DESC, id DESC
-                """,
-                (route_id,),
-            )
-            rows = cur.fetchall() or []
-            out = [
-                {
-                    "id": r["id"],
-                    "route_id": r["route_id"],
-                    "file_path": r["file_path"],
-                    "thumbnail_path": r["thumbnail_path"],
-                    "latitude": r["lat"],
-                    "longitude": r["lng"],
-                    "caption": r["caption"],
-                    "is_primary": r["is_primary"],
-                    "media_type": r["media_type"],
-                    "uploaded_at": r["uploaded_at"],
-                }
-                for r in rows
-            ]
-            return jsonify(out)
         finally:
-            cur.close()
-    except psycopg2.Error as e:
-        logger.error(f"Database error fetching route media {route_id}: {e}")
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+        
+        # Use the media manager to get route media
+        media_manager = POIMediaManager()
+        route_media = media_manager.get_route_media(route_id)
+        
+        return jsonify(route_media)
+        
+    except Exception as e:
+        logger.error(f"Error fetching route media {route_id}: {e}")
         abort(500, "Database error")
-    finally:
-        if conn:
-            conn.close()
 
+@app.get('/api/admin/routes/<int:route_id>/media')
+def get_admin_route_media(route_id: int):
+    """Return media items for a route (admin endpoint)"""
+    try:
+        # Check if route exists
+        conn = None
+        try:
+            conn = get_db_conn()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("SELECT 1 FROM public.routes WHERE id=%s", (route_id,))
+            if cur.fetchone() is None:
+                abort(404, description="Route not found")
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+        
+        # Use the media manager to get route media
+        media_manager = POIMediaManager()
+        route_media = media_manager.get_route_media(route_id)
+        
+        return jsonify(route_media)
+        
+    except Exception as e:
+        logger.error(f"Error fetching admin route media {route_id}: {e}")
+        abort(500, "Database error")
+
+
+# --- Acceptance (manual) tests (do not run automatically) ---
+# curl -i http://127.0.0.1:5560/api/routes/153/media
+# Expect 404 if route 153 doesn't exist; 200 [] if exists but no media; 200 JSON array otherwise.
+
+@app.post('/api/admin/routes/<int:route_id>/media')
+@admin_rate_limit(max_requests=10, window_seconds=60)
+def upload_route_media(route_id: int):
+    """Upload media for a route"""
+    try:
+        # Check if route exists
+        conn = None
+        try:
+            conn = get_db_conn()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Check if route exists
+            cur.execute("SELECT id, name FROM public.routes WHERE id=%s", (route_id,))
+            route = cur.fetchone()
+            if not route:
+                return jsonify({
+                    'success': False,
+                    'error': 'Route not found'
+                }), 404
+            
+            route_name = route['name']
+            
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+        
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'No file provided'
+            }), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'error': 'No file selected'
+            }), 400
+        
+        # Get form data
+        caption = request.form.get('caption', '')
+        is_primary = request.form.get('is_primary', 'false').lower() == 'true'
+        lat = request.form.get('lat')
+        lng = request.form.get('lng')
+        
+        # Convert coordinates if provided
+        latitude = None
+        longitude = None
+        if lat and lng:
+            try:
+                latitude = float(lat)
+                longitude = float(lng)
+            except ValueError:
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid coordinates provided'
+                }), 400
+        
+        # Save file temporarily
+        temp_dir = tempfile.mkdtemp()
+        temp_file_path = os.path.join(temp_dir, secure_filename(file.filename))
+        file.save(temp_file_path)
+        
+        try:
+            # Initialize media manager
+            media_manager = POIMediaManager()
+            
+            # Add route media
+            media_info = media_manager.add_route_media(
+                route_id=route_id,
+                route_name=route_name,
+                media_file_path=temp_file_path,
+                caption=caption,
+                is_primary=is_primary,
+                lat=latitude,
+                lng=longitude
+            )
+            
+            if not media_info:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to process media file'
+                }), 500
+            
+            # Return success response
+            return jsonify({
+                'success': True,
+                'message': 'Media uploaded successfully',
+                'media': media_info
+            }), 200
+            
+        finally:
+            # Clean up temporary file
+            try:
+                os.remove(temp_file_path)
+                os.rmdir(temp_dir)
+            except Exception as e:
+                logger.warning(f"Failed to clean up temporary file: {e}")
+        
+    except Exception as e:
+        logger.error(f"Error uploading route media: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error uploading media: {str(e)}'
+        }), 500
+
+@app.delete('/api/admin/routes/<int:route_id>/media/<filename>')
+@admin_rate_limit(max_requests=10, window_seconds=60)
+def delete_route_media(route_id: int, filename: str):
+    """Delete media for a route"""
+    try:
+        # Check if route exists
+        conn = None
+        try:
+            conn = get_db_conn()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Check if route exists
+            cur.execute("SELECT id FROM public.routes WHERE id=%s", (route_id,))
+            if not cur.fetchone():
+                return jsonify({
+                    'success': False,
+                    'error': 'Route not found'
+                }), 404
+            
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+        
+        # Initialize media manager
+        media_manager = POIMediaManager()
+        
+        # Delete route media
+        if media_manager.delete_route_media(route_id, filename):
+            return jsonify({
+                'success': True,
+                'message': 'Media deleted successfully'
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Media not found or could not be deleted'
+            }), 404
+        
+    except Exception as e:
+        logger.error(f"Error deleting route media: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error deleting media: {str(e)}'
+        }), 500
 
 # --- Acceptance (manual) tests (do not run automatically) ---
 # curl -i http://127.0.0.1:5560/api/routes/153/media
