@@ -26,9 +26,10 @@ class RouteAdminManager {
         // Use explicit API base path to avoid relative URL issues when the admin
         // panel is served from subdirectories (e.g. /admin)
         this.apiBase = window.apiBase || '/api';
-        // Create a dedicated API client instance without a default base URL so
-        // that we can explicitly prefix requests with this.apiBase
-        this.apiClient = new window.APIClient('');
+        if (window.apiClient) {
+            window.apiClient.baseURL = this.apiBase;
+        }
+        
 
         // Form validation rules
         this.validationRules = {
@@ -117,7 +118,7 @@ class RouteAdminManager {
 
         try {
             console.log('📥 Loading routes for admin...');
-            const data = await this.apiClient.get(`${this.apiBase}/admin/routes`);
+            const data = await window.apiClient.get('/admin/routes');
 
 
             if (data && Array.isArray(data.routes)) {
@@ -145,7 +146,7 @@ class RouteAdminManager {
     async loadAvailablePOIs() {
         try {
             console.log('📥 Loading available POIs...');
-            const data = await this.apiClient.get(`${this.apiBase}/pois`);
+            const data = await window.apiClient.get('/pois');
 
 
             const poiData = data?.pois || data;
@@ -430,7 +431,7 @@ class RouteAdminManager {
         formData.append('lat', e.latlng.lat);
         formData.append('lng', e.latlng.lng);
         try {
-            const data = await this.apiClient.upload(`${this.apiBase}/admin/routes/${routeId}/media`, formData);
+            const data = await window.apiClient.upload(`/admin/routes/${routeId}/media`, formData);
 
             if (data && (data.media || data)) {
                 const media = data.media || data;
@@ -452,7 +453,8 @@ class RouteAdminManager {
     async loadRouteMedia(routeId) {
         const url = `${this.apiBase}/routes/${routeId}/media`;
         try {
-            const data = await this.apiClient.get(url);
+            const data = await window.apiClient.get(`/routes/${routeId}/media`);
+
             const mediaList = data.media || data || [];
             this.routeMedia = Array.isArray(mediaList) ? mediaList : [];
         } catch (err) {
