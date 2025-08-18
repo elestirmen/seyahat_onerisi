@@ -28,7 +28,7 @@ class RouteAdminManager {
         // Create a dedicated API client instance without a default base URL so
         // that we can explicitly prefix requests with this.apiBase
         this.apiClient = new window.APIClient('');
-        
+
         // Form validation rules
         this.validationRules = {
             name: { required: true, minLength: 3, maxLength: 100 },
@@ -110,6 +110,7 @@ class RouteAdminManager {
             console.log('📥 Loading routes for admin...');
             const data = await this.apiClient.get(`${this.apiBase}/admin/routes`);
 
+
             if (data && Array.isArray(data.routes)) {
                 this.routes = data.routes;
                 console.log(`✅ Loaded ${this.routes.length} routes for admin`);
@@ -136,6 +137,7 @@ class RouteAdminManager {
         try {
             console.log('📥 Loading available POIs...');
             const data = await this.apiClient.get(`${this.apiBase}/pois`);
+
 
             const poiData = data?.pois || data;
             if (poiData) {
@@ -361,6 +363,7 @@ class RouteAdminManager {
         formData.append('lng', e.latlng.lng);
         try {
             const data = await this.apiClient.upload(`${this.apiBase}/admin/routes/${routeId}/media`, formData);
+
             if (data && (data.media || data)) {
                 const media = data.media || data;
                 this.routeMedia.push(media);
@@ -383,6 +386,7 @@ class RouteAdminManager {
     async loadRouteMedia(routeId) {
         try {
             const data = await this.apiClient.get(`${this.apiBase}/routes/${routeId}/media`);
+
             const mediaList = data.media || data || [];
             this.routeMedia = Array.isArray(mediaList) ? mediaList : [];
             this.mediaMarkers.forEach(m => this.map && this.map.removeLayer(m.marker));
