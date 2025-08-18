@@ -15,11 +15,12 @@ class RouteAdminManager {
         this.isDirty = false; // Track unsaved changes
 
         // Route media management
-        this.pendingMediaFile = null;
+        this.pendingMediaData = null; // {file, caption, isPrimary}
         this.routeMedia = [];
         this.mediaMarkers = [];
         this.handleMapClickBound = null;
         this.map = null;
+        this.escHandler = null;
         
         // API client setup
         // Use explicit API base path to avoid relative URL issues when the admin
@@ -40,6 +41,14 @@ class RouteAdminManager {
         
         // Initialize
         this.init();
+    }
+
+    ensureMap() {
+        if (!this.map && window.map) {
+            this.map = window.map;
+            this.handleMapClickBound = this.handleMapClick.bind(this);
+            this.map.on('click', this.handleMapClickBound);
+        }
     }
 
     /**
@@ -339,26 +348,82 @@ class RouteAdminManager {
      */
     setupMediaHandlers() {
         const addBtn = this.container.querySelector('#addRouteImageBtn');
-        const fileInput = this.container.querySelector('#routeImageInput');
-        if (addBtn && fileInput) {
-            addBtn.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', (e) => {
-                this.pendingMediaFile = e.target.files[0];
-                if (this.pendingMediaFile) {
-                    this.showNotification('Fotoğraf konumu için haritadan bir nokta seçin', 'info');
+        const modalEl = document.getElementById('routeMediaModal');
+        const fileInput = document.getElementById('routeMediaFile');
+        const captionInput = document.getElementById('routeMediaCaption');
+        const primaryInput = document.getElementById('routeMediaPrimary');
+        const startBtn = document.getElementById('routeMediaStartBtn');
+
+        if (addBtn && modalEl && fileInput && startBtn) {
+            const modal = new bootstrap.Modal(modalEl);
+            addBtn.addEventListener('click', () => {
+                fileInput.value = '';
+                captionInput.value = '';
+                primaryInput.checked = false;
+                modal.show();
+            });
+
+            startBtn.addEventListener('click', () => {
+                if (!fileInput.files.length) {
+                    this.showNotification('Lütfen bir fotoğraf seçin', 'error');
+                    return;
                 }
+                this.pendingMediaData = {
+                    file: fileInput.files[0],
+                    caption: captionInput.value,
+                    isPrimary: primaryInput.checked
+                };
+                startBtn.blur();
+                modalEl.addEventListener('hidden.bs.modal', () => {
+                    this.showNotification('Fotoğraf konumu için haritadan bir nokta seçin. İptal için ESC', 'info');
+                    this.startCoordinateSelection();
+                }, { once: true });
+                modal.hide();
             });
         }
+    }
+
+    startCoordinateSelection() {
+        this.ensureMap();
+        if (!this.map) return;
+        const mapContainer = this.map.getContainer();
+        mapContainer.classList.add('select-location');
+        mapContainer.focus();
+        this.escHandler = (e) => {
+            if (e.key === 'Escape') {
+                this.cancelCoordinateSelection();
+                this.showNotification('Fotoğraf konumu seçimi iptal edildi', 'warning');
+            }
+        };
+        document.addEventListener('keydown', this.escHandler);
+    }
+
+    cancelCoordinateSelection() {
+        if (this.map) {
+            const mapContainer = this.map.getContainer();
+            mapContainer.classList.remove('select-location');
+            mapContainer.blur();
+        }
+        if (this.escHandler) {
+            document.removeEventListener('keydown', this.escHandler);
+            this.escHandler = null;
+        }
+        this.pendingMediaData = null;
+        const fileInput = document.getElementById('routeMediaFile');
+        if (fileInput) fileInput.value = '';
     }
 
     /**
      * Handle map click for media placement
      */
     async handleMapClick(e) {
-        if (!this.pendingMediaFile || !this.currentRoute) return;
+        if (!this.pendingMediaData || !this.currentRoute) return;
+        const { file, caption, isPrimary } = this.pendingMediaData;
         const routeId = this.currentRoute.id;
         const formData = new FormData();
-        formData.append('file', this.pendingMediaFile);
+        formData.append('file', file);
+        formData.append('caption', caption);
+        formData.append('is_primary', isPrimary);
         formData.append('lat', e.latlng.lat);
         formData.append('lng', e.latlng.lng);
         try {
@@ -374,9 +439,7 @@ class RouteAdminManager {
             console.error('Media upload error:', err);
             this.showNotification('Medya yüklenemedi', 'error');
         } finally {
-            this.pendingMediaFile = null;
-            const fileInput = this.container.querySelector('#routeImageInput');
-            if (fileInput) fileInput.value = '';
+            this.cancelCoordinateSelection();
         }
     }
 
@@ -423,18 +486,26 @@ class RouteAdminManager {
      * Render media list panel
      */
     renderMediaList() {
-        const listEl = this.container.querySelector('#routeMediaList');
-        if (!listEl) return;
-        listEl.innerHTML = '';
+        const container = this.container.querySelector('#routeMediaList');
+        if (!container) return;
+        container.innerHTML = '';
+        if (this.routeMedia.length === 0) {
+            container.innerHTML = '<div class="text-muted">Henüz fotoğraf eklenmemiş.</div>';
+            return;
+        }
         this.routeMedia.forEach(media => {
-            const li = document.createElement('li');
-            li.className = 'list-group-item d-flex justify-content-between align-items-center';
-            const name = media.filename || media.file_path?.split('/').pop() || media.id;
-            li.innerHTML = `<span>${name}</span>` +
-                `<i class="fas fa-trash text-danger delete-media" data-id="${media.id}"></i>`;
-            listEl.appendChild(li);
+            const item = document.createElement('div');
+            item.className = 'route-media-card';
+            const imageUrl = media.thumbnail_path ? `/${media.thumbnail_path}` : (media.url || '');
+            const name = media.caption || media.filename || media.id;
+            item.innerHTML = `
+                ${imageUrl ? `<img src="${imageUrl}" class="route-media-thumb" alt="${name}">` : ''}
+                <div class="p-2 small text-truncate">${name}</div>
+                <div class="route-media-delete" data-id="${media.id}"><i class="fas fa-trash"></i></div>
+            `;
+            container.appendChild(item);
         });
-        listEl.querySelectorAll('.delete-media').forEach(el => {
+        container.querySelectorAll('.route-media-delete').forEach(el => {
             el.addEventListener('click', () => this.deleteMedia(el.dataset.id));
         });
     }

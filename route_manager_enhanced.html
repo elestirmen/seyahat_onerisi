@@ -622,6 +622,77 @@
         #routeMap {
             flex: 1;
             min-height: 400px;
+            position: relative;
+        }
+
+        #routeMap.select-location {
+            cursor: crosshair;
+        }
+
+        #routeMap.select-location::after {
+            content: 'Fotoğraf konumu için haritaya tıklayın';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .route-media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .route-media-card {
+            background: white;
+            border: 2px solid var(--route-border);
+            border-radius: var(--route-radius);
+            overflow: hidden;
+            position: relative;
+            transition: var(--route-transition);
+        }
+
+        .route-media-card:hover {
+            border-color: var(--route-primary);
+            box-shadow: var(--route-shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .route-media-thumb {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+        }
+
+        .route-media-delete {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .route-media-panel {
+            background: white;
+            border-radius: var(--route-radius);
+            border: 2px solid var(--route-border);
+            padding: 1rem;
+            max-height: 100%;
+            overflow-y: auto;
         }
 
         /* Elevation Chart Container */
@@ -1186,12 +1257,43 @@
                     </button>
                 </div>
             </div>
-            <div id="routeMap"></div>
+            <div id="routeMap" tabindex="-1"></div>
             <!-- Elevation Chart Container -->
             <div class="route-elevation-container">
                 <div id="routeElevationChartContainer" class="elevation-chart-hidden"></div>
             </div>
         </section>
+    </div>
+
+    <!-- Route Media Modal -->
+    <div class="modal fade" id="routeMediaModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Fotoğraf Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="routeMediaFile" class="form-label">Fotoğraf Seç</label>
+                        <input type="file" id="routeMediaFile" class="form-control" accept="image/*">
+                    </div>
+                    <div class="mb-3">
+                        <label for="routeMediaCaption" class="form-label">Açıklama</label>
+                        <input type="text" id="routeMediaCaption" class="form-control" placeholder="Fotoğraf açıklaması">
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" id="routeMediaPrimary" class="form-check-input">
+                        <label for="routeMediaPrimary" class="form-check-label">Ana fotoğraf olarak ayarla</label>
+                    </div>
+                    <p class="text-muted small mb-0">Yükleme sonrası fotoğraf konumunu haritadan seçmeniz istenecek.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="routeMediaStartBtn">Yüklemeye Başla</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->
@@ -3528,9 +3630,10 @@
                         </div>
                     </form>
                     <div class="route-media-panel flex-grow-1">
-                        <button type="button" id="addRouteImageBtn" class="btn btn-secondary mb-2">Fotoğraf Ekle</button>
-                        <input type="file" id="routeImageInput" accept="image/*" style="display:none">
-                        <ul id="routeMediaList" class="list-group"></ul>
+                        <button type="button" id="addRouteImageBtn" class="btn btn-secondary mb-3">
+                            <i class="fas fa-plus me-1"></i>Fotoğraf Ekle
+                        </button>
+                        <div id="routeMediaList" class="route-media-grid"></div>
                     </div>
                 </div>
             `;
