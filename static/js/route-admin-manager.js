@@ -21,12 +21,14 @@ class RouteAdminManager {
         this.handleMapClickBound = null;
         this.map = null;
         
-        // API base URL
+        // API client setup
+        // Use explicit API base path to avoid relative URL issues when the admin
+        // panel is served from subdirectories (e.g. /admin)
         this.apiBase = window.apiBase || '/api';
-        if (window.apiClient) {
-            window.apiClient.baseURL = this.apiBase;
-        }
-        
+        // Create a dedicated API client instance without a default base URL so
+        // that we can explicitly prefix requests with this.apiBase
+        this.apiClient = new window.APIClient('');
+
         // Form validation rules
         this.validationRules = {
             name: { required: true, minLength: 3, maxLength: 100 },
@@ -106,7 +108,8 @@ class RouteAdminManager {
 
         try {
             console.log('📥 Loading routes for admin...');
-            const data = await window.apiClient.get('/admin/routes');
+            const data = await this.apiClient.get(`${this.apiBase}/admin/routes`);
+
 
             if (data && Array.isArray(data.routes)) {
                 this.routes = data.routes;
@@ -133,7 +136,8 @@ class RouteAdminManager {
     async loadAvailablePOIs() {
         try {
             console.log('📥 Loading available POIs...');
-            const data = await window.apiClient.get('/pois');
+            const data = await this.apiClient.get(`${this.apiBase}/pois`);
+
 
             const poiData = data?.pois || data;
             if (poiData) {
@@ -165,7 +169,7 @@ class RouteAdminManager {
         try {
             console.log('➕ Creating new route:', routeData);
             
-            const data = await window.apiClient.post('/admin/routes', routeData);
+            const data = await this.apiClient.post(`${this.apiBase}/admin/routes`, routeData);
             
             if (data.success) {
                 console.log('✅ Route created successfully:', data.route);
@@ -199,7 +203,7 @@ class RouteAdminManager {
         try {
             console.log('✏️ Updating route:', routeId, routeData);
             
-            const data = await window.apiClient.put(`/admin/routes/${routeId}`, routeData);
+            const data = await this.apiClient.put(`${this.apiBase}/admin/routes/${routeId}`, routeData);
             
             if (data.success) {
                 console.log('✅ Route updated successfully:', data.route);
@@ -247,7 +251,7 @@ class RouteAdminManager {
         try {
             console.log('🗑️ Deleting route:', routeId);
             
-            const data = await window.apiClient.delete(`/admin/routes/${routeId}`);
+            const data = await this.apiClient.delete(`${this.apiBase}/admin/routes/${routeId}`);
             
             if (data.success) {
                 console.log('✅ Route deleted successfully');
@@ -275,7 +279,7 @@ class RouteAdminManager {
         try {
             console.log('🔗 Managing POI associations for route:', routeId, poiAssociations);
             
-            const data = await window.apiClient.post(`/admin/routes/${routeId}/pois`, { pois: poiAssociations });
+            const data = await this.apiClient.post(`${this.apiBase}/admin/routes/${routeId}/pois`, { pois: poiAssociations });
             
             if (data.success) {
                 console.log('✅ POI associations updated successfully');
@@ -358,7 +362,8 @@ class RouteAdminManager {
         formData.append('lat', e.latlng.lat);
         formData.append('lng', e.latlng.lng);
         try {
-            const data = await window.apiClient.upload(`/admin/routes/${routeId}/media`, formData);
+            const data = await this.apiClient.upload(`${this.apiBase}/admin/routes/${routeId}/media`, formData);
+
             if (data && (data.media || data)) {
                 const media = data.media || data;
                 this.routeMedia.push(media);
@@ -380,7 +385,8 @@ class RouteAdminManager {
      */
     async loadRouteMedia(routeId) {
         try {
-            const data = await window.apiClient.get(`/routes/${routeId}/media`);
+            const data = await this.apiClient.get(`${this.apiBase}/routes/${routeId}/media`);
+
             const mediaList = data.media || data || [];
             this.routeMedia = Array.isArray(mediaList) ? mediaList : [];
             this.mediaMarkers.forEach(m => this.map && this.map.removeLayer(m.marker));
@@ -429,7 +435,7 @@ class RouteAdminManager {
     async deleteMedia(mediaId) {
         if (!this.currentRoute) return;
         try {
-            await window.apiClient.delete(`/admin/routes/${this.currentRoute.id}/media/${mediaId}`);
+            await this.apiClient.delete(`${this.apiBase}/admin/routes/${this.currentRoute.id}/media/${mediaId}`);
             this.routeMedia = this.routeMedia.filter(m => m.id !== mediaId);
             const markerObj = this.mediaMarkers.find(m => m.id == mediaId);
             if (markerObj && this.map) {
