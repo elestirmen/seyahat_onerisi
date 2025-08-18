@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for, Blueprint
+from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for, Blueprint, abort
 from flask_cors import CORS
 from poi_database_adapter import POIDatabaseFactory
 from poi_media_manager import POIMediaManager
@@ -6,6 +6,7 @@ from route_service import RouteService
 from route_file_parser import RouteFileParser, RouteParserError
 from elevation_service import ElevationService
 from psycopg2.extras import RealDictCursor
+import psycopg2
 import os
 import json
 import uuid
@@ -27,6 +28,24 @@ import queue
 import math
 import logging
 from typing import List, Tuple, Set, Dict, Any
+
+# Database connection helper
+def get_db_conn():
+    """
+    Create a raw psycopg2 connection using environment variables or a
+    connection string. This bypasses the project's custom database wrapper.
+    """
+    conn_str = os.getenv("POI_DB_CONNECTION")
+    if conn_str:
+        return psycopg2.connect(conn_str)
+
+    return psycopg2.connect(
+        host=os.getenv("POI_DB_HOST", "127.0.0.1"),
+        port=int(os.getenv("POI_DB_PORT", "5432")),
+        dbname=os.getenv("POI_DB_NAME", "poi_db"),
+        user=os.getenv("POI_DB_USER", "poi_user"),
+        password=os.getenv("POI_DB_PASSWORD"),
+    )
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -4006,6 +4025,70 @@ def get_route_geometry(route_id):
             'success': False,
             'error': f'Error fetching route geometry: {str(e)}'
         }), 500
+
+@app.get('/api/routes/<int:route_id>/media')
+def get_route_media(route_id: int):
+    """Return media items for a route."""
+    conn = None
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        try:
+            cur.execute("SELECT 1 FROM public.routes WHERE id=%s", (route_id,))
+            if cur.fetchone() is None:
+                abort(404, description="Route not found")
+
+
+            cur.execute(
+                """
+                SELECT
+                    id,
+                    route_id,
+                    file_path,
+                    thumbnail_path,
+                    lat,
+                    lng,
+                    caption,
+                    is_primary,
+                    media_type,
+                    uploaded_at
+                FROM public.route_media
+
+                WHERE route_id=%s
+                ORDER BY is_primary DESC, uploaded_at DESC, id DESC
+                """,
+                (route_id,),
+            )
+            rows = cur.fetchall() or []
+            out = [
+                {
+                    "id": r["id"],
+                    "route_id": r["route_id"],
+                    "file_path": r["file_path"],
+                    "thumbnail_path": r["thumbnail_path"],
+                    "latitude": r["lat"],
+                    "longitude": r["lng"],
+                    "caption": r["caption"],
+                    "is_primary": r["is_primary"],
+                    "media_type": r["media_type"],
+                    "uploaded_at": r["uploaded_at"],
+                }
+                for r in rows
+            ]
+            return jsonify(out)
+        finally:
+            cur.close()
+    except psycopg2.Error as e:
+        logger.error(f"Database error fetching route media {route_id}: {e}")
+        abort(500, "Database error")
+    finally:
+        if conn:
+            conn.close()
+
+
+# --- Acceptance (manual) tests (do not run automatically) ---
+# curl -i http://127.0.0.1:5560/api/routes/153/media
+# Expect 404 if route 153 doesn't exist; 200 [] if exists but no media; 200 JSON array otherwise.
 
 @app.route('/api/routes/filter', methods=['POST'])
 @public_rate_limit(max_requests=50, window_seconds=60)

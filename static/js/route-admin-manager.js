@@ -15,18 +15,22 @@ class RouteAdminManager {
         this.isDirty = false; // Track unsaved changes
 
         // Route media management
-        this.pendingMediaFile = null;
+        this.pendingMediaData = null; // {file, caption, isPrimary}
         this.routeMedia = [];
         this.mediaMarkers = [];
         this.handleMapClickBound = null;
         this.map = null;
+        this.escHandler = null;
         
-        // API base URL
+        // API client setup
+        // Use explicit API base path to avoid relative URL issues when the admin
+        // panel is served from subdirectories (e.g. /admin)
         this.apiBase = window.apiBase || '/api';
         if (window.apiClient) {
             window.apiClient.baseURL = this.apiBase;
         }
         
+
         // Form validation rules
         this.validationRules = {
             name: { required: true, minLength: 3, maxLength: 100 },
@@ -38,6 +42,14 @@ class RouteAdminManager {
         
         // Initialize
         this.init();
+    }
+
+    ensureMap() {
+        if (!this.map && window.map) {
+            this.map = window.map;
+            this.handleMapClickBound = this.handleMapClick.bind(this);
+            this.map.on('click', this.handleMapClickBound);
+        }
     }
 
     /**
@@ -108,6 +120,7 @@ class RouteAdminManager {
             console.log('📥 Loading routes for admin...');
             const data = await window.apiClient.get('/admin/routes');
 
+
             if (data && Array.isArray(data.routes)) {
                 this.routes = data.routes;
                 console.log(`✅ Loaded ${this.routes.length} routes for admin`);
@@ -134,6 +147,7 @@ class RouteAdminManager {
         try {
             console.log('📥 Loading available POIs...');
             const data = await window.apiClient.get('/pois');
+
 
             const poiData = data?.pois || data;
             if (poiData) {
@@ -165,7 +179,7 @@ class RouteAdminManager {
         try {
             console.log('➕ Creating new route:', routeData);
             
-            const data = await window.apiClient.post('/admin/routes', routeData);
+            const data = await this.apiClient.post(`${this.apiBase}/admin/routes`, routeData);
             
             if (data.success) {
                 console.log('✅ Route created successfully:', data.route);
@@ -199,7 +213,7 @@ class RouteAdminManager {
         try {
             console.log('✏️ Updating route:', routeId, routeData);
             
-            const data = await window.apiClient.put(`/admin/routes/${routeId}`, routeData);
+            const data = await this.apiClient.put(`${this.apiBase}/admin/routes/${routeId}`, routeData);
             
             if (data.success) {
                 console.log('✅ Route updated successfully:', data.route);
@@ -247,7 +261,7 @@ class RouteAdminManager {
         try {
             console.log('🗑️ Deleting route:', routeId);
             
-            const data = await window.apiClient.delete(`/admin/routes/${routeId}`);
+            const data = await this.apiClient.delete(`${this.apiBase}/admin/routes/${routeId}`);
             
             if (data.success) {
                 console.log('✅ Route deleted successfully');
@@ -275,7 +289,7 @@ class RouteAdminManager {
         try {
             console.log('🔗 Managing POI associations for route:', routeId, poiAssociations);
             
-            const data = await window.apiClient.post(`/admin/routes/${routeId}/pois`, { pois: poiAssociations });
+            const data = await this.apiClient.post(`${this.apiBase}/admin/routes/${routeId}/pois`, { pois: poiAssociations });
             
             if (data.success) {
                 console.log('✅ POI associations updated successfully');
@@ -335,30 +349,90 @@ class RouteAdminManager {
      */
     setupMediaHandlers() {
         const addBtn = this.container.querySelector('#addRouteImageBtn');
-        const fileInput = this.container.querySelector('#routeImageInput');
-        if (addBtn && fileInput) {
-            addBtn.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', (e) => {
-                this.pendingMediaFile = e.target.files[0];
-                if (this.pendingMediaFile) {
-                    this.showNotification('Fotoğraf konumu için haritadan bir nokta seçin', 'info');
+        const modalEl = document.getElementById('routeMediaModal');
+        const fileInput = document.getElementById('routeMediaFile');
+        const captionInput = document.getElementById('routeMediaCaption');
+        const primaryInput = document.getElementById('routeMediaPrimary');
+        const startBtn = document.getElementById('routeMediaStartBtn');
+
+        if (addBtn && modalEl && fileInput && startBtn) {
+            const modal = new bootstrap.Modal(modalEl);
+            addBtn.addEventListener('click', () => {
+                fileInput.value = '';
+                captionInput.value = '';
+                primaryInput.checked = false;
+                modal.show();
+            });
+
+            startBtn.addEventListener('click', () => {
+                if (!fileInput.files.length) {
+                    this.showNotification('Lütfen bir fotoğraf seçin', 'error');
+                    return;
                 }
+                this.pendingMediaData = {
+                    file: fileInput.files[0],
+                    caption: captionInput.value,
+                    isPrimary: primaryInput.checked
+                };
+                startBtn.blur();
+                modalEl.addEventListener('hidden.bs.modal', () => {
+                    this.showNotification('Fotoğraf konumu için haritadan bir nokta seçin. İptal için ESC', 'info');
+                    this.startCoordinateSelection();
+                }, { once: true });
+                modal.hide();
+
             });
         }
+    }
+
+    startCoordinateSelection() {
+        this.ensureMap();
+        if (!this.map) return;
+        const mapContainer = this.map.getContainer();
+        mapContainer.classList.add('select-location');
+        mapContainer.focus();
+
+        this.escHandler = (e) => {
+            if (e.key === 'Escape') {
+                this.cancelCoordinateSelection();
+                this.showNotification('Fotoğraf konumu seçimi iptal edildi', 'warning');
+            }
+        };
+        document.addEventListener('keydown', this.escHandler);
+    }
+
+    cancelCoordinateSelection() {
+        if (this.map) {
+            const mapContainer = this.map.getContainer();
+            mapContainer.classList.remove('select-location');
+            mapContainer.blur();
+
+        }
+        if (this.escHandler) {
+            document.removeEventListener('keydown', this.escHandler);
+            this.escHandler = null;
+        }
+        this.pendingMediaData = null;
+        const fileInput = document.getElementById('routeMediaFile');
+        if (fileInput) fileInput.value = '';
     }
 
     /**
      * Handle map click for media placement
      */
     async handleMapClick(e) {
-        if (!this.pendingMediaFile || !this.currentRoute) return;
+        if (!this.pendingMediaData || !this.currentRoute) return;
+        const { file, caption, isPrimary } = this.pendingMediaData;
         const routeId = this.currentRoute.id;
         const formData = new FormData();
-        formData.append('file', this.pendingMediaFile);
+        formData.append('file', file);
+        formData.append('caption', caption);
+        formData.append('is_primary', isPrimary);
         formData.append('lat', e.latlng.lat);
         formData.append('lng', e.latlng.lng);
         try {
             const data = await window.apiClient.upload(`/admin/routes/${routeId}/media`, formData);
+
             if (data && (data.media || data)) {
                 const media = data.media || data;
                 this.routeMedia.push(media);
@@ -369,9 +443,7 @@ class RouteAdminManager {
             console.error('Media upload error:', err);
             this.showNotification('Medya yüklenemedi', 'error');
         } finally {
-            this.pendingMediaFile = null;
-            const fileInput = this.container.querySelector('#routeImageInput');
-            if (fileInput) fileInput.value = '';
+            this.cancelCoordinateSelection();
         }
     }
 
@@ -379,17 +451,23 @@ class RouteAdminManager {
      * Load existing media for a route
      */
     async loadRouteMedia(routeId) {
+        const url = `${this.apiBase}/routes/${routeId}/media`;
         try {
             const data = await window.apiClient.get(`/routes/${routeId}/media`);
+
             const mediaList = data.media || data || [];
             this.routeMedia = Array.isArray(mediaList) ? mediaList : [];
-            this.mediaMarkers.forEach(m => this.map && this.map.removeLayer(m.marker));
-            this.mediaMarkers = [];
-            this.routeMedia.forEach(m => this.addMediaMarker(m));
-            this.renderMediaList();
         } catch (err) {
-            console.error('Media load error:', err);
+            if (err.status !== 404) {
+                console.error('Media load error:', err);
+            }
+            this.routeMedia = [];
         }
+
+        this.mediaMarkers.forEach(m => this.map && this.map.removeLayer(m.marker));
+        this.mediaMarkers = [];
+        this.routeMedia.forEach(m => this.addMediaMarker(m));
+        this.renderMediaList();
     }
 
     /**
@@ -397,9 +475,14 @@ class RouteAdminManager {
      */
     addMediaMarker(media) {
         if (!this.map) return;
-        const marker = L.marker([media.latitude, media.longitude]).addTo(this.map);
-        if (media.url) {
-            marker.bindPopup(`<img src="${media.url}" alt="route media" style="max-width:150px;">`);
+        const lat = media.lat ?? media.latitude;
+        const lng = media.lng ?? media.longitude;
+        if (lat == null || lng == null) return;
+
+        const marker = L.marker([lat, lng]).addTo(this.map);
+        const imageUrl = media.url || `/${media.thumbnail_path || media.file_path}`;
+        if (imageUrl) {
+            marker.bindPopup(`<img src="${imageUrl}" alt="route media" style="max-width:150px;">`);
         }
         this.mediaMarkers.push({ id: media.id, marker });
     }
@@ -408,17 +491,26 @@ class RouteAdminManager {
      * Render media list panel
      */
     renderMediaList() {
-        const listEl = this.container.querySelector('#routeMediaList');
-        if (!listEl) return;
-        listEl.innerHTML = '';
+        const container = this.container.querySelector('#routeMediaList');
+        if (!container) return;
+        container.innerHTML = '';
+        if (this.routeMedia.length === 0) {
+            container.innerHTML = '<div class="text-muted">Henüz fotoğraf eklenmemiş.</div>';
+            return;
+        }
         this.routeMedia.forEach(media => {
-            const li = document.createElement('li');
-            li.className = 'list-group-item d-flex justify-content-between align-items-center';
-            li.innerHTML = `<span>${media.filename || media.id}</span>` +
-                `<i class="fas fa-trash text-danger delete-media" data-id="${media.id}"></i>`;
-            listEl.appendChild(li);
+            const item = document.createElement('div');
+            item.className = 'route-media-card';
+            const imageUrl = media.thumbnail_path ? `/${media.thumbnail_path}` : (media.url || '');
+            const name = media.caption || media.filename || media.id;
+            item.innerHTML = `
+                ${imageUrl ? `<img src="${imageUrl}" class="route-media-thumb" alt="${name}">` : ''}
+                <div class="p-2 small text-truncate">${name}</div>
+                <div class="route-media-delete" data-id="${media.id}"><i class="fas fa-trash"></i></div>
+            `;
+            container.appendChild(item);
         });
-        listEl.querySelectorAll('.delete-media').forEach(el => {
+        container.querySelectorAll('.route-media-delete').forEach(el => {
             el.addEventListener('click', () => this.deleteMedia(el.dataset.id));
         });
     }
@@ -429,7 +521,7 @@ class RouteAdminManager {
     async deleteMedia(mediaId) {
         if (!this.currentRoute) return;
         try {
-            await window.apiClient.delete(`/admin/routes/${this.currentRoute.id}/media/${mediaId}`);
+            await this.apiClient.delete(`${this.apiBase}/admin/routes/${this.currentRoute.id}/media/${mediaId}`);
             this.routeMedia = this.routeMedia.filter(m => m.id !== mediaId);
             const markerObj = this.mediaMarkers.find(m => m.id == mediaId);
             if (markerObj && this.map) {
