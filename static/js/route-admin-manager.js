@@ -43,6 +43,14 @@ class RouteAdminManager {
         this.init();
     }
 
+    ensureMap() {
+        if (!this.map && window.map) {
+            this.map = window.map;
+            this.handleMapClickBound = this.handleMapClick.bind(this);
+            this.map.on('click', this.handleMapClickBound);
+        }
+    }
+
     /**
      * Initialize the route admin manager
      */
@@ -365,17 +373,24 @@ class RouteAdminManager {
                     caption: captionInput.value,
                     isPrimary: primaryInput.checked
                 };
+                startBtn.blur();
+                modalEl.addEventListener('hidden.bs.modal', () => {
+                    this.showNotification('Fotoğraf konumu için haritadan bir nokta seçin. İptal için ESC', 'info');
+                    this.startCoordinateSelection();
+                }, { once: true });
                 modal.hide();
-                this.showNotification('Fotoğraf konumu için haritadan bir nokta seçin. İptal için ESC', 'info');
-                this.startCoordinateSelection();
+
             });
         }
     }
 
     startCoordinateSelection() {
+        this.ensureMap();
         if (!this.map) return;
         const mapContainer = this.map.getContainer();
         mapContainer.classList.add('select-location');
+        mapContainer.focus();
+
         this.escHandler = (e) => {
             if (e.key === 'Escape') {
                 this.cancelCoordinateSelection();
@@ -387,7 +402,10 @@ class RouteAdminManager {
 
     cancelCoordinateSelection() {
         if (this.map) {
-            this.map.getContainer().classList.remove('select-location');
+            const mapContainer = this.map.getContainer();
+            mapContainer.classList.remove('select-location');
+            mapContainer.blur();
+
         }
         if (this.escHandler) {
             document.removeEventListener('keydown', this.escHandler);
