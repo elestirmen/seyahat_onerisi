@@ -32,9 +32,13 @@ from typing import List, Tuple, Set, Dict, Any
 # Database connection helper
 def get_db_conn():
     """
-    Create a raw psycopg2 connection using environment variables.
-    This bypasses the project's custom database wrapper.
+    Create a raw psycopg2 connection using environment variables or a
+    connection string. This bypasses the project's custom database wrapper.
     """
+    conn_str = os.getenv("POI_DB_CONNECTION")
+    if conn_str:
+        return psycopg2.connect(conn_str)
+
     return psycopg2.connect(
         host=os.getenv("POI_DB_HOST", "127.0.0.1"),
         port=int(os.getenv("POI_DB_PORT", "5432")),
@@ -4025,14 +4029,15 @@ def get_route_geometry(route_id):
 @app.get('/api/routes/<int:route_id>/media')
 def get_route_media(route_id: int):
     """Return media items for a route."""
-    conn = get_db_conn()
+    conn = None
     try:
+        conn = get_db_conn()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         try:
             cur.execute("SELECT 1 FROM public.routes WHERE id=%s", (route_id,))
-
             if cur.fetchone() is None:
-                abort(404, "Route not found")
+                abort(404, description="Route not found")
+
 
             cur.execute(
                 """
@@ -4076,9 +4081,10 @@ def get_route_media(route_id: int):
     except psycopg2.Error as e:
         logger.error(f"Database error fetching route media {route_id}: {e}")
         abort(500, "Database error")
-
     finally:
-        conn.close()
+        if conn:
+            conn.close()
+
 
 # --- Acceptance (manual) tests (do not run automatically) ---
 # curl -i http://127.0.0.1:5560/api/routes/153/media
