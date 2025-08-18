@@ -1714,6 +1714,7 @@
             console.log('Map container:', mapContainer, 'Visible:', mapContainer ? mapContainer.offsetHeight : 'N/A');
 
             map = L.map('routeMap').setView([38.7312, 34.4547], 10);
+            window.map = map;
             console.log('Map object created:', map);
 
             addBaseLayers(map);
