@@ -277,6 +277,24 @@ def admin_get_route(route_id):
         raise APIError("Internal server error", "INTERNAL_ERROR", 500)
 
 
+@route_bp.route('/admin/routes/<int:route_id>/media', methods=['GET'])
+@auth_middleware.require_auth
+def admin_list_route_media(route_id):
+    """Admin: Get media files for a route."""
+    try:
+        if not route_id:
+            raise bad_request("Route ID is required")
+
+        media = route_service.list_route_media(route_id)
+        return jsonify({'route_id': route_id, 'media': media}), 200
+
+    except APIError:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in admin_list_route_media: {e}")
+        raise APIError("Internal server error", "INTERNAL_ERROR", 500)
+
+
 @route_bp.route('/admin/routes/<int:route_id>/media', methods=['POST'])
 @auth_middleware.require_auth
 def admin_add_route_media(route_id):
