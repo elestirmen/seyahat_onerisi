@@ -983,6 +983,17 @@
             transform: translateY(-1px);
         }
 
+        .predefined-routes-header .route-search .btn.btn-outline-info {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.3);
+            color: #3b82f6;
+        }
+
+        .predefined-routes-header .route-search .btn.btn-outline-info:hover {
+            background: rgba(59, 130, 246, 0.3);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
         .section-header-content {
             position: relative;
             z-index: 2;
@@ -6525,6 +6536,60 @@ ute Preview Map Styles */
 
 .route-media-refresh-btn:hover i {
     transform: rotate(180deg);
+}
+
+/* Route card fallback content styles */
+.route-card-fallback {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.route-fallback-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.route-fallback-icon {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    backdrop-filter: blur(10px);
+}
+
+.route-fallback-text {
+    text-align: center;
+}
+
+.route-fallback-text h4 {
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    line-height: 1.2;
+}
+
+.route-fallback-text p {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    line-height: 1.3;
 }
 
 /* Route Options Popup Styles */

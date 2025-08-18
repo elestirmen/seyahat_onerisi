@@ -71,6 +71,13 @@ let startLocation = null;
 const apiBase = '/api';
 window.apiBase = apiBase; // Make it globally accessible
 
+// Media display configuration
+const MEDIA_CONFIG = {
+    useFallbackContent: true,  // Show custom fallback content instead of placeholder images
+    fallbackTimeout: 10000,    // 10 seconds timeout for media loading
+    showPlaceholderImages: false // Use external placeholder images as fallback
+};
+
 // Route tabs management
 let currentTab = 'dynamic-routes';
 let predefinedRoutes = [];
@@ -6010,6 +6017,9 @@ async function loadPredefinedRoutes() {
                     console.warn(`Failed to load media for route ${route.id}:`, error);
                 });
             });
+            
+            // Initialize media display mode button
+            initializeMediaDisplayModeButton();
         } else {
             console.error('❌ Failed to load predefined routes:', response.status);
             showNoRoutesMessage('Rotalar yüklenirken hata oluştu.');
@@ -6162,13 +6172,31 @@ async function loadRouteMediaForCard(route) {
 
     console.log('📸 Loading media for route card:', route.id);
     
+    // Set a timeout to prevent indefinite loading
+    const timeoutId = setTimeout(() => {
+        console.warn(`Media loading timeout for route ${route.id}, showing fallback`);
+        if (MEDIA_CONFIG.useFallbackContent) {
+            showRouteCardFallback(route.id);
+        } else if (MEDIA_CONFIG.showPlaceholderImages) {
+            showRouteCardPlaceholder(route.id);
+        }
+    }, MEDIA_CONFIG.fallbackTimeout);
+    
     try {
         const response = await fetch(`${apiBase}/admin/routes/${route.id}/media`, {
             credentials: 'include'
         });
         
+        // Clear the timeout since we got a response
+        clearTimeout(timeoutId);
+        
         if (!response.ok) {
             console.warn(`Failed to load media for route ${route.id}:`, response.status);
+            if (MEDIA_CONFIG.useFallbackContent) {
+                showRouteCardFallback(route.id);
+            } else if (MEDIA_CONFIG.showPlaceholderImages) {
+                showRouteCardPlaceholder(route.id);
+            }
             return;
         }
 
@@ -6202,10 +6230,32 @@ async function loadRouteMediaForCard(route) {
 
             if (primaryImage) {
                 updateRouteCardImage(route.id, primaryImage);
+            } else {
+                // No suitable image found, show fallback
+                if (MEDIA_CONFIG.useFallbackContent) {
+                    showRouteCardFallback(route.id);
+                } else if (MEDIA_CONFIG.showPlaceholderImages) {
+                    showRouteCardPlaceholder(route.id);
+                }
+            }
+        } else {
+            // No media files at all, show fallback
+            console.log(`No media found for route ${route.id}, showing fallback`);
+            if (MEDIA_CONFIG.useFallbackContent) {
+                showRouteCardFallback(route.id);
+            } else if (MEDIA_CONFIG.showPlaceholderImages) {
+                showRouteCardPlaceholder(route.id);
             }
         }
     } catch (error) {
+        // Clear the timeout since we got an error
+        clearTimeout(timeoutId);
         console.error(`Error loading media for route ${route.id}:`, error);
+        if (MEDIA_CONFIG.useFallbackContent) {
+            showRouteCardFallback(route.id);
+        } else if (MEDIA_CONFIG.showPlaceholderImages) {
+            showRouteCardPlaceholder(route.id);
+        }
     }
 }
 
@@ -6233,14 +6283,209 @@ function updateRouteCardImage(routeId, mediaFile) {
         return;
     }
 
-    // Update the main image
+        // Update the main image
     mainImage.src = `/${imagePath}`;
     mainImage.alt = mediaFile.caption || `Rota görseli - ${mediaFile.filename || ''}`;
+    
+    // Show the main image
+    mainImage.style.display = 'block';
     
     // Hide the loading overlay
     mediaOverlay.style.display = 'none';
     
+    // Hide any existing fallback content
+    const fallbackElement = imageContainer.querySelector('.route-card-fallback');
+    if (fallbackElement) {
+        fallbackElement.style.display = 'none';
+    }
+    
     console.log(`✅ Updated route card image for route ${routeId}:`, imagePath);
+}
+
+// Show fallback content when no media is available
+function showRouteCardFallback(routeId) {
+    const card = document.querySelector(`[data-route-id="${routeId}"]`);
+    if (!card) {
+        console.warn(`Route card not found for ID: ${routeId}`);
+        return;
+    }
+
+    const imageContainer = card.querySelector('.route-card-image');
+    const mainImage = card.querySelector('.route-card-main-image');
+    const mediaOverlay = card.querySelector(`#route-media-overlay-${routeId}`);
+    
+    if (!imageContainer || !mainImage || !mediaOverlay) {
+        console.warn(`Image elements not found for route: ${routeId}`);
+        return;
+    }
+
+    // Hide the loading overlay
+    mediaOverlay.style.display = 'none';
+    
+    // Create fallback content based on route type
+    const route = predefinedRoutes.find(r => r.id === routeId);
+    if (route) {
+        const fallbackContent = createRouteFallbackContent(route);
+        mainImage.style.display = 'none';
+        
+        // Add fallback content to the image container
+        let fallbackElement = imageContainer.querySelector('.route-card-fallback');
+        if (!fallbackElement) {
+            fallbackElement = document.createElement('div');
+            fallbackElement.className = 'route-card-fallback';
+            imageContainer.appendChild(fallbackElement);
+        }
+        fallbackElement.innerHTML = fallbackContent;
+        fallbackElement.style.display = 'flex';
+    }
+    
+    console.log(`✅ Fallback content shown for route ${routeId}`);
+}
+
+// Create fallback content based on route type
+function createRouteFallbackContent(route) {
+    const routeType = route.route_type || 'walking';
+    const routeName = route.name || 'Rota';
+    
+    // Define fallback content for different route types
+    const fallbackConfigs = {
+        'walking': {
+            icon: 'fas fa-walking',
+            color: '#059669',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            text: 'Yürüyüş Rotası'
+        },
+        'hiking': {
+            icon: 'fas fa-mountain',
+            color: '#d97706',
+            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            text: 'Doğa Yürüyüşü'
+        },
+        'cycling': {
+            icon: 'fas fa-bicycle',
+            color: '#2563eb',
+            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+            text: 'Bisiklet Rotası'
+        },
+        'driving': {
+            icon: 'fas fa-car',
+            color: '#dc2626',
+            background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+            text: 'Araç Rotası'
+        }
+    };
+    
+    const config = fallbackConfigs[routeType] || fallbackConfigs['walking'];
+    
+    return `
+        <div class="route-fallback-content" style="background: ${config.background};">
+            <div class="route-fallback-icon">
+                <i class="${config.icon}" style="color: white; font-size: 2.5rem;"></i>
+            </div>
+            <div class="route-fallback-text">
+                <h4 style="color: white; margin: 0; font-size: 1rem; font-weight: 600;">${routeName}</h4>
+                <p style="color: rgba(255,255,255,0.9); margin: 0.5rem 0 0 0; font-size: 0.85rem;">${config.text}</p>
+            </div>
+        </div>
+    `;
+}
+
+// Toggle between fallback content and placeholder images
+window.toggleMediaDisplayMode = function() {
+    MEDIA_CONFIG.useFallbackContent = !MEDIA_CONFIG.useFallbackContent;
+    MEDIA_CONFIG.showPlaceholderImages = !MEDIA_CONFIG.useFallbackContent;
+    
+    console.log(`Media display mode changed: ${MEDIA_CONFIG.useFallbackContent ? 'Fallback Content' : 'Placeholder Images'}`);
+    
+    // Update the toggle button text
+    const toggleBtn = document.querySelector('.btn-outline-info[onclick="toggleMediaDisplayMode()"]');
+    if (toggleBtn) {
+        const icon = toggleBtn.querySelector('i');
+        const span = toggleBtn.querySelector('span');
+        if (MEDIA_CONFIG.useFallbackContent) {
+            icon.className = 'fas fa-toggle-on';
+            span.textContent = 'Özel İçerik';
+        } else {
+            icon.className = 'fas fa-toggle-off';
+            span.textContent = 'Varsayılan';
+        }
+    }
+    
+    // Refresh all route media to apply the new mode
+    if (predefinedRoutes && predefinedRoutes.length > 0) {
+        predefinedRoutes.forEach(route => {
+            if (MEDIA_CONFIG.useFallbackContent) {
+                showRouteCardFallback(route.id);
+            } else if (MEDIA_CONFIG.showPlaceholderImages) {
+                showRouteCardPlaceholder(route.id);
+            }
+        });
+    }
+    
+    showNotification(`Medya görüntüleme modu değiştirildi: ${MEDIA_CONFIG.useFallbackContent ? 'Özel İçerik' : 'Varsayılan Görseller'}`, 'info');
+};
+
+// Show current media display mode
+window.showMediaDisplayMode = function() {
+    const currentMode = MEDIA_CONFIG.useFallbackContent ? 'Özel İçerik' : 'Varsayılan Görseller';
+    const description = MEDIA_CONFIG.useFallbackContent 
+        ? 'Rotada medya yoksa özel tasarlanmış içerik gösterilir'
+        : 'Rotada medya yoksa varsayılan görseller gösterilir';
+    
+    showNotification(`Mevcut Mod: ${currentMode}\n${description}`, 'info');
+};
+
+// Initialize media display mode button
+function initializeMediaDisplayModeButton() {
+    const toggleBtn = document.querySelector('.btn-outline-info[onclick="toggleMediaDisplayMode()"]');
+    if (toggleBtn) {
+        const icon = toggleBtn.querySelector('i');
+        const span = toggleBtn.querySelector('span');
+        if (MEDIA_CONFIG.useFallbackContent) {
+            icon.className = 'fas fa-toggle-on';
+            span.textContent = 'Özel İçerik';
+        } else {
+            icon.className = 'fas fa-toggle-off';
+            span.textContent = 'Varsayılan';
+        }
+    }
+}
+
+// Alternative: Show a default placeholder image
+function showRouteCardPlaceholder(routeId) {
+    const card = document.querySelector(`[data-route-id="${routeId}"]`);
+    if (!card) return;
+
+    const imageContainer = card.querySelector('.route-card-image');
+    const mainImage = card.querySelector('.route-card-main-image');
+    const mediaOverlay = card.querySelector(`#route-media-overlay-${routeId}`);
+    
+    if (!imageContainer || !mainImage || !mediaOverlay) return;
+
+    // Hide the loading overlay
+    mediaOverlay.style.display = 'none';
+    
+    // Show a default placeholder image
+    const route = predefinedRoutes.find(r => r.id === routeId);
+    if (route) {
+        const routeType = route.route_type || 'walking';
+        const placeholderUrls = {
+            'walking': 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=200&fit=crop&crop=center',
+            'hiking': 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=200&fit=crop&crop=center',
+            'cycling': 'https://images.unsplash.com/photo-1544191696-102dbdaeeaa1?w=400&h=200&fit=crop&crop=center',
+            'driving': 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=200&fit=crop&crop=center'
+        };
+        
+        mainImage.src = placeholderUrls[routeType] || placeholderUrls['walking'];
+        mainImage.alt = `${route.name} - Varsayılan görsel`;
+        mainImage.style.display = 'block';
+        
+        // Hide any existing fallback content
+        const fallbackElement = imageContainer.querySelector('.route-card-fallback');
+        if (fallbackElement) {
+            fallbackElement.style.display = 'none';
+        }
+    }
 }
 
 // Manual refresh function for route media
@@ -6259,10 +6504,18 @@ window.refreshRouteMedia = async function(routeId) {
     }
     
     try {
+        // Show loading state first
+        const mediaOverlay = document.querySelector(`#route-media-overlay-${routeId}`);
+        if (mediaOverlay) {
+            mediaOverlay.style.display = 'flex';
+        }
+        
         await loadRouteMediaForCard(route);
         console.log(`✅ Media refreshed for route ${routeId}`);
     } catch (error) {
         console.error(`❌ Failed to refresh media for route ${routeId}:`, error);
+        // If refresh fails, show fallback
+        showRouteCardFallback(routeId);
     }
 };
 
