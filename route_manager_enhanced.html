@@ -3509,7 +3509,13 @@
                 const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
                     credentials: 'include'
                 });
-                if (!response.ok) return;
+                const container = document.getElementById('routeCurrentMedia');
+                if (!response.ok) {
+                    if (container) {
+                        container.innerHTML = '<div class="text-center text-muted py-3">Medya bilgileri yüklenemedi.</div>';
+                    }
+                    return;
+                }
 
                 const data = await response.json();
                 const mediaFiles = data.media || [];
@@ -3558,29 +3564,31 @@
                 `;
 
                 groupedMedia[mediaType].forEach(media => {
-                    const previewPath = media.preview_path || media.thumbnail_path || media.path;
+                    const rawPath = media.path || media.file_path || '';
+                    const filename = media.filename || rawPath.split('/').pop();
+                    const previewPath = media.preview_path || media.thumbnail_path || rawPath;
                     const isImage = mediaType === 'image';
 
                     mediaHtml += `
                         <div class="media-item-card">
-                            <button class="media-delete-btn" onclick="deleteRouteMediaFile('${routeId}', '${media.filename}')" title="Sil">
+                            <button class="media-delete-btn" onclick="deleteRouteMediaFile('${routeId}', '${filename}')" title="Sil">
                                 <i class="fas fa-times"></i>
                             </button>
-                            
+
                             ${isImage ?
-                            `<img src="/${previewPath}" class="media-preview" alt="${media.filename}" 
-                                      onclick="showRouteMediaModal('/${media.path}', '${media.filename}', '${mediaType}')">` :
-                            `<div class="media-placeholder" onclick="showRouteMediaModal('/${media.path}', '${media.filename}', '${mediaType}')">
+                            `<img src="/${previewPath}" class="media-preview" alt="${filename}"
+                                      onclick="showRouteMediaModal('/${rawPath}', '${filename}', '${mediaType}')">` :
+                            `<div class="media-placeholder" onclick="showRouteMediaModal('/${rawPath}', '${filename}', '${mediaType}')">
                                     ${getMediaTypeIcon(mediaType)}
                                     <div class="media-format">${media.format?.toUpperCase() || ''}</div>
                                 </div>`
                         }
-                            
+
                             <div class="media-type-badge">${getMediaTypeIcon(mediaType)}</div>
-                            
+
                             <div class="media-item-info">
-                                <div class="media-item-name">${media.filename}</div>
-                                <div class="media-item-size">${(media.size / 1024).toFixed(0)}KB</div>
+                                <div class="media-item-name">${filename || ''}</div>
+                                <div class="media-item-size">${media.size ? (media.size / 1024).toFixed(0) + 'KB' : ''}</div>
                             </div>
                         </div>
                     `;
