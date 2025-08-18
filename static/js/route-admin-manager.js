@@ -384,18 +384,32 @@ class RouteAdminManager {
      * Load existing media for a route
      */
     async loadRouteMedia(routeId) {
-        try {
-            const data = await this.apiClient.get(`${this.apiBase}/routes/${routeId}/media`);
+        const endpoints = [
+            `${this.apiBase}/admin/routes/${routeId}/media`,
+            `${this.apiBase}/routes/${routeId}/media`
+        ];
 
-            const mediaList = data.media || data || [];
-            this.routeMedia = Array.isArray(mediaList) ? mediaList : [];
-            this.mediaMarkers.forEach(m => this.map && this.map.removeLayer(m.marker));
-            this.mediaMarkers = [];
-            this.routeMedia.forEach(m => this.addMediaMarker(m));
-            this.renderMediaList();
-        } catch (err) {
-            console.error('Media load error:', err);
+        for (const url of endpoints) {
+            try {
+                const data = await this.apiClient.get(url);
+                const mediaList = data.media || data || [];
+                this.routeMedia = Array.isArray(mediaList) ? mediaList : [];
+                this.mediaMarkers.forEach(m => this.map && this.map.removeLayer(m.marker));
+                this.mediaMarkers = [];
+                this.routeMedia.forEach(m => this.addMediaMarker(m));
+                this.renderMediaList();
+                return;
+            } catch (err) {
+                if (err.status !== 404) {
+                    console.error('Media load error:', err);
+                    return;
+                }
+            }
+
         }
+
+        this.routeMedia = [];
+        this.renderMediaList();
     }
 
     /**
@@ -403,9 +417,14 @@ class RouteAdminManager {
      */
     addMediaMarker(media) {
         if (!this.map) return;
-        const marker = L.marker([media.latitude, media.longitude]).addTo(this.map);
-        if (media.url) {
-            marker.bindPopup(`<img src="${media.url}" alt="route media" style="max-width:150px;">`);
+        const lat = media.lat ?? media.latitude;
+        const lng = media.lng ?? media.longitude;
+        if (lat == null || lng == null) return;
+
+        const marker = L.marker([lat, lng]).addTo(this.map);
+        const imageUrl = media.url || `/${media.thumbnail_path || media.file_path}`;
+        if (imageUrl) {
+            marker.bindPopup(`<img src="${imageUrl}" alt="route media" style="max-width:150px;">`);
         }
         this.mediaMarkers.push({ id: media.id, marker });
     }
@@ -420,7 +439,8 @@ class RouteAdminManager {
         this.routeMedia.forEach(media => {
             const li = document.createElement('li');
             li.className = 'list-group-item d-flex justify-content-between align-items-center';
-            li.innerHTML = `<span>${media.filename || media.id}</span>` +
+            const name = media.filename || media.file_path?.split('/').pop() || media.id;
+            li.innerHTML = `<span>${name}</span>` +
                 `<i class="fas fa-trash text-danger delete-media" data-id="${media.id}"></i>`;
             listEl.appendChild(li);
         });
