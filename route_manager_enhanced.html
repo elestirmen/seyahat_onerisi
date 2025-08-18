@@ -1265,36 +1265,7 @@
         </section>
     </div>
 
-    <!-- Route Media Modal -->
-    <div class="modal fade" id="routeMediaModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Fotoğraf Ekle</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="routeMediaFile" class="form-label">Fotoğraf Seç</label>
-                        <input type="file" id="routeMediaFile" class="form-control" accept="image/*">
-                    </div>
-                    <div class="mb-3">
-                        <label for="routeMediaCaption" class="form-label">Açıklama</label>
-                        <input type="text" id="routeMediaCaption" class="form-control" placeholder="Fotoğraf açıklaması">
-                    </div>
-                    <div class="form-check mb-3">
-                        <input type="checkbox" id="routeMediaPrimary" class="form-check-input">
-                        <label for="routeMediaPrimary" class="form-check-label">Ana fotoğraf olarak ayarla</label>
-                    </div>
-                    <p class="text-muted small mb-0">Yükleme sonrası fotoğraf konumunu haritadan seçmeniz istenecek.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                    <button type="button" class="btn btn-primary" id="routeMediaStartBtn">Yüklemeye Başla</button>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -3423,6 +3394,770 @@
             showNotification(`${layerType} katmanı özelliği yakında eklenecek`, 'info');
         }
 
+        // Enhanced Media Management Functions
+        async function uploadRouteMedia() {
+            if (!currentRoute) {
+                showNotification('Önce bir rota seçin', 'error');
+                return;
+            }
+
+            const fileInput = document.getElementById('routeMediaFile');
+            const mediaTypeSelect = document.getElementById('routeMediaType');
+            const mediaCaption = document.getElementById('routeMediaCaption').value;
+            const isPrimary = document.getElementById('routeMediaPrimary').checked;
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showNotification('Lütfen bir medya dosyası seçin', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const filename = file.name.toLowerCase();
+
+            // Auto-detect media type
+            let mediaType = mediaTypeSelect.value;
+            if (mediaType === 'auto') {
+                if (filename.match(/\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/)) {
+                    mediaType = 'image';
+                } else if (filename.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)$/)) {
+                    mediaType = 'video';
+                } else if (filename.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/)) {
+                    mediaType = 'audio';
+                } else if (filename.match(/\.(glb|gltf|obj|fbx|dae|ply|stl)$/)) {
+                    mediaType = 'model_3d';
+                } else {
+                    showNotification('Dosya türü tespit edilemedi. Lütfen medya türünü manuel olarak seçin.', 'error');
+                    return;
+                }
+            }
+
+            // File size check
+            const maxSize = getMediaMaxSize(mediaType) * 1024 * 1024;
+            if (file.size > maxSize) {
+                showNotification(`Dosya boyutu ${getMediaMaxSize(mediaType)}MB'dan küçük olmalıdır.\n\nSeçilen dosya: ${(file.size / 1024 / 1024).toFixed(1)}MB`, 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('media', file);
+            formData.append('caption', mediaCaption);
+            formData.append('is_primary', isPrimary);
+
+            try {
+                const response = await fetch(`${apiBase}/admin/routes/${getRouteId(currentRoute)}/media`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Medya yükleme başarısız');
+                }
+
+                const result = await response.json();
+
+                if (result.media && result.media.compression_ratio && result.media.compression_ratio !== "0%") {
+                    showNotification(`${getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!\n📦 Boyut azalması: ${result.media.compression_ratio}`, 'success');
+                } else {
+                    showNotification(`${getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!`, 'success');
+                }
+
+                // Clear form fields
+                fileInput.value = '';
+                document.getElementById('routeMediaCaption').value = '';
+                document.getElementById('routeMediaPrimary').checked = false;
+                mediaTypeSelect.value = 'auto';
+
+                // Reload media
+                await loadRouteMediaForEdit(getRouteId(currentRoute));
+
+            } catch (error) {
+                console.error('Media upload error:', error);
+                showNotification('Medya yükleme hatası: ' + error.message, 'error');
+            }
+        }
+
+        function getMediaTypeIcon(mediaType) {
+            const icons = {
+                'image': '📸',
+                'video': '🎥',
+                'audio': '🎵',
+                'model_3d': '🧊',
+                'unknown': '📄'
+            };
+            return icons[mediaType] || '📄';
+        }
+
+        function getMediaMaxSize(mediaType) {
+            const sizes = {
+                'image': 15,
+                'video': 100,
+                'audio': 50,
+                'model_3d': 50
+            };
+            return sizes[mediaType] || 15;
+        }
+
+        async function loadRouteMediaForEdit(routeId) {
+            if (!routeId) return;
+
+            try {
+                const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
+                    credentials: 'include'
+                });
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const mediaFiles = data.media || [];
+
+                // Update edit form current media
+                displayRouteCurrentMedia(mediaFiles, routeId);
+
+            } catch (error) {
+                console.error('Error loading route media:', error);
+            }
+        }
+
+        function displayRouteCurrentMedia(mediaFiles, routeId) {
+            const container = document.getElementById('routeCurrentMedia');
+            if (!container) return;
+
+            if (mediaFiles.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-3">Henüz medya dosyası eklenmemiş.</div>';
+                return;
+            }
+
+            // Group media by type
+            const groupedMedia = {};
+            mediaFiles.forEach(media => {
+                const type = media.media_type || 'unknown';
+                if (!groupedMedia[type]) groupedMedia[type] = [];
+                groupedMedia[type].push(media);
+            });
+
+            let mediaHtml = '';
+
+            Object.keys(groupedMedia).forEach(mediaType => {
+                const typeIcon = getMediaTypeIcon(mediaType);
+                const typeLabel = {
+                    'image': 'Görseller',
+                    'video': 'Videolar',
+                    'audio': 'Ses Dosyaları',
+                    'model_3d': '3D Modeller',
+                    'unknown': 'Diğer'
+                }[mediaType] || mediaType.toUpperCase();
+
+                mediaHtml += `
+                    <div class="media-type-section">
+                        <h6 class="media-type-title">${typeIcon} ${typeLabel} (${groupedMedia[mediaType].length})</h6>
+                        <div class="current-media-grid">
+                `;
+
+                groupedMedia[mediaType].forEach(media => {
+                    const previewPath = media.preview_path || media.thumbnail_path || media.path;
+                    const isImage = mediaType === 'image';
+
+                    mediaHtml += `
+                        <div class="media-item-card">
+                            <button class="media-delete-btn" onclick="deleteRouteMediaFile('${routeId}', '${media.filename}')" title="Sil">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            
+                            ${isImage ?
+                            `<img src="/${previewPath}" class="media-preview" alt="${media.filename}" 
+                                      onclick="showRouteMediaModal('/${media.path}', '${media.filename}', '${mediaType}')">` :
+                            `<div class="media-placeholder" onclick="showRouteMediaModal('/${media.path}', '${media.filename}', '${mediaType}')">
+                                    ${getMediaTypeIcon(mediaType)}
+                                    <div class="media-format">${media.format?.toUpperCase() || ''}</div>
+                                </div>`
+                        }
+                            
+                            <div class="media-type-badge">${getMediaTypeIcon(mediaType)}</div>
+                            
+                            <div class="media-item-info">
+                                <div class="media-item-name">${media.filename}</div>
+                                <div class="media-item-size">${(media.size / 1024).toFixed(0)}KB</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                mediaHtml += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = mediaHtml;
+        }
+
+        async function deleteRouteMediaFile(routeId, filename) {
+            if (!confirm(`'${filename}' dosyasını silmek istediğinizden emin misiniz?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiBase}/admin/routes/${routeId}/media/${filename}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Dosya silinemedi');
+                }
+
+                showNotification('Medya dosyası başarıyla silindi', 'success');
+
+                // Reload media
+                await loadRouteMediaForEdit(routeId);
+
+            } catch (error) {
+                console.error('Media delete error:', error);
+                showNotification('Medya silme hatası: ' + error.message, 'error');
+            }
+        }
+
+        function showRouteMediaModal(mediaPath, filename, mediaType) {
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+
+            let modalContent = '';
+            if (mediaType === 'image') {
+                modalContent = `<img src="${mediaPath}" class="img-fluid rounded-3 shadow-lg" alt="${filename}" style="max-height: 70vh;">`;
+            } else if (mediaType === 'video') {
+                modalContent = `
+                    <video controls class="w-100 rounded-3 shadow-lg" style="max-height: 70vh;">
+                        <source src="${mediaPath}" type="video/mp4">
+                        Tarayıcınız video oynatmayı desteklemiyor.
+                    </video>`;
+            } else if (mediaType === 'audio') {
+                modalContent = `
+                    <div class="text-center p-4">
+                        <i class="fas fa-music fa-3x text-primary mb-3"></i>
+                        <h5>${filename}</h5>
+                        <audio controls class="w-100 mt-3">
+                            <source src="${mediaPath}">
+                            Tarayıcınız ses oynatmayı desteklemiyor.
+                        </audio>
+                    </div>`;
+            } else if (mediaType === 'model_3d') {
+                modalContent = `
+                    <div class="text-center p-4">
+                        <i class="fas fa-cube fa-3x text-primary mb-3"></i>
+                        <h5>${filename}</h5>
+                        <p class="text-muted">3D model dosyası - indirip uygun bir uygulamada görüntüleyebilirsiniz.</p>
+                    </div>`;
+            } else {
+                modalContent = `
+                    <div class="text-center p-4">
+                        <i class="fas fa-file fa-3x text-primary mb-3"></i>
+                        <h5>${filename}</h5>
+                        <p class="text-muted">Medya dosyası</p>
+                    </div>`;
+            }
+
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title fw-bold"><i class="fas fa-file me-2"></i>${filename}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center p-4">
+                            ${modalContent}
+                        </div>
+                        <div class="modal-footer justify-content-center">
+                            <a href="${mediaPath}" target="_blank" class="btn btn-primary">
+                                <i class="fas fa-external-link-alt me-1"></i> Yeni Sekmede Aç/İndir
+                            </a>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i> Kapat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+
+            modal.addEventListener('hidden.bs.modal', () => {
+                modal.remove();
+            });
+        }
+
+        // Coordinate Management Functions
+        let routeCoordinates = [];
+
+        async function loadRouteCoordinates(routeId) {
+            if (!routeId) return;
+
+            try {
+                const response = await fetch(`${apiBase}/admin/routes/${routeId}`, {
+                    credentials: 'include'
+                });
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const route = data.route || data;
+
+                // Extract coordinates from route data
+                routeCoordinates = [];
+                
+                if (route.coordinates && Array.isArray(route.coordinates)) {
+                    route.coordinates.forEach((coord, index) => {
+                        routeCoordinates.push({
+                            id: index + 1,
+                            lat: coord[1] || coord.lat || coord.latitude,
+                            lng: coord[0] || coord.lng || coord.longitude,
+                            name: `Nokta ${index + 1}`,
+                            description: ''
+                        });
+                    });
+                } else if (route.segments && Array.isArray(route.segments)) {
+                    route.segments.forEach((segment, index) => {
+                        if (segment.coordinates && Array.isArray(segment.coordinates)) {
+                            segment.coordinates.forEach((coord, coordIndex) => {
+                                routeCoordinates.push({
+                                    id: routeCoordinates.length + 1,
+                                    lat: coord[1] || coord.lat || coord.latitude,
+                                    lng: coord[0] || coord.lng || coord.longitude,
+                                    name: `Segment ${index + 1} - Nokta ${coordIndex + 1}`,
+                                    description: ''
+                                });
+                            });
+                        }
+                    });
+                }
+
+                displayRouteCoordinates();
+
+            } catch (error) {
+                console.error('Error loading route coordinates:', error);
+            }
+        }
+
+        function displayRouteCoordinates() {
+            const container = document.getElementById('routeCoordinatesList');
+            if (!container) return;
+
+            if (routeCoordinates.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-3">Henüz koordinat eklenmemiş.</div>';
+                return;
+            }
+
+            let coordinatesHtml = '';
+            routeCoordinates.forEach((coord, index) => {
+                coordinatesHtml += `
+                    <div class="coordinate-item" data-index="${index}">
+                        <div class="coordinate-number">${index + 1}</div>
+                        <div class="coordinate-info">
+                            <div class="coordinate-name">${coord.name}</div>
+                            <div class="coordinate-coords">${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}</div>
+                            ${coord.description ? `<div class="coordinate-description">${coord.description}</div>` : ''}
+                        </div>
+                        <div class="coordinate-actions-item">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editCoordinate(${index})" title="Düzenle">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeCoordinate(${index})" title="Sil">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = coordinatesHtml;
+        }
+
+        function addCoordinateToRoute() {
+            const lat = parseFloat(document.getElementById('newCoordinateLat').value);
+            const lng = parseFloat(document.getElementById('newCoordinateLng').value);
+            const name = document.getElementById('newCoordinateName').value.trim();
+            const description = document.getElementById('newCoordinateDescription').value.trim();
+
+            if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+                showNotification('Lütfen geçerli enlem ve boylam değerleri girin', 'error');
+                return;
+            }
+
+            if (lat < -90 || lat > 90) {
+                showNotification('Enlem değeri -90 ile 90 arasında olmalıdır', 'error');
+                return;
+            }
+
+            if (lng < -180 || lng > 180) {
+                showNotification('Boylam değeri -180 ile 180 arasında olmalıdır', 'error');
+                return;
+            }
+
+            const newCoordinate = {
+                id: routeCoordinates.length + 1,
+                lat: lat,
+                lng: lng,
+                name: name || `Nokta ${routeCoordinates.length + 1}`,
+                description: description
+            };
+
+            routeCoordinates.push(newCoordinate);
+            displayRouteCoordinates();
+            
+            // Add marker to map
+            addCoordinateMarker(newCoordinate);
+            
+            // Clear form
+            clearCoordinateForm();
+            
+            showNotification('Koordinat başarıyla eklendi', 'success');
+        }
+
+        function getCurrentMapLocation() {
+            if (map && map.getCenter) {
+                const center = map.getCenter();
+                document.getElementById('newCoordinateLat').value = center.lat.toFixed(6);
+                document.getElementById('newCoordinateLng').value = center.lng.toFixed(6);
+                showNotification('Harita merkezi koordinatları alındı', 'info');
+            } else {
+                showNotification('Harita henüz yüklenmemiş', 'error');
+            }
+        }
+
+        function clearCoordinateForm() {
+            document.getElementById('newCoordinateLat').value = '';
+            document.getElementById('newCoordinateLng').value = '';
+            document.getElementById('newCoordinateName').value = '';
+            document.getElementById('newCoordinateDescription').value = '';
+        }
+
+        function editCoordinate(index) {
+            const coord = routeCoordinates[index];
+            if (!coord) return;
+
+            // Populate form with existing values
+            document.getElementById('newCoordinateLat').value = coord.lat;
+            document.getElementById('newCoordinateLng').value = coord.lng;
+            document.getElementById('newCoordinateName').value = coord.name;
+            document.getElementById('newCoordinateDescription').value = coord.description;
+
+            // Change button text and action
+            const addBtn = document.querySelector('.coordinate-actions .btn-success');
+            addBtn.innerHTML = '<i class="fas fa-save me-1"></i>Güncelle';
+            addBtn.onclick = () => updateCoordinate(index);
+
+            showNotification('Koordinat düzenleme moduna geçildi', 'info');
+        }
+
+        function updateCoordinate(index) {
+            const lat = parseFloat(document.getElementById('newCoordinateLat').value);
+            const lng = parseFloat(document.getElementById('newCoordinateLng').value);
+            const name = document.getElementById('newCoordinateName').value.trim();
+            const description = document.getElementById('newCoordinateDescription').value.trim();
+
+            if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+                showNotification('Lütfen geçerli enlem ve boylam değerleri girin', 'error');
+                return;
+            }
+
+            routeCoordinates[index] = {
+                ...routeCoordinates[index],
+                lat: lat,
+                lng: lng,
+                name: name,
+                description: description
+            };
+
+            displayRouteCoordinates();
+            
+            // Update marker on map
+            updateCoordinateMarker(routeCoordinates[index]);
+            
+            // Reset form and button
+            clearCoordinateForm();
+            const addBtn = document.querySelector('.coordinate-actions .btn-success');
+            addBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Koordinat Ekle';
+            addBtn.onclick = addCoordinateToRoute;
+            
+            showNotification('Koordinat başarıyla güncellendi', 'success');
+        }
+
+        function removeCoordinate(index) {
+            if (!confirm(`Bu koordinatı silmek istediğinizden emin misiniz?`)) {
+                return;
+            }
+
+            const coord = routeCoordinates[index];
+            routeCoordinates.splice(index, 1);
+            
+            // Reorder IDs
+            routeCoordinates.forEach((coord, idx) => {
+                coord.id = idx + 1;
+            });
+            
+            displayRouteCoordinates();
+            
+            // Remove marker from map
+            removeCoordinateMarker(coord);
+            
+            showNotification('Koordinat başarıyla silindi', 'success');
+        }
+
+        function reorderCoordinates() {
+            if (routeCoordinates.length < 2) {
+                showNotification('Sıralama için en az 2 koordinat gerekli', 'info');
+                return;
+            }
+
+            // Create a reordering interface with drag and drop
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Koordinat Sıralamasını Düzenle</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="text-muted mb-3">Koordinatları sürükleyip bırakarak sıralayın:</p>
+                            <div id="reorderCoordinatesList" class="coordinates-list">
+                                ${routeCoordinates.map((coord, index) => `
+                                    <div class="coordinate-item reorderable" data-index="${index}" draggable="true">
+                                        <div class="coordinate-number">${index + 1}</div>
+                                        <div class="coordinate-info">
+                                            <div class="coordinate-name">${coord.name}</div>
+                                            <div class="coordinate-coords">${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}</div>
+                                        </div>
+                                        <div class="coordinate-actions-item">
+                                            <i class="fas fa-grip-vertical text-muted"></i>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                            <button type="button" class="btn btn-primary" onclick="saveCoordinateOrder()">Sıralamayı Kaydet</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+
+            // Setup drag and drop functionality
+            setupDragAndDrop();
+
+            modal.addEventListener('hidden.bs.modal', () => {
+                modal.remove();
+            });
+        }
+
+        function setupDragAndDrop() {
+            const reorderList = document.getElementById('reorderCoordinatesList');
+            if (!reorderList) return;
+
+            let draggedElement = null;
+
+            reorderList.addEventListener('dragstart', function(e) {
+                draggedElement = e.target.closest('.reorderable');
+                if (draggedElement) {
+                    draggedElement.style.opacity = '0.5';
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', draggedElement.outerHTML);
+                }
+            });
+
+            reorderList.addEventListener('dragend', function(e) {
+                if (draggedElement) {
+                    draggedElement.style.opacity = '';
+                    draggedElement = null;
+                }
+            });
+
+            reorderList.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+
+            reorderList.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (!draggedElement) return;
+
+                const targetElement = e.target.closest('.reorderable');
+                if (!targetElement || targetElement === draggedElement) return;
+
+                const draggedIndex = parseInt(draggedElement.dataset.index);
+                const targetIndex = parseInt(targetElement.dataset.index);
+
+                // Reorder the coordinates array
+                const [movedCoord] = routeCoordinates.splice(draggedIndex, 1);
+                routeCoordinates.splice(targetIndex, 0, movedCoord);
+
+                // Update the display
+                updateReorderDisplay();
+            });
+        }
+
+        function updateReorderDisplay() {
+            const reorderList = document.getElementById('reorderCoordinatesList');
+            if (!reorderList) return;
+
+            reorderList.innerHTML = routeCoordinates.map((coord, index) => `
+                <div class="coordinate-item reorderable" data-index="${index}" draggable="true">
+                    <div class="coordinate-number">${index + 1}</div>
+                    <div class="coordinate-info">
+                        <div class="coordinate-name">${coord.name}</div>
+                        <div class="coordinate-coords">${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}</div>
+                    </div>
+                    <div class="coordinate-actions-item">
+                        <i class="fas fa-grip-vertical text-muted"></i>
+                    </div>
+                </div>
+            `).join('');
+
+            // Re-setup drag and drop
+            setupDragAndDrop();
+        }
+
+        function saveCoordinateOrder() {
+            // This would typically save the new order to the backend
+            // For now, we'll just show a success message
+            showNotification('Koordinat sıralaması güncellendi', 'success');
+            
+            // Close modal
+            const modal = document.querySelector('.modal.show');
+            if (modal) {
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                bsModal.hide();
+            }
+        }
+
+        function clearAllCoordinates() {
+            if (!confirm('Tüm koordinatları silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
+                return;
+            }
+
+            routeCoordinates = [];
+            displayRouteCoordinates();
+            
+            // Clear all coordinate markers from map
+            clearAllCoordinateMarkers();
+            
+            showNotification('Tüm koordinatlar temizlendi', 'success');
+        }
+
+        // Map marker management for coordinates
+        let coordinateMarkers = [];
+
+        function addCoordinateMarker(coordinate) {
+            if (!map) return;
+
+            const marker = L.marker([coordinate.lat, coordinate.lng], {
+                title: coordinate.name,
+                draggable: true
+            }).addTo(map);
+
+            marker.bindPopup(`
+                <div class="coordinate-popup">
+                    <h6>${coordinate.name}</h6>
+                    <p class="mb-1"><strong>Koordinat:</strong> ${coordinate.lat.toFixed(6)}, ${coordinate.lng.toFixed(6)}</p>
+                    ${coordinate.description ? `<p class="mb-0"><em>${coordinate.description}</em></p>` : ''}
+                </div>
+            `);
+
+            // Store marker reference
+            coordinateMarkers.push({
+                coordinate: coordinate,
+                marker: marker
+            });
+
+            // Add drag event
+            marker.on('dragend', function(e) {
+                const newLat = e.target.getLatLng().lat;
+                const newLng = e.target.getLatLng().lng;
+                
+                // Update coordinate data
+                coordinate.lat = newLat;
+                coordinate.lng = newLng;
+                
+                // Update display
+                displayRouteCoordinates();
+                
+                showNotification('Koordinat haritada güncellendi', 'info');
+            });
+        }
+
+        function updateCoordinateMarker(coordinate) {
+            const markerData = coordinateMarkers.find(m => m.coordinate.id === coordinate.id);
+            if (markerData) {
+                markerData.marker.setLatLng([coordinate.lat, coordinate.lng]);
+                markerData.marker.getPopup().setContent(`
+                    <div class="coordinate-popup">
+                        <h6>${coordinate.name}</h6>
+                        <p class="mb-1"><strong>Koordinat:</strong> ${coordinate.lat.toFixed(6)}, ${coordinate.lng.toFixed(6)}</p>
+                        ${coordinate.description ? `<p class="mb-0"><em>${coordinate.description}</em></p>` : ''}
+                    </div>
+                `);
+            }
+        }
+
+        function removeCoordinateMarker(coordinate) {
+            const markerData = coordinateMarkers.find(m => m.coordinate.id === coordinate.id);
+            if (markerData) {
+                map.removeLayer(markerData.marker);
+                coordinateMarkers = coordinateMarkers.filter(m => m.coordinate.id !== coordinate.id);
+            }
+        }
+
+        function clearAllCoordinateMarkers() {
+            coordinateMarkers.forEach(markerData => {
+                if (map) {
+                    map.removeLayer(markerData.marker);
+                }
+            });
+            coordinateMarkers = [];
+        }
+
+        // Add map click handler for adding coordinates
+        function setupMapClickForCoordinates() {
+            if (!map) return;
+
+            // Remove existing click handler if any
+            if (map._coordinateClickHandler) {
+                map.off('click', map._coordinateClickHandler);
+            }
+
+            // Add new click handler
+            map._coordinateClickHandler = function(e) {
+                // Only add coordinates if we're in edit mode and the coordinate form is visible
+                const coordinateForm = document.querySelector('.coordinate-input-form');
+                if (coordinateForm && coordinateForm.style.display !== 'none') {
+                    document.getElementById('newCoordinateLat').value = e.latlng.lat.toFixed(6);
+                    document.getElementById('newCoordinateLng').value = e.latlng.lng.toFixed(6);
+                    showNotification('Haritadan koordinat alındı. Nokta adı ve açıklama ekleyip "Koordinat Ekle" butonuna tıklayın.', 'info');
+                }
+            };
+
+            map.on('click', map._coordinateClickHandler);
+        }
+
+        // Initialize coordinate management when route edit form is displayed
+        function initializeCoordinateManagement() {
+            // Setup map click handler
+            setupMapClickForCoordinates();
+            
+            // Load existing coordinates if any
+            if (currentRoute) {
+                loadRouteCoordinates(getRouteId(currentRoute));
+            }
+        }
+
         function fitMapToRoutes() {
             if (map && Object.keys(routeLayers).length > 0) {
                 // If there's a selected route, focus on it; otherwise show all routes
@@ -3609,6 +4344,75 @@
                         </div>
 
                         <div class="form-section">
+                            <h5><i class="fas fa-map-marker-alt me-2"></i>Koordinat Yönetimi</h5>
+                            <div class="coordinate-management-container">
+                                <div class="coordinate-input-section">
+                                    <h6><i class="fas fa-plus-circle me-2"></i>Yeni Koordinat Ekle</h6>
+                                    
+                                    <div class="coordinate-input-form">
+                                        <div class="form-grid">
+                                            <div class="form-group">
+                                                <label for="newCoordinateLat">Enlem (Latitude) *</label>
+                                                <input type="number" id="newCoordinateLat" class="form-control" 
+                                                       step="any" placeholder="41.0082" required>
+                                                <small class="form-help">Örnek: 41.0082 (İstanbul)</small>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="newCoordinateLng">Boylam (Longitude) *</label>
+                                                <input type="number" id="newCoordinateLng" class="form-control" 
+                                                       step="any" placeholder="28.9784" required>
+                                                <small class="form-help">Örnek: 28.9784 (İstanbul)</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="newCoordinateName">Nokta Adı</label>
+                                            <input type="text" id="newCoordinateName" class="form-control" 
+                                                   placeholder="Başlangıç noktası, mola yeri, vb.">
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="newCoordinateDescription">Açıklama</label>
+                                            <textarea id="newCoordinateDescription" class="form-control" rows="2" 
+                                                      placeholder="Bu nokta hakkında bilgi..."></textarea>
+                                        </div>
+                                        
+                                        <div class="coordinate-actions">
+                                            <button type="button" class="btn btn-success" onclick="addCoordinateToRoute()">
+                                                <i class="fas fa-plus me-1"></i>Koordinat Ekle
+                                            </button>
+                                            <button type="button" class="btn btn-outline-info" onclick="getCurrentMapLocation()">
+                                                <i class="fas fa-crosshairs me-1"></i>Haritadan Al
+                                            </button>
+                                            <button type="button" class="btn btn-outline-warning" onclick="clearCoordinateForm()">
+                                                <i class="fas fa-eraser me-1"></i>Temizle
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="coordinate-list-section">
+                                    <h6><i class="fas fa-list me-2"></i>Mevcut Koordinatlar</h6>
+                                    <div id="routeCoordinatesList" class="coordinates-list">
+                                        <div class="loading-spinner">
+                                            <div class="spinner"></div>
+                                            <p>Koordinatlar yükleniyor...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="coordinate-actions-section">
+                                    <button type="button" class="btn btn-primary" onclick="reorderCoordinates()">
+                                        <i class="fas fa-sort me-1"></i>Sıralamayı Düzenle
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" onclick="clearAllCoordinates()">
+                                        <i class="fas fa-trash me-1"></i>Tümünü Temizle
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
                             <h5><i class="fas fa-download me-2"></i>Dışa Aktarma Seçenekleri</h5>
                             <div class="export-options">
                                 <button type="button" class="btn btn-outline-info" onclick="exportRouteAsGPX(${getRouteId(route)})">
@@ -3631,10 +4435,68 @@
                         </div>
                     </form>
                     <div class="route-media-panel flex-grow-1">
-                        <button type="button" id="addRouteImageBtn" class="btn btn-secondary mb-3">
-                            <i class="fas fa-plus me-1"></i>Fotoğraf Ekle
-                        </button>
-                        <div id="routeMediaList" class="route-media-grid"></div>
+                        <div class="media-upload-container">
+                            <div class="media-upload-form">
+                                <h5><i class="fas fa-photo-video me-2"></i>Medya Yönetimi</h5>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">
+                                        <i class="fas fa-file-upload"></i>
+                                        Medya Dosyası Seç
+                                    </label>
+                                    <input type="file" class="form-input" id="routeMediaFile"
+                                        accept="image/*,video/*,audio/*,.glb,.gltf,.obj,.fbx,.dae,.ply,.stl">
+                                    <small class="form-help">
+                                        Desteklenen formatlar: Görsel (JPG, PNG, GIF), Video (MP4, AVI, MOV),
+                                        Ses (MP3, WAV, OGG), 3D Model (GLB, GLTF, OBJ, FBX)
+                                    </small>
+                                </div>
+
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Medya Türü</label>
+                                        <select class="form-input" id="routeMediaType">
+                                            <option value="auto">🔍 Otomatik Tespit</option>
+                                            <option value="image">📸 Görsel</option>
+                                            <option value="video">🎥 Video</option>
+                                            <option value="audio">🎵 Ses</option>
+                                            <option value="model_3d">🧊 3D Model</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Açıklama</label>
+                                        <input type="text" class="form-input" id="routeMediaCaption"
+                                            placeholder="Medya açıklaması">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="routeMediaPrimary">
+                                        <label class="form-check-label" for="routeMediaPrimary">
+                                            Ana medya olarak ayarla
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <button type="button" class="btn btn-primary" onclick="uploadRouteMedia()">
+                                    <i class="fas fa-upload"></i>
+                                    Medya Yükle
+                                </button>
+                            </div>
+
+                            <!-- Current Media Files -->
+                            <div class="current-media-container">
+                                <h5><i class="fas fa-folder-open"></i> Mevcut Medya Dosyaları</h5>
+                                <div id="routeCurrentMedia" class="current-media-grid">
+                                    <div class="loading-spinner">
+                                        <div class="spinner"></div>
+                                        <p>Medya dosyaları yükleniyor...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -3650,10 +4512,19 @@
                 loadRouteMedia(getRouteId(route));
             }
 
-            // Fotoğraf yükleme butonunun çalışması için medya dinleyicilerini kur
-            if (window.routeAdminManager) {
-                window.routeAdminManager.setupMediaHandlers();
-            }
+                    // Fotoğraf yükleme butonunun çalışması için medya dinleyicilerini kur
+        if (window.routeAdminManager) {
+            window.routeAdminManager.setupMediaHandlers();
+        }
+
+        // Load existing media for route
+        loadRouteMediaForEdit(getRouteId(route));
+        
+        // Load existing coordinates for route
+        loadRouteCoordinates(getRouteId(route));
+        
+        // Initialize coordinate management
+        initializeCoordinateManagement();
         }
 
         // Add styles for route edit form
@@ -3726,6 +4597,342 @@
                 .form-check-input {
                     width: 18px;
                     height: 18px;
+                }
+
+                /* Media Management Styles */
+                .media-upload-container {
+                    background: white;
+                    border-radius: var(--route-radius);
+                    padding: 1.5rem;
+                    box-shadow: var(--route-shadow);
+                }
+
+                .media-upload-form h5 {
+                    color: var(--route-dark);
+                    margin-bottom: 1.5rem;
+                    font-weight: 600;
+                    border-bottom: 2px solid var(--route-border);
+                    padding-bottom: 0.5rem;
+                }
+
+                .form-input {
+                    padding: 0.75rem;
+                    border: 2px solid var(--route-border);
+                    border-radius: var(--route-radius);
+                    font-size: 0.9rem;
+                    transition: var(--route-transition);
+                    width: 100%;
+                }
+
+                .form-input:focus {
+                    outline: none;
+                    border-color: var(--route-primary);
+                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+                }
+
+                .form-label {
+                    font-weight: 600;
+                    color: var(--route-dark);
+                    font-size: 0.9rem;
+                    margin-bottom: 0.5rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+
+                .form-help {
+                    color: var(--route-secondary);
+                    font-size: 0.8rem;
+                    margin-top: 0.25rem;
+                }
+
+                .current-media-container {
+                    margin-top: 2rem;
+                    padding-top: 1.5rem;
+                    border-top: 2px solid var(--route-border);
+                }
+
+                .current-media-container h5 {
+                    color: var(--route-dark);
+                    margin-bottom: 1rem;
+                    font-weight: 600;
+                }
+
+                .current-media-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                    gap: 1rem;
+                    margin-top: 1rem;
+                }
+
+                .media-item-card {
+                    position: relative;
+                    background: white;
+                    border: 2px solid var(--route-border);
+                    border-radius: var(--route-radius);
+                    padding: 0.75rem;
+                    text-align: center;
+                    transition: var(--route-transition);
+                    cursor: pointer;
+                }
+
+                .media-item-card:hover {
+                    border-color: var(--route-primary);
+                    box-shadow: var(--route-shadow-hover);
+                    transform: translateY(-2px);
+                }
+
+                .media-preview {
+                    width: 100%;
+                    height: 80px;
+                    object-fit: cover;
+                    border-radius: calc(var(--route-radius) - 4px);
+                    margin-bottom: 0.5rem;
+                }
+
+                .media-placeholder {
+                    width: 100%;
+                    height: 80px;
+                    background: var(--route-light);
+                    border: 2px dashed var(--route-border);
+                    border-radius: calc(var(--route-radius) - 4px);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 0.5rem;
+                    font-size: 1.5rem;
+                }
+
+                .media-format {
+                    font-size: 0.7rem;
+                    color: var(--route-secondary);
+                    margin-top: 0.25rem;
+                }
+
+                .media-delete-btn {
+                    position: absolute;
+                    top: -8px;
+                    right: -8px;
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    background: var(--route-danger);
+                    color: white;
+                    border: none;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 0.8rem;
+                    transition: var(--route-transition);
+                }
+
+                .media-delete-btn:hover {
+                    background: #b91c1c;
+                    transform: scale(1.1);
+                }
+
+                .media-type-badge {
+                    position: absolute;
+                    top: 0.5rem;
+                    left: 0.5rem;
+                    background: rgba(0, 0, 0, 0.7);
+                    color: white;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 12px;
+                    font-size: 0.8rem;
+                }
+
+                .media-item-info {
+                    margin-top: 0.5rem;
+                }
+
+                .media-item-name {
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    color: var(--route-dark);
+                    margin-bottom: 0.25rem;
+                    word-break: break-word;
+                }
+
+                .media-item-size {
+                    font-size: 0.7rem;
+                    color: var(--route-secondary);
+                }
+
+                .loading-spinner {
+                    text-align: center;
+                    padding: 2rem;
+                    color: var(--route-secondary);
+                }
+
+                .spinner {
+                    width: 40px;
+                    height: 40px;
+                    border: 4px solid var(--route-border);
+                    border-top: 4px solid var(--route-primary);
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                    margin: 0 auto 1rem;
+                }
+
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+
+                /* Coordinate Management Styles */
+                .coordinate-management-container {
+                    background: white;
+                    border-radius: var(--route-radius);
+                    padding: 1.5rem;
+                    box-shadow: var(--route-shadow);
+                }
+
+                .coordinate-input-section h6,
+                .coordinate-list-section h6 {
+                    color: var(--route-dark);
+                    margin-bottom: 1rem;
+                    font-weight: 600;
+                    border-bottom: 1px solid var(--route-border);
+                    padding-bottom: 0.5rem;
+                }
+
+                .coordinate-input-form {
+                    background: var(--route-light);
+                    border-radius: var(--route-radius);
+                    padding: 1rem;
+                    margin-bottom: 1.5rem;
+                }
+
+                .coordinate-actions {
+                    display: flex;
+                    gap: 0.75rem;
+                    margin-top: 1rem;
+                    flex-wrap: wrap;
+                }
+
+                .coordinate-actions .btn {
+                    flex: 1;
+                    min-width: 120px;
+                }
+
+                .coordinates-list {
+                    background: var(--route-light);
+                    border-radius: var(--route-radius);
+                    padding: 1rem;
+                    margin-bottom: 1rem;
+                    max-height: 300px;
+                    overflow-y: auto;
+                }
+
+                .coordinate-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    padding: 0.75rem;
+                    background: white;
+                    border: 1px solid var(--route-border);
+                    border-radius: calc(var(--route-radius) - 4px);
+                    margin-bottom: 0.5rem;
+                    transition: var(--route-transition);
+                }
+
+                .coordinate-item:hover {
+                    border-color: var(--route-primary);
+                    box-shadow: var(--route-shadow);
+                }
+
+                .coordinate-item:last-child {
+                    margin-bottom: 0;
+                }
+
+                .coordinate-number {
+                    background: var(--route-primary);
+                    color: white;
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    flex-shrink: 0;
+                }
+
+                .coordinate-info {
+                    flex: 1;
+                }
+
+                .coordinate-name {
+                    font-weight: 600;
+                    color: var(--route-dark);
+                    margin-bottom: 0.25rem;
+                }
+
+                .coordinate-coords {
+                    font-family: monospace;
+                    font-size: 0.8rem;
+                    color: var(--route-secondary);
+                    margin-bottom: 0.25rem;
+                }
+
+                .coordinate-description {
+                    font-size: 0.8rem;
+                    color: var(--route-secondary);
+                    font-style: italic;
+                }
+
+                .coordinate-actions-item {
+                    display: flex;
+                    gap: 0.5rem;
+                    flex-shrink: 0;
+                }
+
+                .coordinate-actions-section {
+                    display: flex;
+                    gap: 1rem;
+                    justify-content: center;
+                    padding-top: 1rem;
+                    border-top: 1px solid var(--route-border);
+                }
+
+                .coordinate-actions-section .btn {
+                    min-width: 150px;
+                }
+
+                .coordinate-item.reorderable {
+                    cursor: grab;
+                    user-select: none;
+                }
+
+                .coordinate-item.reorderable:active {
+                    cursor: grabbing;
+                }
+
+                .coordinate-item.reorderable:hover {
+                    background: var(--route-light);
+                    border-color: var(--route-primary);
+                }
+
+                .coordinate-item.reorderable.dragging {
+                    opacity: 0.5;
+                    transform: rotate(2deg);
+                }
+
+                .media-type-section {
+                    margin-bottom: 1.5rem;
+                }
+
+                .media-type-title {
+                    color: var(--route-dark);
+                    margin-bottom: 1rem;
+                    font-weight: 600;
+                    font-size: 0.9rem;
+                    border-bottom: 1px solid var(--route-border);
+                    padding-bottom: 0.5rem;
                 }
 
                 .poi-association-container {
@@ -4729,6 +5936,11 @@
                     tags: document.getElementById('editTags').value,
                     is_circular: document.getElementById('editIsCircular').checked
                 };
+
+                // Add coordinates if they exist
+                if (routeCoordinates && routeCoordinates.length > 0) {
+                    formData.coordinates = routeCoordinates.map(coord => [coord.lng, coord.lat]);
+                }
 
                 const headers = { 'Content-Type': 'application/json' };
                 if (csrfToken) headers['X-CSRFToken'] = csrfToken;
