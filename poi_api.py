@@ -38,6 +38,7 @@ def get_db_conn():
     conn_str = os.getenv("POI_DB_CONNECTION")
     if conn_str:
         return psycopg2.connect(conn_str)
+
     return psycopg2.connect(
         host=os.getenv("POI_DB_HOST", "127.0.0.1"),
         port=int(os.getenv("POI_DB_PORT", "5432")),
@@ -4037,6 +4038,7 @@ def get_route_media(route_id: int):
             if cur.fetchone() is None:
                 abort(404, description="Route not found")
 
+
             cur.execute(
                 """
                 SELECT
@@ -4051,6 +4053,7 @@ def get_route_media(route_id: int):
                     media_type,
                     uploaded_at
                 FROM public.route_media
+
                 WHERE route_id=%s
                 ORDER BY is_primary DESC, uploaded_at DESC, id DESC
                 """,
@@ -4081,6 +4084,7 @@ def get_route_media(route_id: int):
     finally:
         if conn:
             conn.close()
+
 
 # --- Acceptance (manual) tests (do not run automatically) ---
 # curl -i http://127.0.0.1:5560/api/routes/153/media
