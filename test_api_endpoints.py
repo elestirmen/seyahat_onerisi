@@ -22,8 +22,19 @@ if not hasattr(werkzeug, "__version__"):
 # Add current directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Set required environment variables for authentication config
+os.environ.setdefault('POI_SESSION_SECRET_KEY', 'x' * 32)
+os.environ.setdefault('POI_ADMIN_PASSWORD_HASH', '$2b$12$abcdefghijklmnopqrstuv')
+
 # Import the Flask app
 import poi_api
+from auth_middleware import auth_middleware as am
+am.require_auth = lambda f: f
+from app.routes.route import route_bp
+
+# Register route blueprint for admin endpoints
+if 'route' not in poi_api.app.blueprints:
+    poi_api.app.register_blueprint(route_bp)
 
 
 class TestRouteAPIEndpoints(unittest.TestCase):
@@ -227,14 +238,25 @@ class TestAdminRouteAPIEndpoints(unittest.TestCase):
     def test_admin_get_route_details_success(self, mock_auth):
         """Test admin route detail retrieval"""
         mock_auth.return_value = lambda f: f  # Mock decorator
-        
+
         with patch('poi_api.route_service.get_route_by_id', return_value=self.mock_route):
             response = self.client.get('/api/admin/routes/1', headers=self.auth_headers)
-            
+
             self.assertEqual(response.status_code, 200)
             data = json.loads(response.data)
             self.assertTrue(data['success'])
             self.assertEqual(data['route']['name'], 'Admin Test Route')
+
+    def test_admin_get_route_media_success(self):
+        """Test admin retrieval of route media"""
+        mock_media = [{'id': 1, 'url': 'image.jpg'}]
+        with patch('app.services.route_service.route_service.list_route_media', return_value=mock_media):
+            response = self.client.get('/api/admin/routes/1/media', headers=self.auth_headers)
+
+            self.assertEqual(response.status_code, 200)
+            data = json.loads(response.data)
+            self.assertEqual(data['route_id'], 1)
+            self.assertEqual(data['media'], mock_media)
     
     @patch('poi_api.auth_middleware.require_auth')
     def test_admin_create_route_success(self, mock_auth):
