@@ -379,6 +379,7 @@ class RouteAdminManager {
                     this.startCoordinateSelection();
                 }, { once: true });
                 modal.hide();
+
             });
         }
     }
@@ -389,6 +390,7 @@ class RouteAdminManager {
         const mapContainer = this.map.getContainer();
         mapContainer.classList.add('select-location');
         mapContainer.focus();
+
         this.escHandler = (e) => {
             if (e.key === 'Escape') {
                 this.cancelCoordinateSelection();
@@ -403,6 +405,7 @@ class RouteAdminManager {
             const mapContainer = this.map.getContainer();
             mapContainer.classList.remove('select-location');
             mapContainer.blur();
+
         }
         if (this.escHandler) {
             document.removeEventListener('keydown', this.escHandler);
