@@ -2615,7 +2615,6 @@ def download_map(filename):
 
 @app.route('/api/admin/routes', methods=['GET'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=50, window_seconds=60)
 def get_all_routes():
     """Tüm rotaları getir (admin)"""
     try:
@@ -2633,7 +2632,6 @@ def get_all_routes():
 
 @app.route('/api/admin/routes/<int:route_id>', methods=['GET'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=100, window_seconds=60)
 def admin_get_route_details(route_id):
     """Rota detaylarını getir (admin)"""
     try:
@@ -2740,7 +2738,6 @@ def admin_delete_route(route_id):
 
 @app.route('/api/admin/routes/<int:route_id>/pois', methods=['GET'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=100, window_seconds=60)
 def admin_get_route_pois(route_id):
     """Rotaya ait POI'leri getir (admin)"""
     try:
@@ -2758,7 +2755,6 @@ def admin_get_route_pois(route_id):
 
 @app.route('/api/admin/routes/<int:route_id>/pois', methods=['POST'])
 @auth_middleware.require_auth
-# @admin_rate_limit(max_requests=30, window_seconds=60)  # Geliştirme için devre dışı
 def admin_associate_route_pois(route_id):
     """Rotaya POI'leri ilişkilendir (admin)"""
     try:
@@ -2804,7 +2800,6 @@ def admin_associate_route_pois(route_id):
 
 @app.route('/api/admin/routes/<int:route_id>/geometry', methods=['POST'])
 @auth_middleware.require_auth
-# @admin_rate_limit(max_requests=20, window_seconds=60)  # Geliştirme için devre dışı
 def save_route_geometry(route_id):
     """Rota geometrisini kaydet"""
     try:
@@ -2843,7 +2838,6 @@ def save_route_geometry(route_id):
 
 @app.route('/api/admin/routes/search', methods=['GET'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=50, window_seconds=60)
 def admin_search_routes():
     """Rota arama (admin)"""
     try:
@@ -2866,7 +2860,6 @@ def admin_search_routes():
 
 @app.route('/api/admin/routes/filter', methods=['POST'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=50, window_seconds=60)
 def admin_filter_routes():
     """Rota filtreleme (admin)"""
     try:
@@ -2886,7 +2879,6 @@ def admin_filter_routes():
 
 @app.route('/api/admin/routes/statistics', methods=['GET'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=20, window_seconds=60)
 def admin_get_route_statistics():
     """Rota istatistiklerini getir (admin)"""
     try:
@@ -4088,7 +4080,6 @@ def get_admin_route_media(route_id: int):
 # Expect 404 if route 153 doesn't exist; 200 [] if exists but no media; 200 JSON array otherwise.
 
 @app.post('/api/admin/routes/<int:route_id>/media')
-@admin_rate_limit(max_requests=10, window_seconds=60)
 def upload_route_media(route_id: int):
     """Upload media for a route"""
     try:
@@ -4197,7 +4188,6 @@ def upload_route_media(route_id: int):
         }), 500
 
 @app.delete('/api/admin/routes/<int:route_id>/media/<filename>')
-@admin_rate_limit(max_requests=10, window_seconds=60)
 def delete_route_media(route_id: int, filename: str):
     """Delete media for a route"""
     try:
@@ -4248,7 +4238,6 @@ def delete_route_media(route_id: int, filename: str):
 # Expect 404 if route 153 doesn't exist; 200 [] if exists but no media; 200 JSON array otherwise.
 
 @app.put('/api/admin/routes/<int:route_id>/media/<filename>')
-@admin_rate_limit(max_requests=10, window_seconds=60)
 def update_route_media(route_id: int, filename: str):
     """Update route media metadata including location"""
     try:
@@ -4360,7 +4349,6 @@ def update_route_media(route_id: int, filename: str):
         }), 500
 
 @app.put('/api/admin/routes/<int:route_id>/media/<filename>/location')
-@admin_rate_limit(max_requests=10, window_seconds=60)
 def update_route_media_location(route_id: int, filename: str):
     """Update only the location of route media"""
     try:
@@ -5682,7 +5670,6 @@ class POISuggestionEngine:
 
 @app.route('/api/routes/<int:route_id>/suggest-pois', methods=['GET'])
 @auth_middleware.require_auth
-@admin_rate_limit(max_requests=100, window_seconds=60)
 def suggest_pois_for_route(route_id):
     """
     Suggest POIs for a specific route
