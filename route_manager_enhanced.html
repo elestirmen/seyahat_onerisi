@@ -799,7 +799,6 @@
             line-height: 1.4;
             margin-bottom: 0.5rem;
         }
-
         .poi-popup-order {
             color: #666;
             font-size: 0.8rem;
@@ -904,6 +903,38 @@
 
         .btn-location-remove {
             color: var(--route-danger);
+        }
+
+        .webp-conversion-actions {
+            margin-top: 0.5rem;
+        }
+
+        .webp-conversion-actions .btn {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .webp-conversion-actions .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .debug-actions {
+            margin-top: 0.25rem;
+        }
+
+        .debug-actions .btn {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .debug-actions .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
         }
 
         /* Map Location Selection Styles */
@@ -3654,7 +3685,10 @@
                                     <div class="mb-3">
                                         <label for="routeMediaFile" class="form-label">Medya Dosyası</label>
                                         <input type="file" class="form-control" id="routeMediaFile" accept="image/*,video/*,audio/*" required>
-                                        <div class="form-text">Desteklenen formatlar: JPG, PNG, GIF, MP4, MP3, vb.</div>
+                                        <div class="form-text">
+                                            Desteklenen formatlar: JPG, PNG, GIF, MP4, MP3, vb.<br>
+                                            <small class="text-info">📸 Resimler otomatik olarak WebP formatına dönüştürülür (daha iyi sıkıştırma)</small>
+                                        </div>
                                     </div>
                                     <div class="mb-3">
                                         <label for="routeMediaCaption" class="form-label">Açıklama (Opsiyonel)</label>
@@ -3736,8 +3770,23 @@
                 return;
             }
 
+            let fileToUpload = file;
+            
+            // Convert images to WebP format for better compression
+            if (mediaType === 'image' && !filename.endsWith('.webp')) {
+                try {
+                    showNotification('Resim WebP formatına dönüştürülüyor...', 'info');
+                    fileToUpload = await convertImageToWebP(file);
+                    showNotification('Resim WebP formatına dönüştürüldü!', 'success');
+                } catch (error) {
+                    console.warn('WebP conversion failed, using original file:', error);
+                    fileToUpload = file;
+                    showNotification('WebP dönüştürme başarısız, orijinal dosya kullanılıyor', 'warning');
+                }
+            }
+
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', fileToUpload);
             formData.append('caption', mediaCaption);
             formData.append('is_primary', isPrimary);
 
@@ -3780,6 +3829,227 @@
                 console.error('Media upload error:', error);
                 showNotification('Medya yükleme hatası: ' + error.message, 'error');
             }
+        }
+
+        // Convert image to WebP format
+        async function convertImageToWebP(file) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = function() {
+                    // Calculate new dimensions while maintaining aspect ratio
+                    const maxWidth = 1920;
+                    const maxHeight = 1080;
+                    let { width, height } = img;
+                    
+                    if (width > maxWidth || height > maxHeight) {
+                        const ratio = Math.min(maxWidth / width, maxHeight / height);
+                        width *= ratio;
+                        height *= ratio;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Draw image with white background for transparent images
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Convert to WebP with quality 0.85
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            // Create new file with WebP extension
+                            const webpFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.webp'), {
+                                type: 'image/webp',
+                                lastModified: Date.now()
+                            });
+                            resolve(webpFile);
+                        } else {
+                            reject(new Error('WebP conversion failed'));
+                        }
+                    }, 'image/webp', 0.85);
+                };
+                
+                img.onerror = () => reject(new Error('Image loading failed'));
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        // Convert existing image URL to WebP format
+        async function convertImageUrlToWebP(imageUrl, filename) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.crossOrigin = 'anonymous';
+                
+                img.onload = function() {
+                    // Calculate new dimensions while maintaining aspect ratio
+                    const maxWidth = 1920;
+                    const maxHeight = 1080;
+                    let { width, height } = img;
+                    
+                    if (width > maxWidth || height > maxHeight) {
+                        const ratio = Math.min(maxWidth / width, maxHeight / height);
+                        width *= ratio;
+                        height *= ratio;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Draw image with white background for transparent images
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Convert to WebP with quality 0.85
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            // Create new file with WebP extension
+                            const webpFile = new File([blob], filename.replace(/\.[^/.]+$/, '.webp'), {
+                                type: 'image/webp',
+                                lastModified: Date.now()
+                            });
+                            resolve(webpFile);
+                        } else {
+                            reject(new Error('WebP conversion failed'));
+                        }
+                    }, 'image/webp', 0.85);
+                };
+                
+                img.onerror = () => reject(new Error('Image loading failed'));
+                img.src = imageUrl;
+            });
+        }
+
+        // Convert existing image to WebP and replace it
+        async function convertExistingImageToWebP(filename, imagePath) {
+            if (!currentRoute) {
+                showNotification('Aktif rota bulunamadı', 'error');
+                return;
+            }
+
+            const routeId = getRouteId(currentRoute);
+            if (!routeId) {
+                showNotification('Rota ID bulunamadı', 'error');
+                return;
+            }
+
+            if (!confirm(`"${filename}" dosyasını WebP formatına dönüştürmek istediğinizden emin misiniz?\n\nBu işlem orijinal dosya ile değiştirilecektir.`)) {
+                return;
+            }
+
+            try {
+                showNotification('Resim WebP formatına dönüştürülüyor...', 'info');
+                
+                // Convert the image to WebP
+                const webpFile = await convertImageUrlToWebP(imagePath, filename);
+                
+                // Create form data for upload
+                const formData = new FormData();
+                formData.append('file', webpFile);
+                formData.append('caption', `WebP dönüştürülmüş: ${filename}`);
+                
+                // Try to replace existing file if supported
+                try {
+                    formData.append('replace_existing', 'true');
+                } catch (e) {
+                    // Some servers might not support this parameter
+                    console.log('replace_existing parameter not supported');
+                }
+
+                // Upload the converted WebP file
+                const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    showNotification(`"${filename}" başarıyla WebP formatına dönüştürüldü!`, 'success');
+                    
+                    // Reload media to show the updated file
+                    await loadRouteMediaForEdit(routeId);
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'WebP dönüştürme başarısız');
+                }
+            } catch (error) {
+                console.error('WebP conversion error:', error);
+                showNotification('WebP dönüştürme hatası: ' + error.message, 'error');
+            }
+        }
+
+        // Test API endpoints for debugging
+        async function testMediaAPIEndpoints(routeId, filename) {
+            if (!routeId || !filename) {
+                showNotification('Rota ID ve dosya adı gerekli', 'error');
+                return;
+            }
+
+            const endpoints = [
+                { method: 'DELETE', url: `${apiBase}/admin/routes/${routeId}/media/${filename}/location`, description: 'Location DELETE endpoint' },
+                { method: 'PATCH', url: `${apiBase}/admin/routes/${routeId}/media/${filename}`, description: 'Media PATCH endpoint' },
+                { method: 'PUT', url: `${apiBase}/admin/routes/${routeId}/media/${filename}`, description: 'Media PUT endpoint' }
+            ];
+
+            showNotification('API endpoint testleri başlatılıyor...', 'info');
+
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(endpoint.url, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken || ''
+                        },
+                        credentials: 'include'
+                    });
+
+                    console.log(`${endpoint.description}: ${response.status} ${response.statusText}`);
+                    
+                    if (response.status === 405) {
+                        console.log(`${endpoint.description} - Method Not Allowed`);
+                    } else if (response.status === 404) {
+                        console.log(`${endpoint.description} - Not Found`);
+                    } else if (response.status >= 500) {
+                        console.error(`${endpoint.description} - Server Error: ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error(`${endpoint.description} - Network Error:`, error);
+                }
+            }
+
+            showNotification('API endpoint testleri tamamlandı. Console\'u kontrol edin.', 'info');
+        }
+
+        // Enhanced error logging for location operations
+        function logLocationOperation(operation, filename, routeId, details = {}) {
+            const logData = {
+                timestamp: new Date().toISOString(),
+                operation,
+                filename,
+                routeId,
+                apiBase,
+                csrfToken: csrfToken ? 'present' : 'missing',
+                userAgent: navigator.userAgent,
+                ...details
+            };
+            
+            console.group(`🔍 Location Operation: ${operation}`);
+            console.log('Details:', logData);
+            console.groupEnd();
+            
+            // Store in localStorage for debugging
+            const logs = JSON.parse(localStorage.getItem('locationOperationLogs') || '[]');
+            logs.push(logData);
+            if (logs.length > 100) logs.shift(); // Keep only last 100 logs
+            localStorage.setItem('locationOperationLogs', JSON.stringify(logs));
         }
 
         // Refresh route media
@@ -4206,6 +4476,22 @@
                                             </button>
                                         </div>`
                                     }
+                                    
+                                    <!-- WebP Conversion Button for Images -->
+                                    ${isImage && !filename.toLowerCase().endsWith('.webp') ? 
+                                        `<div class="webp-conversion-actions mt-2">
+                                            <button class="btn btn-sm btn-outline-info" onclick="convertExistingImageToWebP('${filename}', '${rawPath}')" title="WebP formatına dönüştür">
+                                                <i class="fas fa-compress"></i> WebP'ye Dönüştür
+                                            </button>
+                                        </div>` : ''
+                                    }
+                                    
+                                    <!-- Debug Button for API Testing -->
+                                    <div class="debug-actions mt-1">
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="testMediaAPIEndpoints('${routeId}', '${filename}')" title="API endpoint testleri">
+                                            <i class="fas fa-bug"></i> API Test
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -4248,7 +4534,6 @@
                 showNotification('Medya silme hatası: ' + error.message, 'error');
             }
         }
-
         function showRouteMediaModal(mediaPath, filename, mediaType) {
             const modal = document.createElement('div');
             modal.className = 'modal fade';
@@ -4405,6 +4690,9 @@
                 return;
             }
 
+            // Log the operation start
+            logLocationOperation('remove_location_start', filename, routeId);
+
             try {
                 // Remove location marker from map
                 if (photoLocationMarkers[filename]) {
@@ -4412,7 +4700,37 @@
                     delete photoLocationMarkers[filename];
                 }
 
-                // Update media metadata to remove location
+                // First try to use the dedicated location endpoint
+                logLocationOperation('try_delete_endpoint', filename, routeId, { endpoint: `${apiBase}/admin/routes/${routeId}/media/${filename}/location` });
+                
+                let response = await fetch(`${apiBase}/admin/routes/${routeId}/media/${filename}/location`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken || ''
+                    },
+                    credentials: 'include'
+                });
+
+                logLocationOperation('delete_endpoint_response', filename, routeId, { status: response.status, statusText: response.statusText });
+
+                if (response.ok) {
+                    logLocationOperation('remove_location_success', filename, routeId, { method: 'DELETE endpoint' });
+                    showNotification(`"${filename}" için konum kaldırıldı`, 'success');
+                    
+                    // Refresh media display
+                    await loadRouteMediaForEdit(routeId);
+                    
+                    // Refresh elevation chart
+                    if (window.routeElevationChart) {
+                        refreshPhotoLocationMarkers();
+                    }
+                    return;
+                }
+
+                // Fallback: Update media metadata to remove location
+                logLocationOperation('try_media_update', filename, routeId, { method: 'PATCH/PUT fallback' });
+                
                 const mediaResponse = await fetch(`${apiBase}/admin/routes/${routeId}/media`, { credentials: 'include' });
                 if (mediaResponse.ok) {
                     const mediaJson = await mediaResponse.json();
@@ -4428,8 +4746,11 @@
                             longitude: null
                         };
                         
-                        const response = await fetch(`${apiBase}/admin/routes/${routeId}/media/${filename}`, {
-                            method: 'PUT',
+                        // Try PATCH method first, then PUT as fallback
+                        logLocationOperation('try_patch_method', filename, routeId, { updatedMedia });
+                        
+                        response = await fetch(`${apiBase}/admin/routes/${routeId}/media/${filename}`, {
+                            method: 'PATCH',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'X-CSRF-Token': csrfToken || ''
@@ -4438,7 +4759,27 @@
                             body: JSON.stringify(updatedMedia)
                         });
 
+                        logLocationOperation('patch_response', filename, routeId, { status: response.status, statusText: response.statusText });
+
+                        if (!response.ok) {
+                            // Try PUT method as fallback
+                            logLocationOperation('try_put_method', filename, routeId, { updatedMedia });
+                            
+                            response = await fetch(`${apiBase}/admin/routes/${routeId}/media/${filename}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-Token': csrfToken || ''
+                                },
+                                credentials: 'include',
+                                body: JSON.stringify(updatedMedia)
+                            });
+                            
+                            logLocationOperation('put_response', filename, routeId, { status: response.status, statusText: response.statusText });
+                        }
+
                         if (response.ok) {
+                            logLocationOperation('remove_location_success', filename, routeId, { method: response.method || 'PATCH/PUT' });
                             showNotification(`"${filename}" için konum kaldırıldı`, 'success');
                             
                             // Refresh media display
@@ -4449,11 +4790,26 @@
                                 refreshPhotoLocationMarkers();
                             }
                         } else {
-                            throw new Error('Konum kaldırılamadı');
+                            const errorData = await response.text();
+                            logLocationOperation('remove_location_failed', filename, routeId, { 
+                                status: response.status, 
+                                statusText: response.statusText, 
+                                errorData,
+                                method: response.method || 'PATCH/PUT'
+                            });
+                            console.error('Location removal failed:', response.status, errorData);
+                            throw new Error(`Konum kaldırılamadı (HTTP ${response.status}): ${errorData}`);
                         }
+                    } else {
+                        logLocationOperation('media_item_not_found', filename, routeId);
+                        throw new Error('Medya dosyası bulunamadı');
                     }
+                } else {
+                    logLocationOperation('media_list_fetch_failed', filename, routeId, { status: mediaResponse.status });
+                    throw new Error('Medya listesi alınamadı');
                 }
             } catch (error) {
+                logLocationOperation('remove_location_error', filename, routeId, { error: error.message, stack: error.stack });
                 console.error('Error removing photo location:', error);
                 showNotification('Konum kaldırılırken hata oluştu: ' + error.message, 'error');
             }
@@ -5043,7 +5399,6 @@
             
             showNotification('Koordinat başarıyla eklendi', 'success');
         }
-
         function getCurrentMapLocation() {
             if (map && map.getCenter) {
                 const center = map.getCenter();
@@ -6592,7 +6947,6 @@
 
             console.log('Available POIs displayed successfully');
         }
-
         // Display associated POIs
         function displayAssociatedPOIs(pois) {
             const container = document.getElementById('associatedPOIsList');
@@ -7033,14 +7387,6 @@
 
             console.log('✅ currentRoute mevcut, ID:', currentRoute.id);
 
-            // Rate limiting kontrolü - Geliştirme için devre dışı
-            // const now = Date.now();
-            // if ((now - lastLoadTime) < minLoadInterval) {
-            //     console.log('POI arama rate limit nedeniyle atlandı');
-            //     showNotification('Çok sık istek gönderiyorsunuz, lütfen bekleyin', 'warning');
-            //     return;
-            // }
-
             try {
                 showNotification('Yakın POI\'ler aranıyor...', 'info');
 
@@ -7080,14 +7426,6 @@
             }
 
             console.log('✅ currentRoute mevcut, ID:', currentRoute.id);
-
-            // Rate limiting kontrolü - Geliştirme için devre dışı
-            // const now = Date.now();
-            // if ((now - lastLoadTime) < minLoadInterval) {
-            //     console.log('Otomatik POI ekleme rate limit nedeniyle atlandı');
-            //     showNotification('Çok sık istek gönderiyorsunuz, lütfen bekleyin', 'warning');
-            //     return;
-            // }
 
             try {
                 showNotification('Yakın POI\'ler otomatik ekleniyor...', 'info');
@@ -7347,7 +7685,6 @@
                 alert(`❌ Media Test Error:\n${error.message}`);
             }
         }
-
         // Save route changes (with CSRF)
         async function saveRouteChanges() {
             if (!currentRoute) return;
