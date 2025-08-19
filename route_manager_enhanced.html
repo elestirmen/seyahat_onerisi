@@ -4443,7 +4443,7 @@
                             ${(!isImage || !previewPath) ?
                             `<div class="media-placeholder" onclick="showRouteMediaModal('${modalPath}', '${filename}', '${mediaType}')" style="display: ${isImage && previewPath ? 'none' : 'flex'};">
                                     ${getMediaTypeIcon(mediaType)}
-                                    <div class="media-format">${media.format?.toUpperCase() || filename.split('.').pop()?.toUpperCase() || ''}</div>
+                                    <div class="media-format">${filename.split('.').pop()?.toUpperCase() || ''}</div>
                                 </div>` : ''
                         }
 
@@ -4451,7 +4451,9 @@
 
                             <div class="media-item-info">
                                 <div class="media-item-name">${filename || ''}</div>
-                                <div class="media-item-size">${media.size ? (media.size / 1024).toFixed(0) + 'KB' : ''}</div>
+                                <div class="media-item-size">${media.file_size ? (media.file_size / 1024).toFixed(0) + 'KB' : ''}</div>
+                                ${media.compression_ratio && media.compression_ratio !== "0%" ? 
+                                    `<div class="media-compression">📦 ${media.compression_ratio}</div>` : ''}
                                 
                                 <!-- Location Information -->
                                 <div class="media-location-info">
@@ -4746,6 +4748,9 @@
                             longitude: null
                         };
                         
+                        // Remove filename to avoid duplicate parameter error
+                        delete updatedMedia.filename;
+                        
                         // Try PATCH method first, then PUT as fallback
                         logLocationOperation('try_patch_method', filename, routeId, { updatedMedia });
                         
@@ -4863,6 +4868,9 @@
                                 latitude: lat,
                                 longitude: lng
                             };
+                            
+                            // Remove filename to avoid duplicate parameter error
+                            delete updatedMedia.filename;
                             
                             response = await fetch(`${apiBase}/admin/routes/${routeId}/media/${filename}`, {
                                 method: 'PUT',
@@ -6448,6 +6456,12 @@
                 .media-item-size {
                     font-size: 0.7rem;
                     color: var(--route-secondary);
+                }
+                
+                .media-compression {
+                    font-size: 0.7rem;
+                    color: #059669;
+                    font-weight: 500;
                 }
 
                 .loading-spinner {

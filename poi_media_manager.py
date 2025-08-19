@@ -600,13 +600,32 @@ class POIMediaManager:
             thumb_dir.mkdir(exist_ok=True)
             preview_dir.mkdir(exist_ok=True)
             
-            # Dosyayı kopyala
+            # Dosyayı kopyala ve gerekirse WebP'ye dönüştür
             filename = Path(media_file_path).name
-            safe_filename = self._generate_safe_filename(filename, media_dir)
-            destination_path = media_dir / safe_filename
+            original_extension = Path(filename).suffix.lower()
             
-            shutil.copy2(media_file_path, destination_path)
-            print(f"✅ Medya dosyası kopyalandı: {destination_path}")
+            if media_type == 'image':
+                # Görseller için WebP dönüşümü
+                unique_id = str(uuid.uuid4())[:8]
+                safe_filename = f"{unique_id}.webp"
+                destination_path = media_dir / safe_filename
+                
+                # WebP'ye dönüştür
+                webp_success = self.convert_to_webp(Path(media_file_path), destination_path, quality=90)
+                if not webp_success:
+                    # WebP dönüşümü başarısızsa, orijinal dosyayı kopyala
+                    safe_filename = self._generate_safe_filename(filename, media_dir)
+                    destination_path = media_dir / safe_filename
+                    shutil.copy2(media_file_path, destination_path)
+                    print(f"✅ Medya dosyası kopyalandı (WebP dönüşümü başarısız): {destination_path}")
+                else:
+                    print(f"✅ Medya dosyası WebP'ye dönüştürüldü: {destination_path}")
+            else:
+                # Diğer medya türleri için orijinal dosyayı kopyala
+                safe_filename = self._generate_safe_filename(filename, media_dir)
+                destination_path = media_dir / safe_filename
+                shutil.copy2(media_file_path, destination_path)
+                print(f"✅ Medya dosyası kopyalandı: {destination_path}")
             
             # Thumbnail ve preview oluştur
             thumbnail_path = None
@@ -641,7 +660,7 @@ class POIMediaManager:
                 'lat': lat,
                 'lng': lng,
                 'uploaded_at': datetime.now().isoformat(),
-                'compression_ratio': "0%"  # Route media doesn't have compression
+                'compression_ratio': self._calculate_compression_ratio(media_file_path, destination_path) if media_type == 'image' else "0%"
             }
             
             print(f"✅ Rota medyası başarıyla eklendi: {media_info['filename']}")
@@ -686,7 +705,8 @@ class POIMediaManager:
                     
                     # Get media from database
                     cur.execute("""
-                        SELECT id, route_id, file_path, thumbnail_path, preview_path,
+                        SELECT id, route_id, file_path, thumbnail_path, 
+                               COALESCE(preview_path, thumbnail_path) as preview_path,
                                lat, lng, caption, is_primary, media_type, uploaded_at
                         FROM route_media 
                         WHERE route_id = %s
@@ -1162,6 +1182,21 @@ class POIMediaManager:
         except Exception as e:
             print(f"❌ 3D model preview oluşturma hatası: {e}")
             return None
+
+    def _calculate_compression_ratio(self, original_path: Path, converted_path: Path) -> str:
+        """Orijinal ve dönüştürülmüş dosya arasındaki sıkıştırma oranını hesapla"""
+        try:
+            original_size = os.path.getsize(original_path)
+            converted_size = os.path.getsize(converted_path)
+            
+            if original_size > 0:
+                reduction = ((original_size - converted_size) / original_size) * 100
+                return f"{reduction:.1f}%"
+            else:
+                return "0%"
+        except Exception as e:
+            print(f"❌ Sıkıştırma oranı hesaplama hatası: {e}")
+            return "0%"
 
 
 # Geriye uyumluluk için POIImageManager takma adı
