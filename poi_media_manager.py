@@ -1312,6 +1312,88 @@ class POIMediaManager:
             print(f"❌ Route media location update error: {e}")
             return False
     
+    def remove_route_media_location(self, route_id: int, filename: str) -> bool:
+        """
+        Remove location information from route media (set lat/lng to NULL)
+        
+        Args:
+            route_id: Route ID
+            filename: Filename to remove location from
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            print(f"🔍 Removing location for route_id={route_id}, filename={filename}")
+            
+            # Get database connection
+            conn_str = os.getenv("POI_DB_CONNECTION")
+            if conn_str:
+                conn = psycopg2.connect(conn_str)
+            else:
+                conn = psycopg2.connect(
+                    host=os.getenv("POI_DB_HOST", "127.0.0.1"),
+                    port=int(os.getenv("POI_DB_PORT", "5432")),
+                    dbname=os.getenv("POI_DB_NAME", "poi_db"),
+                    user=os.getenv("POI_DB_USER", "poi_user"),
+                    password=os.getenv("POI_DB_PASSWORD", "poi_password"),
+                )
+            
+            try:
+                cur = conn.cursor(cursor_factory=RealDictCursor)
+                
+                # Check if route exists
+                cur.execute("SELECT id FROM public.routes WHERE id=%s", (route_id,))
+                if not cur.fetchone():
+                    print(f"❌ Route not found: {route_id}")
+                    return False
+                
+                # Find the media record in the database using file_path
+                cur.execute("""
+                    SELECT id, media_type FROM route_media 
+                    WHERE route_id = %s AND file_path LIKE %s
+                """, (route_id, f"%{filename}"))
+                
+                existing_record = cur.fetchone()
+                
+                if existing_record:
+                    print(f"✅ Found existing media record, removing location...")
+                    
+                    # Check if this is a photo that requires coordinates
+                    if existing_record['media_type'] == 'photo':
+                        print(f"⚠️ Photo type requires coordinates, changing to 'promotional' type...")
+                        # Update the record to set lat/lng to NULL and change media_type to 'promotional'
+                        cur.execute("""
+                            UPDATE route_media 
+                            SET lat = NULL, lng = NULL, media_type = 'promotional'
+                            WHERE id = %s
+                        """, (existing_record['id'],))
+                    else:
+                        # For non-photo types, just set lat/lng to NULL
+                        cur.execute("""
+                            UPDATE route_media 
+                            SET lat = NULL, lng = NULL 
+                            WHERE id = %s
+                        """, (existing_record['id'],))
+                    
+                    # Commit the changes
+                    conn.commit()
+                    print(f"✅ Media location removed successfully: route_id={route_id}, filename={filename}")
+                    return True
+                else:
+                    print(f"❌ Media record not found in database: {filename}")
+                    return False
+                
+            finally:
+                if cur:
+                    cur.close()
+                if conn:
+                    conn.close()
+                    
+        except Exception as e:
+            print(f"❌ Route media location removal error: {e}")
+            return False
+    
     def _find_media_file_path(self, route_id: int, filename: str) -> str:
         """Helper method to find the actual file path in the filesystem"""
         try:
@@ -1319,34 +1401,99 @@ class POIMediaManager:
             file_stem = Path(filename).stem
             
             # Remove common prefixes to get the actual file identifier
+            original_stem = file_stem
             if file_stem.startswith('preview_'):
-                file_stem = file_stem[8:]  # Remove 'preview_' prefix
+                original_stem = file_stem[8:]  # Remove 'preview_' prefix
             elif file_stem.startswith('thumb_'):
-                file_stem = file_stem[6:]   # Remove 'thumb_' prefix
+                original_stem = file_stem[6:]   # Remove 'thumb_' prefix
+            
+            print(f"🔍 Looking for file: {filename}")
+            print(f"  Original stem: {original_stem}")
+            print(f"  File stem: {file_stem}")
             
             # Look for the file in the route directory
             base_route_dir = self.base_path / "by_route_id"
-            if not base_route_dir.exists():
-                return None
+            route_dir = None
             
-            for route_folder in base_route_dir.iterdir():
-                if route_folder.name.startswith(f"route_{route_id}_"):
-                    # Check images directory
-                    images_dir = route_folder / "images"
-                    if images_dir.exists():
-                        # Look for the file with the same stem
-                        for media_file in images_dir.iterdir():
-                            if media_file.is_file():
-                                if file_stem in media_file.stem or media_file.stem in file_stem:
-                                    return str(media_file)
-                    
-                    # Also check previews directory
-                    preview_dir = self.previews_path / "by_route_id" / route_folder.name / "images"
-                    if preview_dir.exists():
-                        preview_file = preview_dir / f"preview_{file_stem}.webp"
-                        if preview_file.exists():
-                            return str(preview_file)
+            if base_route_dir.exists():
+                # First, try to find the exact route directory
+                for route_folder in base_route_dir.iterdir():
+                    if route_folder.name.startswith(f"route_{route_id}_"):
+                        route_dir = route_folder
+                        print(f"✅ Found route folder: {route_folder.name}")
+                        break
             
+            # Check images directory for original files (if route directory exists)
+            if route_dir:
+                images_dir = route_dir / "images"
+                if images_dir.exists():
+                    print(f"🔍 Checking images directory: {images_dir}")
+                    # Look for the file with the same stem
+                    for media_file in images_dir.iterdir():
+                        if media_file.is_file():
+                            if original_stem in media_file.stem or media_file.stem in original_stem:
+                                print(f"✅ Found original file: {media_file}")
+                                return str(media_file)
+            
+            # Check previews directory (even if main route directory doesn't exist)
+            previews_base = self.previews_path / "by_route_id"
+            if previews_base.exists():
+                print(f"🔍 Checking previews base directory: {previews_base}")
+                for preview_route_dir in previews_base.iterdir():
+                    if preview_route_dir.name.startswith(f"route_{route_id}_"):
+                        print(f"✅ Found preview route folder: {preview_route_dir.name}")
+                        preview_dir = preview_route_dir / "images"
+                        if preview_dir.exists():
+                            print(f"🔍 Checking previews directory: {preview_dir}")
+                            # Look for exact preview file match
+                            preview_file = preview_dir / f"preview_{original_stem}.webp"
+                            if preview_file.exists():
+                                print(f"✅ Found preview file: {preview_file}")
+                                return str(preview_file)
+                            
+                            # Also check if the filename itself is a preview
+                            preview_file = preview_dir / filename
+                            if preview_file.exists():
+                                print(f"✅ Found exact preview file: {preview_file}")
+                                return str(preview_file)
+                            
+                            # Check all files in preview directory for partial matches
+                            for preview_file in preview_dir.iterdir():
+                                if preview_file.is_file() and filename in preview_file.name:
+                                    print(f"✅ Found matching preview file: {preview_file}")
+                                    return str(preview_file)
+                        break
+            
+            # Check thumbnails directory (even if main route directory doesn't exist)
+            thumbs_base = self.thumbnails_path / "by_route_id"
+            if thumbs_base.exists():
+                print(f"🔍 Checking thumbnails base directory: {thumbs_base}")
+                for thumb_route_dir in thumbs_base.iterdir():
+                    if thumb_route_dir.name.startswith(f"route_{route_id}_"):
+                        print(f"✅ Found thumbnail route folder: {thumb_route_dir.name}")
+                        thumb_dir = thumb_route_dir / "images"
+                        if thumb_dir.exists():
+                            print(f"🔍 Checking thumbnails directory: {thumb_dir}")
+                            # Look for exact thumbnail file match
+                            thumb_file = thumb_dir / f"thumb_{original_stem}.webp"
+                            if thumb_file.exists():
+                                print(f"✅ Found thumbnail file: {thumb_file}")
+                                return str(thumb_file)
+                            
+                            # Also check if the filename itself is a thumbnail
+                            thumb_file = thumb_dir / filename
+                            if thumb_file.exists():
+                                print(f"✅ Found exact thumbnail file: {thumb_file}")
+                                return str(thumb_file)
+                            
+                            # Check all files in thumbnail directory for partial matches
+                            for thumb_file in thumb_dir.iterdir():
+                                if thumb_file.is_file() and filename in thumb_file.name:
+                                    print(f"✅ Found matching thumbnail file: {thumb_file}")
+                                    return str(thumb_file)
+                        break
+            
+            print(f"❌ No file found for {filename} in route {route_id}")
             return None
             
         except Exception as e:

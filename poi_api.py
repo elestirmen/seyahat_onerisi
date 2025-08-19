@@ -4503,6 +4503,186 @@ def update_route_media_location(route_id: int, filename: str):
             'error': f'Error updating media location: {str(e)}'
         }), 500
 
+@app.delete('/api/admin/routes/<int:route_id>/media/<filename>/location')
+def delete_route_media_location(route_id: int, filename: str):
+    """Delete the location information from route media (set lat/lng to NULL)"""
+    try:
+        # Check if route exists
+        conn = None
+        try:
+            conn = get_db_conn()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Check if route exists
+            cur.execute("SELECT id FROM public.routes WHERE id=%s", (route_id,))
+            if not cur.fetchone():
+                return jsonify({
+                    'success': False,
+                    'error': 'Route not found'
+                }), 404
+            
+        except Exception as db_error:
+            logger.error(f"Database connection error: {db_error}")
+            return jsonify({
+                'success': False,
+                'error': f'Database connection failed: {str(db_error)}'
+            }), 500
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+        
+        # Initialize media manager
+        try:
+            media_manager = POIMediaManager()
+        except Exception as manager_error:
+            logger.error(f"Error initializing media manager: {manager_error}")
+            return jsonify({
+                'success': False,
+                'error': f'Media manager initialization failed: {str(manager_error)}'
+            }), 500
+        
+        # Remove location from the database
+        try:
+            if media_manager.remove_route_media_location(route_id, filename):
+                return jsonify({
+                    'success': True,
+                    'message': 'Media location removed successfully',
+                    'media': {
+                        'filename': filename,
+                        'lat': None,
+                        'lng': None
+                    }
+                }), 200
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to remove media location from database'
+                }), 500
+        except Exception as remove_error:
+            logger.error(f"Error removing media location: {remove_error}")
+            return jsonify({
+                'success': False,
+                'error': f'Error removing media location: {str(remove_error)}'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error removing route media location: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error removing media location: {str(e)}'
+        }), 500
+
+@app.patch('/api/admin/routes/<int:route_id>/media/<filename>')
+def patch_route_media(route_id: int, filename: str):
+    """Update specific fields of route media using PATCH method"""
+    try:
+        # Check if route exists
+        conn = None
+        try:
+            conn = get_db_conn()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Check if route exists
+            cur.execute("SELECT id FROM public.routes WHERE id=%s", (route_id,))
+            if not cur.fetchone():
+                return jsonify({
+                    'success': False,
+                    'error': 'Route not found'
+                }), 404
+            
+        except Exception as db_error:
+            logger.error(f"Database connection error: {db_error}")
+            return jsonify({
+                'success': False,
+                'error': f'Database connection failed: {str(db_error)}'
+            }), 500
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+        
+        # Get request data
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Validate and filter allowed fields
+        allowed_fields = ['caption', 'is_primary', 'media_type', 'lat', 'lng']
+        filtered_data = {}
+        
+        for field, value in data.items():
+            if field in allowed_fields:
+                if field in ['lat', 'lng']:
+                    try:
+                        filtered_data[field] = float(value) if value is not None else None
+                    except (ValueError, TypeError):
+                        return jsonify({
+                            'success': False,
+                            'error': f'Invalid {field} value: {value}'
+                        }), 400
+                elif field == 'is_primary':
+                    if not isinstance(value, bool):
+                        return jsonify({
+                            'success': False,
+                            'error': f'is_primary must be a boolean value'
+                        }), 400
+                    filtered_data[field] = value
+                else:
+                    filtered_data[field] = value
+        
+        if not filtered_data:
+            return jsonify({
+                'success': False,
+                'error': 'No valid fields to update'
+            }), 400
+        
+        # Initialize media manager
+        try:
+            media_manager = POIMediaManager()
+        except Exception as manager_error:
+            logger.error(f"Error initializing media manager: {manager_error}")
+            return jsonify({
+                'success': False,
+                'error': f'Media manager initialization failed: {str(manager_error)}'
+            }), 500
+        
+        # Update media metadata
+        try:
+            if media_manager.update_route_media_metadata(route_id, filename, **filtered_data):
+                # Get updated media info
+                updated_media = media_manager.get_route_media(route_id)
+                updated_item = next((m for m in updated_media if m.get('filename') == filename), None)
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Media updated successfully',
+                    'media': updated_item
+                }), 200
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to update media in database'
+                }), 500
+        except Exception as update_error:
+            logger.error(f"Error updating media: {update_error}")
+            return jsonify({
+                'success': False,
+                'error': f'Error updating media: {str(update_error)}'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error updating route media: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error updating media: {str(e)}'
+        }), 500
+
 @app.route('/api/routes/filter', methods=['POST'])
 @public_rate_limit(max_requests=50, window_seconds=60)
 def filter_routes():
