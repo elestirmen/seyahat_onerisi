@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Ana Sayfa - Ürgüp POI Öneri Sistemi{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto text-center">
+        <h1 class="display-4 mb-4">🗺️ Ürgüp POI Öneri Sistemi</h1>
+        <p class="lead mb-5">
+            Ürgüp bölgesindeki turistik yerleri, restoranları, otelleri ve aktiviteleri 
+            kişiselleştirilmiş öneriler halinde keşfedin.
+        </p>
+        
+        <div class="row g-4 mb-5">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="display-6 mb-3">🎯</div>
+                        <h5 class="card-title">Akıllı Öneriler</h5>
+                        <p class="card-text">Tercihlerinize göre kişiselleştirilmiş POI önerileri alın.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="display-6 mb-3">🗺️</div>
+                        <h5 class="card-title">İnteraktif Harita</h5>
+                        <p class="card-text">Modern harita teknolojisi ile POI'leri keşfedin.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="display-6 mb-3">🛣️</div>
+                        <h5 class="card-title">Rota Planlama</h5>
+                        <p class="card-text">Seçtiğiniz POI'ler için optimize edilmiş rotalar oluşturun.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+            <a href="/poi_recommendation_system.html" class="btn btn-primary btn-lg px-4 gap-3">
+                🚀 POI Önerilerini Başlat
+            </a>
+            <a href="/api/health/" class="btn btn-outline-secondary btn-lg px-4">
+                📊 Sistem Durumu
+            </a>
+        </div>
+        
+        <div class="mt-5">
+            <h3>✨ Özellikler</h3>
+            <div class="row g-3 mt-3">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">✅ 10 farklı kategori için tercih belirleme</li>
+                        <li class="mb-2">✅ Kişiselleştirilmiş puanlama sistemi</li>
+                        <li class="mb-2">✅ İnteraktif harita entegrasyonu</li>
+                        <li class="mb-2">✅ Rota planlama ve optimizasyon</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">✅ Medya galerisi desteği</li>
+                        <li class="mb-2">✅ Responsive tasarım</li>
+                        <li class="mb-2">✅ Modern kullanıcı arayüzü</li>
+                        <li class="mb-2">✅ API endpoint'leri</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

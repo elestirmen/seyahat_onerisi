@@ -21,3 +21,4 @@ python-bcrypt==0.3.2
 python-magic==0.4.27
 requests==2.32.4
 scikit-learn==1.7.1
+psutil==5.9.5
