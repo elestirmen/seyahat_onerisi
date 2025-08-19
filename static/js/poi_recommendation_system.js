@@ -5328,6 +5328,37 @@ async function displayRouteOnMap(route) {
                                 }
                             });
                         }
+                        // Load route media and overlay camera markers + elevation markers
+                        try {
+                            const mediaResp = await fetch(`${apiBase}/routes/${route.id}/media`);
+                            if (mediaResp.ok) {
+                                const mediaJson = await mediaResp.json();
+                                const mediaItems = Array.isArray(mediaJson) ? mediaJson : (mediaJson.media || []);
+                                const locatedMedia = mediaItems.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
+                                if (locatedMedia.length > 0) {
+                                    const cameraIcon = L.divIcon({
+                                        className: 'camera-marker',
+                                        html: '<div style="background:#f59e0b;border:2px solid #fff;width:12px;height:12px;transform:rotate(45deg);border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>',
+                                        iconSize: [12, 12],
+                                        iconAnchor: [6, 6]
+                                    });
+                                    locatedMedia.forEach(m => {
+                                        const lat = parseFloat(m.lat ?? m.latitude);
+                                        const lng = parseFloat(m.lng ?? m.longitude ?? m.lon);
+                                        if (!isFinite(lat) || !isFinite(lng)) return;
+                                        const mk = L.marker([lat, lng], { icon: cameraIcon })
+                                            .bindPopup(`<div style=\"min-width:180px\"><strong>Fotoğraf</strong>${m.caption ? `<div style=\\\"margin-top:4px;color:#666\\\">${m.caption}</div>`: ''}${m.preview_path || m.thumbnail_path || m.file_path ? `<div style=\\\"margin-top:8px\\\"><img src='/${m.preview_path || m.thumbnail_path || m.file_path}' alt='media' style='width:100%;border-radius:6px;'/></div>`:''}</div>`)
+                                            .addTo(predefinedMap);
+                                        predefinedMapLayers.push(mk);
+                                    });
+                                    if (predefinedElevationChart) {
+                                        predefinedElevationChart.setMediaMarkers(locatedMedia);
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Could not load route media for predefined map:', e);
+                        }
                     }
                     return;
                 }
@@ -5457,6 +5488,37 @@ async function displayRouteOnMap(route) {
                                 longitude: poi.lng || poi.lon
                             }))
                         });
+                    }
+                    // Overlay media markers for POI-based routes
+                    try {
+                        const mediaResp = await fetch(`${apiBase}/routes/${route.id}/media`);
+                        if (mediaResp.ok) {
+                            const mediaJson = await mediaResp.json();
+                            const mediaItems = Array.isArray(mediaJson) ? mediaJson : (mediaJson.media || []);
+                            const locatedMedia = mediaItems.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
+                            if (locatedMedia.length > 0 && predefinedElevationChart) {
+                                predefinedElevationChart.setMediaMarkers(locatedMedia);
+                            }
+                            if (locatedMedia.length > 0) {
+                                const cameraIcon = L.divIcon({
+                                    className: 'camera-marker',
+                                    html: '<div style="background:#f59e0b;border:2px solid #fff;width:12px;height:12px;transform:rotate(45deg);border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>',
+                                    iconSize: [12, 12],
+                                    iconAnchor: [6, 6]
+                                });
+                                locatedMedia.forEach(m => {
+                                    const lat = parseFloat(m.lat ?? m.latitude);
+                                    const lng = parseFloat(m.lng ?? m.longitude ?? m.lon);
+                                    if (!isFinite(lat) || !isFinite(lng)) return;
+                                    const mk = L.marker([lat, lng], { icon: cameraIcon })
+                                        .bindPopup(`<div style=\"min-width:180px\"><strong>Fotoğraf</strong>${m.caption ? `<div style=\\\"margin-top:4px;color:#666\\\">${m.caption}</div>`: ''}${m.preview_path || m.thumbnail_path || m.file_path ? `<div style=\\\"margin-top:8px\\\"><img src='/${m.preview_path || m.thumbnail_path || m.file_path}' alt='media' style='width:100%;border-radius:6px;'/></div>`:''}</div>`)
+                                        .addTo(predefinedMap);
+                                    predefinedMapLayers.push(mk);
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Could not load route media for POI-based predefined route:', e);
                     }
                 }
             } else {
