@@ -793,7 +793,6 @@
             margin-bottom: 0.5rem;
             font-style: italic;
         }
-
         .poi-popup-description {
             color: #444;
             font-size: 0.9rem;
@@ -1164,7 +1163,6 @@
         }
     </style>
 </head>
-
 <body>
     <div class="route-management-container" id="routeContainer">
         <!-- Resizable Splitter -->
@@ -1797,6 +1795,9 @@
                 .then(r => r.ok ? r.json() : null)
                 .then(d => { if (d?.csrf_token) csrfToken = d.csrf_token; })
                 .catch(() => { });
+
+            // Ensure media functionality is properly initialized
+            console.log('Route manager initialized, media functionality ready');
         });
 
         // Cleanup on page unload
@@ -1941,7 +1942,6 @@
                 loadingInProgress = false;
             }
         }
-
         // Display routes in sidebar
         function displayRoutes() {
             const container = document.getElementById('routeListContainer');
@@ -2118,6 +2118,15 @@
 
                 // Highlight and focus on the selected route
                 highlightAndFocusRoute(currentRoute);
+
+                // Ensure media section is initialized for the selected route
+                setTimeout(async () => {
+                    try {
+                        await loadRouteMediaForEdit(routeId);
+                    } catch (error) {
+                        console.warn('Failed to initialize media for selected route:', error);
+                    }
+                }, 1000);
             }
         }
 
@@ -2353,6 +2362,15 @@
                     }
                 }, 500);
             }
+
+            // Also refresh media for the selected route
+            setTimeout(async () => {
+                try {
+                    await loadRouteMediaForEdit(rid);
+                } catch (error) {
+                    console.warn('Failed to load media for route details:', error);
+                }
+            }, 800);
         }
 
         // Show route details in a popup modal
@@ -2657,7 +2675,6 @@
             `;
             document.head.appendChild(style);
         }
-
         // Update map with filtered routes
         async function updateMapRoutes() {
             console.log('=== updateMapRoutes called ===');
@@ -3402,7 +3419,6 @@
                 }
             }, 5000);
         }
-
         // Resizable Map Functionality
         function setupResizableMap() {
             const resizeHandle = document.getElementById('resizeHandle');
@@ -3638,22 +3654,25 @@
                 mediaTypeSelect.value = 'auto';
 
                 // Wait a moment for the server to process the upload
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 1000));
 
                 // Reload media with retry logic
                 let retryCount = 0;
-                const maxRetries = 3;
+                const maxRetries = 5;
                 
                 while (retryCount < maxRetries) {
                     try {
                         console.log(`Reloading media, attempt ${retryCount + 1}`);
                         await loadRouteMediaForEdit(getRouteId(currentRoute));
+                        console.log('Media reload successful on attempt', retryCount + 1);
                         break;
                     } catch (error) {
                         retryCount++;
                         console.warn(`Media reload attempt ${retryCount} failed:`, error);
                         if (retryCount < maxRetries) {
                             await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                        } else {
+                            console.error('All media reload attempts failed');
                         }
                     }
                 }
@@ -3703,17 +3722,45 @@
             console.log('Loading media for route:', routeId);
 
             try {
+                // Ensure container exists and show loading state
+                let container = document.getElementById('routeCurrentMedia');
+                if (!container) {
+                    console.warn('Media container not found, waiting for DOM...');
+                    // Wait a bit more for DOM to be ready
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    container = document.getElementById('routeCurrentMedia');
+                    if (!container) {
+                        console.error('Media container still not found after delay');
+                        
+                        // Try to find the container in the edit form
+                        const editForm = document.getElementById('routeEditForm');
+                        if (editForm) {
+                            console.log('Edit form found, looking for media container...');
+                            // Look for any element with 'media' in the ID
+                            const mediaElements = editForm.querySelectorAll('[id*="media"]');
+                            console.log('Found media elements:', mediaElements);
+                            
+                            if (mediaElements.length > 0) {
+                                container = mediaElements[0];
+                                console.log('Using found media container:', container);
+                            }
+                        }
+                        
+                        if (!container) {
+                            console.error('Media container could not be found or created');
+                            return;
+                        }
+                    }
+                }
+
+                // Show loading state
+                container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Medya dosyaları yükleniyor...</p></div>';
+
                 const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
                     credentials: 'include'
                 });
                 
                 console.log('Media API response status:', response.status);
-                
-                const container = document.getElementById('routeCurrentMedia');
-                if (!container) {
-                    console.error('Media container not found: routeCurrentMedia');
-                    return;
-                }
 
                 if (!response.ok) {
                     console.error('Media API error:', response.status, response.statusText);
@@ -3832,10 +3879,23 @@
                 groupedMedia[mediaType].forEach(media => {
                     if (!media) return;
                     
-                    // Handle different path field names
+                    // Handle different path field names and ensure proper path construction
                     const rawPath = media.path || media.file_path || media.url || '';
                     const filename = media.filename || media.name || rawPath.split('/').pop() || 'Unknown file';
-                    const previewPath = media.preview_path || media.thumbnail_path || media.thumb_path || rawPath;
+                    
+                    // Try multiple thumbnail paths in order of preference
+                    let previewPath = '';
+                    if (media.thumbnail_path) {
+                        previewPath = media.thumbnail_path.startsWith('/') ? media.thumbnail_path : `/${media.thumbnail_path}`;
+                    } else if (media.preview_path) {
+                        previewPath = media.preview_path.startsWith('/') ? media.preview_path : `/${media.preview_path}`;
+                    } else if (media.thumb_path) {
+                        previewPath = media.thumb_path.startsWith('/') ? media.thumb_path : `/${media.thumb_path}`;
+                    } else if (rawPath) {
+                        // Fallback to original path if no thumbnail
+                        previewPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+                    }
+                    
                     const isImage = mediaType === 'image';
                     
                     // Check if media has location coordinates
@@ -3843,7 +3903,19 @@
                     const lat = parseFloat(media.lat ?? media.latitude);
                     const lng = parseFloat(media.lng ?? media.longitude ?? media.lon);
 
-                    console.log('Processing media item:', { media, rawPath, filename, previewPath, isImage, hasLocation, lat, lng });
+                    console.log('Processing media item:', { 
+                        media, 
+                        rawPath, 
+                        filename, 
+                        previewPath, 
+                        isImage, 
+                        hasLocation, 
+                        lat, 
+                        lng 
+                    });
+
+                    // Ensure rawPath is properly formatted for modal
+                    const modalPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
 
                     mediaHtml += `
                         <div class="media-item-card ${hasLocation ? 'has-location' : ''}" data-media-id="${filename}" data-lat="${lat || ''}" data-lng="${lng || ''}">
@@ -3851,13 +3923,18 @@
                                 <i class="fas fa-times"></i>
                             </button>
 
-                            ${isImage ?
-                            `<img src="/${previewPath}" class="media-preview" alt="${filename}"
-                                      onclick="showRouteMediaModal('/${rawPath}', '${filename}', '${mediaType}')">` :
-                            `<div class="media-placeholder" onclick="showRouteMediaModal('/${rawPath}', '${filename}', '${mediaType}')">
+                            ${isImage && previewPath ?
+                            `<img src="${previewPath}" class="media-preview" alt="${filename}"
+                                      onclick="showRouteMediaModal('${modalPath}', '${filename}', '${mediaType}')"
+                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                      style="display: block;">` : ''
+                        }
+                            
+                            ${(!isImage || !previewPath) ?
+                            `<div class="media-placeholder" onclick="showRouteMediaModal('${modalPath}', '${filename}', '${mediaType}')" style="display: ${isImage && previewPath ? 'none' : 'flex'};">
                                     ${getMediaTypeIcon(mediaType)}
-                                    <div class="media-format">${media.format?.toUpperCase() || ''}</div>
-                                </div>`
+                                    <div class="media-format">${media.format?.toUpperCase() || filename.split('.').pop()?.toUpperCase() || ''}</div>
+                                </div>` : ''
                         }
 
                             <div class="media-type-badge">${getMediaTypeIcon(mediaType)}</div>
@@ -3902,7 +3979,7 @@
             });
 
             container.innerHTML = mediaHtml;
-            console.log('Media display HTML set');
+            console.log('Media display HTML generated and inserted');
         }
 
         async function deleteRouteMediaFile(routeId, filename) {
@@ -4141,7 +4218,6 @@
                 showNotification('Konum kaldırılırken hata oluştu: ' + error.message, 'error');
             }
         }
-
         // Update photo location in the system
         async function updatePhotoLocation(filename, lat, lng) {
             if (!currentRoute) {
@@ -4937,7 +5013,6 @@
             // Re-setup drag and drop
             setupDragAndDrop();
         }
-
         function saveCoordinateOrder() {
             // This would typically save the new order to the backend
             // For now, we'll just show a success message
@@ -5475,9 +5550,27 @@
         }
 
         // Load existing media for route - with delay to ensure DOM is ready
-        setTimeout(() => {
-            loadRouteMediaForEdit(getRouteId(route));
-        }, 100);
+        setTimeout(async () => {
+            try {
+                await loadRouteMediaForEdit(getRouteId(route));
+                console.log('Media loaded successfully for route:', getRouteId(route));
+            } catch (error) {
+                console.error('Failed to load media for route:', getRouteId(route), error);
+            }
+        }, 500);
+
+        // Additional media initialization to ensure it works
+        setTimeout(async () => {
+            try {
+                const container = document.getElementById('routeCurrentMedia');
+                if (container && container.innerHTML.includes('loading-spinner')) {
+                    console.log('Media container still loading, retrying...');
+                    await loadRouteMediaForEdit(getRouteId(route));
+                }
+            } catch (error) {
+                console.warn('Additional media initialization failed:', error);
+            }
+        }, 1500);
         
                     // Load existing coordinates for route
             loadRouteCoordinates(getRouteId(route));
@@ -5489,8 +5582,25 @@
             setTimeout(() => {
                 refreshPhotoLocationMarkers();
             }, 500);
-        }
 
+            // Final media initialization check
+            setTimeout(async () => {
+                try {
+                    const container = document.getElementById('routeCurrentMedia');
+                    if (container) {
+                        console.log('Final media container check - container exists');
+                        if (container.innerHTML.includes('loading-spinner') || container.innerHTML.includes('Medya dosyaları yükleniyor')) {
+                            console.log('Media container still in loading state, final retry...');
+                            await loadRouteMediaForEdit(getRouteId(route));
+                        }
+                    } else {
+                        console.warn('Final check - media container still not found');
+                    }
+                } catch (error) {
+                    console.warn('Final media initialization failed:', error);
+                }
+            }, 2000);
+        }
         // Add styles for route edit form
         function addRouteEditFormStyles() {
             if (document.getElementById('routeEditFormStyles')) return;
@@ -5718,6 +5828,26 @@
                     color: var(--route-dark);
                     margin-bottom: 0.25rem;
                     word-break: break-word;
+                }
+
+                .media-type-section {
+                    margin-bottom: 2rem;
+                }
+
+                .media-type-title {
+                    font-size: 1rem;
+                    font-weight: 600;
+                    color: var(--route-dark);
+                    margin-bottom: 1rem;
+                    padding-bottom: 0.5rem;
+                    border-bottom: 2px solid var(--route-border);
+                }
+
+                .current-media-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                    gap: 1rem;
+                    margin-top: 1rem;
                 }
 
                 .media-item-size {
@@ -6279,7 +6409,6 @@
 
             console.log('Associated POIs displayed successfully');
         }
-
         // Search POIs
         function searchPOIs() {
             const searchTerm = document.getElementById('poiSearchInput').value.toLowerCase();
@@ -6929,6 +7058,15 @@
             const routeId = getRouteId(currentRoute);
             console.log('🧪 TEST: Media loading test for route:', routeId);
 
+            // First, check if we're in edit mode
+            const isEditMode = document.getElementById('routeEditForm') !== null;
+            console.log('Is in edit mode:', isEditMode);
+
+            if (!isEditMode) {
+                alert('❌ Rota düzenleme modunda değilsiniz! Önce rotayı düzenlemeye girin.');
+                return;
+            }
+
             try {
                 const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
                     credentials: 'include'
@@ -6948,9 +7086,14 @@
                     const container = document.getElementById('routeCurrentMedia');
                     if (container) {
                         console.log('Media container found:', container);
+                        console.log('Container HTML before:', container.innerHTML);
                         displayRouteCurrentMedia(data.media || data || [], routeId);
+                        console.log('Container HTML after:', container.innerHTML);
                     } else {
                         console.error('Media container not found');
+                        // Try to find the container in different ways
+                        const allContainers = document.querySelectorAll('[id*="media"]');
+                        console.log('All media-related containers:', allContainers);
                     }
                     
                     alert(`🎉 Media Test Başarılı!\nResponse: ${JSON.stringify(data, null, 2)}`);
@@ -7070,7 +7213,6 @@
                 showError('JSON dışa aktarımında hata oluştu');
             }
         }
-
         function printRouteDetails(routeId) {
             const route = allRoutes.find(r => r.id === routeId);
             if (!route) return;
