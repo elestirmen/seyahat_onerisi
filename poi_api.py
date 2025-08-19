@@ -4468,22 +4468,7 @@ def update_route_media_location(route_id: int, filename: str):
                 'error': f'Media manager initialization failed: {str(manager_error)}'
             }), 500
         
-        # Get current media info
-        try:
-            route_media = media_manager.get_route_media(route_id)
-            media_item = next((m for m in route_media if m['filename'] == filename), None)
-            
-            if not media_item:
-                return jsonify({
-                    'success': False,
-                    'error': 'Media not found'
-                }), 404
-        except Exception as media_error:
-            logger.error(f"Error getting route media: {media_error}")
-            return jsonify({
-                'success': False,
-                'error': f'Error retrieving media information: {str(media_error)}'
-            }), 500
+        # Note: Media existence check is handled by the media manager
         
         # Update location in the database
         try:

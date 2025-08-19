@@ -1198,8 +1198,8 @@ class POIMediaManager:
                 # Delete the media record
                 cur.execute("""
                     DELETE FROM route_media 
-                    WHERE route_id = %s AND (filename = %s OR file_path LIKE %s)
-                """, (route_id, filename, f"%{filename}%"))
+                    WHERE route_id = %s AND file_path LIKE %s
+                """, (route_id, f"%{filename}%"))
                 
                 conn.commit()
                 print(f"✅ Database record deleted for route {route_id}, filename {filename}")
@@ -1254,11 +1254,11 @@ class POIMediaManager:
                     print(f"❌ Route not found: {route_id}")
                     return False
                 
-                # First, try to find the media record in the database
+                # First, try to find the media record in the database using file_path
                 cur.execute("""
                     SELECT id FROM route_media 
-                    WHERE route_id = %s AND (filename = %s OR file_path LIKE %s)
-                """, (route_id, filename, f"%{filename}"))
+                    WHERE route_id = %s AND file_path LIKE %s
+                """, (route_id, f"%{filename}"))
                 
                 existing_record = cur.fetchone()
                 
@@ -1279,15 +1279,14 @@ class POIMediaManager:
                         print(f"❌ Media file not found in filesystem: {filename}")
                         return False
                     
-                    # Create a new database record
+                    # Create a new database record (without filename column)
                     cur.execute("""
-                        INSERT INTO route_media (route_id, file_path, filename, lat, lng, 
+                        INSERT INTO route_media (route_id, file_path, lat, lng, 
                                                media_type, uploaded_at, caption, is_primary)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         route_id,
                         file_path,
-                        filename,
                         lat,
                         lng,
                         'photo',  # Default to photo for images
