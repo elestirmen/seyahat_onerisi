@@ -90,24 +90,21 @@ def create_route_media_table(cursor):
             route_id        INTEGER NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
             file_path       VARCHAR(255) NOT NULL,        -- dosya yolu
             thumbnail_path  VARCHAR(255),                 -- küçük önizleme
+            preview_path    VARCHAR(255),                 -- büyük önizleme
             lat             DOUBLE PRECISION,             -- opsiyonel enlem
             lng             DOUBLE PRECISION,             -- opsiyonel boylam
             caption         TEXT,
             is_primary      BOOLEAN DEFAULT FALSE,        -- ana görsel
-            media_type      VARCHAR(20) DEFAULT 'photo',  -- 'photo','promotional','thumbnail','cover'
+            media_type      VARCHAR(20) DEFAULT 'image',  -- 'image','video','audio','model_3d'
             uploaded_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
             -- Geçerlilik kontrolleri
             CONSTRAINT valid_media_type CHECK (
-                media_type IN ('photo','promotional','thumbnail','cover')
+                media_type IN ('image','video','audio','model_3d')
             ),
             -- lat ve lng birlikte NULL ya da birlikte dolu olmalı
             CONSTRAINT both_or_none CHECK ((lat IS NULL) = (lng IS NULL)),
-            -- 'photo' türünde konum zorunlu, diğerlerinde serbest
-            CONSTRAINT coords_required_for_photos CHECK (
-                media_type <> 'photo' OR (lat IS NOT NULL AND lng IS NOT NULL)
-            ),
-            -- Aralık kontrolleri (NULL ise atlanır)
+            -- Konum zorunlu değil, opsiyonel
             CONSTRAINT lat_range_if_present CHECK (lat IS NULL OR (lat BETWEEN -90 AND 90)),
             CONSTRAINT lng_range_if_present CHECK (lng IS NULL OR (lng BETWEEN -180 AND 180))
         );
@@ -210,6 +207,33 @@ def create_trigram_search_index(cursor):
         print("  ✅ idx_routes_description_trgm created")
     else:
         print("  ℹ️ routes.description not found; skipping description trigram")
+
+
+def ensure_route_media_columns(cursor):
+    """Ensure all required columns exist in route_media table"""
+    print("📊 Ensuring route_media columns...")
+    
+    # Add preview_path column if it doesn't exist
+    if not check_column_exists(cursor, 'route_media', 'preview_path'):
+        cursor.execute("ALTER TABLE route_media ADD COLUMN preview_path VARCHAR(255);")
+        print("  ✅ Added route_media.preview_path")
+    else:
+        print("  ℹ️ route_media.preview_path already exists")
+    
+    # Update media_type constraint if needed
+    try:
+        cursor.execute("""
+            ALTER TABLE route_media 
+            DROP CONSTRAINT IF EXISTS valid_media_type;
+        """)
+        cursor.execute("""
+            ALTER TABLE route_media 
+            ADD CONSTRAINT valid_media_type 
+            CHECK (media_type IN ('image','video','audio','model_3d'));
+        """)
+        print("  ✅ Updated media_type constraint")
+    except Exception as e:
+        print(f"  ⚠️ Could not update media_type constraint: {e}")
 
 
 def create_helper_functions(cursor):
@@ -429,6 +453,7 @@ def run_migration():
         ensure_schema_migrations_table(cursor)
 
         create_route_media_table(cursor)
+        ensure_route_media_columns(cursor)
         add_preview_image_to_routes(cursor)
         ensure_routes_metadata_columns(cursor)
         create_trigram_search_index(cursor)
@@ -521,9 +546,11 @@ def rollback_migration():
         print("🗑️ Dropping route_media table...")
         cursor.execute("DROP TABLE IF EXISTS route_media CASCADE;")
 
-        # Column
+        # Columns
         print("🧹 Removing routes.preview_image (keeps meta cols)...")
         cursor.execute("ALTER TABLE routes DROP COLUMN IF EXISTS preview_image;")
+        print("🧹 Removing route_media.preview_path...")
+        cursor.execute("ALTER TABLE route_media DROP COLUMN IF EXISTS preview_path;")
 
         # Log
         ensure_schema_migrations_table(cursor)

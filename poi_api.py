@@ -4172,20 +4172,19 @@ def upload_route_media(route_id: int):
                 
                 # Insert into route_media table
                 cur.execute("""
-                    INSERT INTO route_media (route_id, file_path, thumbnail_path, preview_path, 
+                    INSERT INTO route_media (route_id, file_path, thumbnail_path, 
                                            lat, lng, caption, is_primary, media_type, uploaded_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id
                 """, (
                     route_id,
                     media_info['file_path'],
                     media_info['thumbnail_path'],
-                    media_info['preview_path'],
                     latitude,
                     longitude,
                     caption,
                     is_primary,
-                    'photo' if media_info['media_type'] == 'image' else media_info['media_type'],
+                    media_info['media_type'],
                     datetime.now()
                 ))
                 
