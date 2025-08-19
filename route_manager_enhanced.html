@@ -807,6 +807,127 @@
             font-weight: 600;
         }
 
+        /* Photo Location Management Styles */
+        .photo-location-management {
+            background: #f8f9fa;
+            border: 1px solid var(--route-border);
+            border-radius: var(--route-radius);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .photo-location-info {
+            margin-bottom: 1rem;
+        }
+
+        .photo-location-info p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .photo-location-controls {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .photo-location-controls .btn {
+            font-size: 0.8rem;
+            padding: 0.375rem 0.75rem;
+        }
+
+        /* Media Item Location Styles */
+        .media-item-card.has-location {
+            border-color: var(--route-success);
+            box-shadow: 0 0 0 1px var(--route-success);
+        }
+
+        .media-location-info {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--route-border);
+        }
+
+        .location-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .location-badge.location-set {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .location-badge.location-missing {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .location-actions {
+            display: flex;
+            gap: 0.25rem;
+            margin-left: auto;
+        }
+
+        .btn-location-edit,
+        .btn-location-add,
+        .btn-location-remove {
+            background: none;
+            border: none;
+            padding: 0.125rem 0.25rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: var(--route-transition);
+            opacity: 0.7;
+        }
+
+        .btn-location-edit:hover,
+        .btn-location-add:hover,
+        .btn-location-remove:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-location-edit {
+            color: var(--route-primary);
+        }
+
+        .btn-location-add {
+            color: var(--route-success);
+        }
+
+        .btn-location-remove {
+            color: var(--route-danger);
+        }
+
+        /* Map Location Selection Styles */
+        #routeMap.select-location {
+            cursor: crosshair;
+        }
+
+        #routeMap.select-location::after {
+            content: 'Fotoğraf konumu için haritaya tıklayın';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            pointer-events: none;
+            z-index: 1000;
+            white-space: nowrap;
+        }
+
         /* Route Details Popup Styles */
         .route-detail-popup {
             padding: 0;
@@ -1582,10 +1703,15 @@
                                         }
                                     });
 
-                                    // Pass to elevation chart so markers appear on profile
-                                    if (window.routeElevationChart) {
-                                        window.routeElevationChart.setMediaMarkers(locatedMedia);
-                                    }
+                                                        // Pass to elevation chart so markers appear on profile
+                    if (window.routeElevationChart) {
+                        window.routeElevationChart.setMediaMarkers(locatedMedia);
+                    }
+                    
+                    // Store located media for elevation chart updates
+                    if (window.routeElevationChart && locatedMedia.length > 0) {
+                        window.routeElevationChart.setPhotoLocations(locatedMedia);
+                    }
                                 }
                             } catch (e) {
                                 console.warn('Rota medyası yüklenemedi:', e);
@@ -2907,10 +3033,12 @@
             // Sadece seçili rotayı haritaya ekle
             await showSingleRouteOnMap(route);
 
-            // Seçili rotanın POI'lerini yükle ve göster
-            setTimeout(async () => {
-                await loadAndDisplayRoutePOIs(rid);
-            }, 100);
+                            // Seçili rotanın POI'lerini yükle ve göster
+                setTimeout(async () => {
+                    await loadAndDisplayRoutePOIs(rid);
+                    // Refresh photo location markers
+                    refreshPhotoLocationMarkers();
+                }, 100);
         }
 
         // Load and display POI markers for a specific route
@@ -3709,11 +3837,16 @@
                     const filename = media.filename || media.name || rawPath.split('/').pop() || 'Unknown file';
                     const previewPath = media.preview_path || media.thumbnail_path || media.thumb_path || rawPath;
                     const isImage = mediaType === 'image';
+                    
+                    // Check if media has location coordinates
+                    const hasLocation = (media.lat || media.latitude) && (media.lng || media.longitude || media.lon);
+                    const lat = parseFloat(media.lat ?? media.latitude);
+                    const lng = parseFloat(media.lng ?? media.longitude ?? media.lon);
 
-                    console.log('Processing media item:', { media, rawPath, filename, previewPath, isImage });
+                    console.log('Processing media item:', { media, rawPath, filename, previewPath, isImage, hasLocation, lat, lng });
 
                     mediaHtml += `
-                        <div class="media-item-card">
+                        <div class="media-item-card ${hasLocation ? 'has-location' : ''}" data-media-id="${filename}" data-lat="${lat || ''}" data-lng="${lng || ''}">
                             <button class="media-delete-btn" onclick="deleteRouteMediaFile('${routeId}', '${filename}')" title="Sil">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -3732,6 +3865,31 @@
                             <div class="media-item-info">
                                 <div class="media-item-name">${filename || ''}</div>
                                 <div class="media-item-size">${media.size ? (media.size / 1024).toFixed(0) + 'KB' : ''}</div>
+                                
+                                <!-- Location Information -->
+                                <div class="media-location-info">
+                                    ${hasLocation ? 
+                                        `<div class="location-badge location-set">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            <span>${lat.toFixed(6)}, ${lng.toFixed(6)}</span>
+                                            <div class="location-actions">
+                                                <button class="btn-location-edit" onclick="editPhotoLocation('${filename}', ${lat}, ${lng})" title="Konumu Düzenle">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn-location-remove" onclick="removePhotoLocation('${filename}')" title="Konumu Kaldır">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>` :
+                                        `<div class="location-badge location-missing">
+                                            <i class="fas fa-map-marker-alt text-muted"></i>
+                                            <span class="text-muted">Konum yok</span>
+                                            <button class="btn-location-add" onclick="addPhotoLocation('${filename}')" title="Konum Ekle">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>`
+                                    }
+                                </div>
                             </div>
                         </div>
                     `;
@@ -3842,6 +4000,606 @@
             modal.addEventListener('hidden.bs.modal', () => {
                 modal.remove();
             });
+        }
+
+        // Photo Location Management Functions
+        let photoLocationMode = false;
+        let selectedPhotoForLocation = null;
+        let photoLocationMarkers = {};
+
+        // Enable photo location selection mode
+        function enablePhotoLocationSelection() {
+            if (photoLocationMode) {
+                disablePhotoLocationSelection();
+                return;
+            }
+
+            photoLocationMode = true;
+            document.getElementById('enablePhotoLocationBtn').innerHTML = '<i class="fas fa-times me-1"></i>Konum Seçimi İptal';
+            document.getElementById('enablePhotoLocationBtn').classList.remove('btn-outline-primary');
+            document.getElementById('enablePhotoLocationBtn').classList.add('btn-danger');
+            
+            // Add map click handler for location selection
+            if (map) {
+                map.getContainer().classList.add('select-location');
+                map.once('click', handleMapClickForPhotoLocation);
+            }
+            
+            showNotification('Haritaya tıklayarak fotoğraf konumu seçin', 'info');
+        }
+
+        // Disable photo location selection mode
+        function disablePhotoLocationSelection() {
+            photoLocationMode = false;
+            document.getElementById('enablePhotoLocationBtn').innerHTML = '<i class="fas fa-crosshairs me-1"></i>Haritadan Konum Seç';
+            document.getElementById('enablePhotoLocationBtn').classList.remove('btn-danger');
+            document.getElementById('enablePhotoLocationBtn').classList.add('btn-outline-primary');
+            
+            if (map) {
+                map.getContainer().classList.remove('select-location');
+                map.off('click', handleMapClickForPhotoLocation);
+            }
+            
+            selectedPhotoForLocation = null;
+        }
+
+        // Handle map click for photo location selection
+        function handleMapClickForPhotoLocation(e) {
+            if (!photoLocationMode || !selectedPhotoForLocation) return;
+            
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            // Update photo location
+            updatePhotoLocation(selectedPhotoForLocation, lat, lng);
+            
+            // Exit location selection mode
+            disablePhotoLocationSelection();
+        }
+
+        // Add location to a photo
+        function addPhotoLocation(filename) {
+            selectedPhotoForLocation = filename;
+            enablePhotoLocationSelection();
+            showNotification(`"${filename}" için konum seçimi aktif. Haritaya tıklayın.`, 'info');
+        }
+
+        // Edit existing photo location
+        function editPhotoLocation(filename, currentLat, currentLng) {
+            selectedPhotoForLocation = filename;
+            enablePhotoLocationSelection();
+            showNotification(`"${filename}" için yeni konum seçimi aktif. Haritaya tıklayın.`, 'info');
+        }
+
+        // Remove photo location
+        async function removePhotoLocation(filename) {
+            if (!confirm(`"${filename}" için konum bilgisini kaldırmak istediğinizden emin misiniz?`)) {
+                return;
+            }
+
+            if (!currentRoute) {
+                showNotification('Aktif rota bulunamadı', 'error');
+                return;
+            }
+
+            const routeId = getRouteId(currentRoute);
+            if (!routeId) {
+                showNotification('Rota ID bulunamadı', 'error');
+                return;
+            }
+
+            try {
+                // Remove location marker from map
+                if (photoLocationMarkers[filename]) {
+                    poiMarkersLayer.removeLayer(photoLocationMarkers[filename]);
+                    delete photoLocationMarkers[filename];
+                }
+
+                // Update media metadata to remove location
+                const mediaResponse = await fetch(`${apiBase}/admin/routes/${routeId}/media`, { credentials: 'include' });
+                if (mediaResponse.ok) {
+                    const mediaJson = await mediaResponse.json();
+                    const mediaItems = Array.isArray(mediaJson) ? mediaJson : (Array.isArray(mediaJson.media) ? mediaJson.media : []);
+                    const mediaItem = mediaItems.find(m => (m.filename || m.name || m.path?.split('/').pop()) === filename);
+                    
+                    if (mediaItem) {
+                        const updatedMedia = {
+                            ...mediaItem,
+                            lat: null,
+                            lng: null,
+                            latitude: null,
+                            longitude: null
+                        };
+                        
+                        const response = await fetch(`${apiBase}/admin/routes/${routeId}/media/${filename}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': csrfToken || ''
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify(updatedMedia)
+                        });
+
+                        if (response.ok) {
+                            showNotification(`"${filename}" için konum kaldırıldı`, 'success');
+                            
+                            // Refresh media display
+                            await loadRouteMediaForEdit(routeId);
+                            
+                            // Refresh elevation chart
+                            if (window.routeElevationChart) {
+                                refreshPhotoLocationMarkers();
+                            }
+                        } else {
+                            throw new Error('Konum kaldırılamadı');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error removing photo location:', error);
+                showNotification('Konum kaldırılırken hata oluştu: ' + error.message, 'error');
+            }
+        }
+
+        // Update photo location in the system
+        async function updatePhotoLocation(filename, lat, lng) {
+            if (!currentRoute) {
+                showNotification('Aktif rota bulunamadı', 'error');
+                return;
+            }
+
+            const routeId = getRouteId(currentRoute);
+            if (!routeId) {
+                showNotification('Rota ID bulunamadı', 'error');
+                return;
+            }
+
+            try {
+                // First try the dedicated location endpoint
+                let response = await fetch(`${apiBase}/admin/routes/${routeId}/media/${filename}/location`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken || ''
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        latitude: lat,
+                        longitude: lng,
+                        filename: filename
+                    })
+                });
+
+                // If the dedicated endpoint doesn't exist, try updating the media metadata
+                if (!response.ok && response.status === 404) {
+                    console.log('Location endpoint not found, trying media update...');
+                    
+                    // Get current media info
+                    const mediaResponse = await fetch(`${apiBase}/admin/routes/${routeId}/media`, { credentials: 'include' });
+                    if (mediaResponse.ok) {
+                        const mediaJson = await mediaResponse.json();
+                        const mediaItems = Array.isArray(mediaJson) ? mediaJson : (Array.isArray(mediaJson.media) ? mediaJson.media : []);
+                        const mediaItem = mediaItems.find(m => (m.filename || m.name || m.path?.split('/').pop()) === filename);
+                        
+                        if (mediaItem) {
+                            // Update the media item with location data
+                            const updatedMedia = {
+                                ...mediaItem,
+                                lat: lat,
+                                lng: lng,
+                                latitude: lat,
+                                longitude: lng
+                            };
+                            
+                            response = await fetch(`${apiBase}/admin/routes/${routeId}/media/${filename}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-Token': csrfToken || ''
+                                },
+                                credentials: 'include',
+                                body: JSON.stringify(updatedMedia)
+                            });
+                        }
+                    }
+                }
+
+                if (response.ok) {
+                    showNotification(`"${filename}" için konum güncellendi: ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 'success');
+                    
+                    // Refresh media display
+                    await loadRouteMediaForEdit(routeId);
+                    
+                    // Update map markers
+                    updatePhotoLocationMarker(filename, lat, lng);
+                    
+                    // Update elevation chart
+                    if (window.routeElevationChart) {
+                        refreshPhotoLocationMarkers();
+                    }
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Konum güncellenemedi');
+                }
+            } catch (error) {
+                console.error('Error updating photo location:', error);
+                showNotification('Konum güncellenirken hata oluştu: ' + error.message, 'error');
+            }
+        }
+
+        // Update photo location marker on map
+        function updatePhotoLocationMarker(filename, lat, lng) {
+            // Remove existing marker if any
+            if (photoLocationMarkers[filename]) {
+                poiMarkersLayer.removeLayer(photoLocationMarkers[filename]);
+                delete photoLocationMarkers[filename];
+            }
+
+            // Create new marker
+            const cameraIcon = L.divIcon({
+                className: 'camera-marker',
+                html: '<div style="background:#f59e0b;border:2px solid #fff;width:12px;height:12px;transform:rotate(45deg);border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>',
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+            });
+
+            const marker = L.marker([lat, lng], { icon: cameraIcon })
+                .bindPopup(`<div style="min-width:180px"><strong>Fotoğraf: ${filename}</strong><div style="margin-top:4px;color:#666">Konum: ${lat.toFixed(6)}, ${lng.toFixed(6)}</div></div>`);
+
+            photoLocationMarkers[filename] = marker;
+            poiMarkersLayer.addLayer(marker);
+        }
+
+        // Refresh all photo location markers
+        async function refreshPhotoLocationMarkers() {
+            if (!currentRoute) return;
+            
+            const routeId = getRouteId(currentRoute);
+            if (!routeId) return;
+
+            try {
+                const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, { credentials: 'include' });
+                if (response.ok) {
+                    const mediaJson = await response.json();
+                    const mediaItems = Array.isArray(mediaJson) ? mediaJson : (Array.isArray(mediaJson.media) ? mediaJson.media : []);
+                    
+                    // Clear existing photo markers
+                    Object.values(photoLocationMarkers).forEach(marker => {
+                        poiMarkersLayer.removeLayer(marker);
+                    });
+                    photoLocationMarkers = {};
+
+                    // Add markers for media with coordinates
+                    const locatedMedia = mediaItems.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
+                    locatedMedia.forEach(m => {
+                        const lat = parseFloat(m.lat ?? m.latitude);
+                        const lng = parseFloat(m.lng ?? m.longitude ?? m.lon);
+                        const filename = m.filename || m.name || m.path?.split('/').pop() || 'Unknown';
+                        
+                        if (isFinite(lat) && isFinite(lng)) {
+                            updatePhotoLocationMarker(filename, lat, lng);
+                        }
+                    });
+
+                    // Update elevation chart
+                    if (window.routeElevationChart) {
+                        window.routeElevationChart.setMediaMarkers(locatedMedia);
+                    }
+                }
+            } catch (error) {
+                console.error('Error refreshing photo location markers:', error);
+            }
+        }
+
+        // Batch set photo locations from route coordinates
+        async function batchSetPhotoLocations() {
+            if (!currentRoute) {
+                showNotification('Aktif rota bulunamadı', 'error');
+                return;
+            }
+
+            const routeId = getRouteId(currentRoute);
+            if (!routeId) return;
+
+            try {
+                // Get current media files
+                const mediaResponse = await fetch(`${apiBase}/admin/routes/${routeId}/media`, { credentials: 'include' });
+                if (!mediaResponse.ok) {
+                    throw new Error('Medya dosyaları alınamadı');
+                }
+
+                const mediaJson = await mediaResponse.json();
+                const mediaItems = Array.isArray(mediaJson) ? mediaJson : (Array.isArray(mediaJson.media) ? mediaJson.media : []);
+                
+                // Get route coordinates
+                const routeResponse = await fetch(`${apiBase}/admin/routes/${routeId}`, { credentials: 'include' });
+                if (!routeResponse.ok) {
+                    throw new Error('Rota bilgileri alınamadı');
+                }
+
+                const routeData = await routeResponse.json();
+                const route = routeData.route || routeData;
+                
+                let coordinates = [];
+                if (route.coordinates && Array.isArray(route.coordinates)) {
+                    coordinates = route.coordinates.map(coord => ({
+                        lat: coord[1] || coord.lat || coord.latitude,
+                        lng: coord[0] || coord.lng || coord.longitude
+                    }));
+                } else if (route.geometry && route.geometry.coordinates) {
+                    coordinates = route.geometry.coordinates.map(coord => ({
+                        lat: coord[1],
+                        lng: coord[0]
+                    }));
+                }
+
+                if (coordinates.length === 0) {
+                    showNotification('Rota koordinatları bulunamadı', 'warning');
+                    return;
+                }
+
+                // Distribute photos along route coordinates
+                const photosWithoutLocation = mediaItems.filter(m => !(m.lat || m.latitude) && !(m.lng || m.longitude || m.lon));
+                
+                if (photosWithoutLocation.length === 0) {
+                    showNotification('Konum belirlenmemiş fotoğraf bulunamadı', 'info');
+                    return;
+                }
+
+                // Calculate distribution
+                const step = Math.max(1, Math.floor(coordinates.length / photosWithoutLocation.length));
+                let assignedCount = 0;
+
+                for (let i = 0; i < photosWithoutLocation.length && i * step < coordinates.length; i++) {
+                    const coord = coordinates[i * step];
+                    const photo = photosWithoutLocation[i];
+                    const filename = photo.filename || photo.name || photo.path?.split('/').pop() || 'Unknown';
+                    
+                    await updatePhotoLocation(filename, coord.lat, coord.lng);
+                    assignedCount++;
+                }
+
+                showNotification(`${assignedCount} fotoğraf için konum atandı`, 'success');
+                
+                // Refresh display
+                await loadRouteMediaForEdit(routeId);
+                refreshPhotoLocationMarkers();
+
+            } catch (error) {
+                console.error('Error in batch location assignment:', error);
+                showNotification('Toplu konum atama hatası: ' + error.message, 'error');
+            }
+        }
+
+        // Export photo locations
+        function exportPhotoLocations() {
+            if (!currentRoute) {
+                showNotification('Aktif rota bulunamadı', 'error');
+                return;
+            }
+
+            const routeId = getRouteId(currentRoute);
+            if (!routeId) {
+                showNotification('Rota ID bulunamadı', 'error');
+                return;
+            }
+
+            // Get all media with locations from the current display
+            const mediaCards = document.querySelectorAll('.media-item-card.has-location');
+            const locations = [];
+
+            mediaCards.forEach(card => {
+                const filename = card.dataset.mediaId;
+                const lat = parseFloat(card.dataset.lat);
+                const lng = parseFloat(card.dataset.lng);
+                
+                if (filename && !isNaN(lat) && !isNaN(lng)) {
+                    locations.push({
+                        filename: filename,
+                        latitude: lat,
+                        longitude: lng,
+                        coordinates: `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+                    });
+                }
+            });
+
+            if (locations.length === 0) {
+                showNotification('Konum bulunamadı', 'warning');
+                return;
+            }
+
+            // Create CSV content
+            const csvContent = [
+                'Dosya Adı,Enlem,Boylam,Koordinatlar',
+                ...locations.map(loc => `${loc.filename},${loc.latitude},${loc.longitude},"${loc.coordinates}"`)
+            ].join('\n');
+
+            // Download CSV file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `route_${routeId}_photo_locations.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showNotification(`${locations.length} konum CSV olarak dışa aktarıldı`, 'success');
+        }
+
+        // Import photo locations from CSV
+        function importPhotoLocations() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                try {
+                    const text = await file.text();
+                    const lines = text.split('\n');
+                    const headers = lines[0].split(',');
+                    
+                    // Find column indices
+                    const filenameIndex = headers.findIndex(h => h.includes('Dosya') || h.includes('File'));
+                    const latIndex = headers.findIndex(h => h.includes('Enlem') || h.includes('Latitude') || h.includes('Lat'));
+                    const lngIndex = headers.findIndex(h => h.includes('Boylam') || h.includes('Longitude') || h.includes('Lng'));
+
+                    if (filenameIndex === -1 || latIndex === -1 || lngIndex === -1) {
+                        throw new Error('CSV formatı tanınmadı. Gerekli sütunlar: Dosya Adı, Enlem, Boylam');
+                    }
+
+                    let importedCount = 0;
+                    let errorCount = 0;
+
+                    for (let i = 1; i < lines.length; i++) {
+                        if (!lines[i].trim()) continue;
+                        
+                        const values = lines[i].split(',');
+                        const filename = values[filenameIndex]?.trim().replace(/"/g, '');
+                        const lat = parseFloat(values[latIndex]);
+                        const lng = parseFloat(values[lngIndex]);
+
+                        if (filename && !isNaN(lat) && !isNaN(lng)) {
+                            try {
+                                await updatePhotoLocation(filename, lat, lng);
+                                importedCount++;
+                            } catch (error) {
+                                console.error(`Error importing location for ${filename}:`, error);
+                                errorCount++;
+                            }
+                        }
+                    }
+
+                    if (importedCount > 0) {
+                        showNotification(`${importedCount} konum başarıyla içe aktarıldı${errorCount > 0 ? `, ${errorCount} hata` : ''}`, 'success');
+                    } else {
+                        showNotification('Hiçbir konum içe aktarılamadı', 'warning');
+                    }
+
+                } catch (error) {
+                    console.error('CSV import error:', error);
+                    showNotification('CSV içe aktarma hatası: ' + error.message, 'error');
+                }
+            };
+
+            input.click();
+        }
+
+        // Clear all photo locations
+        async function clearAllPhotoLocations() {
+            if (!currentRoute) {
+                showNotification('Aktif rota bulunamadı', 'error');
+                return;
+            }
+
+            const routeId = getRouteId(currentRoute);
+            if (!routeId) {
+                showNotification('Rota ID bulunamadı', 'error');
+                return;
+            }
+
+            if (!confirm('Tüm fotoğraf konumlarını kaldırmak istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
+                return;
+            }
+
+            try {
+                // Get current media files
+                const mediaResponse = await fetch(`${apiBase}/admin/routes/${routeId}/media`, { credentials: 'include' });
+                if (!mediaResponse.ok) {
+                    throw new Error('Medya dosyaları alınamadı');
+                }
+
+                const mediaJson = await mediaResponse.json();
+                const mediaItems = Array.isArray(mediaJson) ? mediaJson : (Array.isArray(mediaJson.media) ? mediaJson.media : []);
+                
+                // Clear all location markers from map
+                Object.values(photoLocationMarkers).forEach(marker => {
+                    poiMarkersLayer.removeLayer(marker);
+                });
+                photoLocationMarkers = {};
+
+                // Remove locations from all media items
+                let clearedCount = 0;
+                for (const media of mediaItems) {
+                    if ((media.lat || media.latitude) && (media.lng || media.longitude || media.lon)) {
+                        const filename = media.filename || media.name || media.path?.split('/').pop() || 'Unknown';
+                        
+                        try {
+                            const updatedMedia = {
+                                ...media,
+                                lat: null,
+                                lng: null,
+                                latitude: null,
+                                longitude: null
+                            };
+                            
+                            const response = await fetch(`${apiBase}/admin/routes/${routeId}/media/${filename}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-Token': csrfToken || ''
+                                },
+                                credentials: 'include',
+                                body: JSON.stringify(updatedMedia)
+                            });
+
+                            if (response.ok) {
+                                clearedCount++;
+                            }
+                        } catch (error) {
+                            console.error(`Error clearing location for ${filename}:`, error);
+                        }
+                    }
+                }
+
+                showNotification(`${clearedCount} fotoğraf konumu kaldırıldı`, 'success');
+                
+                // Refresh display
+                await loadRouteMediaForEdit(routeId);
+                
+                // Refresh elevation chart
+                if (window.routeElevationChart) {
+                    refreshPhotoLocationMarkers();
+                }
+
+            } catch (error) {
+                console.error('Error clearing photo locations:', error);
+                showNotification('Fotoğraf konumları kaldırılırken hata oluştu: ' + error.message, 'error');
+            }
+        }
+
+        // Enhanced elevation chart integration for photo locations
+        function enhanceElevationChartWithPhotoLocations() {
+            if (!window.routeElevationChart) return;
+            
+            // Add photo location markers to elevation chart
+            const locatedMedia = Object.values(photoLocationMarkers).map(marker => {
+                const latlng = marker.getLatLng();
+                const filename = marker.options.filename || 'Unknown';
+                return {
+                    filename: filename,
+                    latitude: latlng.lat,
+                    longitude: latlng.lng,
+                    lat: latlng.lat,
+                    lng: latlng.lng
+                };
+            });
+            
+            if (locatedMedia.length > 0) {
+                window.routeElevationChart.setMediaMarkers(locatedMedia);
+                console.log('Photo locations added to elevation chart:', locatedMedia.length);
+            }
+        }
+
+        // Update elevation chart when photo locations change
+        function updateElevationChartPhotoLocations() {
+            if (window.routeElevationChart && currentRoute) {
+                enhanceElevationChartWithPhotoLocations();
+            }
         }
 
         // Coordinate Management Functions
@@ -4641,6 +5399,40 @@
                                 </button>
                             </div>
 
+                            <!-- Photo Location Management -->
+                            <div class="photo-location-management">
+                                <h5><i class="fas fa-map-marker-alt me-2"></i>Fotoğraf Konum Yönetimi</h5>
+                                <div class="photo-location-info">
+                                    <p class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Her fotoğraf için ayrı konum belirleyebilirsiniz. Konum belirlenen fotoğraflar harita ve yükseklik profili üzerinde gösterilecektir.
+                                    </p>
+                                </div>
+                                
+                                <div class="photo-location-controls">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="enablePhotoLocationSelection()" id="enablePhotoLocationBtn">
+                                        <i class="fas fa-crosshairs me-1"></i>
+                                        Haritadan Konum Seç
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success btn-sm" onclick="batchSetPhotoLocations()" id="batchLocationBtn">
+                                        <i class="fas fa-layer-group me-1"></i>
+                                        Toplu Konum Ata
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info btn-sm" onclick="exportPhotoLocations()" id="exportLocationsBtn">
+                                        <i class="fas fa-download me-1"></i>
+                                        Konumları Dışa Aktar
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="importPhotoLocations()" id="importLocationsBtn">
+                                        <i class="fas fa-upload me-1"></i>
+                                        Konumları İçe Aktar
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearAllPhotoLocations()" id="clearLocationsBtn">
+                                        <i class="fas fa-trash me-1"></i>
+                                        Tüm Konumları Temizle
+                                    </button>
+                                </div>
+                            </div>
+
                             <!-- Current Media Files -->
                             <div class="current-media-container">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -4687,11 +5479,16 @@
             loadRouteMediaForEdit(getRouteId(route));
         }, 100);
         
-        // Load existing coordinates for route
-        loadRouteCoordinates(getRouteId(route));
-        
-        // Initialize coordinate management
-        initializeCoordinateManagement();
+                    // Load existing coordinates for route
+            loadRouteCoordinates(getRouteId(route));
+            
+            // Initialize coordinate management
+            initializeCoordinateManagement();
+            
+            // Refresh photo location markers
+            setTimeout(() => {
+                refreshPhotoLocationMarkers();
+            }, 500);
         }
 
         // Add styles for route edit form
