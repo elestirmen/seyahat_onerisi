@@ -493,7 +493,6 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
-
         /* Workspace */
         .route-workspace {
             grid-area: workspace;
@@ -994,7 +993,6 @@
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
-
         .stat-card-popup {
             display: flex;
             align-items: center;
@@ -1917,7 +1915,6 @@
             document.getElementById('durationFilter').addEventListener('change', applyFilters);
             document.getElementById('sortFilter').addEventListener('change', applyFilters);
         }
-
         // Load routes from API
         async function loadRoutes() {
             // Rate limiting kontrolü - Geliştirme için devre dışı
@@ -2242,7 +2239,6 @@
             // Fit map to all routes
             fitMapToRoutes();
         }
-
         // Display route details in workspace
         async function displayRouteDetails(route) {
             const workspaceTitle = document.getElementById('workspaceTitle');
@@ -2371,6 +2367,9 @@
                             </button>
                             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="refreshRouteMedia()">
                                 <i class="fas fa-sync-alt me-1"></i>Yenile
+                            </button>
+                            <button type="button" class="btn btn-outline-warning btn-sm" onclick="debugMediaDisplay('${rid}')" title="Medya görüntüleme sorunlarını debug et">
+                                <i class="fas fa-bug me-1"></i>Debug
                             </button>
                         </div>
                         <div id="routeCurrentMedia" class="current-media-grid">
@@ -2582,7 +2581,6 @@
             // Select the route
             selectRoute(routeId);
         }
-
         // Add styles for route detail view
         function addRouteDetailStyles() {
             if (document.getElementById('routeDetailStyles')) return;
@@ -3573,7 +3571,6 @@
             // }
             loadRoutes();
         }
-
         function clearMapRoutes() {
             clearAllRoutesFromMap();
             // POI marker'larını da temizle
@@ -3973,8 +3970,40 @@
                 if (response.ok) {
                     showNotification(`"${filename}" başarıyla WebP formatına dönüştürüldü!`, 'success');
                     
+                    // Wait a moment for the server to process the file
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
                     // Reload media to show the updated file
+                    console.log('Reloading media after WebP conversion...');
                     await loadRouteMediaForEdit(routeId);
+                    
+                    // Additional verification - check if the WebP file is now visible
+                    setTimeout(async () => {
+                        try {
+                            const verifyResponse = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
+                                credentials: 'include'
+                            });
+                            if (verifyResponse.ok) {
+                                const verifyData = await verifyResponse.json();
+                                console.log('Verification - Media after WebP conversion:', verifyData);
+                                
+                                // Check if WebP file exists
+                                const webpFile = Array.isArray(verifyData) ? verifyData : (verifyData.media || []);
+                                const hasWebP = webpFile.some(m => 
+                                    (m.filename || m.name || '').toLowerCase().endsWith('.webp') ||
+                                    (m.path || m.file_path || '').toLowerCase().endsWith('.webp')
+                                );
+                                
+                                if (hasWebP) {
+                                    console.log('✅ WebP file successfully verified in media list');
+                                } else {
+                                    console.warn('⚠️ WebP file not found in media list after conversion');
+                                }
+                            }
+                        } catch (verifyError) {
+                            console.warn('Verification failed:', verifyError);
+                        }
+                    }, 2000);
                 } else {
                     const error = await response.json();
                     throw new Error(error.error || 'WebP dönüştürme başarısız');
@@ -3982,6 +4011,32 @@
             } catch (error) {
                 console.error('WebP conversion error:', error);
                 showNotification('WebP dönüştürme hatası: ' + error.message, 'error');
+            }
+        }
+
+        // Debug media display issues
+        function debugMediaDisplay(routeId) {
+            console.log('🔍 Debugging media display for route:', routeId);
+            
+            // Check if container exists
+            const container = document.getElementById('routeCurrentMedia');
+            console.log('Media container found:', !!container);
+            if (container) {
+                console.log('Container innerHTML length:', container.innerHTML.length);
+                console.log('Container classes:', container.className);
+            }
+            
+            // Check if route is selected
+            console.log('Current route:', currentRoute);
+            console.log('Current route ID:', getRouteId(currentRoute));
+            
+            // Check if media loading function exists
+            console.log('loadRouteMediaForEdit function exists:', typeof loadRouteMediaForEdit === 'function');
+            
+            // Try to manually trigger media loading
+            if (typeof loadRouteMediaForEdit === 'function' && routeId) {
+                console.log('Manually triggering media loading...');
+                loadRouteMediaForEdit(routeId);
             }
         }
 
@@ -4067,7 +4122,6 @@
                 showNotification('Medya yenilenirken hata oluştu: ' + error.message, 'error');
             }
         }
-
         async function uploadRouteMedia() {
             if (!currentRoute) {
                 showNotification('Önce bir rota seçin', 'error');
@@ -4285,6 +4339,44 @@
                     });
                 }
 
+                // Ensure all media items have proper media_type set
+                mediaFiles.forEach(media => {
+                    if (media && !media.media_type) {
+                        // Try to determine media type from filename or path
+                        const filename = media.filename || media.name || '';
+                        const filePath = media.path || media.file_path || '';
+                        
+                        if (filename || filePath) {
+                            const checkPath = filename || filePath;
+                            const lowerPath = checkPath.toLowerCase();
+                            
+                            if (lowerPath.endsWith('.webp') || lowerPath.endsWith('.jpg') || lowerPath.endsWith('.jpeg') || 
+                                lowerPath.endsWith('.png') || lowerPath.endsWith('.gif') || lowerPath.endsWith('.bmp') || 
+                                lowerPath.endsWith('.tiff')) {
+                                media.media_type = 'image';
+                                console.log('Set media_type to image for:', checkPath);
+                            } else if (lowerPath.endsWith('.mp4') || lowerPath.endsWith('.avi') || lowerPath.endsWith('.mov') || 
+                                     lowerPath.endsWith('.wmv') || lowerPath.endsWith('.flv') || lowerPath.endsWith('.webm') || 
+                                     lowerPath.endsWith('.mkv') || lowerPath.endsWith('.m4v')) {
+                                media.media_type = 'video';
+                                console.log('Set media_type to video for:', checkPath);
+                            } else if (lowerPath.endsWith('.mp3') || lowerPath.endsWith('.wav') || lowerPath.endsWith('.ogg') || 
+                                     lowerPath.endsWith('.m4a') || lowerPath.endsWith('.aac') || lowerPath.endsWith('.flac')) {
+                                media.media_type = 'audio';
+                                console.log('Set media_type to audio for:', checkPath);
+                            } else if (lowerPath.endsWith('.glb') || lowerPath.endsWith('.gltf') || lowerPath.endsWith('.obj') || 
+                                     lowerPath.endsWith('.fbx') || lowerPath.endsWith('.dae') || lowerPath.endsWith('.ply') || 
+                                     lowerPath.endsWith('.stl')) {
+                                media.media_type = 'model_3d';
+                                console.log('Set media_type to model_3d for:', checkPath);
+                            } else {
+                                media.media_type = 'unknown';
+                                console.log('Could not determine media_type for:', checkPath);
+                            }
+                        }
+                    }
+                });
+
                 console.log('Processed media files:', mediaFiles);
                 console.log('Processed media files count:', mediaFiles.length);
                 if (mediaFiles.length > 0) {
@@ -4352,7 +4444,32 @@
             mediaFiles.forEach(media => {
                 if (!media) return; // Skip null/undefined items
                 
-                const type = media.media_type || media.type || 'unknown';
+                // Enhanced media type detection - ensure WebP files are treated as images
+                let type = media.media_type || media.type || 'unknown';
+                
+                // If media_type is not set but filename suggests it's an image, set it to 'image'
+                if (type === 'unknown' && media.filename) {
+                    const filename = media.filename.toLowerCase();
+                    if (filename.endsWith('.webp') || filename.endsWith('.jpg') || filename.endsWith('.jpeg') || 
+                        filename.endsWith('.png') || filename.endsWith('.gif') || filename.endsWith('.bmp') || 
+                        filename.endsWith('.tiff')) {
+                        type = 'image';
+                        // Update the media object to ensure consistency
+                        media.media_type = 'image';
+                    }
+                }
+                
+                // Also check the file path if filename is not available
+                if (type === 'unknown' && (media.path || media.file_path)) {
+                    const filePath = (media.path || media.file_path).toLowerCase();
+                    if (filePath.endsWith('.webp') || filePath.endsWith('.jpg') || filePath.endsWith('.jpeg') || 
+                        filePath.endsWith('.png') || filePath.endsWith('.gif') || filePath.endsWith('.bmp') || 
+                        filePath.endsWith('.tiff')) {
+                        type = 'image';
+                        media.media_type = 'image';
+                    }
+                }
+                
                 if (!groupedMedia[type]) groupedMedia[type] = [];
                 groupedMedia[type].push(media);
             });
@@ -4403,10 +4520,20 @@
                         preview_path: media.preview_path,
                         thumb_path: media.thumb_path,
                         rawPath,
-                        finalPreviewPath: previewPath
+                        finalPreviewPath: previewPath,
+                        media_type: media.media_type
                     });
                     
-                    const isImage = mediaType === 'image';
+                    // Enhanced image detection - include WebP files
+                    const isImage = mediaType === 'image' || 
+                                  (media.media_type === 'image') || 
+                                  filename.toLowerCase().endsWith('.webp') ||
+                                  filename.toLowerCase().endsWith('.jpg') ||
+                                  filename.toLowerCase().endsWith('.jpeg') ||
+                                  filename.toLowerCase().endsWith('.png') ||
+                                  filename.toLowerCase().endsWith('.gif') ||
+                                  filename.toLowerCase().endsWith('.bmp') ||
+                                  filename.toLowerCase().endsWith('.tiff');
                     
                     // Check if media has location coordinates
                     const hasLocation = (media.lat || media.latitude) && (media.lng || media.longitude || media.lon);
@@ -4421,7 +4548,8 @@
                         isImage, 
                         hasLocation, 
                         lat, 
-                        lng 
+                        lng,
+                        media_type: media.media_type
                     });
 
                     // Ensure rawPath is properly formatted for modal
@@ -4479,7 +4607,7 @@
                                         </div>`
                                     }
                                     
-                                    <!-- WebP Conversion Button for Images -->
+                                    <!-- WebP Conversion Button for Images (only show for non-WebP images) -->
                                     ${isImage && !filename.toLowerCase().endsWith('.webp') ? 
                                         `<div class="webp-conversion-actions mt-2">
                                             <button class="btn btn-sm btn-outline-info" onclick="convertExistingImageToWebP('${filename}', '${rawPath}')" title="WebP formatına dönüştür">
@@ -4507,7 +4635,7 @@
             });
 
             container.innerHTML = mediaHtml;
-            console.log('Media display HTML generated and inserted');
+            console.log('Media display completed');
         }
 
         async function deleteRouteMediaFile(routeId, filename) {
@@ -4971,7 +5099,6 @@
                 console.error('Error refreshing photo location markers:', error);
             }
         }
-
         // Batch set photo locations from route coordinates
         async function batchSetPhotoLocations() {
             if (!currentRoute) {
@@ -5442,7 +5569,6 @@
 
             showNotification('Koordinat düzenleme moduna geçildi', 'info');
         }
-
         function updateCoordinate(index) {
             const lat = parseFloat(document.getElementById('newCoordinateLat').value);
             const lng = parseFloat(document.getElementById('newCoordinateLng').value);
@@ -5789,7 +5915,6 @@
                 displayRouteEditForm(currentRoute);
             }
         }
-
         // Display route editing form in workspace
         function displayRouteEditForm(route) {
             const workspaceTitle = document.getElementById('workspaceTitle');
@@ -6365,6 +6490,9 @@
                     object-fit: cover;
                     border-radius: calc(var(--route-radius) - 4px);
                     margin-bottom: 0.5rem;
+                    /* Ensure WebP images are properly displayed */
+                    image-rendering: -webkit-optimize-contrast;
+                    image-rendering: crisp-edges;
                 }
 
                 .media-placeholder {
@@ -6701,7 +6829,6 @@
                 .poi-item-info {
                     flex: 1;
                 }
-
                 .poi-item-name {
                     font-weight: 600;
                     color: var(--route-dark);
@@ -7129,7 +7256,6 @@
                 }
             }
         }
-
         // Disassociate POI from route
         async function disassociatePOI(poiId) {
             if (!currentRoute) {
@@ -7606,7 +7732,6 @@
                 showNotification('Medya yenilenirken hata oluştu', 'error');
             }
         }
-
         // Test function for debugging
         function testNearbyFeature() {
             console.log('🧪 TEST: Yakın POI özelliği test ediliyor');
