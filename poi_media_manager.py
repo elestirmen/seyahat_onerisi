@@ -678,7 +678,7 @@ class POIMediaManager:
                         port=int(os.getenv("POI_DB_PORT", "5432")),
                         dbname=os.getenv("POI_DB_NAME", "poi_db"),
                         user=os.getenv("POI_DB_USER", "poi_user"),
-                        password=os.getenv("POI_DB_PASSWORD"),
+                        password=os.getenv("POI_DB_PASSWORD", "poi_password"),
                     )
                 
                 try:
@@ -686,7 +686,7 @@ class POIMediaManager:
                     
                     # Get media from database
                     cur.execute("""
-                        SELECT id, route_id, file_path, thumbnail_path, 
+                        SELECT id, route_id, file_path, thumbnail_path, preview_path,
                                lat, lng, caption, is_primary, media_type, uploaded_at
                         FROM route_media 
                         WHERE route_id = %s
@@ -712,9 +712,9 @@ class POIMediaManager:
                                     'route_id': row['route_id'],
                                     'file_path': row['file_path'],
                                     'thumbnail_path': row['thumbnail_path'],
-                                    'preview_path': None,  # Not in database, will be set from file system
+                                    'preview_path': row['preview_path'],  # Get from database
                                     'filename': file_path.name,
-                                    'media_type': row['media_type'] or 'photo',
+                                    'media_type': 'image' if row['media_type'] == 'photo' else row['media_type'] or 'image',
                                     'file_size': file_size,
                                     'caption': row['caption'] or '',
                                     'is_primary': row['is_primary'] or False,

@@ -488,7 +488,7 @@ class RouteService:
         with conn_context as conn:
             with conn.cursor() as cursor:
                 query = """
-                    SELECT id, route_id, file_path, thumbnail_path, lat, lng,
+                    SELECT id, route_id, file_path, thumbnail_path, preview_path, lat, lng,
                            caption, is_primary, media_type, uploaded_at
                     FROM route_media
                     WHERE route_id = %s
@@ -502,6 +502,14 @@ class RouteService:
             item = dict(row)
             if item.get('uploaded_at'):
                 item['uploaded_at'] = item['uploaded_at'].isoformat()
+            
+            # Add fields that the frontend expects
+            item['filename'] = Path(item['file_path']).name if item.get('file_path') else ''
+            item['file_size'] = Path(item['file_path']).stat().st_size if item.get('file_path') and Path(item['file_path']).exists() else 0
+            item['media_type'] = 'image' if item.get('media_type') == 'photo' else item.get('media_type', 'image')
+            item['latitude'] = item.get('lat')
+            item['longitude'] = item.get('lng')
+            
             media_list.append(item)
 
         return media_list

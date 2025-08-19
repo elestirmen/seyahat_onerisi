@@ -4165,6 +4165,44 @@ def upload_route_media(route_id: int):
                     'error': 'Failed to process media file'
                 }), 500
             
+            # Save media info to database
+            try:
+                conn = get_db_conn()
+                cur = conn.cursor(cursor_factory=RealDictCursor)
+                
+                # Insert into route_media table
+                cur.execute("""
+                    INSERT INTO route_media (route_id, file_path, thumbnail_path, preview_path, 
+                                           lat, lng, caption, is_primary, media_type, uploaded_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (
+                    route_id,
+                    media_info['file_path'],
+                    media_info['thumbnail_path'],
+                    media_info['preview_path'],
+                    latitude,
+                    longitude,
+                    caption,
+                    is_primary,
+                    'photo' if media_info['media_type'] == 'image' else media_info['media_type'],
+                    datetime.now()
+                ))
+                
+                db_result = cur.fetchone()
+                media_info['id'] = str(db_result['id'])
+                conn.commit()
+                print(f"✅ Media saved to database with ID: {media_info['id']}")
+                
+            except Exception as db_error:
+                print(f"⚠️ Database save failed: {db_error}")
+                # Continue anyway - the file is saved to filesystem
+            finally:
+                if cur:
+                    cur.close()
+                if conn:
+                    conn.close()
+            
             # Return success response
             return jsonify({
                 'success': True,
