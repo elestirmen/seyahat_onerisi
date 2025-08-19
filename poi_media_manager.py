@@ -14,6 +14,8 @@ import uuid
 from pathlib import Path
 import mimetypes
 from datetime import datetime
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 class POIMediaManager:
     # Desteklenen medya formatları
@@ -686,9 +688,6 @@ class POIMediaManager:
             # Try to get from database first
             try:
                 print(f"🔍 Attempting database lookup...")
-                import psycopg2
-                from psycopg2.extras import RealDictCursor
-                import os
                 
                 # Get database connection
                 conn_str = os.getenv("POI_DB_CONNECTION")
@@ -1049,14 +1048,18 @@ class POIMediaManager:
             
             # Extract the file stem (base name without extension) from the filename
             file_stem = Path(filename).stem
+            file_extension = Path(filename).suffix.lower()
+            
+            print(f"🔍 File stem: {file_stem}, extension: {file_extension}")
             
             # Remove common prefixes to get the actual file identifier
+            original_stem = file_stem
             if file_stem.startswith('preview_'):
                 file_stem = file_stem[8:]  # Remove 'preview_' prefix
             elif file_stem.startswith('thumb_'):
                 file_stem = file_stem[6:]   # Remove 'thumb_' prefix
             
-            print(f"🔍 Looking for files with stem: {file_stem}")
+            print(f"🔍 Looking for files with stem: {file_stem} (original: {original_stem})")
             
             # Rota klasörünü bul
             base_route_dir = self.base_path / "by_route_id"
@@ -1065,90 +1068,106 @@ class POIMediaManager:
                 return False
             
             # Rota ID'si ile başlayan klasörleri ara
-            for route_folder in base_route_dir.iterdir():
-                if route_folder.name.startswith(f"route_{route_id}_"):
-                    print(f"📂 Found route folder: {route_folder}")
+            route_folders = [f for f in base_route_dir.iterdir() if f.name.startswith(f"route_{route_id}_")]
+            if not route_folders:
+                print(f"❌ No route folders found for route_id={route_id}")
+                return False
+            
+            print(f"📂 Found {len(route_folders)} route folder(s)")
+            
+            deleted_any = False
+            
+            for route_folder in route_folders:
+                print(f"📂 Processing route folder: {route_folder}")
+                
+                # Define the paths for all three locations
+                preview_dir = self.previews_path / "by_route_id" / route_folder.name / "images"
+                thumb_dir = self.thumbnails_path / "by_route_id" / route_folder.name / "images"
+                original_dir = route_folder / "images"
+                
+                # 1. Delete preview file
+                if preview_dir.exists():
+                    preview_path = preview_dir / f"preview_{file_stem}.webp"
+                    if preview_path.exists():
+                        preview_path.unlink()
+                        print(f"✅ Preview file deleted: {preview_path}")
+                        deleted_any = True
+                    else:
+                        print(f"⚠️ Preview file not found: {preview_path}")
+                
+                # 2. Delete thumbnail file
+                if thumb_dir.exists():
+                    thumb_path = thumb_dir / f"thumb_{file_stem}.webp"
+                    if thumb_path.exists():
+                        thumb_path.unlink()
+                        print(f"✅ Thumbnail file deleted: {thumb_path}")
+                        deleted_any = True
+                    else:
+                        print(f"⚠️ Thumbnail file not found: {thumb_path}")
+                
+                # 3. Delete original file (could be in various formats)
+                if original_dir.exists():
+                    print(f"🔍 Searching in original directory: {original_dir}")
+                    # Look for original files with the same stem
+                    for original_file in original_dir.iterdir():
+                        if original_file.is_file():
+                            original_stem = original_file.stem
+                            print(f"🔍 Checking file: {original_file.name} (stem: {original_stem})")
+                            
+                            # Check if this original file matches our target
+                            if (original_stem == file_stem or 
+                                original_stem.endswith(file_stem) or
+                                file_stem.endswith(original_stem) or
+                                (len(original_stem) > 10 and len(file_stem) > 10 and 
+                                 (original_stem[-10:] in file_stem or file_stem[-10:] in original_stem)) or
+                                # For UUID-based filenames, try to match the core identifier
+                                (len(original_stem) > 20 and len(file_stem) > 20 and 
+                                 any(part in original_stem for part in file_stem.split('-') if len(part) > 8))):
+                                
+                                original_file.unlink()
+                                print(f"✅ Original file deleted: {original_file}")
+                                deleted_any = True
+                                break
+                
+                # 4. Also try to delete from videos folder if it exists
+                video_preview_dir = self.previews_path / "by_route_id" / route_folder.name / "videos"
+                video_thumb_dir = self.thumbnails_path / "by_route_id" / route_folder.name / "videos"
+                video_original_dir = route_folder / "videos"
+                
+                if video_preview_dir.exists():
+                    video_preview_path = video_preview_dir / f"preview_{file_stem}.png"
+                    if video_preview_path.exists():
+                        video_preview_path.unlink()
+                        print(f"✅ Video preview file deleted: {video_preview_path}")
+                        deleted_any = True
+                
+                if video_thumb_dir.exists():
+                    video_thumb_path = video_thumb_dir / f"thumb_{file_stem}.png"
+                    if video_thumb_path.exists():
+                        video_thumb_path.unlink()
+                        print(f"✅ Video thumbnail file deleted: {video_thumb_path}")
+                        deleted_any = True
+                
+                if video_original_dir.exists():
+                    for video_file in video_original_dir.iterdir():
+                        if video_file.is_file():
+                            video_stem = video_file.stem
+                            if (video_stem == file_stem or 
+                                video_stem.endswith(file_stem) or
+                                file_stem.endswith(video_stem)):
+                                video_file.unlink()
+                                print(f"✅ Video original file deleted: {video_file}")
+                                deleted_any = True
+                                break
+                
+                # 5. Try to delete from database
+                if deleted_any:
+                    try:
+                        self._delete_from_database(route_id, filename)
+                    except Exception as e:
+                        print(f"⚠️ Database deletion failed: {e}")
                     
-                    # Define the paths for all three locations
-                    preview_dir = self.previews_path / "by_route_id" / route_folder.name / "images"
-                    thumb_dir = self.thumbnails_path / "by_route_id" / route_folder.name / "images"
-                    original_dir = route_folder / "images"
-                    
-                    deleted_any = False
-                    
-                    # 1. Delete preview file
-                    if preview_dir.exists():
-                        preview_path = preview_dir / f"preview_{file_stem}.webp"
-                        if preview_path.exists():
-                            preview_path.unlink()
-                            print(f"✅ Preview file deleted: {preview_path}")
-                            deleted_any = True
-                    
-                    # 2. Delete thumbnail file
-                    if thumb_dir.exists():
-                        thumb_path = thumb_dir / f"thumb_{file_stem}.webp"
-                        if thumb_path.exists():
-                            thumb_path.unlink()
-                            print(f"✅ Thumbnail file deleted: {thumb_path}")
-                            deleted_any = True
-                    
-                    # 3. Delete original file (could be in various formats)
-                    if original_dir.exists():
-                        # Look for original files with the same stem
-                        for original_file in original_dir.iterdir():
-                            if original_file.is_file():
-                                original_stem = original_file.stem
-                                # Check if this original file matches our target
-                                if (original_stem == file_stem or 
-                                    original_stem.endswith(file_stem) or
-                                    file_stem.endswith(original_stem) or
-                                    (len(original_stem) > 10 and len(file_stem) > 10 and 
-                                     (original_stem[-10:] in file_stem or file_stem[-10:] in original_stem))):
-                                    
-                                    original_file.unlink()
-                                    print(f"✅ Original file deleted: {original_file}")
-                                    deleted_any = True
-                                    break
-                    
-                    # 4. Also try to delete from videos folder if it exists
-                    video_preview_dir = self.previews_path / "by_route_id" / route_folder.name / "videos"
-                    video_thumb_dir = self.thumbnails_path / "by_route_id" / route_folder.name / "videos"
-                    video_original_dir = route_folder / "videos"
-                    
-                    if video_preview_dir.exists():
-                        video_preview_path = video_preview_dir / f"preview_{file_stem}.png"
-                        if video_preview_path.exists():
-                            video_preview_path.unlink()
-                            print(f"✅ Video preview file deleted: {video_preview_path}")
-                            deleted_any = True
-                    
-                    if video_thumb_dir.exists():
-                        video_thumb_path = video_thumb_dir / f"thumb_{file_stem}.png"
-                        if video_thumb_path.exists():
-                            video_thumb_path.unlink()
-                            print(f"✅ Video thumbnail file deleted: {video_thumb_path}")
-                            deleted_any = True
-                    
-                    if video_original_dir.exists():
-                        for video_file in video_original_dir.iterdir():
-                            if video_file.is_file():
-                                video_stem = video_file.stem
-                                if (video_stem == file_stem or 
-                                    video_stem.endswith(file_stem) or
-                                    file_stem.endswith(video_stem)):
-                                    video_file.unlink()
-                                    print(f"✅ Video original file deleted: {video_file}")
-                                    deleted_any = True
-                                    break
-                    
-                    # 5. Try to delete from database
-                    if deleted_any:
-                        try:
-                            self._delete_from_database(route_id, filename)
-                        except Exception as e:
-                            print(f"⚠️ Database deletion failed: {e}")
-                        
-                        return True
+                    return True
             
             print(f"❌ No files found to delete for route_id={route_id}, filename={filename}")
             return False
@@ -1160,8 +1179,6 @@ class POIMediaManager:
     def _delete_from_database(self, route_id: int, filename: str):
         """Helper method to delete media record from database"""
         try:
-            import psycopg2
-            import os
             
             conn_str = os.getenv("POI_DB_CONNECTION")
             if conn_str:
@@ -1214,9 +1231,6 @@ class POIMediaManager:
             print(f"🔍 Updating location for route_id={route_id}, filename={filename}, lat={lat}, lng={lng}")
             
             # Database connection
-            import psycopg2
-            from psycopg2.extras import RealDictCursor
-            import os
             
             # Get database connection
             conn_str = os.getenv("POI_DB_CONNECTION")
@@ -1354,9 +1368,6 @@ class POIMediaManager:
         """
         try:
             # Database connection
-            import psycopg2
-            from psycopg2.extras import RealDictCursor
-            import os
             
             # Get database connection
             conn_str = os.getenv("POI_DB_CONNECTION")
