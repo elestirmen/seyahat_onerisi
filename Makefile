@@ -18,7 +18,7 @@ test-coverage: ## Coverage ile testleri çalıştır
 	python -m pytest tests/ --cov=app --cov-report=html
 
 run: ## Geliştirme sunucusunu başlat
-	python app.py
+	python poi_api.py
 
 run-prod: ## Production sunucusunu başlat
 	python wsgi.py

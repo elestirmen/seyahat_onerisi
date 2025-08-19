@@ -50,7 +50,9 @@ def get_db_conn():
 # Setup logger
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+app = Flask(__name__, 
+            static_folder='static',
+            template_folder='templates')
 CORS(app, origins=["*"], supports_credentials=True)
 
 # Configure session management
@@ -842,9 +844,14 @@ def get_db():
 
 @app.route('/')
 def index():
-    """Genel kullanıcılar için ana sayfa → öneri sistemi sayfasına yönlendir."""
-    # Son kullanıcı için giriş istemeden öneri sistemi sayfasına yönlendir
-    return redirect('/poi_recommendation_system.html')
+    """Genel kullanıcılar için ana sayfa."""
+    try:
+        from flask import render_template
+        return render_template('index.html')
+    except Exception as e:
+        logger.error(f"Template render hatası: {e}")
+        # Fallback olarak öneri sistemi sayfasına yönlendir
+        return redirect('/poi_recommendation_system.html')
 
 @app.route('/admin')
 @auth_middleware.require_auth

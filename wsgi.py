@@ -11,11 +11,8 @@ project_root = os.path.dirname(os.path.abspath(__file__))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# Import the application factory
-from app import create_app
-
-# Create application instance
-application = create_app()
+# Import the main application
+from poi_api import app as application
 
 # For compatibility, also expose as 'app'
 app = application

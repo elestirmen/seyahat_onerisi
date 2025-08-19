@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 def create_app(config_name=None):
     """
     Application factory function that creates and configures Flask app.
+    This is kept for compatibility but the main app is in poi_api.py
     
     Args:
         config_name (str): Configuration profile name ('development', 'production', 'testing')
@@ -32,11 +33,8 @@ def create_app(config_name=None):
     Returns:
         Flask: Configured Flask application instance
     """
-    # Create Flask app instance
-    app = Flask(__name__, 
-                instance_relative_config=True,
-                static_folder='../static',
-                template_folder='../templates')
+    # Import the main application from poi_api.py
+    from poi_api import app
     
     # Load configuration
     config = get_config(config_name)

@@ -87,7 +87,7 @@ python import_poi_data.py
 ### 6. Sunucuyu Başlatın
 ```bash
 # Development
-python app.py
+python poi_api.py
 
 # Production
 python wsgi.py
@@ -140,7 +140,7 @@ urgup-poi-recommendation/
 ├── temp_uploads/                # Geçici yüklemeler
 ├── poi_media/                   # POI medya dosyaları
 ├── poi_images/                  # POI resimleri
-├── app.py                       # Ana uygulama (development)
+├── poi_api.py                   # Ana uygulama (development)
 ├── wsgi.py                      # WSGI entry point (production)
 ├── requirements.txt             # Python bağımlılıkları
 ├── Dockerfile                   # Docker image
