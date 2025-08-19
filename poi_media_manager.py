@@ -653,7 +653,7 @@ class POIMediaManager:
     
     def get_route_media(self, route_id: int) -> List[Dict]:
         """
-        Rota için tüm medya dosyalarını getir
+        Rota için tüm medya dosyalarını getir (database'den)
         
         Args:
             route_id: Rota ID'si
@@ -662,6 +662,82 @@ class POIMediaManager:
             Medya dosyalarının listesi
         """
         try:
+            # Try to get from database first
+            try:
+                import psycopg2
+                from psycopg2.extras import RealDictCursor
+                import os
+                
+                # Get database connection
+                conn_str = os.getenv("POI_DB_CONNECTION")
+                if conn_str:
+                    conn = psycopg2.connect(conn_str)
+                else:
+                    conn = psycopg2.connect(
+                        host=os.getenv("POI_DB_HOST", "127.0.0.1"),
+                        port=int(os.getenv("POI_DB_PORT", "5432")),
+                        dbname=os.getenv("POI_DB_NAME", "poi_db"),
+                        user=os.getenv("POI_DB_USER", "poi_user"),
+                        password=os.getenv("POI_DB_PASSWORD"),
+                    )
+                
+                try:
+                    cur = conn.cursor(cursor_factory=RealDictCursor)
+                    
+                    # Get media from database
+                    cur.execute("""
+                        SELECT id, route_id, file_path, thumbnail_path, 
+                               lat, lng, caption, is_primary, media_type, uploaded_at
+                        FROM route_media 
+                        WHERE route_id = %s
+                        ORDER BY uploaded_at DESC
+                    """, (route_id,))
+                    
+                    db_media = cur.fetchall()
+                    
+                    if db_media:
+                        route_media = []
+                        for row in db_media:
+                            # Check if file still exists
+                            file_path = Path(row['file_path'])
+                            if file_path.exists():
+                                # Get file size
+                                try:
+                                    file_size = file_path.stat().st_size
+                                except:
+                                    file_size = 0
+                                
+                                media_info = {
+                                    'id': str(row['id']),
+                                    'route_id': row['route_id'],
+                                    'file_path': row['file_path'],
+                                    'thumbnail_path': row['thumbnail_path'],
+                                    'preview_path': None,  # Not in database, will be set from file system
+                                    'filename': file_path.name,
+                                    'media_type': row['media_type'] or 'photo',
+                                    'file_size': file_size,
+                                    'caption': row['caption'] or '',
+                                    'is_primary': row['is_primary'] or False,
+                                    'lat': row['lat'],
+                                    'lng': row['lng'],
+                                    'latitude': row['lat'],  # For compatibility
+                                    'longitude': row['lng'],  # For compatibility
+                                    'uploaded_at': row['uploaded_at'].isoformat() if row['uploaded_at'] else None
+                                }
+                                route_media.append(media_info)
+                        
+                        return route_media
+                
+                finally:
+                    if cur:
+                        cur.close()
+                    if conn:
+                        conn.close()
+                        
+            except Exception as e:
+                print(f"⚠️ Database'den medya getirilemedi, dosya sisteminden getiriliyor: {e}")
+            
+            # Fallback to file system if database fails
             route_media = []
             
             # Rota klasörünü bul
@@ -749,38 +825,195 @@ class POIMediaManager:
                         media_dir = route_folder / config['folder']
                         media_path = media_dir / filename
                         
-                        if media_path.exists() and media_path.is_file():
-                            # Ana dosyayı sil
+                        if media_path.exists():
+                            # Dosyayı sil
                             media_path.unlink()
-                            print(f"✅ Rota medyası silindi: {media_path}")
+                            print(f"✅ Medya dosyası silindi: {media_path}")
                             
                             # Thumbnail ve preview dosyalarını da sil
-                            file_stem = Path(filename).stem
                             thumb_dir = self.thumbnails_path / "by_route_id" / route_folder.name / config['folder']
                             preview_dir = self.previews_path / "by_route_id" / route_folder.name / config['folder']
                             
-                            if media_type == 'image':
-                                thumb_file = thumb_dir / f"thumb_{file_stem}.webp"
-                                preview_file = preview_dir / f"preview_{file_stem}.webp"
-                            else:
-                                thumb_file = thumb_dir / f"thumb_{file_stem}.png"
-                                preview_file = preview_dir / f"preview_{file_stem}.png"
+                            thumb_path = thumb_dir / f"thumb_{media_path.stem}.{'webp' if media_type == 'image' else 'png'}"
+                            preview_path = preview_dir / f"preview_{media_path.stem}.{'webp' if media_type == 'image' else 'png'}"
                             
-                            if thumb_file.exists():
-                                thumb_file.unlink()
-                                print(f"✅ Thumbnail silindi: {thumb_file}")
+                            if thumb_path.exists():
+                                thumb_path.unlink()
+                                print(f"✅ Thumbnail silindi: {thumb_path}")
                             
-                            if preview_file.exists():
-                                preview_file.unlink()
-                                print(f"✅ Preview silindi: {preview_file}")
+                            if preview_path.exists():
+                                preview_path.unlink()
+                                print(f"✅ Preview silindi: {preview_path}")
                             
                             return True
             
-            print(f"⚠️ Silinecek rota medyası bulunamadı: {filename}")
+            print(f"❌ Medya dosyası bulunamadı: route_id={route_id}, filename={filename}")
             return False
             
         except Exception as e:
             print(f"❌ Rota medyası silme hatası: {e}")
+            return False
+
+    def update_route_media_location(self, route_id: int, filename: str, lat: float, lng: float) -> bool:
+        """
+        Rota medyasının konum bilgisini güncelle
+        
+        Args:
+            route_id: Rota ID'si
+            filename: Güncellenecek dosya adı
+            lat: Yeni enlem
+            lng: Yeni boylam
+            
+        Returns:
+            Başarılı olursa True, başarısız olursa False
+        """
+        try:
+            # Database connection
+            import psycopg2
+            from psycopg2.extras import RealDictCursor
+            import os
+            
+            # Get database connection
+            conn_str = os.getenv("POI_DB_CONNECTION")
+            if conn_str:
+                conn = psycopg2.connect(conn_str)
+            else:
+                conn = psycopg2.connect(
+                    host=os.getenv("POI_DB_HOST", "127.0.0.1"),
+                    port=int(os.getenv("POI_DB_PORT", "5432")),
+                    dbname=os.getenv("POI_DB_NAME", "poi_db"),
+                    user=os.getenv("POI_DB_USER", "poi_user"),
+                    password=os.getenv("POI_DB_PASSWORD"),
+                )
+            
+            try:
+                cur = conn.cursor(cursor_factory=RealDictCursor)
+                
+                # Check if route exists
+                cur.execute("SELECT id FROM public.routes WHERE id=%s", (route_id,))
+                if not cur.fetchone():
+                    print(f"❌ Rota bulunamadı: {route_id}")
+                    return False
+                
+                # Update the route_media table
+                cur.execute("""
+                    UPDATE route_media 
+                    SET lat = %s, lng = %s 
+                    WHERE route_id = %s AND file_path LIKE %s
+                """, (lat, lng, route_id, f"%{filename}"))
+                
+                if cur.rowcount == 0:
+                    print(f"❌ Medya kaydı bulunamadı: route_id={route_id}, filename={filename}")
+                    return False
+                
+                # Commit the changes
+                conn.commit()
+                print(f"✅ Medya konumu güncellendi: route_id={route_id}, filename={filename}, lat={lat}, lng={lng}")
+                return True
+                
+            finally:
+                if cur:
+                    cur.close()
+                if conn:
+                    conn.close()
+                    
+        except Exception as e:
+            print(f"❌ Rota medya konumu güncelleme hatası: {e}")
+            return False
+
+    def update_route_media_metadata(self, route_id: int, filename: str, **kwargs) -> bool:
+        """
+        Rota medyasının metadata bilgilerini güncelle
+        
+        Args:
+            route_id: Rota ID'si
+            filename: Güncellenecek dosya adı
+            **kwargs: Güncellenecek alanlar (lat, lng, caption, is_primary, etc.)
+            
+        Returns:
+            Başarılı olursa True, başarısız olursa False
+        """
+        try:
+            # Database connection
+            import psycopg2
+            from psycopg2.extras import RealDictCursor
+            import os
+            
+            # Get database connection
+            conn_str = os.getenv("POI_DB_CONNECTION")
+            if conn_str:
+                conn = psycopg2.connect(conn_str)
+            else:
+                conn = psycopg2.connect(
+                    host=os.getenv("POI_DB_HOST", "127.0.0.1"),
+                    port=int(os.getenv("POI_DB_PORT", "5432")),
+                    dbname=os.getenv("POI_DB_NAME", "poi_db"),
+                    user=os.getenv("POI_DB_USER", "poi_user"),
+                    password=os.getenv("POI_DB_PASSWORD"),
+                )
+            
+            try:
+                cur = conn.cursor(cursor_factory=RealDictCursor)
+                
+                # Check if route exists
+                cur.execute("SELECT id FROM public.routes WHERE id=%s", (route_id,))
+                if not cur.fetchone():
+                    print(f"❌ Rota bulunamadı: {route_id}")
+                    return False
+                
+                # Build update query dynamically
+                update_fields = []
+                update_values = []
+                
+                if 'lat' in kwargs and kwargs['lat'] is not None:
+                    update_fields.append("lat = %s")
+                    update_values.append(kwargs['lat'])
+                
+                if 'lng' in kwargs and kwargs['lng'] is not None:
+                    update_fields.append("lng = %s")
+                    update_values.append(kwargs['lng'])
+                
+                if 'caption' in kwargs:
+                    update_fields.append("caption = %s")
+                    update_values.append(kwargs['caption'])
+                
+                if 'is_primary' in kwargs:
+                    update_fields.append("is_primary = %s")
+                    update_values.append(kwargs['is_primary'])
+                
+                if not update_fields:
+                    print("❌ Güncellenecek alan bulunamadı")
+                    return False
+                
+                # Add route_id and filename to values
+                update_values.extend([route_id, f"%{filename}"])
+                
+                # Execute update
+                query = f"""
+                    UPDATE route_media 
+                    SET {', '.join(update_fields)}
+                    WHERE route_id = %s AND file_path LIKE %s
+                """
+                
+                cur.execute(query, update_values)
+                
+                if cur.rowcount == 0:
+                    print(f"❌ Medya kaydı bulunamadı: route_id={route_id}, filename={filename}")
+                    return False
+                
+                # Commit the changes
+                conn.commit()
+                print(f"✅ Medya metadata güncellendi: route_id={route_id}, filename={filename}")
+                return True
+                
+            finally:
+                if cur:
+                    cur.close()
+                if conn:
+                    conn.close()
+                    
+        except Exception as e:
+            print(f"❌ Rota medya metadata güncelleme hatası: {e}")
             return False
 
     def _generate_safe_filename(self, filename: str, directory: Path) -> str:

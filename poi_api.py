@@ -4247,6 +4247,209 @@ def delete_route_media(route_id: int, filename: str):
 # curl -i http://127.0.0.1:5560/api/routes/153/media
 # Expect 404 if route 153 doesn't exist; 200 [] if exists but no media; 200 JSON array otherwise.
 
+@app.put('/api/admin/routes/<int:route_id>/media/<filename>')
+@admin_rate_limit(max_requests=10, window_seconds=60)
+def update_route_media(route_id: int, filename: str):
+    """Update route media metadata including location"""
+    try:
+        # Check if route exists
+        conn = None
+        try:
+            conn = get_db_conn()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Check if route exists
+            cur.execute("SELECT id FROM public.routes WHERE id=%s", (route_id,))
+            if not cur.fetchone():
+                return jsonify({
+                    'success': False,
+                    'error': 'Route not found'
+                }), 404
+            
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+        
+        # Get request data
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Initialize media manager
+        media_manager = POIMediaManager()
+        
+        # Get current media info
+        route_media = media_manager.get_route_media(route_id)
+        media_item = next((m for m in route_media if m['filename'] == filename), None)
+        
+        if not media_item:
+            return jsonify({
+                'success': False,
+                'error': 'Media not found'
+            }), 404
+        
+        # Update media metadata
+        updated_media = {**media_item}
+        
+        # Update location if provided
+        if 'latitude' in data or 'lat' in data:
+            lat = data.get('latitude') or data.get('lat')
+            if lat is not None:
+                try:
+                    updated_media['lat'] = float(lat)
+                    updated_media['latitude'] = float(lat)
+                except ValueError:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Invalid latitude value'
+                    }), 400
+        
+        if 'longitude' in data or 'lng' in data:
+            lng = data.get('longitude') or data.get('lng')
+            if lng is not None:
+                try:
+                    updated_media['lng'] = float(lng)
+                    updated_media['longitude'] = float(lng)
+                except ValueError:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Invalid longitude value'
+                    }), 400
+        
+        # Update caption if provided
+        if 'caption' in data:
+            updated_media['caption'] = data['caption']
+        
+        # Update primary flag if provided
+        if 'is_primary' in data:
+            updated_media['is_primary'] = bool(data['is_primary'])
+        
+        # Update the media in the database
+        if media_manager.update_route_media_metadata(route_id, filename, **data):
+            # Get updated media info
+            updated_route_media = media_manager.get_route_media(route_id)
+            updated_media = next((m for m in updated_route_media if m['filename'] == filename), None)
+            
+            if updated_media:
+                return jsonify({
+                    'success': True,
+                    'message': 'Media updated successfully',
+                    'media': updated_media
+                }), 200
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to retrieve updated media'
+                }), 500
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to update media in database'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error updating route media: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error updating media: {str(e)}'
+        }), 500
+
+@app.put('/api/admin/routes/<int:route_id>/media/<filename>/location')
+@admin_rate_limit(max_requests=10, window_seconds=60)
+def update_route_media_location(route_id: int, filename: str):
+    """Update only the location of route media"""
+    try:
+        # Check if route exists
+        conn = None
+        try:
+            conn = get_db_conn()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Check if route exists
+            cur.execute("SELECT id FROM public.routes WHERE id=%s", (route_id,))
+            if not cur.fetchone():
+                return jsonify({
+                    'success': False,
+                    'error': 'Route not found'
+                }), 404
+            
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+        
+        # Get request data
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Validate required fields
+        lat = data.get('latitude') or data.get('lat')
+        lng = data.get('longitude') or data.get('lng')
+        
+        if lat is None or lng is None:
+            return jsonify({
+                'success': False,
+                'error': 'Both latitude and longitude are required'
+            }), 400
+        
+        try:
+            lat = float(lat)
+            lng = float(lng)
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid coordinate values'
+            }), 400
+        
+        # Initialize media manager
+        media_manager = POIMediaManager()
+        
+        # Get current media info
+        route_media = media_manager.get_route_media(route_id)
+        media_item = next((m for m in route_media if m['filename'] == filename), None)
+        
+        if not media_item:
+            return jsonify({
+                'success': False,
+                'error': 'Media not found'
+            }), 404
+        
+        # Update location in the database
+        if media_manager.update_route_media_location(route_id, filename, lat, lng):
+            return jsonify({
+                'success': True,
+                'message': 'Media location updated successfully',
+                'media': {
+                    'filename': filename,
+                    'lat': lat,
+                    'lng': lng,
+                    'latitude': lat,
+                    'longitude': lng
+                }
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to update media location in database'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error updating route media location: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error updating media location: {str(e)}'
+        }), 500
+
 @app.route('/api/routes/filter', methods=['POST'])
 @public_rate_limit(max_requests=50, window_seconds=60)
 def filter_routes():
