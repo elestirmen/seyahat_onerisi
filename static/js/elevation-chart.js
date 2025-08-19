@@ -12,6 +12,8 @@ class ElevationChart {
         this.ctx = null;
         this.routeData = null;
         this.elevationData = [];
+        this.mediaOverlayPoints = [];
+        this.pendingMediaMarkers = null;
         this.mapMarker = null;
         this.isMouseOver = false;
         
@@ -224,6 +226,11 @@ class ElevationChart {
             this.updateChart();
             this.updateStats();
             this.showChart();
+            // If media markers were provided before elevation was ready, render them now
+            if (this.pendingMediaMarkers) {
+                this.setMediaMarkers(this.pendingMediaMarkers);
+                this.pendingMediaMarkers = null;
+            }
             
         } catch (error) {
             console.error('Error loading elevation profile:', error);
@@ -249,6 +256,11 @@ class ElevationChart {
             this.updateChart();
             this.updateStats();
             this.showChart();
+            // If media markers were provided before elevation was ready, render them now
+            if (this.pendingMediaMarkers) {
+                this.setMediaMarkers(this.pendingMediaMarkers);
+                this.pendingMediaMarkers = null;
+            }
         } catch (error) {
             console.error('Error loading elevation data:', error);
             this.hideChart();
@@ -457,6 +469,26 @@ class ElevationChart {
                     ctx.stroke();
                 }
             });
+
+            // Draw media markers if provided
+            if (Array.isArray(this.mediaOverlayPoints) && this.mediaOverlayPoints.length > 0) {
+                this.mediaOverlayPoints.forEach(mediaPoint => {
+                    const x = padding + (mediaPoint.distance / maxDistance) * chartWidth;
+                    const y = height - padding - ((mediaPoint.elevation - minElevation) / elevationRange) * chartHeight;
+                    // Camera-style diamond marker
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(Math.PI / 4);
+                    ctx.fillStyle = '#f59e0b'; // amber
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.rect(-4, -4, 8, 8);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.restore();
+                });
+            }
         }
 
         // Update distance label
@@ -701,6 +733,59 @@ class ElevationChart {
         if (tooltip) {
             tooltip.classList.remove('show');
         }
+    }
+
+    /**
+     * Provide media items with coordinates to be shown as markers over the chart.
+     * Each item should have {lat, lng, ...}
+     */
+    setMediaMarkers(mediaItems) {
+        if (!Array.isArray(mediaItems) || mediaItems.length === 0) {
+            this.mediaOverlayPoints = [];
+            this.updateChart();
+            return;
+        }
+
+        // If elevation data is not ready yet, defer processing
+        if (!this.elevationData || this.elevationData.length === 0) {
+            this.pendingMediaMarkers = mediaItems;
+            return;
+        }
+
+        const overlay = [];
+        mediaItems.forEach(item => {
+            const lat = parseFloat(item.lat ?? item.latitude);
+            const lng = parseFloat(item.lng ?? item.longitude ?? item.lon);
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            const closest = this.findClosestElevationPoint(lat, lng);
+            if (closest) {
+                overlay.push({
+                    lat: lat,
+                    lng: lng,
+                    elevation: closest.elevation,
+                    distance: closest.distance,
+                    media: item
+                });
+            }
+        });
+
+        this.mediaOverlayPoints = overlay;
+        this.updateChart();
+    }
+
+    findClosestElevationPoint(lat, lng) {
+        if (!this.elevationData || this.elevationData.length === 0) return null;
+        let min = Infinity;
+        let closest = null;
+        for (const p of this.elevationData) {
+            const d = this.calculateDistance(lat, lng, p.lat, p.lng);
+            if (d < min) {
+                min = d;
+                closest = p;
+            }
+        }
+        return closest;
     }
 
     updateMapMarker(point) {

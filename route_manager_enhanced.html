@@ -1553,6 +1553,43 @@
                                     }))
                                 });
                             }
+
+                            // Fetch route media with coordinates and overlay markers on map and elevation
+                            try {
+                                const mediaResp = await fetch(`${apiBase}/admin/routes/${rid}/media`, { credentials: 'include' });
+                                if (mediaResp.ok) {
+                                    const mediaJson = await mediaResp.json();
+                                    const mediaItems = Array.isArray(mediaJson)
+                                        ? mediaJson
+                                        : (Array.isArray(mediaJson.media) ? mediaJson.media : []);
+
+                                    // Add markers for media that have coordinates
+                                    const cameraIcon = L.divIcon({
+                                        className: 'camera-marker',
+                                        html: '<div style="background:#f59e0b;border:2px solid #fff;width:12px;height:12px;transform:rotate(45deg);border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>',
+                                        iconSize: [12, 12],
+                                        iconAnchor: [6, 6]
+                                    });
+                                    const locatedMedia = mediaItems.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
+                                    locatedMedia.forEach(m => {
+                                        const lat = parseFloat(m.lat ?? m.latitude);
+                                        const lng = parseFloat(m.lng ?? m.longitude ?? m.lon);
+                                        if (isFinite(lat) && isFinite(lng)) {
+                                            const mk = L.marker([lat, lng], { icon: cameraIcon })
+                                                .bindPopup(`<div style="min-width:180px"><strong>Fotoğraf</strong>${m.caption ? `<div style=\"margin-top:4px;color:#666\">${m.caption}</div>`: ''}${m.preview_path || m.thumbnail_path || m.file_path ? `<div style=\"margin-top:8px\"><img src='/${m.preview_path || m.thumbnail_path || m.file_path}' alt='media' style='width:100%;border-radius:6px;'/></div>`:''}</div>`)
+                                                .addTo(map);
+                                            poiMarkersLayer.addLayer(mk);
+                                        }
+                                    });
+
+                                    // Pass to elevation chart so markers appear on profile
+                                    if (window.routeElevationChart) {
+                                        window.routeElevationChart.setMediaMarkers(locatedMedia);
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('Rota medyası yüklenemedi:', e);
+                            }
                         }
 
                         console.log('✅ Rota haritaya eklendi:', routeDetails.name);
@@ -3580,6 +3617,36 @@
 
                 // Update edit form current media
                 displayRouteCurrentMedia(mediaFiles, routeId);
+
+                // Update map and elevation chart with media locations
+                try {
+                    const located = mediaFiles.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
+                    if (located.length > 0) {
+                        // Add markers
+                        const cameraIcon = L.divIcon({
+                            className: 'camera-marker',
+                            html: '<div style="background:#f59e0b;border:2px solid #fff;width:12px;height:12px;transform:rotate(45deg);border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>',
+                            iconSize: [12, 12],
+                            iconAnchor: [6, 6]
+                        });
+                        located.forEach(m => {
+                            const lat = parseFloat(m.lat ?? m.latitude);
+                            const lng = parseFloat(m.lng ?? m.longitude ?? m.lon);
+                            if (!isFinite(lat) || !isFinite(lng)) return;
+                            const mk = L.marker([lat, lng], { icon: cameraIcon })
+                                .bindPopup(`<div style=\"min-width:180px\"><strong>Fotoğraf</strong>${m.caption ? `<div style=\\\"margin-top:4px;color:#666\\\">${m.caption}</div>`: ''}${m.preview_path || m.thumbnail_path || m.file_path ? `<div style=\\\"margin-top:8px\\\"><img src='/${m.preview_path || m.thumbnail_path || m.file_path}' alt='media' style='width:100%;border-radius:6px;'/></div>`:''}</div>`)
+                                .addTo(map);
+                            poiMarkersLayer.addLayer(mk);
+                        });
+                        if (window.routeElevationChart) {
+                            window.routeElevationChart.setMediaMarkers(located);
+                        }
+                    } else if (window.routeElevationChart) {
+                        window.routeElevationChart.setMediaMarkers([]);
+                    }
+                } catch (e) {
+                    console.warn('Medya konumları haritaya eklenemedi:', e);
+                }
 
             } catch (error) {
                 console.error('Error loading route media:', error);
