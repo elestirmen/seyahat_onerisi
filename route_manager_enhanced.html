@@ -2330,6 +2330,25 @@
                             ` : ''}
                         </div>
                     </div>
+
+                    <!-- Route Media Section -->
+                    <div class="route-media-section">
+                        <h5><i class="fas fa-images me-2"></i>Medya Dosyaları</h5>
+                        <div class="route-media-controls mb-3">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="showRouteMediaUploadForm()">
+                                <i class="fas fa-plus me-1"></i>Medya Ekle
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="refreshRouteMedia()">
+                                <i class="fas fa-sync-alt me-1"></i>Yenile
+                            </button>
+                        </div>
+                        <div id="routeCurrentMedia" class="current-media-grid">
+                            <div class="loading-spinner">
+                                <div class="spinner"></div>
+                                <p>Medya dosyaları yükleniyor...</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
 
@@ -2366,7 +2385,9 @@
             // Also refresh media for the selected route
             setTimeout(async () => {
                 try {
+                    console.log('Loading media for route details, routeId:', rid);
                     await loadRouteMediaForEdit(rid);
+                    console.log('Media loaded successfully for route details');
                 } catch (error) {
                     console.warn('Failed to load media for route details:', error);
                 }
@@ -2671,6 +2692,39 @@
 
                 .metadata-item span {
                     color: var(--route-secondary);
+                }
+
+                .route-media-section {
+                    margin-bottom: 1.5rem;
+                    background: var(--route-light);
+                    border-radius: var(--route-radius);
+                    padding: 1.5rem;
+                    border: 2px solid var(--route-border);
+                }
+
+                .route-media-section h5 {
+                    color: var(--route-dark);
+                    margin-bottom: 1rem;
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+
+                .route-media-controls {
+                    display: flex;
+                    gap: 0.5rem;
+                    flex-wrap: wrap;
+                    margin-bottom: 1rem;
+                }
+
+                .route-media-controls .btn {
+                    font-size: 0.85rem;
+                    padding: 0.375rem 0.75rem;
+                }
+
+                .route-media-section .current-media-grid {
+                    margin-top: 0;
                 }
             `;
             document.head.appendChild(style);
@@ -3576,6 +3630,174 @@
         }
 
         // Enhanced Media Management Functions
+        
+        // Show route media upload form
+        function showRouteMediaUploadForm() {
+            if (!currentRoute) {
+                showNotification('Önce bir rota seçin', 'error');
+                return;
+            }
+
+            const modalHtml = `
+                <div class="modal fade" id="routeMediaUploadModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-upload me-2"></i>
+                                    Medya Dosyası Ekle - ${escapeHtml(currentRoute.name)}
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="routeMediaUploadForm">
+                                    <div class="mb-3">
+                                        <label for="routeMediaFile" class="form-label">Medya Dosyası</label>
+                                        <input type="file" class="form-control" id="routeMediaFile" accept="image/*,video/*,audio/*" required>
+                                        <div class="form-text">Desteklenen formatlar: JPG, PNG, GIF, MP4, MP3, vb.</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="routeMediaCaption" class="form-label">Açıklama (Opsiyonel)</label>
+                                        <input type="text" class="form-control" id="routeMediaCaption" placeholder="Medya dosyası açıklaması">
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="routeMediaPrimary">
+                                            <label class="form-check-label" for="routeMediaPrimary">
+                                                Ana görsel olarak ayarla
+                                            </label>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                <button type="button" class="btn btn-primary" onclick="uploadRouteMediaFromModal()">
+                                    <i class="fas fa-upload me-1"></i>Yükle
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if any
+            const existingModal = document.getElementById('routeMediaUploadModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('routeMediaUploadModal'));
+            modal.show();
+        }
+
+        // Upload media from modal
+        async function uploadRouteMediaFromModal() {
+            if (!currentRoute) {
+                showNotification('Önce bir rota seçin', 'error');
+                return;
+            }
+
+            const fileInput = document.getElementById('routeMediaFile');
+            const mediaCaption = document.getElementById('routeMediaCaption').value;
+            const isPrimary = document.getElementById('routeMediaPrimary').checked;
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showNotification('Lütfen bir medya dosyası seçin', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const filename = file.name.toLowerCase();
+
+            // Auto-detect media type
+            let mediaType = 'auto';
+            if (filename.match(/\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/)) {
+                mediaType = 'image';
+            } else if (filename.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)$/)) {
+                mediaType = 'video';
+            } else if (filename.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/)) {
+                mediaType = 'audio';
+            } else if (filename.match(/\.(glb|gltf|obj|fbx|dae|ply|stl)$/)) {
+                mediaType = 'model_3d';
+            } else {
+                showNotification('Dosya türü tespit edilemedi. Lütfen medya türünü manuel olarak seçin.', 'error');
+                return;
+            }
+
+            // File size check
+            const maxSize = getMediaMaxSize(mediaType) * 1024 * 1024;
+            if (file.size > maxSize) {
+                showNotification(`Dosya boyutu ${getMediaMaxSize(mediaType)}MB'dan küçük olmalıdır.\n\nSeçilen dosya: ${(file.size / 1024 / 1024).toFixed(1)}MB`, 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('caption', mediaCaption);
+            formData.append('is_primary', isPrimary);
+
+            try {
+                const response = await fetch(`${apiBase}/admin/routes/${getRouteId(currentRoute)}/media`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Medya yükleme başarısız');
+                }
+
+                const result = await response.json();
+
+                if (result.media && result.media.compression_ratio && result.media.compression_ratio !== "0%") {
+                    showNotification(`${getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!\n📦 Boyut azalması: ${result.media.compression_ratio}`, 'success');
+                } else {
+                    showNotification(`${getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!`, 'success');
+                }
+
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('routeMediaUploadModal'));
+                if (modal) modal.hide();
+
+                // Clear form fields
+                fileInput.value = '';
+                document.getElementById('routeMediaCaption').value = '';
+                document.getElementById('routeMediaPrimary').checked = false;
+
+                // Wait a moment for the server to process the upload
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Reload media
+                await loadRouteMediaForEdit(getRouteId(currentRoute));
+
+            } catch (error) {
+                console.error('Media upload error:', error);
+                showNotification('Medya yükleme hatası: ' + error.message, 'error');
+            }
+        }
+
+        // Refresh route media
+        async function refreshRouteMedia() {
+            if (!currentRoute) {
+                showNotification('Önce bir rota seçin', 'error');
+                return;
+            }
+
+            try {
+                await loadRouteMediaForEdit(getRouteId(currentRoute));
+                showNotification('Medya listesi yenilendi', 'success');
+            } catch (error) {
+                console.error('Media refresh error:', error);
+                showNotification('Medya yenilenirken hata oluştu: ' + error.message, 'error');
+            }
+        }
+
         async function uploadRouteMedia() {
             if (!currentRoute) {
                 showNotification('Önce bir rota seçin', 'error');
@@ -3770,6 +3992,11 @@
 
                 const data = await response.json();
                 console.log('Media API response data:', data);
+                console.log('Media API response data type:', typeof data);
+                console.log('Media API response data keys:', Object.keys(data || {}));
+                if (Array.isArray(data)) {
+                    console.log('Media API returned array with', data.length, 'items');
+                }
                 
                 // Handle different possible response formats
                 let mediaFiles = [];
@@ -3789,6 +4016,10 @@
                 }
 
                 console.log('Processed media files:', mediaFiles);
+                console.log('Processed media files count:', mediaFiles.length);
+                if (mediaFiles.length > 0) {
+                    console.log('First media file structure:', mediaFiles[0]);
+                }
 
                 // Update edit form current media
                 displayRouteCurrentMedia(mediaFiles, routeId);
@@ -3895,6 +4126,15 @@
                         // Fallback to original path if no thumbnail
                         previewPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
                     }
+                    
+                    console.log('Media thumbnail paths:', {
+                        filename,
+                        thumbnail_path: media.thumbnail_path,
+                        preview_path: media.preview_path,
+                        thumb_path: media.thumb_path,
+                        rawPath,
+                        finalPreviewPath: previewPath
+                    });
                     
                     const isImage = mediaType === 'image';
                     
