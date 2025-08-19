@@ -1,266 +1,463 @@
-# 🗺️ Ürgüp POI Öneri Sistemi
+# 🗺️ Kapadokya POI Sistemi - Seyahat Öneri Platformu
 
-Kullanıcı tercihlerine dayalı akıllı POI (Point of Interest) öneri sistemi. Ürgüp bölgesindeki turistik yerleri, restoranları, otelleri ve aktiviteleri kişiselleştirilmiş öneriler halinde sunar.
+[![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Flask](https://img.shields.io/badge/Flask-2.3.3-green.svg)](https://flask.palletsprojects.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## ✨ Özellikler
+Kapadokya bölgesi için geliştirilmiş, Points of Interest (POI) yönetimi, rota planlama ve seyahat önerileri sunan kapsamlı bir web platformudur. Bu sistem, turistlerin Kapadokya'yı keşfetmesine yardımcı olmak için tasarlanmıştır.
 
-### 🎯 Akıllı Öneri Sistemi
-- **Kişiselleştirilmiş Öneriler**: 10 farklı kategori için tercih belirleme
-- **Puanlama Sistemi**: 0-100 arası uygunluk puanları
-- **İki Seviyeli Görüntüleme**: 
-  - Yüksek puanlı öneriler (≥45 puan) öncelikli gösterim
-  - Düşük puanlı alternatifler isteğe bağlı görüntüleme
+## 🌟 Özellikler
 
-### 🗺️ Gelişmiş Harita Entegrasyonu
-- **İnteraktif Harita**: Leaflet.js tabanlı modern harita
-- **Özel Marker'lar**: Kategori bazlı renkli ve ikonlu marker'lar
-- **Popup Detayları**: Her POI için zengin bilgi kartları
-- **Smooth Navigation**: "Haritada Göster" ile yumuşak geçişler
-- **Responsive Tasarım**: Mobil uyumlu harita boyutları
+### 🎯 Ana Özellikler
+- **POI Yönetimi**: Restoranlar, oteller, turistik yerler ve aktiviteler için kapsamlı veri yönetimi
+- **Akıllı Rota Planlama**: Kategori bazlı, özelleştirilebilir rota oluşturma
+- **Çoklu Veritabanı Desteği**: JSON, MongoDB, PostgreSQL + PostGIS
+- **Medya Yönetimi**: POI'lar için fotoğraf ve video desteği
+- **WebSocket Desteği**: Gerçek zamanlı veri güncellemeleri
+- **Admin Paneli**: Gelişmiş yönetim arayüzü
+- **API Desteği**: RESTful API ile entegrasyon imkanı
 
-### 🛣️ Rota Planlama
-- **Çoklu POI Seçimi**: İstediğiniz POI'leri rotaya ekleme
-- **Rota Detayları**: Mesafe, süre ve durak bilgileri
-- **Yükseklik Profili**: Chart.js ile interaktif yükseklik grafiği
-- **Google Maps Entegrasyonu**: Rotayı Google Maps'e aktarma
-- **Başlangıç Noktası**: Özel başlangıç konumu belirleme
+### 🗺️ Harita ve Navigasyon
+- **OpenStreetMap Entegrasyonu**: Folium tabanlı interaktif haritalar
+- **Rota Görselleştirme**: GPX, KML dosya formatları desteği
+- **Yükseklik Verileri**: Rota planlamada yükseklik faktörü
+- **Çoklu Katman Desteği**: Farklı harita katmanları ve görünümler
 
-### 🎨 Modern Kullanıcı Arayüzü
-- **Glassmorphism Tasarım**: Modern cam efekti tasarımı
-- **Responsive Layout**: Tüm cihazlarda uyumlu görünüm
-- **Smooth Animasyonlar**: CSS3 ve JavaScript animasyonları
-- **Loading States**: Kullanıcı dostu yükleme göstergeleri
-- **Touch Optimized**: Mobil dokunmatik optimizasyonları
+### 🤖 AI ve Öneri Sistemi
+- **Akıllı POI Önerileri**: Makine öğrenmesi tabanlı öneri algoritması
+- **Kategori Optimizasyonu**: Otomatik kategori sınıflandırması
+- **Performans Optimizasyonu**: Veritabanı sorgu optimizasyonları
 
-### 📱 Medya Galerisi
-- **Çoklu Medya Desteği**: Resim, video ve ses dosyaları
-- **Modal Görüntüleyici**: Tam ekran medya görüntüleme
-- **Lazy Loading**: Performans için gecikmeli yükleme
-- **Thumbnail Preview**: POI kartlarında medya önizlemeleri
+## 🚀 Hızlı Başlangıç
 
-## 🚀 Kurulum
+### Sistem Gereksinimleri
+- **Python**: 3.7 veya üzeri
+- **İşletim Sistemi**: Linux, macOS, Windows
+- **RAM**: Minimum 4GB (önerilen 8GB+)
+- **Disk**: Minimum 2GB boş alan
 
-### Gereksinimler
-- Python 3.8+
-- Flask
-- Modern web tarayıcısı (Chrome, Firefox, Safari, Edge)
+### Otomatik Kurulum (Önerilen)
 
-### 1. Projeyi İndirin
 ```bash
+# Projeyi klonlayın
 git clone <repository-url>
-cd urgup-poi-recommendation
+cd kapadokya-poi-sistemi
+
+# Kurulum scriptini çalıştırın
+chmod +x install.sh
+./install.sh
 ```
 
-### 2. Python Sanal Ortamı Oluşturun
+### Manuel Kurulum
+
+#### 1. Python Sanal Ortamı Oluşturun
 ```bash
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# macOS/Linux
-source venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate  # Linux/macOS
+# veya
+venv\Scripts\activate     # Windows
 ```
 
-### 3. Gerekli Paketleri Yükleyin
+#### 2. Bağımlılıkları Kurun
 ```bash
-pip install flask
+pip install -r requirements.txt
 ```
 
-### 4. Proje Yapısını Kontrol Edin
-```
-urgup-poi-recommendation/
-├── poi_api.py                 # Flask API sunucusu
-├── poi_recommendation_system.html  # Ana HTML dosyası
-├── static/
-│   ├── css/
-│   │   ├── poi_recommendation_system.css
-│   │   ├── components.css
-│   │   ├── design-tokens.css
-│   │   ├── layout-system.css
-│   │   └── ux-enhancements.css
-│   └── js/
-│       └── poi_recommendation_system.js
-├── poi_data/
-│   └── urgup_pois.json       # POI veritabanı
-└── poi_media/                # Medya dosyaları (resim, video, ses)
-```
-
-### 5. Sunucuyu Başlatın
+#### 3. Veritabanını Yapılandırın
 ```bash
+# JSON dosyası (hızlı başlangıç)
+python setup_poi_database.py json
+
+# MongoDB
+python setup_poi_database.py mongodb "mongodb://localhost:27017/"
+
+# PostgreSQL + PostGIS
+python setup_poi_database.py postgresql "postgresql://user:password@localhost/dbname"
+```
+
+#### 4. Sistemi Başlatın
+```bash
+# Rota planlayıcı
+python category_route_planner.py
+
+# POI API
 python poi_api.py
+
+# WSGI sunucu
+python wsgi.py
 ```
 
-### 6. Uygulamayı Açın
-Tarayıcınızda şu adresi açın:
-```
-http://localhost:5000
-```
+## 📁 Proje Yapısı
 
-## 📊 Veri Yapısı
-
-### POI Veri Formatı
-```json
-{
-  "doga_macera": [
-    {
-      "id": "unique_id",
-      "name": "POI Adı",
-      "latitude": 38.6320,
-      "longitude": 34.9120,
-      "description": "POI açıklaması",
-      "category": "doga_macera",
-      "ratings": {
-        "doga": 85,
-        "macera": 90,
-        "spor": 70
-      }
-    }
-  ]
-}
+```
+kapadokya-poi-sistemi/
+├── 📁 src/                    # Ana kaynak kodları
+│   └── 📁 utils/             # Yardımcı fonksiyonlar
+├── 📁 static/                 # Statik dosyalar (CSS, JS)
+├── 📁 poi_media/             # POI medya dosyaları
+├── 📁 poi_images/            # POI görselleri
+├── 📁 tests/                 # Test dosyaları
+├── 📁 scripts/               # Yardımcı scriptler
+├── 📁 temp_uploads/          # Geçici yüklemeler
+├── 📁 poi_env/               # POI ortam dosyaları
+├── 📁 perf/                  # Performans testleri
+├── 🐍 poi_api.py             # Ana Flask uygulaması
+├── 🐍 route_service.py       # Rota servis katmanı
+├── 🐍 poi_database_adapter.py # Veritabanı adaptörü
+├── 🐍 poi_media_manager.py   # Medya yönetimi
+├── 🐍 route_file_parser.py   # Rota dosya işleyici
+├── 🐍 category_route_planner.py # Ana rota planlayıcı
+├── 🐍 wsgi.py                # WSGI giriş noktası
+├── 📋 requirements.txt        # Python bağımlılıkları
+├── 📋 openapi.yaml           # API dokümantasyonu
+├── 🚀 install.sh             # Otomatik kurulum scripti
+└── 📖 README.md              # Bu dosya
 ```
 
-### Kategori Sistemi
-- **🌿 Doğa & Macera**: Doğal güzellikler, hiking, outdoor aktiviteler
-- **🍽️ Gastronomi**: Restoranlar, yerel lezzetler, wine tasting
-- **🏨 Konaklama**: Oteller, pansiyonlar, butik konaklama
-- **🏛️ Kültürel**: Müzeler, tarihi yerler, kültürel mekanlar
-- **🎨 Sanatsal**: Sanat galerileri, atölyeler, kültür merkezleri
+## 🔧 Yapılandırma
 
-## 🎛️ Kullanım Kılavuzu
+### Çevre Değişkenleri
 
-### 1. Tercih Belirleme
-- Ana sayfada 10 farklı kategori için tercih seviyenizi ayarlayın
-- Slider'ları kullanarak ilgi seviyenizi belirtin:
-  - **İlgilenmiyorum** (0)
-  - **Az İlgiliyim** (25)
-  - **Orta Seviye** (50)
-  - **Çok İlgiliyim** (75)
-  - **Kesinlikle İhtiyacım Var** (100)
+`.env` dosyası oluşturun:
 
-### 2. Öneri Alma
-- "Önerilerimi Getir" butonuna tıklayın
-- Sistem tercihlerinizi analiz ederek önerileri hesaplar
-- Yüksek puanlı öneriler (≥45 puan) öncelikli gösterilir
+```bash
+# Veritabanı Yapılandırması
+POI_DB_TYPE=postgresql  # json, mongodb, postgresql
+POI_DB_HOST=localhost
+POI_DB_PORT=5432
+POI_DB_NAME=poi_db
+POI_DB_USER=poi_user
+POI_DB_PASSWORD=your_password
+POI_DB_CONNECTION=postgresql://user:password@localhost/dbname
 
-### 3. Harita Kullanımı
-- POI kartlarındaki "Haritada Göster" butonunu kullanın
-- Marker'lara tıklayarak detaylı bilgi alın
-- Harita üzerinde zoom ve pan işlemleri yapın
+# Flask Yapılandırması
+FLASK_ENV=development
+FLASK_DEBUG=True
+SECRET_KEY=your_secret_key
 
-### 4. Rota Planlama
-- İstediğiniz POI'leri "Rotaya Ekle" ile seçin
-- Rota detaylarını görüntüleyin
-- Google Maps'e aktararak navigasyon başlatın
+# Sunucu Yapılandırması
+HOST=0.0.0.0
+PORT=5000
 
-### 5. Medya Görüntüleme
-- POI kartlarındaki medya önizlemelerine tıklayın
-- Modal pencerede tam ekran görüntüleme
-- Resim, video ve ses dosyalarını inceleyin
-
-## 🔧 Özelleştirme
-
-### CSS Değişkenleri
-```css
-:root {
-    --primary-color: #667eea;
-    --secondary-color: #f8f9fa;
-    --accent-color: #28a745;
-    --text-color: #2c3e50;
-    --border-color: #dee2e6;
-}
+# Cache Yapılandırması
+CACHE_TYPE=simple
+CACHE_DEFAULT_TIMEOUT=300
 ```
 
-### Kategori Renkleri
-Her kategori için özel renkler tanımlanmıştır:
-```css
---doga-color: #27ae60;
---yemek-color: #e74c3c;
---tarihi-color: #8e44ad;
-/* ... diğer kategoriler */
+### Veritabanı Seçenekleri
+
+#### 1. JSON Dosyası (Hızlı Başlangıç)
+- **Avantajlar**: Kurulum gerektirmez, hızlı başlangıç
+- **Dezavantajlar**: Sınırlı performans, eşzamanlı erişim yok
+- **Kullanım**: Küçük projeler ve test için ideal
+
+#### 2. MongoDB
+- **Avantajlar**: Esnek şema, JSON benzeri veri yapısı
+- **Dezavantajlar**: Coğrafi sorgular için ek kurulum gerekir
+- **Kullanım**: Orta ölçekli projeler
+
+#### 3. PostgreSQL + PostGIS (Önerilen)
+- **Avantajlar**: Güçlü coğrafi sorgular, ACID uyumluluğu
+- **Dezavantajlar**: Kurulum karmaşıklığı
+- **Kullanım**: Üretim ortamları ve büyük projeler
+
+## 🚀 Kullanım
+
+### Rota Planlayıcı
+
+#### Temel Kullanım
+```bash
+# Tüm kategorilerde rota oluştur
+python category_route_planner.py
+
+# Belirli kategoride rota oluştur
+python category_route_planner.py gastronomik
+
+# Başlangıç noktası belirle
+python category_route_planner.py kulturel --start "Ürgüp Müzesi"
+
+# Maksimum mesafe belirle
+python category_route_planner.py aktivite --radius 5
+
+# Yükseklik verilerini dahil et
+python category_route_planner.py dogal --elevation
+
+# Çıktı formatını belirle
+python category_route_planner.py gastronomik -o rota.html
 ```
 
-### Responsive Breakpoint'ler
-- **Mobile**: < 768px
-- **Tablet**: 768px - 1024px
-- **Desktop**: > 1024px
+#### Gelişmiş Seçenekler
+```bash
+# Yardım menüsü
+python category_route_planner.py --help
 
-## 🚀 Performans Optimizasyonları
+# Detaylı çıktı
+python category_route_planner.py --verbose
 
-### Frontend
-- **Lazy Loading**: Medya dosyaları için gecikmeli yükleme
-- **GPU Acceleration**: CSS transform'lar için hardware acceleration
-- **Debounced Events**: Scroll ve resize event'leri için debouncing
-- **Image Optimization**: Otomatik resim boyutlandırma
+# Belirli saat aralığında planla
+python category_route_planner.py --time-start "09:00" --time-end "18:00"
 
-### Backend
-- **Caching**: POI verilerini memory'de cache'leme
-- **Gzip Compression**: HTTP response'ları için sıkıştırma
-- **Static File Serving**: Efficient static file delivery
+# Bütçe sınırı ekle
+python category_route_planner.py --max-budget 500
+```
+
+### POI Yönetimi
+
+#### Web Arayüzü
+```bash
+# POI API'yi başlat
+python poi_api.py
+
+# Tarayıcıda aç
+http://localhost:5505/poi_manager_ui.html
+```
+
+#### API Endpoints
+```bash
+# POI listesi
+GET /api/pois
+
+# POI detayı
+GET /api/pois/{poi_id}
+
+# POI oluştur
+POST /api/pois
+
+# POI güncelle
+PUT /api/pois/{poi_id}
+
+# POI sil
+DELETE /api/pois/{poi_id}
+```
+
+### Medya Yönetimi
+
+#### Fotoğraf Yükleme
+```bash
+# Tek fotoğraf
+curl -X POST -F "file=@photo.jpg" http://localhost:5505/api/pois/{poi_id}/media
+
+# Çoklu fotoğraf
+curl -X POST -F "files[]=@photo1.jpg" -F "files[]=@photo2.jpg" http://localhost:5505/api/pois/{poi_id}/media
+```
+
+#### Video Yükleme
+```bash
+# Video yükleme
+curl -X POST -F "file=@video.mp4" http://localhost:5505/api/pois/{poi_id}/media
+```
+
+## 🧪 Test
+
+### Test Çalıştırma
+```bash
+# Tüm testleri çalıştır
+python run_all_tests.py
+
+# Belirli test kategorisi
+python -m pytest tests/test_api_core.py
+
+# Performans testleri
+python -m pytest perf/
+```
+
+### Test Kapsamı
+- **API Testleri**: Endpoint fonksiyonalitesi
+- **Entegrasyon Testleri**: Sistem bileşenleri arası etkileşim
+- **Performans Testleri**: Yük testleri ve optimizasyon
+- **Frontend Testleri**: Kullanıcı arayüzü testleri
+
+## 📊 API Dokümantasyonu
+
+### Swagger UI
+```bash
+# API dokümantasyonunu görüntüle
+http://localhost:5505/swagger-ui
+```
+
+### OpenAPI Spec
+```bash
+# OpenAPI spesifikasyonu
+http://localhost:5505/openapi.yaml
+```
 
 ## 🔒 Güvenlik
 
+### Kimlik Doğrulama
+- **Session Tabanlı**: Flask-Session ile güvenli oturum yönetimi
+- **Rate Limiting**: Admin endpoint'leri için istek sınırlama
+- **CORS**: Cross-Origin Resource Sharing yapılandırması
+
+### Güvenlik Önlemleri
 - **Input Validation**: Tüm kullanıcı girdileri doğrulanır
-- **XSS Protection**: HTML içeriği sanitize edilir
-- **CORS Headers**: Uygun CORS politikaları
-- **Rate Limiting**: API endpoint'leri için rate limiting
+- **File Upload Security**: Güvenli dosya yükleme kontrolleri
+- **SQL Injection Protection**: Parametreli sorgular kullanılır
+
+## 🚀 Dağıtım
+
+### Geliştirme Ortamı
+```bash
+# Geliştirme sunucusu
+python poi_api.py
+
+# Debug modunda
+FLASK_DEBUG=True python poi_api.py
+```
+
+### Üretim Ortamı
+```bash
+# WSGI sunucu
+python wsgi.py
+
+# Gunicorn ile
+gunicorn -w 4 -b 0.0.0.0:5000 wsgi:application
+
+# Docker ile
+docker build -t kapadokya-poi .
+docker run -p 5000:5000 kapadokya-poi
+```
+
+### Docker Kurulumu
+```dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+EXPOSE 5000
+
+CMD ["python", "wsgi.py"]
+```
+
+## 📈 Performans Optimizasyonu
+
+### Veritabanı Optimizasyonları
+- **İndeksleme**: Önerilen indeksler `recommended_indexes.sql` dosyasında
+- **Sorgu Optimizasyonu**: Optimize edilmiş SQL sorguları
+- **Connection Pooling**: Veritabanı bağlantı havuzu
+
+### Cache Stratejileri
+- **Redis Cache**: Yüksek performanslı önbellekleme
+- **Memory Cache**: Hızlı erişim için bellek önbelleği
+- **File Cache**: Statik dosyalar için dosya önbelleği
 
 ## 🐛 Sorun Giderme
 
 ### Yaygın Sorunlar
 
-**1. Harita Yüklenmiyor**
-```javascript
-// Konsol hatalarını kontrol edin
-// Leaflet.js kütüphanesinin yüklendiğinden emin olun
-```
-
-**2. POI Verileri Gelmiyor**
+#### 1. Veritabanı Bağlantı Hatası
 ```bash
-# API sunucusunun çalıştığından emin olun
-curl http://localhost:5000/api/pois
+# Bağlantı bilgilerini kontrol et
+python -c "from poi_database_adapter import test_connection; test_connection()"
+
+# Veritabanı servisini kontrol et
+sudo systemctl status postgresql
 ```
 
-**3. Medya Dosyaları Görünmüyor**
+#### 2. Python Bağımlılık Hataları
 ```bash
-# poi_media klasörünün var olduğundan emin olun
-ls -la poi_media/
+# Sanal ortamı yeniden oluştur
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### Debug Modu
-```javascript
-// Konsol loglarını etkinleştirin
-localStorage.setItem('debug', 'true');
+#### 3. Port Çakışması
+```bash
+# Kullanılan portları kontrol et
+netstat -tulpn | grep :5000
+
+# Farklı port kullan
+python poi_api.py --port 5001
 ```
 
-## 📈 Gelecek Geliştirmeler
+### Log Dosyaları
+```bash
+# Uygulama logları
+tail -f logs/app.log
 
-- [ ] **Kullanıcı Hesapları**: Kişisel tercih kaydetme
-- [ ] **Sosyal Özellikler**: POI paylaşımı ve yorumlar
-- [ ] **Offline Destek**: PWA özellikleri
-- [ ] **AI Önerileri**: Machine learning tabanlı öneriler
-- [ ] **Çoklu Dil**: İngilizce ve diğer dil desteği
-- [ ] **API Genişletme**: RESTful API endpoint'leri
-- [ ] **Admin Panel**: POI yönetimi için admin arayüzü
+# Hata logları
+tail -f logs/error.log
+
+# Debug logları
+tail -f logs/debug.log
+```
 
 ## 🤝 Katkıda Bulunma
 
-1. Fork yapın
-2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Değişikliklerinizi commit edin (`git commit -m 'Add amazing feature'`)
-4. Branch'inizi push edin (`git push origin feature/amazing-feature`)
-5. Pull Request oluşturun
+### Geliştirme Ortamı Kurulumu
+```bash
+# Projeyi fork edin
+git clone <your-fork-url>
+cd kapadokya-poi-sistemi
+
+# Geliştirme branch'i oluşturun
+git checkout -b feature/yeni-ozellik
+
+# Değişiklikleri commit edin
+git add .
+git commit -m "Yeni özellik: açıklama"
+
+# Pull request gönderin
+git push origin feature/yeni-ozellik
+```
+
+### Kod Standartları
+- **Python**: PEP 8 standartlarına uygun
+- **JavaScript**: ESLint kurallarına uygun
+- **CSS**: BEM metodolojisi
+- **Git**: Conventional Commits formatı
+
+### Test Yazma
+```python
+# Yeni test ekle
+def test_yeni_ozellik():
+    """Yeni özellik testi"""
+    result = yeni_fonksiyon()
+    assert result == expected_value
+```
+
+## 📚 Ek Kaynaklar
+
+### Dokümantasyon
+- [Flask Dokümantasyonu](https://flask.palletsprojects.com/)
+- [PostGIS Dokümantasyonu](https://postgis.net/documentation/)
+- [Folium Dokümantasyonu](https://python-visualization.github.io/folium/)
+
+### Yardımcı Araçlar
+- **Postman**: API testleri için
+- **pgAdmin**: PostgreSQL yönetimi için
+- **MongoDB Compass**: MongoDB yönetimi için
+
+### Topluluk
+- [GitHub Issues](https://github.com/username/kapadokya-poi-sistemi/issues)
+- [Discussions](https://github.com/username/kapadokya-poi-sistemi/discussions)
 
 ## 📄 Lisans
 
-Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosyasına bakın.
+Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+
+## 👥 Geliştirici Ekibi
+
+- **Ana Geliştirici**: [İsim](mailto:email@example.com)
+- **UI/UX Tasarım**: [İsim](mailto:email@example.com)
+- **Veritabanı Uzmanı**: [İsim](mailto:email@example.com)
+
+## 🙏 Teşekkürler
+
+- [OpenStreetMap](https://www.openstreetmap.org/) - Harita verileri için
+- [Folium](https://python-visualization.github.io/folium/) - Harita görselleştirme için
+- [PostGIS](https://postgis.net/) - Coğrafi veritabanı desteği için
 
 ## 📞 İletişim
 
-Proje hakkında sorularınız için:
-- GitHub Issues kullanın
-- Email: [your-email@example.com]
+- **E-posta**: support@kapadokya-poi.com
+- **GitHub**: [Proje Sayfası](https://github.com/username/kapadokya-poi-sistemi)
+- **Dokümantasyon**: [Wiki](https://github.com/username/kapadokya-poi-sistemi/wiki)
 
 ---
 
-**Not**: Bu proje Ürgüp turizmi için geliştirilmiş bir demo uygulamadır. Gerçek kullanım için POI verilerinin güncel tutulması önerilir.
+⭐ Bu projeyi beğendiyseniz yıldız vermeyi unutmayın!
