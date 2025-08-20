@@ -3939,10 +3939,11 @@ window.refreshPredefinedRouteMedia = async function(routeId) {
                 const mediaType = media.media_type || 'image';
                 const mediaIcon = createMediaMarkerIcon(mediaType, media);
                 
-                const mediaMarker = L.marker([lat, lng], { 
+                const mediaMarker = L.marker([lat, lng], {
                     icon: mediaIcon,
                     title: media.caption || `Medya ${index + 1}`
                 }).addTo(predefinedMap);
+                mediaMarker.routeId = route.id || route._id;
                 
                 // Create enhanced popup content
                 const popupContent = createMediaPopupContent(media);
@@ -4085,20 +4086,28 @@ function copyRouteToPersonalRoute(routeId) {
 // Zoom to specific route
 function zoomToRoute(routeId) {
     const route = predefinedRoutes.find(r => (r.id || r._id) === routeId);
-    if (!route) {
+    if (!route || !predefinedMap) {
         showNotification('❌ Rota bulunamadı', 'error');
         return;
     }
 
-    // Find the route layers and zoom to them
-    predefinedMapLayers.forEach(layer => {
-        if (layer.getBounds && layer.getBounds().isValid()) {
-            predefinedMap.fitBounds(layer.getBounds(), { padding: [20, 20] });
-            return;
-        }
+    const layers = predefinedMapLayers.filter(layer => {
+        const id = layer.routeData ? (layer.routeData.id || layer.routeData._id) : layer.routeId;
+        return id === routeId;
     });
 
-    showNotification(`🎯 "${route.name}" rotasına yakınlaştırıldı`, 'success');
+    if (layers.length > 0) {
+        const group = new L.featureGroup(layers);
+        predefinedMap.fitBounds(group.getBounds(), {
+            padding: [30, 30],
+            maxZoom: 14,
+            animate: true,
+            duration: 0.8
+        });
+        showNotification(`🎯 "${route.name}" rotasına odaklanıldı`, 'success');
+    } else {
+        showNotification('❌ Rota haritada bulunamadı', 'error');
+    }
 }
 
 // Optimize route (wrapper for backward compatibility)
@@ -5195,7 +5204,7 @@ function initializePredefinedRoutes() {
         });
     }
     if (fitMapBtn) {
-        fitMapBtn.addEventListener('click', fitAllRoutesOnMap);
+        fitMapBtn.addEventListener('click', fitMapToRoutes);
     }
     
     console.log('✅ Predefined routes functionality initialized');
@@ -5356,9 +5365,10 @@ async function displayRouteOnMap(route) {
                         opacity: 0.8,
                         className: 'route-on-map predefined-route-line'
                     }).addTo(predefinedMap);
-                    
+
                     // Store route data for reference
                     routeLine.routeData = route;
+                    routeLine.routeId = route.id || route._id;
                     
                     // Add START marker (green)
                     const startCoord = coords[0];
@@ -5370,6 +5380,7 @@ async function displayRouteOnMap(route) {
                             iconAnchor: [15, 15]
                         })
                     }).addTo(predefinedMap);
+                    startMarker.routeId = route.id || route._id;
                     
                     // Add END marker (red)
                     const endCoord = coords[coords.length - 1];
@@ -5381,6 +5392,7 @@ async function displayRouteOnMap(route) {
                             iconAnchor: [15, 15]
                         })
                     }).addTo(predefinedMap);
+                    endMarker.routeId = route.id || route._id;
                     
                     // Add tooltips to markers
                     startMarker.bindTooltip('Başlangıç', { permanent: false, direction: 'top' });
@@ -5448,6 +5460,7 @@ async function displayRouteOnMap(route) {
                                     popupAnchor: [0, -35]
                                 })
                             }).addTo(predefinedMap);
+                            marker.routeId = route.id || route._id;
 
                             // Create detailed popup content
                             const popupContent = createDetailedPOIPopup(poi, index + 1);
@@ -5514,10 +5527,11 @@ async function displayRouteOnMap(route) {
                                             const mediaType = media.media_type || 'image';
                                             const mediaIcon = createMediaMarkerIcon(mediaType, media);
                                             
-                                            const mediaMarker = L.marker([lat, lng], { 
+                                            const mediaMarker = L.marker([lat, lng], {
                                                 icon: mediaIcon,
                                                 title: media.caption || `Medya ${index + 1}`
                                             }).addTo(predefinedMap);
+                                            mediaMarker.routeId = route.id || route._id;
                                             
                                             // Create enhanced popup content
                                             const popupContent = createMediaPopupContent(media);
@@ -5602,6 +5616,7 @@ async function displayRouteOnMap(route) {
                             popupAnchor: [0, -35]
                         })
                     }).addTo(predefinedMap);
+                    marker.routeId = route.id || route._id;
 
                     // Create detailed popup content
                     const popupContent = createDetailedPOIPopup(poi, index + 1);
@@ -5626,9 +5641,10 @@ async function displayRouteOnMap(route) {
                         className: 'route-connecting-line',
                         dashArray: '10, 5' // Dashed line to indicate estimated route
                     }).addTo(predefinedMap);
-                    
+
                     // Store route data for reference
                     routeLine.routeData = route;
+                    routeLine.routeId = route.id || route._id;
 
                     // Attach standard route interaction handlers
                     attachPredefinedRouteEvents(routeLine, route);
@@ -5698,10 +5714,11 @@ async function displayRouteOnMap(route) {
                                     const mediaType = media.media_type || 'image';
                                     const mediaIcon = createMediaMarkerIcon(mediaType, media);
                                     
-                                    const mediaMarker = L.marker([lat, lng], { 
+                                    const mediaMarker = L.marker([lat, lng], {
                                         icon: mediaIcon,
                                         title: media.caption || `Medya ${index + 1}`
                                     }).addTo(predefinedMap);
+                                    mediaMarker.routeId = route.id || route._id;
                                     
                                     // Create enhanced popup content
                                     const popupContent = createMediaPopupContent(media);
@@ -6247,7 +6264,8 @@ function displayRouteOnMapFallback(route) {
                             popupAnchor: [0, -30]
                         })
                     }).addTo(predefinedMap);
-                    
+                    marker.routeId = route.id || route._id;
+
                     // Create detailed popup content
                     const popupContent = createDetailedPOIPopup(poi, index + 1);
                     marker.bindPopup(popupContent, {
@@ -6272,9 +6290,10 @@ function displayRouteOnMapFallback(route) {
                         dashArray: '15, 10' // More dashed to indicate estimated route
                     }).addTo(predefinedMap);
 
-                    // Attach standard route interaction handlers
+                    // Store route data for reference and attach handlers
+                    routeLine.routeData = route;
+                    routeLine.routeId = route.id || route._id;
                     attachPredefinedRouteEvents(routeLine, route);
-
 
                     predefinedMapLayers.push(routeLine);
                     console.log('✅ Fallback connecting line added');
@@ -6293,6 +6312,7 @@ function displayRouteOnMapFallback(route) {
         // If still no success, show a center marker
         console.log('📍 Fallback: Showing center marker...');
         const centerMarker = L.marker([38.6436, 34.8128]).addTo(predefinedMap);
+        centerMarker.routeId = route.id || route._id;
         centerMarker.bindPopup(`
             <div style="text-align: center;">
                 <h5 style="margin: 0 0 8px 0;">${route.name}</h5>
@@ -6312,24 +6332,50 @@ function displayRouteOnMapFallback(route) {
     }
 }
 
-function fitAllRoutesOnMap() {
-    console.log('🗺️ Fitting all routes on predefined map...');
-    
+function fitMapToRoutes() {
+    console.log('🗺️ Fitting map to routes...');
+
     if (!predefinedMap || !predefinedMapInitialized) {
         console.warn('⚠️ Predefined map not initialized');
         return;
     }
-    
+
     if (predefinedMapLayers.length === 0) {
-        // No routes on map, show default view
         predefinedMap.setView([38.6436, 34.8128], 12);
+        showNotification('Görüntülenecek rota bulunamadı', 'warning');
         return;
     }
-    
+
+    const routeIds = new Set();
+    predefinedMapLayers.forEach(layer => {
+        const id = layer.routeData ? (layer.routeData.id || layer.routeData._id) : layer.routeId;
+        if (id) routeIds.add(id);
+    });
+
+    let layersToFit = [];
+    if (routeIds.size === 1) {
+        const targetId = Array.from(routeIds)[0];
+        layersToFit = predefinedMapLayers.filter(layer => {
+            const id = layer.routeData ? (layer.routeData.id || layer.routeData._id) : layer.routeId;
+            return id === targetId;
+        });
+        const route = predefinedRoutes.find(r => (r.id || r._id) === targetId);
+        if (route) {
+            showNotification(`${route.name} rotasına odaklanıldı`, 'info');
+        }
+    } else {
+        layersToFit = predefinedMapLayers.filter(l => l.getBounds && l.getBounds().isValid());
+        showNotification('Tüm rotalara odaklanıldı', 'info');
+    }
+
     try {
-        const group = L.featureGroup(predefinedMapLayers);
-        predefinedMap.fitBounds(group.getBounds(), { padding: [20, 20] });
-        console.log('✅ Map fitted to all routes');
+        const group = L.featureGroup(layersToFit);
+        predefinedMap.fitBounds(group.getBounds(), {
+            padding: [20, 20],
+            maxZoom: 14,
+            animate: true,
+            duration: 0.8
+        });
     } catch (error) {
         console.error('❌ Error fitting map to routes:', error);
         predefinedMap.setView([38.6436, 34.8128], 12);
