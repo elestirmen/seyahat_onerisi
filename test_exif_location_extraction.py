@@ -1,5 +1,6 @@
 import os
 import tempfile
+import json
 import pytest
 
 from poi_media_manager import POIMediaManager
@@ -107,4 +108,33 @@ def test_extract_gps_from_webp_exif():
         assert abs(info['lng'] - lng) < 0.01
 
         manager.delete_route_media(3, info['filename'])
+
+
+def test_webp_sidecar_creation():
+    manager = POIMediaManager()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        img_path = os.path.join(tmpdir, "sidecar.jpg")
+        lat, lng = 22.3344, 55.6677
+        _create_image_with_exif(img_path, lat, lng)
+
+        info = manager.add_route_media(
+            route_id=4,
+            route_name="Sidecar",
+            media_file_path=img_path
+        )
+        assert info is not None
+        webp_path = info['file_path']
+        exif_lat, exif_lng = manager._get_exif_location(webp_path)
+        if exif_lat is None or exif_lng is None:
+            sidecar = os.path.splitext(webp_path)[0] + '.json'
+            assert os.path.exists(sidecar)
+            with open(sidecar) as f:
+                data = json.load(f)
+            assert abs(data['lat'] - lat) < 0.01
+            assert abs(data['lng'] - lng) < 0.01
+        else:
+            assert abs(exif_lat - lat) < 0.01
+            assert abs(exif_lng - lng) < 0.01
+
+        manager.delete_route_media(4, info['filename'])
 
