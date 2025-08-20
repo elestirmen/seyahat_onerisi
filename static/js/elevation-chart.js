@@ -475,17 +475,14 @@ class ElevationChart {
                 this.mediaOverlayPoints.forEach(mediaPoint => {
                     const x = padding + (mediaPoint.distance / maxDistance) * chartWidth;
                     const y = height - padding - ((mediaPoint.elevation - minElevation) / elevationRange) * chartHeight;
-                    // Camera-style diamond marker
+                    const type = mediaPoint.media?.media_type || 'image';
+                    const iconMap = { image: '📷', video: '🎥', audio: '🎵', model_3d: '🧊', unknown: '📍' };
+                    const iconChar = iconMap[type] || iconMap.unknown;
                     ctx.save();
-                    ctx.translate(x, y);
-                    ctx.rotate(Math.PI / 4);
-                    ctx.fillStyle = '#f59e0b'; // amber
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.rect(-4, -4, 8, 8);
-                    ctx.fill();
-                    ctx.stroke();
+                    ctx.font = '16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(iconChar, x, y);
                     ctx.restore();
                 });
             }

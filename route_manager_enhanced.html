@@ -771,6 +771,36 @@
             z-index: 1000;
         }
 
+        /* Media location markers */
+        .media-marker {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            border: 2px solid white;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+            font-size: 12px;
+        }
+
+        .media-marker.image {
+            background: #f59e0b;
+        }
+
+        .media-marker.video {
+            background: #ef4444;
+        }
+
+        .media-marker.audio {
+            background: #10b981;
+        }
+
+        .media-marker.model_3d {
+            background: #6366f1;
+        }
+
         /* POI Popup Styles */
         .poi-popup {
             min-width: 200px;
@@ -1711,20 +1741,39 @@
                                         ? mediaJson
                                         : (Array.isArray(mediaJson.media) ? mediaJson.media : []);
 
-                                    // Add markers for media that have coordinates
-                                    const cameraIcon = L.divIcon({
-                                        className: 'camera-marker',
-                                        html: '<div style="background:#f59e0b;border:2px solid #fff;width:12px;height:12px;transform:rotate(45deg);border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>',
-                                        iconSize: [12, 12],
-                                        iconAnchor: [6, 6]
+                                    // Ensure media types are set
+                                    mediaItems.forEach(m => {
+                                        if (!m.media_type) {
+                                            const path = (m.filename || m.file_path || m.path || '').toLowerCase();
+                                            if (path.match(/\.(webp|jpg|jpeg|png|gif|bmp|tiff)$/)) m.media_type = 'image';
+                                            else if (path.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)$/)) m.media_type = 'video';
+                                            else if (path.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/)) m.media_type = 'audio';
+                                            else if (path.match(/\.(glb|gltf|obj|fbx|dae|ply|stl)$/)) m.media_type = 'model_3d';
+                                            else m.media_type = 'unknown';
+                                        }
                                     });
+
+                                    // Add markers for media that have coordinates
                                     const locatedMedia = mediaItems.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
+                                    const typeLabels = { image: 'Fotoğraf', video: 'Video', audio: 'Ses', model_3d: '3D Model', unknown: 'Medya' };
                                     locatedMedia.forEach(m => {
                                         const lat = parseFloat(m.lat ?? m.latitude);
                                         const lng = parseFloat(m.lng ?? m.longitude ?? m.lon);
                                         if (isFinite(lat) && isFinite(lng)) {
-                                            const mk = L.marker([lat, lng], { icon: cameraIcon })
-                                                .bindPopup(`<div style="min-width:180px"><strong>Fotoğraf</strong>${m.caption ? `<div style=\"margin-top:4px;color:#666\">${m.caption}</div>`: ''}${m.preview_path || m.thumbnail_path || m.file_path ? `<div style=\"margin-top:8px\"><img src='/${m.preview_path || m.thumbnail_path || m.file_path}' alt='media' style='width:100%;border-radius:6px;'/></div>`:''}</div>`)
+                                            const label = typeLabels[m.media_type] || 'Medya';
+                                            let preview = '';
+                                            const mediaPath = m.preview_path || m.thumbnail_path || m.file_path;
+                                            if (mediaPath) {
+                                                if (m.media_type === 'image') {
+                                                    preview = `<div style=\"margin-top:8px\"><img src='/${mediaPath}' alt='media' style='width:100%;border-radius:6px;'/></div>`;
+                                                } else if (m.media_type === 'video') {
+                                                    preview = `<div style=\"margin-top:8px\"><video src='/${mediaPath}' controls style='width:100%;border-radius:6px;max-height:200px'></video></div>`;
+                                                } else if (m.media_type === 'audio') {
+                                                    preview = `<div style=\"margin-top:8px\"><audio controls style='width:100%'><source src='/${mediaPath}'></audio></div>`;
+                                                }
+                                            }
+                                            const mk = L.marker([lat, lng], { icon: getMediaMarkerIcon(m.media_type) })
+                                                .bindPopup(`<div style=\"min-width:180px\"><strong>${label}</strong>${m.caption ? `<div style=\\\"margin-top:4px;color:#666\\\">${m.caption}</div>`: ''}${preview}</div>`)
                                                 .addTo(map);
                                             poiMarkersLayer.addLayer(mk);
                                         }
@@ -4391,18 +4440,25 @@
                     const located = mediaFiles.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
                     if (located.length > 0) {
                         // Add markers
-                        const cameraIcon = L.divIcon({
-                            className: 'camera-marker',
-                            html: '<div style="background:#f59e0b;border:2px solid #fff;width:12px;height:12px;transform:rotate(45deg);border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>',
-                            iconSize: [12, 12],
-                            iconAnchor: [6, 6]
-                        });
+                        const typeLabels = { image: 'Fotoğraf', video: 'Video', audio: 'Ses', model_3d: '3D Model', unknown: 'Medya' };
                         located.forEach(m => {
                             const lat = parseFloat(m.lat ?? m.latitude);
                             const lng = parseFloat(m.lng ?? m.longitude ?? m.lon);
                             if (!isFinite(lat) || !isFinite(lng)) return;
-                            const mk = L.marker([lat, lng], { icon: cameraIcon })
-                                .bindPopup(`<div style=\"min-width:180px\"><strong>Fotoğraf</strong>${m.caption ? `<div style=\\\"margin-top:4px;color:#666\\\">${m.caption}</div>`: ''}${m.preview_path || m.thumbnail_path || m.file_path ? `<div style=\\\"margin-top:8px\\\"><img src='/${m.preview_path || m.thumbnail_path || m.file_path}' alt='media' style='width:100%;border-radius:6px;'/></div>`:''}</div>`)
+                            const label = typeLabels[m.media_type] || 'Medya';
+                            let preview = '';
+                            const mediaPath = m.preview_path || m.thumbnail_path || m.file_path;
+                            if (mediaPath) {
+                                if (m.media_type === 'image') {
+                                    preview = `<div style=\"margin-top:8px\"><img src='/${mediaPath}' alt='media' style='width:100%;border-radius:6px;'/></div>`;
+                                } else if (m.media_type === 'video') {
+                                    preview = `<div style=\"margin-top:8px\"><video src='/${mediaPath}' controls style='width:100%;border-radius:6px;max-height:200px'></video></div>`;
+                                } else if (m.media_type === 'audio') {
+                                    preview = `<div style=\"margin-top:8px\"><audio controls style='width:100%'><source src='/${mediaPath}'></audio></div>`;
+                                }
+                            }
+                            const mk = L.marker([lat, lng], { icon: getMediaMarkerIcon(m.media_type) })
+                                .bindPopup(`<div style=\"min-width:180px\"><strong>${label}</strong>${m.caption ? `<div style=\\\"margin-top:4px;color:#666\\\">${m.caption}</div>`: ''}${preview}</div>`)
                                 .addTo(map);
                             poiMarkersLayer.addLayer(mk);
                         });
@@ -4734,6 +4790,22 @@
             });
         }
 
+        function getMediaMarkerIcon(mediaType) {
+            const iconMap = {
+                image: { icon: 'fa-camera', cls: 'image' },
+                video: { icon: 'fa-video', cls: 'video' },
+                audio: { icon: 'fa-music', cls: 'audio' },
+                model_3d: { icon: 'fa-cube', cls: 'model_3d' }
+            };
+            const cfg = iconMap[mediaType] || { icon: 'fa-file', cls: 'image' };
+            return L.divIcon({
+                html: `<div class="media-marker ${cfg.cls}"><i class="fas ${cfg.icon}"></i></div>`,
+                className: '',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+        }
+
         // Photo Location Management Functions
         let photoLocationMode = false;
         let selectedPhotoForLocation = null;
@@ -5019,13 +5091,11 @@
                     // Refresh media display
                     await loadRouteMediaForEdit(routeId);
                     
-                    // Update map markers
-                    updatePhotoLocationMarker(filename, lat, lng);
-                    
-                    // Update elevation chart
-                    if (window.routeElevationChart) {
-                        refreshPhotoLocationMarkers();
-                    }
+                    // Update map markers immediately with a default icon
+                    updatePhotoLocationMarker(filename, lat, lng, 'image');
+
+                    // Update elevation chart and refresh markers with actual types
+                    refreshPhotoLocationMarkers();
                 } else {
                     const errorData = await response.json();
                     throw new Error(errorData.error || 'Konum güncellenemedi');
@@ -5037,7 +5107,7 @@
         }
 
         // Update photo location marker on map
-        function updatePhotoLocationMarker(filename, lat, lng) {
+        function updatePhotoLocationMarker(filename, lat, lng, mediaType = 'image') {
             // Remove existing marker if any
             if (photoLocationMarkers[filename]) {
                 poiMarkersLayer.removeLayer(photoLocationMarkers[filename]);
@@ -5045,15 +5115,10 @@
             }
 
             // Create new marker
-            const cameraIcon = L.divIcon({
-                className: 'camera-marker',
-                html: '<div style="background:#f59e0b;border:2px solid #fff;width:12px;height:12px;transform:rotate(45deg);border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>',
-                iconSize: [12, 12],
-                iconAnchor: [6, 6]
-            });
-
-            const marker = L.marker([lat, lng], { icon: cameraIcon })
-                .bindPopup(`<div style="min-width:180px"><strong>Fotoğraf: ${filename}</strong><div style="margin-top:4px;color:#666">Konum: ${lat.toFixed(6)}, ${lng.toFixed(6)}</div></div>`);
+            const typeLabels = { image: 'Fotoğraf', video: 'Video', audio: 'Ses', model_3d: '3D Model' };
+            const label = typeLabels[mediaType] || 'Medya';
+            const marker = L.marker([lat, lng], { icon: getMediaMarkerIcon(mediaType) })
+                .bindPopup(`<div style="min-width:180px"><strong>${label}: ${filename}</strong><div style="margin-top:4px;color:#666">Konum: ${lat.toFixed(6)}, ${lng.toFixed(6)}</div></div>`);
 
             photoLocationMarkers[filename] = marker;
             poiMarkersLayer.addLayer(marker);
@@ -5071,7 +5136,19 @@
                 if (response.ok) {
                     const mediaJson = await response.json();
                     const mediaItems = Array.isArray(mediaJson) ? mediaJson : (Array.isArray(mediaJson.media) ? mediaJson.media : []);
-                    
+
+                    // Ensure media types
+                    mediaItems.forEach(m => {
+                        if (!m.media_type) {
+                            const path = (m.filename || m.file_path || m.path || '').toLowerCase();
+                            if (path.match(/\.(webp|jpg|jpeg|png|gif|bmp|tiff)$/)) m.media_type = 'image';
+                            else if (path.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)$/)) m.media_type = 'video';
+                            else if (path.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/)) m.media_type = 'audio';
+                            else if (path.match(/\.(glb|gltf|obj|fbx|dae|ply|stl)$/)) m.media_type = 'model_3d';
+                            else m.media_type = 'unknown';
+                        }
+                    });
+
                     // Clear existing photo markers
                     Object.values(photoLocationMarkers).forEach(marker => {
                         poiMarkersLayer.removeLayer(marker);
@@ -5084,9 +5161,9 @@
                         const lat = parseFloat(m.lat ?? m.latitude);
                         const lng = parseFloat(m.lng ?? m.longitude ?? m.lon);
                         const filename = m.filename || m.name || m.path?.split('/').pop() || 'Unknown';
-                        
+
                         if (isFinite(lat) && isFinite(lng)) {
-                            updatePhotoLocationMarker(filename, lat, lng);
+                            updatePhotoLocationMarker(filename, lat, lng, m.media_type);
                         }
                     });
 
