@@ -151,11 +151,24 @@ class POIMediaManager:
                 if not gps_info:
                     return None, None
 
+                # Map GPS tag ids to names for broader compatibility
+                gps_tags = {
+                    ExifTags.GPSTAGS.get(k, k): v for k, v in gps_info.items()
+                }
+
+                gps_latitude = gps_tags.get('GPSLatitude')
+                gps_lat_ref = gps_tags.get('GPSLatitudeRef')
+                gps_longitude = gps_tags.get('GPSLongitude')
+                gps_long_ref = gps_tags.get('GPSLongitudeRef')
+
+                if not (gps_latitude and gps_lat_ref and gps_longitude and gps_long_ref):
+                    return None, None
+
                 def _to_float(ratio):
-                    try:
-                        return ratio[0] / ratio[1]
-                    except TypeError:
-                        return ratio.numerator / ratio.denominator
+                    if isinstance(ratio, tuple):
+                        return float(ratio[0]) / float(ratio[1])
+                    return float(ratio)
+
 
                 def _to_degrees(value):
                     d = _to_float(value[0])
@@ -163,20 +176,18 @@ class POIMediaManager:
                     s = _to_float(value[2])
                     return d + (m / 60.0) + (s / 3600.0)
 
-                gps_latitude = gps_info.get(2)
-                gps_lat_ref = gps_info.get(1)
-                gps_longitude = gps_info.get(4)
-                gps_long_ref = gps_info.get(3)
-
-                if not (gps_latitude and gps_lat_ref and gps_longitude and gps_long_ref):
-                    return None, None
+                if isinstance(gps_lat_ref, bytes):
+                    gps_lat_ref = gps_lat_ref.decode().upper()
+                if isinstance(gps_long_ref, bytes):
+                    gps_long_ref = gps_long_ref.decode().upper()
 
                 lat = _to_degrees(gps_latitude)
-                if gps_lat_ref in ['S', 's']:
+                if gps_lat_ref in ['S']:
                     lat = -lat
 
                 lng = _to_degrees(gps_longitude)
-                if gps_long_ref in ['W', 'w']:
+                if gps_long_ref in ['W']:
+
                     lng = -lng
 
                 return lat, lng
