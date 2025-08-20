@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medya İşaretleyici Testi</title>
+    <style>
+        .media-marker {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            border: 2px solid white;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+            font-size: 12px;
+            margin: 10px;
+        }
+
+        .media-marker.image {
+            background: #f59e0b;
+        }
+
+        .media-marker.video {
+            background: #ef4444;
+        }
+
+        .media-marker.audio {
+            background: #10b981;
+        }
+
+        .media-marker.model_3d {
+            background: #6366f1;
+        }
+
+        .test-container {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .marker-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .marker-label {
+            margin-right: 15px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="test-container">
+        <h1>Medya İşaretleyici Testi</h1>
+        <p>Hazır rotalarda sadece bu işaretleyiciler görünmeli (turuncu karo olmamalı):</p>
+        
+        <div class="marker-row">
+            <span class="marker-label">Fotoğraf:</span>
+            <div class="media-marker image">
+                <i class="fas fa-camera"></i>
+            </div>
+        </div>
+
+        <div class="marker-row">
+            <span class="marker-label">Video:</span>
+            <div class="media-marker video">
+                <i class="fas fa-video"></i>
+            </div>
+        </div>
+
+        <div class="marker-row">
+            <span class="marker-label">Ses:</span>
+            <div class="media-marker audio">
+                <i class="fas fa-music"></i>
+            </div>
+        </div>
+
+        <div class="marker-row">
+            <span class="marker-label">3D Model:</span>
+            <div class="media-marker model_3d">
+                <i class="fas fa-cube"></i>
+            </div>
+        </div>
+
+        <div style="margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <h3>Test Sonucu:</h3>
+            <p>✅ Sadece yukarıdaki dairesel işaretleyiciler görünmeli</p>
+            <p>❌ Turuncu karo (diamond) şeklinde ikinci simge olmamalı</p>
+            <p>✅ Her işaretleyici kendi renginde ve Font Awesome ikonu ile olmalı</p>
+        </div>
+    </div>
+</body>
+</html>

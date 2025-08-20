@@ -8403,13 +8403,4 @@ odern Recommendations UX Styles */
     z-index: 10;
 }
 
-/* Camera marker legacy support */
-.camera-marker {
-    transition: all 0.2s ease;
-}
-
-.camera-marker:hover {
-    transform: scale(1.1);
-    z-index: 1000 !important;
-}
 }
