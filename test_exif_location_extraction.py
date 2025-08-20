@@ -7,7 +7,7 @@ from PIL import Image
 import piexif
 
 
-def _create_image_with_exif(path: str, lat: float, lng: float):
+def _create_image_with_exif(path: str, lat: float, lng: float, fmt: str = "jpeg"):
     img = Image.new('RGB', (10, 10), color='red')
 
     def _to_deg(value):
@@ -35,7 +35,7 @@ def _create_image_with_exif(path: str, lat: float, lng: float):
         }
     }
     exif_bytes = piexif.dump(exif_dict)
-    img.save(path, "jpeg", exif=exif_bytes)
+    img.save(path, fmt, exif=exif_bytes)
 
 
 def test_extract_gps_from_exif():
@@ -87,4 +87,24 @@ def test_auto_set_route_media_location():
         assert abs(auto_lng - lng) < 0.01
 
         manager.delete_route_media(2, info['filename'])
+
+
+def test_extract_gps_from_webp_exif():
+    manager = POIMediaManager()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        img_path = os.path.join(tmpdir, "exif.webp")
+        lat, lng = 11.2233, 44.5566
+        _create_image_with_exif(img_path, lat, lng, fmt="webp")
+
+        info = manager.add_route_media(
+            route_id=3,
+            route_name="WebpTest",
+            media_file_path=img_path
+        )
+        assert info is not None
+        assert info['lat'] is not None and info['lng'] is not None
+        assert abs(info['lat'] - lat) < 0.01
+        assert abs(info['lng'] - lng) < 0.01
+
+        manager.delete_route_media(3, info['filename'])
 
