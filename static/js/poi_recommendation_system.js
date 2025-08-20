@@ -5259,9 +5259,10 @@ async function displayRouteOnMap(route) {
                                         border-radius: 50%; 
                                         display: flex; 
                                         align-items: center; 
-                                        justify-content: center; 
+                                        justify-content: center;
                                         font-weight: bold;
                                         border: 3px solid white;
+                                        box-sizing: border-box;
                                         box-shadow: 0 3px 8px rgba(0,0,0,0.4);
                                         font-size: 16px;
                                         position: relative;
@@ -5285,7 +5286,7 @@ async function displayRouteOnMap(route) {
                                         ">${index + 1}</span>
                                     </div>`,
                                     iconSize: [35, 35],
-                                    iconAnchor: [17, 17]
+                                    iconAnchor: [17.5, 17.5]
                                 })
                             }).addTo(predefinedMap);
 
