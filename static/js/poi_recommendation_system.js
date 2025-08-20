@@ -1280,8 +1280,8 @@ class RouteDetailsPanel {
                                     font-size: 16px;
                                 ">${categoryStyle.icon}</div>`,
                                 iconSize: [30, 30],
-                                iconAnchor: [15, 30],
-                                popupAnchor: [0, -30]
+                                iconAnchor: [15, 15],
+                                popupAnchor: [0, -15]
                             })
                         }).addTo(routeLayerGroup);
 
@@ -5456,8 +5456,8 @@ async function displayRouteOnMap(route) {
                                         ">${index + 1}</span>
                                     </div>`,
                                     iconSize: [35, 35],
-                                    iconAnchor: [17, 35],
-                                    popupAnchor: [0, -35]
+                                    iconAnchor: [17, 17],
+                                    popupAnchor: [0, -17]
                                 })
                             }).addTo(predefinedMap);
                             marker.routeId = route.id || route._id;
@@ -5612,8 +5612,8 @@ async function displayRouteOnMap(route) {
                                 ">${index + 1}</span>
                             </div>`,
                             iconSize: [35, 35],
-                            iconAnchor: [17, 35],
-                            popupAnchor: [0, -35]
+                            iconAnchor: [17, 17],
+                            popupAnchor: [0, -17]
                         })
                     }).addTo(predefinedMap);
                     marker.routeId = route.id || route._id;
@@ -6260,8 +6260,8 @@ function displayRouteOnMapFallback(route) {
                                 ">${index + 1}</span>
                             </div>`,
                             iconSize: [30, 30],
-                            iconAnchor: [15, 30],
-                            popupAnchor: [0, -30]
+                            iconAnchor: [15, 15],
+                            popupAnchor: [0, -15]
                         })
                     }).addTo(predefinedMap);
                     marker.routeId = route.id || route._id;
