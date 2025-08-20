@@ -3733,7 +3733,7 @@
                                         <input type="file" class="form-control" id="routeMediaFile" accept="image/*,video/*,audio/*" required>
                                         <div class="form-text">
                                             Desteklenen formatlar: JPG, PNG, GIF, MP4, MP3, vb.<br>
-                                            <small class="text-info">📸 Resimler otomatik olarak WebP formatına dönüştürülür (daha iyi sıkıştırma)</small>
+                                            <small class="text-info">📸 Resimler isteğe bağlı olarak WebP formatına dönüştürülür (daha iyi sıkıştırma)</small>
                                         </div>
                                     </div>
                                     <div class="mb-3">
@@ -3747,6 +3747,15 @@
                                                 Ana görsel olarak ayarla
                                             </label>
                                         </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="routeMediaKeepOriginalModal">
+                                            <label class="form-check-label" for="routeMediaKeepOriginalModal">
+                                                Orijinal dosyayı (EXIF ile) yükle
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Seçilmezse görseller WebP formatına dönüştürülür.</div>
                                     </div>
                                 </form>
                             </div>
@@ -3817,9 +3826,10 @@
             }
 
             let fileToUpload = file;
-            
+            const keepOriginal = document.getElementById('routeMediaKeepOriginalModal')?.checked;
+
             // Convert images to WebP format for better compression
-            if (mediaType === 'image' && !filename.endsWith('.webp')) {
+            if (mediaType === 'image' && !filename.endsWith('.webp') && !keepOriginal) {
                 try {
                     showNotification('Resim WebP formatına dönüştürülüyor...', 'info');
                     fileToUpload = await convertImageToWebP(file);
@@ -4214,11 +4224,26 @@
                 return;
             }
 
+            let fileToUpload = file;
+            const keepOriginal = document.getElementById('routeMediaKeepOriginal')?.checked;
+
+            if (mediaType === 'image' && !filename.endsWith('.webp') && !keepOriginal) {
+                try {
+                    showNotification('Resim WebP formatına dönüştürülüyor...', 'info');
+                    fileToUpload = await convertImageToWebP(file);
+                    showNotification('Resim WebP formatına dönüştürüldü!', 'success');
+                } catch (error) {
+                    console.warn('WebP conversion failed, using original file:', error);
+                    fileToUpload = file;
+                    showNotification('WebP dönüştürme başarısız, orijinal dosya kullanılıyor', 'warning');
+                }
+            }
+
             const formData = new FormData();
             // Backend API expects the uploaded file under the 'file' field name
             // Using a different key results in the server thinking no file was provided
             // and returning a 404/HTML error page which then breaks JSON parsing
-            formData.append('file', file);
+            formData.append('file', fileToUpload);
             formData.append('caption', mediaCaption);
             formData.append('is_primary', isPrimary);
 
@@ -6268,7 +6293,8 @@
                                         accept="image/*,video/*,audio/*,.glb,.gltf,.obj,.fbx,.dae,.ply,.stl">
                                     <small class="form-help">
                                         Desteklenen formatlar: Görsel (JPG, PNG, GIF), Video (MP4, AVI, MOV),
-                                        Ses (MP3, WAV, OGG), 3D Model (GLB, GLTF, OBJ, FBX)
+                                        Ses (MP3, WAV, OGG), 3D Model (GLB, GLTF, OBJ, FBX)<br>
+                                        📸 Görseller isteğe bağlı olarak WebP formatına dönüştürülür
                                     </small>
                                 </div>
 
@@ -6298,6 +6324,15 @@
                                             Ana medya olarak ayarla
                                         </label>
                                     </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="routeMediaKeepOriginal">
+                                        <label class="form-check-label" for="routeMediaKeepOriginal">
+                                            Orijinal dosyayı (EXIF ile) yükle
+                                        </label>
+                                    </div>
+                                    <small class="form-help">Seçilmezse görseller WebP formatına dönüştürülür.</small>
                                 </div>
 
                                 <button type="button" class="btn btn-primary" onclick="uploadRouteMedia()">
