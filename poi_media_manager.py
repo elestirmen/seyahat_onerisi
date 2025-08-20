@@ -8,6 +8,7 @@ Görseller, videolar, ses dosyaları ve 3D modelleri yükler, işler ve veritaba
 import os
 import shutil
 from PIL import Image, ExifTags
+import piexif
 import hashlib
 from typing import List, Dict, Optional, Tuple, Union
 import uuid
@@ -140,14 +141,21 @@ class POIMediaManager:
         """Görselden EXIF konum bilgisi çıkar"""
         try:
             with Image.open(image_path) as img:
-                exif = img._getexif()
-                if not exif:
-                    return None, None
+                exif = img.getexif()
+                gps_info = None
 
-                exif_data = {
-                    ExifTags.TAGS.get(k): v for k, v in exif.items() if k in ExifTags.TAGS
-                }
-                gps_info = exif_data.get('GPSInfo')
+                if exif:
+                    gps_info = exif.get_ifd(ExifTags.IFD.GPSInfo)
+
+                if not gps_info:
+                    exif_bytes = img.info.get("exif")
+                    if exif_bytes:
+                        try:
+                            exif_dict = piexif.load(exif_bytes)
+                            gps_info = exif_dict.get("GPS")
+                        except Exception as ex:
+                            print(f"⚠️ piexif EXIF okuma hatası: {ex}")
+
                 if not gps_info:
                     return None, None
 
@@ -218,16 +226,15 @@ class POIMediaManager:
         try:
             with Image.open(image_path) as img:
                 # EXIF verilerini koru ve döndür
-                if hasattr(img, '_getexif'):
-                    exif = img._getexif()
-                    if exif is not None:
-                        orientation = exif.get(274)  # Orientation tag
-                        if orientation == 3:
-                            img = img.rotate(180, expand=True)
-                        elif orientation == 6:
-                            img = img.rotate(270, expand=True)
-                        elif orientation == 8:
-                            img = img.rotate(90, expand=True)
+                exif = img.getexif()
+                if exif:
+                    orientation = exif.get(274)  # Orientation tag
+                    if orientation == 3:
+                        img = img.rotate(180, expand=True)
+                    elif orientation == 6:
+                        img = img.rotate(270, expand=True)
+                    elif orientation == 8:
+                        img = img.rotate(90, expand=True)
                 
                 # Thumbnail oluştur
                 img.thumbnail(size, Image.Resampling.LANCZOS)
@@ -361,16 +368,15 @@ class POIMediaManager:
         try:
             with Image.open(input_path) as img:
                 # EXIF verilerini koru ve döndür
-                if hasattr(img, '_getexif'):
-                    exif = img._getexif()
-                    if exif is not None:
-                        orientation = exif.get(274)
-                        if orientation == 3:
-                            img = img.rotate(180, expand=True)
-                        elif orientation == 6:
-                            img = img.rotate(270, expand=True)
-                        elif orientation == 8:
-                            img = img.rotate(90, expand=True)
+                exif = img.getexif()
+                if exif:
+                    orientation = exif.get(274)
+                    if orientation == 3:
+                        img = img.rotate(180, expand=True)
+                    elif orientation == 6:
+                        img = img.rotate(270, expand=True)
+                    elif orientation == 8:
+                        img = img.rotate(90, expand=True)
                 
                 # Çok büyük görselleri yeniden boyutlandır
                 max_size = 2048
