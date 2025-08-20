@@ -575,7 +575,21 @@
                     <!-- Map and Routes Container -->
                     <div class="routes-map-container">
                         <!-- Map View -->
-                        <div id="mapView" class="predefined-map-container">
+                        <div id="mapView" class="predefined-map-container route-map-view">
+                            <div class="map-header">
+                                <h3 class="map-title">
+                                    <i class="fas fa-map me-2"></i>
+                                    Rota Haritası
+                                </h3>
+                                <div class="map-controls">
+                                    <button class="btn-map" id="clearMapBtn" title="Haritayı Temizle">
+                                        <i class="fas fa-eraser"></i>
+                                    </button>
+                                    <button class="btn-map" id="fitMapBtn" title="Tüm Rotaları Göster">
+                                        <i class="fas fa-expand-arrows-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
                             <div id="predefinedRoutesMap" class="predefined-routes-map">
                                 <div class="map-loading" id="predefinedMapLoading">
                                     <div class="loading__spinner"></div>
@@ -584,15 +598,6 @@
                             </div>
                             <!-- Elevation Chart for Predefined Routes -->
                             <div id="predefinedElevationChartContainer" class="elevation-chart-hidden"></div>
-                            <!-- Map Controls -->
-                            <div class="map-controls">
-                                <button class="map-control-btn" id="clearMapBtn" title="Haritayı Temizle">
-                                    <i class="fas fa-eraser"></i>
-                                </button>
-                                <button class="map-control-btn" id="fitMapBtn" title="Tüm Rotaları Göster">
-                                    <i class="fas fa-expand-arrows-alt"></i>
-                                </button>
-                            </div>
                         </div>
 
                         <!-- List View -->

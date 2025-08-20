@@ -6271,11 +6271,48 @@ ute Preview Map Styles */
     overflow: hidden;
     background: white;
     box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+}
+
+.predefined-map-container .map-header {
+    background: linear-gradient(135deg, var(--success-600) 0%, var(--success-700) 100%);
+    color: #fff;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.predefined-map-container .map-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.predefined-map-container .map-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.predefined-map-container .btn-map {
+    padding: 0.25rem 0.5rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: transparent;
+    color: #fff;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.predefined-map-container .btn-map:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .predefined-routes-map {
-    width: 100%;
-    height: 500px;
+    flex: 1;
+    min-height: 400px;
     position: relative;
 }
 
@@ -6293,41 +6330,6 @@ ute Preview Map Styles */
     z-index: 1000;
 }
 
-.map-controls {
-    position: absolute;
-    top: 60px;
-    right: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    z-index: 1000;
-}
-
-.map-control-btn {
-    width: 40px;
-    height: 40px;
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-}
-
-.map-control-btn:hover {
-    background: var(--primary-color);
-    color: white;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.map-control-btn i {
-    font-size: 14px;
-}
-
 /* Mobile responsiveness for map container */
 @media (max-width: 768px) {
     .predefined-map-container {
@@ -6335,7 +6337,7 @@ ute Preview Map Styles */
     }
 
     .predefined-routes-map {
-        height: 350px;
+        min-height: 350px;
     }
 }
 
