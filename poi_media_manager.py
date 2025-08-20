@@ -1372,10 +1372,30 @@ class POIMediaManager:
                     cur.close()
                 if conn:
                     conn.close()
-                    
+
         except Exception as e:
             print(f"❌ Route media location update error: {e}")
             return False
+
+    def auto_set_route_media_location(self, route_id: int, filename: str) -> Optional[Tuple[float, float]]:
+        """Extract location from image EXIF and update media record.
+
+        Returns latitude and longitude if successful, otherwise None.
+        """
+        try:
+            file_path = self._find_media_file_path(route_id, filename)
+            if not file_path:
+                return None
+
+            lat, lng = self._get_exif_location(file_path)
+            if lat is None or lng is None:
+                return None
+
+            if self.update_route_media_location(route_id, filename, lat, lng):
+                return lat, lng
+        except Exception as e:
+            print(f"⚠️ EXIF konum bilgisi güncellenemedi: {e}")
+        return None
     
     def remove_route_media_location(self, route_id: int, filename: str) -> bool:
         """

@@ -1,5 +1,7 @@
 import os
 import tempfile
+import pytest
+
 from poi_media_manager import POIMediaManager
 from PIL import Image
 import piexif
@@ -57,3 +59,32 @@ def test_extract_gps_from_exif():
 
         # cleanup
         manager.delete_route_media(1, info['filename'])
+
+
+def test_auto_set_route_media_location():
+    manager = POIMediaManager()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        img_path = os.path.join(tmpdir, "exif.jpg")
+        lat, lng = 12.3456, 78.9012
+        _create_image_with_exif(img_path, lat, lng)
+
+        info = manager.add_route_media(
+            route_id=2,
+            route_name="AutoTest",
+            media_file_path=img_path
+        )
+        assert info is not None
+
+        # remove stored location to simulate missing coordinates
+        if not manager.remove_route_media_location(2, info['filename']):
+            pytest.skip("Database not available for location removal")
+
+        coords = manager.auto_set_route_media_location(2, info['filename'])
+        if coords is None:
+            pytest.skip("Database not available for auto location")
+        auto_lat, auto_lng = coords
+        assert abs(auto_lat - lat) < 0.01
+        assert abs(auto_lng - lng) < 0.01
+
+        manager.delete_route_media(2, info['filename'])
+

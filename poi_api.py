@@ -4386,6 +4386,37 @@ def update_route_media(route_id: int, filename: str):
             'error': f'Error updating media: {str(e)}'
         }), 500
 
+@app.post('/api/admin/routes/<int:route_id>/media/<filename>/location/auto')
+def auto_route_media_location(route_id: int, filename: str):
+    """Extract route media location from EXIF and save it"""
+    try:
+        media_manager = POIMediaManager()
+        coords = media_manager.auto_set_route_media_location(route_id, filename)
+        if not coords:
+            return jsonify({
+                'success': False,
+                'error': 'No EXIF location found'
+            }), 404
+
+        lat, lng = coords
+        return jsonify({
+            'success': True,
+            'message': 'Media location extracted from EXIF',
+            'media': {
+                'filename': filename,
+                'lat': lat,
+                'lng': lng,
+                'latitude': lat,
+                'longitude': lng
+            }
+        }), 200
+    except Exception as e:
+        logger.error(f"Error extracting media location from EXIF: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error extracting location: {str(e)}'
+        }), 500
+
 @app.put('/api/admin/routes/<int:route_id>/media/<filename>/location')
 def update_route_media_location(route_id: int, filename: str):
     """Update only the location of route media"""
