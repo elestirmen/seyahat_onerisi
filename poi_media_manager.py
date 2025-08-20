@@ -7,6 +7,7 @@ Görseller, videolar, ses dosyaları ve 3D modelleri yükler, işler ve veritaba
 
 import os
 import shutil
+import json
 from PIL import Image, ExifTags
 import piexif
 import hashlib
@@ -363,12 +364,17 @@ class POIMediaManager:
             print(f"❌ Placeholder oluşturma hatası: {e}")
             return False
 
-    def convert_to_webp(self, input_path: Path, output_path: Path, quality: int = 90) -> bool:
-        """Görseli WebP formatına dönüştür"""
+    def convert_to_webp(self, input_path: Path, output_path: Path, quality: int = 90,
+                        gps_data: Optional[Tuple[float, float]] = None) -> bool:
+        """Görseli WebP formatına dönüştür ve mümkünse EXIF'i koru.
+
+        EXIF verisi WebP'e yazılamazsa, GPS bilgisi aynı klasörde JSON olarak saklanır.
+        """
         try:
             with Image.open(input_path) as img:
                 # EXIF verilerini koru ve döndür
                 exif = img.getexif()
+                exif_bytes = img.info.get("exif")
                 if exif:
                     orientation = exif.get(274)
                     if orientation == 3:
@@ -377,12 +383,12 @@ class POIMediaManager:
                         img = img.rotate(270, expand=True)
                     elif orientation == 8:
                         img = img.rotate(90, expand=True)
-                
+
                 # Çok büyük görselleri yeniden boyutlandır
                 max_size = 2048
                 if img.width > max_size or img.height > max_size:
                     img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-                
+
                 # RGB/RGBA moduna çevir
                 if img.mode in ('LA', 'P'):
                     if img.mode == 'P':
@@ -391,17 +397,36 @@ class POIMediaManager:
                         img = img.convert('RGBA')
                 elif img.mode not in ('RGB', 'RGBA'):
                     img = img.convert('RGB')
-                
-                # WebP formatında kaydet
-                img.save(output_path, 'WebP', quality=quality, optimize=True, lossless=False)
+
+                # WebP formatında kaydet, EXIF'i eklemeye çalış
+                save_kwargs = {'quality': quality, 'optimize': True, 'lossless': False}
+                if exif_bytes:
+                    save_kwargs['exif'] = exif_bytes
+                img.save(output_path, 'WebP', **save_kwargs)
+
+                # Eğer EXIF'te GPS yoksa bilgiyi JSON olarak sakla
+                if gps_data:
+                    try:
+                        with Image.open(output_path) as out_img:
+                            out_exif = out_img.getexif()
+                            gps_ifd = out_exif.get_ifd(ExifTags.IFD.GPSInfo) if out_exif else None
+                            has_gps = bool(gps_ifd)
+                    except Exception:
+                        has_gps = False
+                    if not has_gps:
+                        sidecar_path = output_path.with_suffix('.json')
+                        with open(sidecar_path, 'w', encoding='utf-8') as f:
+                            json.dump({'lat': gps_data[0], 'lng': gps_data[1]}, f)
+
                 return True
-                
+
         except Exception as e:
             print(f"❌ WebP dönüşüm hatası: {e}")
             return False
 
     def add_poi_media(self, poi_id: str, poi_name: str, category: str, media_file_path: str,
-                     media_type: str = None, caption: str = '', is_primary: bool = False) -> Optional[Dict]:
+                      media_type: str = None, caption: str = '', is_primary: bool = False,
+                      lat: float = None, lng: float = None) -> Optional[Dict]:
         """POI'ye medya dosyası ekle"""
         try:
             # Dosya doğrulama
@@ -411,6 +436,12 @@ class POIMediaManager:
             
             media_type = detected_type
             original_size = os.path.getsize(media_file_path)
+
+            # EXIF'ten konum bilgisi çıkar
+            if media_type == 'image' and (lat is None or lng is None):
+                exif_lat, exif_lng = self._get_exif_location(media_file_path)
+                if exif_lat is not None and exif_lng is not None:
+                    lat, lng = exif_lat, exif_lng
             
             # POI ID bazlı klasör yapısı
             poi_id_folder = f"poi_{poi_id}"
@@ -436,7 +467,8 @@ class POIMediaManager:
                 target_path = poi_dir / new_filename
                 
                 # WebP'ye dönüştür
-                webp_success = self.convert_to_webp(Path(media_file_path), target_path, quality=90)
+                gps = (lat, lng) if lat is not None and lng is not None else None
+                webp_success = self.convert_to_webp(Path(media_file_path), target_path, quality=90, gps_data=gps)
                 if not webp_success:
                     # WebP dönüşümü başarısızsa, orijinal dosyayı kopyala
                     new_filename = f"{unique_id}{file_extension}"
@@ -484,6 +516,8 @@ class POIMediaManager:
                 'original_name': original_name,
                 'filename': new_filename,
                 'format': Path(new_filename).suffix[1:] if Path(new_filename).suffix else 'unknown',
+                'lat': lat,
+                'lng': lng,
                 'compression_ratio': f"{size_reduction:.1f}%" if size_reduction > 0 else "0%"
             }
             
@@ -684,7 +718,8 @@ class POIMediaManager:
                 destination_path = media_dir / safe_filename
                 
                 # WebP'ye dönüştür
-                webp_success = self.convert_to_webp(Path(media_file_path), destination_path, quality=90)
+                gps = (lat, lng) if lat is not None and lng is not None else None
+                webp_success = self.convert_to_webp(Path(media_file_path), destination_path, quality=90, gps_data=gps)
                 if not webp_success:
                     # WebP dönüşümü başarısızsa, orijinal dosyayı kopyala
                     safe_filename = self._generate_safe_filename(filename, media_dir)
@@ -1851,9 +1886,10 @@ class POIImageManager(POIMediaManager):
     """Geriye uyumluluk için POIImageManager alias'ı"""
     
     def add_poi_image_by_id(self, poi_id: str, poi_name: str, category: str, image_file_path: str,
-                           image_type: str = 'photo', caption: str = '', is_primary: bool = False) -> Optional[Dict]:
+                           image_type: str = 'photo', caption: str = '', is_primary: bool = False,
+                           lat: float = None, lng: float = None) -> Optional[Dict]:
         """Eski API ile uyumluluk için wrapper"""
-        return self.add_poi_media(poi_id, poi_name, category, image_file_path, 'image', caption, is_primary)
+        return self.add_poi_media(poi_id, poi_name, category, image_file_path, 'image', caption, is_primary, lat, lng)
     
     def get_poi_images_by_id(self, poi_id: str) -> List[Dict]:
         """Eski API ile uyumluluk için wrapper"""
