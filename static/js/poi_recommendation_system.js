@@ -5790,68 +5790,24 @@ function clearPredefinedMapContent() {
 function createMediaMarkerIcon(mediaType, media) {
     const iconSize = [24, 24];
     const iconAnchor = [12, 12];
-    
-    // Define colors and icons for different media types
-    const mediaTypeConfig = {
-        'image': {
-            color: '#f59e0b',
-            icon: '📷',
-            bgColor: '#fef3c7',
-            borderColor: '#f59e0b'
-        },
-        'video': {
-            color: '#ef4444',
-            icon: '🎥',
-            bgColor: '#fee2e2',
-            borderColor: '#ef4444'
-        },
-        'audio': {
-            color: '#8b5cf6',
-            icon: '🎵',
-            bgColor: '#f3e8ff',
-            borderColor: '#8b5cf6'
-        },
-        'model_3d': {
-            color: '#06b6d4',
-            icon: '🧊',
-            bgColor: '#cffafe',
-            borderColor: '#06b6d4'
-        },
-        'unknown': {
-            color: '#6b7280',
-            icon: '📍',
-            bgColor: '#f3f4f6',
-            borderColor: '#6b7280'
-        }
+
+    // Define icons and classes for different media types (matching enhanced route manager)
+    const iconMap = {
+        'image': { icon: 'fa-camera', cls: 'image' },
+        'video': { icon: 'fa-video', cls: 'video' },
+        'audio': { icon: 'fa-music', cls: 'audio' },
+        'model_3d': { icon: 'fa-cube', cls: 'model_3d' },
+        'unknown': { icon: 'fa-file', cls: 'image' }
     };
-    
-    const config = mediaTypeConfig[mediaType] || mediaTypeConfig.unknown;
-    
-    // Create enhanced HTML for the marker
-    const html = `
-        <div style="
-            background: ${config.bgColor};
-            color: ${config.color};
-            width: 24px; 
-            height: 24px; 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: bold;
-            border: 2px solid ${config.borderColor};
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            font-size: 14px;
-            position: relative;
-            cursor: pointer;
-        ">
-            <span style="font-size: 16px;">${config.icon}</span>
-        </div>
-    `;
-    
+
+    const cfg = iconMap[mediaType] || iconMap.unknown;
+
+    // Create HTML for the marker using Font Awesome icons (matching enhanced route manager)
+    const html = `<div class="media-marker ${cfg.cls}"><i class="fas ${cfg.icon}"></i></div>`;
+
     return L.divIcon({
-        className: 'media-marker',
         html: html,
+        className: '',
         iconSize: iconSize,
         iconAnchor: iconAnchor,
         popupAnchor: [0, -12]
@@ -5873,7 +5829,7 @@ function createMediaPopupContent(media) {
         <div class="media-popup-content" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 280px;">
             <div class="media-popup-header" style="display: flex; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
                 <div class="media-popup-icon" style="
-                    background: ${mediaType === 'image' ? '#f59e0b' : mediaType === 'video' ? '#ef4444' : mediaType === 'audio' ? '#8b5cf6' : '#06b6d4'};
+                    background: ${mediaType === 'image' ? '#f59e0b' : mediaType === 'video' ? '#ef4444' : mediaType === 'audio' ? '#10b981' : '#6366f1'};
                     color: white;
                     width: 32px;
                     height: 32px;
@@ -5885,7 +5841,7 @@ function createMediaPopupContent(media) {
                     margin-right: 10px;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
                 ">
-                    ${mediaType === 'image' ? '📷' : mediaType === 'video' ? '🎥' : mediaType === 'audio' ? '🎵' : '🧊'}
+                    <i class="fas ${mediaType === 'image' ? 'fa-camera' : mediaType === 'video' ? 'fa-video' : mediaType === 'audio' ? 'fa-music' : 'fa-cube'}"></i>
                 </div>
                 <div class="media-popup-title-section" style="flex: 1;">
                     <h4 class="media-popup-title" style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">${mediaTypeNames[mediaType]}</h4>
