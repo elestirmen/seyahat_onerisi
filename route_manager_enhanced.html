@@ -974,16 +974,20 @@
             color: var(--route-danger);
         }
 
-        .exif-info {
+        .webp-conversion-actions {
             margin-top: 0.5rem;
-            text-align: center;
         }
 
-        .exif-info small {
+        .webp-conversion-actions .btn {
+            font-size: 0.75rem;
             padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            background: rgba(100, 116, 139, 0.1);
-            border: 1px solid rgba(100, 116, 139, 0.2);
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .webp-conversion-actions .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
         .debug-actions {
@@ -1915,7 +1919,7 @@
             
             // Show info about automatic EXIF extraction
             setTimeout(() => {
-                showNotification('📸 Otomatik EXIF konum çıkarma aktif! Tüm fotoğraflar orijinal formatlarında yüklenir ve GPS bilgisi otomatik olarak haritaya eklenir.', 'info');
+                showNotification('📸 Otomatik EXIF konum çıkarma aktif! Fotoğraf yüklediğinizde GPS bilgisi otomatik olarak haritaya eklenir.', 'info');
             }, 2000);
         });
 
@@ -3774,7 +3778,7 @@
                                         <input type="file" class="form-control" id="routeMediaFile" accept="image/*,video/*,audio/*" required>
                                         <div class="form-text">
                                             Desteklenen formatlar: JPG, PNG, GIF, MP4, MP3, vb.<br>
-                                            <small class="text-success">📸 Tüm fotoğraflar orijinal formatlarında yüklenir ve EXIF GPS bilgisi korunur</small>
+                                            <small class="text-info">📸 Resimler isteğe bağlı olarak WebP formatına dönüştürülür (daha iyi sıkıştırma)</small>
                                         </div>
                                     </div>
                                     <div class="mb-3">
@@ -3790,10 +3794,13 @@
                                         </div>
                                     </div>
                                     <div class="mb-3">
-                                        <div class="alert alert-info">
-                                            <i class="fas fa-info-circle me-2"></i>
-                                            <strong>EXIF Korunuyor:</strong> Tüm fotoğraflar orijinal formatlarında yüklenir ve GPS konum bilgisi otomatik olarak çıkarılır.
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="routeMediaKeepOriginalModal">
+                                            <label class="form-check-label" for="routeMediaKeepOriginalModal">
+                                                Orijinal dosyayı (EXIF ile) yükle
+                                            </label>
                                         </div>
+                                        <div class="form-text">Seçilmezse görseller WebP formatına dönüştürülür.</div>
                                     </div>
                                 </form>
                             </div>
@@ -3863,8 +3870,21 @@
                 return;
             }
 
-            // Always upload original file to preserve EXIF data
             let fileToUpload = file;
+            const keepOriginal = document.getElementById('routeMediaKeepOriginalModal')?.checked;
+
+            // Convert images to WebP format for better compression
+            if (mediaType === 'image' && !filename.endsWith('.webp') && !keepOriginal) {
+                try {
+                    showNotification('Resim WebP formatına dönüştürülüyor...', 'info');
+                    fileToUpload = await convertImageToWebP(file);
+                    showNotification('Resim WebP formatına dönüştürüldü!', 'success');
+                } catch (error) {
+                    console.warn('WebP conversion failed, using original file:', error);
+                    fileToUpload = file;
+                    showNotification('WebP dönüştürme başarısız, orijinal dosya kullanılıyor', 'warning');
+                }
+            }
 
             const formData = new FormData();
             formData.append('file', fileToUpload);
@@ -3960,8 +3980,191 @@
             }
         }
 
-        // EXIF location extraction is now handled automatically during upload
-        // All images are uploaded in their original format to preserve GPS data
+        // Convert image to WebP format
+        async function convertImageToWebP(file) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = function() {
+                    // Calculate new dimensions while maintaining aspect ratio
+                    const maxWidth = 1920;
+                    const maxHeight = 1080;
+                    let { width, height } = img;
+                    
+                    if (width > maxWidth || height > maxHeight) {
+                        const ratio = Math.min(maxWidth / width, maxHeight / height);
+                        width *= ratio;
+                        height *= ratio;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Draw image with white background for transparent images
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Convert to WebP with quality 0.85
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            // Create new file with WebP extension
+                            const webpFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.webp'), {
+                                type: 'image/webp',
+                                lastModified: Date.now()
+                            });
+                            resolve(webpFile);
+                        } else {
+                            reject(new Error('WebP conversion failed'));
+                        }
+                    }, 'image/webp', 0.85);
+                };
+                
+                img.onerror = () => reject(new Error('Image loading failed'));
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        // Convert existing image URL to WebP format
+        async function convertImageUrlToWebP(imageUrl, filename) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.crossOrigin = 'anonymous';
+                
+                img.onload = function() {
+                    // Calculate new dimensions while maintaining aspect ratio
+                    const maxWidth = 1920;
+                    const maxHeight = 1080;
+                    let { width, height } = img;
+                    
+                    if (width > maxWidth || height > maxHeight) {
+                        const ratio = Math.min(maxWidth / width, maxHeight / height);
+                        width *= ratio;
+                        height *= ratio;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Draw image with white background for transparent images
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Convert to WebP with quality 0.85
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            // Create new file with WebP extension
+                            const webpFile = new File([blob], filename.replace(/\.[^/.]+$/, '.webp'), {
+                                type: 'image/webp',
+                                lastModified: Date.now()
+                            });
+                            resolve(webpFile);
+                        } else {
+                            reject(new Error('WebP conversion failed'));
+                        }
+                    }, 'image/webp', 0.85);
+                };
+                
+                img.onerror = () => reject(new Error('Image loading failed'));
+                img.src = imageUrl;
+            });
+        }
+
+        // Convert existing image to WebP and replace it
+        async function convertExistingImageToWebP(filename, imagePath) {
+            if (!currentRoute) {
+                showNotification('Aktif rota bulunamadı', 'error');
+                return;
+            }
+
+            const routeId = getRouteId(currentRoute);
+            if (!routeId) {
+                showNotification('Rota ID bulunamadı', 'error');
+                return;
+            }
+
+            if (!confirm(`"${filename}" dosyasını WebP formatına dönüştürmek istediğinizden emin misiniz?\n\nBu işlem orijinal dosya ile değiştirilecektir.`)) {
+                return;
+            }
+
+            try {
+                showNotification('Resim WebP formatına dönüştürülüyor...', 'info');
+                
+                // Convert the image to WebP
+                const webpFile = await convertImageUrlToWebP(imagePath, filename);
+                
+                // Create form data for upload
+                const formData = new FormData();
+                formData.append('file', webpFile);
+                formData.append('caption', `WebP dönüştürülmüş: ${filename}`);
+                
+                // Try to replace existing file if supported
+                try {
+                    formData.append('replace_existing', 'true');
+                } catch (e) {
+                    // Some servers might not support this parameter
+                    console.log('replace_existing parameter not supported');
+                }
+
+                // Upload the converted WebP file
+                const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    showNotification(`"${filename}" başarıyla WebP formatına dönüştürüldü!`, 'success');
+                    
+                    // Wait a moment for the server to process the file
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Reload media to show the updated file
+                    console.log('Reloading media after WebP conversion...');
+                    await loadRouteMediaForEdit(routeId);
+                    
+                    // Additional verification - check if the WebP file is now visible
+                    setTimeout(async () => {
+                        try {
+                            const verifyResponse = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
+                                credentials: 'include'
+                            });
+                            if (verifyResponse.ok) {
+                                const verifyData = await verifyResponse.json();
+                                console.log('Verification - Media after WebP conversion:', verifyData);
+                                
+                                // Check if WebP file exists
+                                const webpFile = Array.isArray(verifyData) ? verifyData : (verifyData.media || []);
+                                const hasWebP = webpFile.some(m => 
+                                    (m.filename || m.name || '').toLowerCase().endsWith('.webp') ||
+                                    (m.path || m.file_path || '').toLowerCase().endsWith('.webp')
+                                );
+                                
+                                if (hasWebP) {
+                                    console.log('✅ WebP file successfully verified in media list');
+                                } else {
+                                    console.warn('⚠️ WebP file not found in media list after conversion');
+                                }
+                            }
+                        } catch (verifyError) {
+                            console.warn('Verification failed:', verifyError);
+                        }
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'WebP dönüştürme başarısız');
+                }
+            } catch (error) {
+                console.error('WebP conversion error:', error);
+                showNotification('WebP dönüştürme hatası: ' + error.message, 'error');
+            }
+        }
 
         // Debug media display issues
         function debugMediaDisplay(routeId) {
@@ -4114,8 +4317,20 @@
                 return;
             }
 
-            // Always upload original file to preserve EXIF data
             let fileToUpload = file;
+            const keepOriginal = document.getElementById('routeMediaKeepOriginal')?.checked;
+
+            if (mediaType === 'image' && !filename.endsWith('.webp') && !keepOriginal) {
+                try {
+                    showNotification('Resim WebP formatına dönüştürülüyor...', 'info');
+                    fileToUpload = await convertImageToWebP(file);
+                    showNotification('Resim WebP formatına dönüştürüldü!', 'success');
+                } catch (error) {
+                    console.warn('WebP conversion failed, using original file:', error);
+                    fileToUpload = file;
+                    showNotification('WebP dönüştürme başarısız, orijinal dosya kullanılıyor', 'warning');
+                }
+            }
 
             const formData = new FormData();
             // Backend API expects the uploaded file under the 'file' field name
@@ -4629,12 +4844,14 @@
                                         </div>`
                                     }
                                     
-                                    <!-- EXIF Location Info -->
-                                    <div class="exif-info mt-2">
-                                        <small class="text-muted">
-                                            <i class="fas fa-camera"></i> EXIF GPS bilgisi korundu
-                                        </small>
-                                    </div>
+                                    <!-- WebP Conversion Button for Images (only show for non-WebP images) -->
+                                    ${isImage && !filename.toLowerCase().endsWith('.webp') ? 
+                                        `<div class="webp-conversion-actions mt-2">
+                                            <button class="btn btn-sm btn-outline-info" onclick="convertExistingImageToWebP('${filename}', '${rawPath}')" title="WebP formatına dönüştür">
+                                                <i class="fas fa-compress"></i> WebP'ye Dönüştür
+                                            </button>
+                                        </div>` : ''
+                                    }
                                     
                                     <!-- Debug Button for API Testing -->
                                     <div class="debug-actions mt-1">
@@ -6339,7 +6556,7 @@
                                     <small class="form-help">
                                         Desteklenen formatlar: Görsel (JPG, PNG, GIF), Video (MP4, AVI, MOV),
                                         Ses (MP3, WAV, OGG), 3D Model (GLB, GLTF, OBJ, FBX)<br>
-                                        📸 Tüm fotoğraflar orijinal formatlarında yüklenir ve EXIF GPS bilgisi korunur
+                                        📸 Görseller isteğe bağlı olarak WebP formatına dönüştürülür
                                     </small>
                                 </div>
 
@@ -6371,10 +6588,13 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        <strong>EXIF Korunuyor:</strong> Tüm fotoğraflar orijinal formatlarında yüklenir ve GPS konum bilgisi otomatik olarak çıkarılır.
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="routeMediaKeepOriginal">
+                                        <label class="form-check-label" for="routeMediaKeepOriginal">
+                                            Orijinal dosyayı (EXIF ile) yükle
+                                        </label>
                                     </div>
+                                    <small class="form-help">Seçilmezse görseller WebP formatına dönüştürülür.</small>
                                 </div>
 
                                 <button type="button" class="btn btn-primary" onclick="uploadRouteMedia()">
