@@ -8347,6 +8347,69 @@ odern Recommendations UX Styles */
     }
 
     #filtersContent.active {
-        transform: translateY(0);
-    }
+    transform: translateY(0);
+}
+
+/* Media Marker Styles */
+.media-marker {
+    transition: all 0.2s ease;
+}
+
+.media-marker:hover {
+    transform: scale(1.1);
+    z-index: 1000 !important;
+}
+
+.media-popup {
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border: none;
+    padding: 0;
+    overflow: hidden;
+}
+
+.media-popup .leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border: none;
+    padding: 0;
+}
+
+.media-popup .leaflet-popup-content {
+    margin: 0;
+    padding: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.media-popup .leaflet-popup-tip {
+    background: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced elevation chart media markers */
+.elevation-chart-section .media-overlay-points {
+    position: relative;
+}
+
+.elevation-chart-section .media-marker-point {
+    position: absolute;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.elevation-chart-section .media-marker-point:hover {
+    transform: scale(1.2);
+    z-index: 10;
+}
+
+/* Camera marker legacy support */
+.camera-marker {
+    transition: all 0.2s ease;
+}
+
+.camera-marker:hover {
+    transform: scale(1.1);
+    z-index: 1000 !important;
+}
 }
