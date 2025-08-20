@@ -28,6 +28,7 @@ def _create_image_with_exif(path: str, lat: float, lng: float):
             piexif.GPSIFD.GPSLatitudeRef: lat_ref.encode(),
             piexif.GPSIFD.GPSLatitude: _to_deg(lat),
             piexif.GPSIFD.GPSLongitudeRef: lng_ref.encode(),
+
             piexif.GPSIFD.GPSLongitude: _to_deg(lng),
         }
     }
@@ -41,6 +42,7 @@ def test_extract_gps_from_exif():
         img_path = os.path.join(tmpdir, "exif.jpg")
         # Use negative coordinates to ensure byte direction refs are handled
         lat, lng = -40.1234, -29.9876
+
         _create_image_with_exif(img_path, lat, lng)
 
         info = manager.add_route_media(
