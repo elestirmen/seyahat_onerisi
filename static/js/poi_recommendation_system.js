@@ -1251,7 +1251,8 @@ class RouteDetailsPanel {
                                     font-size: 16px;
                                 ">${categoryStyle.icon}</div>`,
                                 iconSize: [30, 30],
-                                iconAnchor: [15, 15]
+                                iconAnchor: [15, 30],
+                                popupAnchor: [0, -30]
                             })
                         }).addTo(routeLayerGroup);
 
@@ -5285,7 +5286,8 @@ async function displayRouteOnMap(route) {
                                         ">${index + 1}</span>
                                     </div>`,
                                     iconSize: [35, 35],
-                                    iconAnchor: [17, 17]
+                                    iconAnchor: [17, 35],
+                                    popupAnchor: [0, -35]
                                 })
                             }).addTo(predefinedMap);
 
@@ -5422,7 +5424,8 @@ async function displayRouteOnMap(route) {
                                 ">${index + 1}</span>
                             </div>`,
                             iconSize: [35, 35],
-                            iconAnchor: [17, 17]
+                            iconAnchor: [17, 35],
+                            popupAnchor: [0, -35]
                         })
                     }).addTo(predefinedMap);
 
@@ -5926,7 +5929,8 @@ function displayRouteOnMapFallback(route) {
                                 ">${index + 1}</span>
                             </div>`,
                             iconSize: [30, 30],
-                            iconAnchor: [15, 15]
+                            iconAnchor: [15, 30],
+                            popupAnchor: [0, -30]
                         })
                     }).addTo(predefinedMap);
                     
