@@ -7,7 +7,7 @@ Görseller, videolar, ses dosyaları ve 3D modelleri yükler, işler ve veritaba
 
 import os
 import shutil
-from PIL import Image
+from PIL import Image, ExifTags
 import hashlib
 from typing import List, Dict, Optional, Tuple, Union
 import uuid
@@ -133,8 +133,65 @@ class POIMediaManager:
             max_mb = config['max_size'] / (1024 * 1024)
             current_mb = file_size / (1024 * 1024)
             return False, f"Dosya boyutu çok büyük: {current_mb:.1f}MB (Max: {max_mb:.0f}MB)", ""
-        
+
         return True, "Geçerli dosya", media_type
+
+    def _get_exif_location(self, image_path: str) -> Tuple[Optional[float], Optional[float]]:
+        """Görselden EXIF konum bilgisi çıkar"""
+        try:
+            with Image.open(image_path) as img:
+                exif = img._getexif()
+                if not exif:
+                    return None, None
+
+                exif_data = {
+                    ExifTags.TAGS.get(k): v for k, v in exif.items() if k in ExifTags.TAGS
+                }
+                gps_info = exif_data.get('GPSInfo')
+                if not gps_info:
+                    return None, None
+
+                # Map GPS tag ids to names for broader compatibility
+                gps_tags = {
+                    ExifTags.GPSTAGS.get(k, k): v for k, v in gps_info.items()
+                }
+
+                gps_latitude = gps_tags.get('GPSLatitude')
+                gps_lat_ref = gps_tags.get('GPSLatitudeRef')
+                gps_longitude = gps_tags.get('GPSLongitude')
+                gps_long_ref = gps_tags.get('GPSLongitudeRef')
+
+                if not (gps_latitude and gps_lat_ref and gps_longitude and gps_long_ref):
+                    return None, None
+
+                def _to_float(ratio):
+                    if isinstance(ratio, tuple):
+                        return float(ratio[0]) / float(ratio[1])
+                    return float(ratio)
+
+                def _to_degrees(value):
+                    d = _to_float(value[0])
+                    m = _to_float(value[1])
+                    s = _to_float(value[2])
+                    return d + (m / 60.0) + (s / 3600.0)
+
+                if isinstance(gps_lat_ref, bytes):
+                    gps_lat_ref = gps_lat_ref.decode().upper()
+                if isinstance(gps_long_ref, bytes):
+                    gps_long_ref = gps_long_ref.decode().upper()
+
+                lat = _to_degrees(gps_latitude)
+                if gps_lat_ref in ['S']:
+                    lat = -lat
+
+                lng = _to_degrees(gps_longitude)
+                if gps_long_ref in ['W']:
+                    lng = -lng
+
+                return lat, lng
+        except Exception as e:
+            print(f"⚠️ EXIF konum bilgisi okunamadı: {e}")
+        return None, None
     
     def sanitize_poi_name(self, poi_name: str) -> str:
         """POI adını dosya adı için temizle"""
@@ -581,6 +638,12 @@ class POIMediaManager:
             if file_size > max_size:
                 print(f"❌ Dosya boyutu çok büyük: {file_size/1024/1024:.1f}MB > {max_size/1024/1024:.0f}MB")
                 return None
+
+            # EXIF verisinden konum bilgisi çıkar
+            if media_type == 'image' and (lat is None or lng is None):
+                exif_lat, exif_lng = self._get_exif_location(media_file_path)
+                if exif_lat is not None and exif_lng is not None:
+                    lat, lng = exif_lat, exif_lng
             
             # Rota klasörlerini oluştur
             route_folder = f"route_{route_id}_{route_name.replace(' ', '_')}"
@@ -1307,10 +1370,30 @@ class POIMediaManager:
                     cur.close()
                 if conn:
                     conn.close()
-                    
+
         except Exception as e:
             print(f"❌ Route media location update error: {e}")
             return False
+
+    def auto_set_route_media_location(self, route_id: int, filename: str) -> Optional[Tuple[float, float]]:
+        """Extract location from image EXIF and update media record.
+
+        Returns latitude and longitude if successful, otherwise None.
+        """
+        try:
+            file_path = self._find_media_file_path(route_id, filename)
+            if not file_path:
+                return None
+
+            lat, lng = self._get_exif_location(file_path)
+            if lat is None or lng is None:
+                return None
+
+            if self.update_route_media_location(route_id, filename, lat, lng):
+                return lat, lng
+        except Exception as e:
+            print(f"⚠️ EXIF konum bilgisi güncellenemedi: {e}")
+        return None
     
     def remove_route_media_location(self, route_id: int, filename: str) -> bool:
         """

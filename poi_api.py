@@ -4123,21 +4123,6 @@ def upload_route_media(route_id: int):
         # Get form data
         caption = request.form.get('caption', '')
         is_primary = request.form.get('is_primary', 'false').lower() == 'true'
-        lat = request.form.get('lat')
-        lng = request.form.get('lng')
-        
-        # Convert coordinates if provided
-        latitude = None
-        longitude = None
-        if lat and lng:
-            try:
-                latitude = float(lat)
-                longitude = float(lng)
-            except ValueError:
-                return jsonify({
-                    'success': False,
-                    'error': 'Invalid coordinates provided'
-                }), 400
         
         # Save file temporarily
         temp_dir = tempfile.mkdtemp()
@@ -4154,9 +4139,7 @@ def upload_route_media(route_id: int):
                 route_name=route_name,
                 media_file_path=temp_file_path,
                 caption=caption,
-                is_primary=is_primary,
-                lat=latitude,
-                lng=longitude
+                is_primary=is_primary
             )
             
             if not media_info:
@@ -4171,8 +4154,10 @@ def upload_route_media(route_id: int):
                 cur = conn.cursor(cursor_factory=RealDictCursor)
                 
                 # Insert into route_media table
+                db_lat = media_info.get('lat')
+                db_lng = media_info.get('lng')
                 cur.execute("""
-                    INSERT INTO route_media (route_id, file_path, thumbnail_path, 
+                    INSERT INTO route_media (route_id, file_path, thumbnail_path,
                                            lat, lng, caption, is_primary, media_type, uploaded_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id
@@ -4180,8 +4165,8 @@ def upload_route_media(route_id: int):
                     route_id,
                     media_info['file_path'],
                     media_info['thumbnail_path'],
-                    latitude,
-                    longitude,
+                    db_lat,
+                    db_lng,
                     caption,
                     is_primary,
                     media_info['media_type'],
@@ -4399,6 +4384,37 @@ def update_route_media(route_id: int, filename: str):
         return jsonify({
             'success': False,
             'error': f'Error updating media: {str(e)}'
+        }), 500
+
+@app.post('/api/admin/routes/<int:route_id>/media/<filename>/location/auto')
+def auto_route_media_location(route_id: int, filename: str):
+    """Extract route media location from EXIF and save it"""
+    try:
+        media_manager = POIMediaManager()
+        coords = media_manager.auto_set_route_media_location(route_id, filename)
+        if not coords:
+            return jsonify({
+                'success': False,
+                'error': 'No EXIF location found'
+            }), 404
+
+        lat, lng = coords
+        return jsonify({
+            'success': True,
+            'message': 'Media location extracted from EXIF',
+            'media': {
+                'filename': filename,
+                'lat': lat,
+                'lng': lng,
+                'latitude': lat,
+                'longitude': lng
+            }
+        }), 200
+    except Exception as e:
+        logger.error(f"Error extracting media location from EXIF: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error extracting location: {str(e)}'
         }), 500
 
 @app.put('/api/admin/routes/<int:route_id>/media/<filename>/location')

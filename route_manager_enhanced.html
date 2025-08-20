@@ -4862,7 +4862,34 @@
         }
 
         // Add location to a photo
-        function addPhotoLocation(filename) {
+        async function addPhotoLocation(filename) {
+            if (!currentRoute) {
+                showNotification('Aktif rota bulunamadı', 'error');
+                return;
+            }
+
+            const routeId = getRouteId(currentRoute);
+            try {
+                const response = await fetch(`${apiBase}/admin/routes/${routeId}/media/${filename}/location/auto`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const media = data.media || {};
+                    const lat = parseFloat(media.lat ?? media.latitude);
+                    const lng = parseFloat(media.lng ?? media.longitude);
+                    if (isFinite(lat) && isFinite(lng)) {
+                        showNotification(`Konum otomatik eklendi: ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 'success');
+                        await loadRouteMediaForEdit(routeId);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('Otomatik konum eklenemedi:', e);
+            }
+
             selectedPhotoForLocation = filename;
             enablePhotoLocationSelection();
             showNotification(`"${filename}" için konum seçimi aktif. Haritaya tıklayın.`, 'info');
