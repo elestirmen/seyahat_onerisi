@@ -843,6 +843,24 @@
             margin-bottom: 1rem;
         }
 
+        .photo-location-management .alert {
+            margin-bottom: 1rem;
+        }
+
+        .photo-location-management .alert h6 {
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .photo-location-management .alert ul {
+            margin-bottom: 0;
+            padding-left: 1.25rem;
+        }
+
+        .photo-location-management .alert li {
+            margin-bottom: 0.25rem;
+        }
+
         .photo-location-info {
             margin-bottom: 1rem;
         }
@@ -903,6 +921,28 @@
             margin-left: auto;
         }
 
+        .location-source-info {
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        .location-source-info small {
+            display: block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .location-source-info .text-success {
+            background: rgba(5, 150, 105, 0.1);
+            border: 1px solid rgba(5, 150, 105, 0.2);
+        }
+
+        .location-source-info .text-muted {
+            background: rgba(100, 116, 139, 0.1);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+        }
+
         .btn-location-edit,
         .btn-location-add,
         .btn-location-remove {
@@ -934,20 +974,16 @@
             color: var(--route-danger);
         }
 
-        .webp-conversion-actions {
+        .exif-info {
             margin-top: 0.5rem;
+            text-align: center;
         }
 
-        .webp-conversion-actions .btn {
-            font-size: 0.75rem;
+        .exif-info small {
             padding: 0.25rem 0.5rem;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-        }
-
-        .webp-conversion-actions .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+            background: rgba(100, 116, 139, 0.1);
+            border: 1px solid rgba(100, 116, 139, 0.2);
         }
 
         .debug-actions {
@@ -1876,6 +1912,11 @@
 
             // Ensure media functionality is properly initialized
             console.log('Route manager initialized, media functionality ready');
+            
+            // Show info about automatic EXIF extraction
+            setTimeout(() => {
+                showNotification('📸 Otomatik EXIF konum çıkarma aktif! Tüm fotoğraflar orijinal formatlarında yüklenir ve GPS bilgisi otomatik olarak haritaya eklenir.', 'info');
+            }, 2000);
         });
 
         // Cleanup on page unload
@@ -3733,7 +3774,7 @@
                                         <input type="file" class="form-control" id="routeMediaFile" accept="image/*,video/*,audio/*" required>
                                         <div class="form-text">
                                             Desteklenen formatlar: JPG, PNG, GIF, MP4, MP3, vb.<br>
-                                            <small class="text-info">📸 Resimler isteğe bağlı olarak WebP formatına dönüştürülür (daha iyi sıkıştırma)</small>
+                                            <small class="text-success">📸 Tüm fotoğraflar orijinal formatlarında yüklenir ve EXIF GPS bilgisi korunur</small>
                                         </div>
                                     </div>
                                     <div class="mb-3">
@@ -3749,13 +3790,10 @@
                                         </div>
                                     </div>
                                     <div class="mb-3">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="routeMediaKeepOriginalModal">
-                                            <label class="form-check-label" for="routeMediaKeepOriginalModal">
-                                                Orijinal dosyayı (EXIF ile) yükle
-                                            </label>
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <strong>EXIF Korunuyor:</strong> Tüm fotoğraflar orijinal formatlarında yüklenir ve GPS konum bilgisi otomatik olarak çıkarılır.
                                         </div>
-                                        <div class="form-text">Seçilmezse görseller WebP formatına dönüştürülür.</div>
                                     </div>
                                 </form>
                             </div>
@@ -3825,21 +3863,8 @@
                 return;
             }
 
+            // Always upload original file to preserve EXIF data
             let fileToUpload = file;
-            const keepOriginal = document.getElementById('routeMediaKeepOriginalModal')?.checked;
-
-            // Convert images to WebP format for better compression
-            if (mediaType === 'image' && !filename.endsWith('.webp') && !keepOriginal) {
-                try {
-                    showNotification('Resim WebP formatına dönüştürülüyor...', 'info');
-                    fileToUpload = await convertImageToWebP(file);
-                    showNotification('Resim WebP formatına dönüştürüldü!', 'success');
-                } catch (error) {
-                    console.warn('WebP conversion failed, using original file:', error);
-                    fileToUpload = file;
-                    showNotification('WebP dönüştürme başarısız, orijinal dosya kullanılıyor', 'warning');
-                }
-            }
 
             const formData = new FormData();
             formData.append('file', fileToUpload);
@@ -3881,197 +3906,62 @@
                 // Reload media
                 await loadRouteMediaForEdit(getRouteId(currentRoute));
 
+                // For images, automatically try to extract EXIF location data
+                if (mediaType === 'image') {
+                    try {
+                        showNotification('📸 EXIF konum bilgisi aranıyor...', 'info');
+                        
+                        // Get the uploaded filename (might be different from original due to WebP conversion)
+                        const uploadedFilename = result.media?.filename || fileToUpload.name;
+                        
+                        // Try to automatically extract location from EXIF
+                        const locationResponse = await fetch(`${apiBase}/admin/routes/${getRouteId(currentRoute)}/media/${uploadedFilename}/location/auto`, {
+                            method: 'POST',
+                            credentials: 'include'
+                        });
+
+                        if (locationResponse.ok) {
+                            const locationData = await locationResponse.json();
+                            if (locationData.success && locationData.media) {
+                                const lat = parseFloat(locationData.media.lat ?? locationData.media.latitude);
+                                const lng = parseFloat(locationData.media.lng ?? locationData.media.longitude);
+                                
+                                if (isFinite(lat) && isFinite(lng)) {
+                                    showNotification(`🎯 EXIF konum bilgisi otomatik olarak eklendi!\n📍 Konum: ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 'success');
+                                    
+                                    // Refresh media display to show the new location
+                                    await loadRouteMediaForEdit(getRouteId(currentRoute));
+                                    
+                                    // Update map markers
+                                    refreshPhotoLocationMarkers();
+                                    
+                                    // Update elevation chart
+                                    if (window.routeElevationChart) {
+                                        refreshPhotoLocationMarkers();
+                                    }
+                                } else {
+                                    showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı', 'info');
+                                }
+                            } else {
+                                showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı', 'info');
+                            }
+                        } else {
+                            showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı', 'info');
+                        }
+                    } catch (exifError) {
+                        console.warn('EXIF extraction failed:', exifError);
+                        showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi çıkarılamadı', 'info');
+                    }
+                }
+
             } catch (error) {
                 console.error('Media upload error:', error);
                 showNotification('Medya yükleme hatası: ' + error.message, 'error');
             }
         }
 
-        // Convert image to WebP format
-        async function convertImageToWebP(file) {
-            return new Promise((resolve, reject) => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const img = new Image();
-                
-                img.onload = function() {
-                    // Calculate new dimensions while maintaining aspect ratio
-                    const maxWidth = 1920;
-                    const maxHeight = 1080;
-                    let { width, height } = img;
-                    
-                    if (width > maxWidth || height > maxHeight) {
-                        const ratio = Math.min(maxWidth / width, maxHeight / height);
-                        width *= ratio;
-                        height *= ratio;
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    
-                    // Draw image with white background for transparent images
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillRect(0, 0, width, height);
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // Convert to WebP with quality 0.85
-                    canvas.toBlob((blob) => {
-                        if (blob) {
-                            // Create new file with WebP extension
-                            const webpFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.webp'), {
-                                type: 'image/webp',
-                                lastModified: Date.now()
-                            });
-                            resolve(webpFile);
-                        } else {
-                            reject(new Error('WebP conversion failed'));
-                        }
-                    }, 'image/webp', 0.85);
-                };
-                
-                img.onerror = () => reject(new Error('Image loading failed'));
-                img.src = URL.createObjectURL(file);
-            });
-        }
-
-        // Convert existing image URL to WebP format
-        async function convertImageUrlToWebP(imageUrl, filename) {
-            return new Promise((resolve, reject) => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const img = new Image();
-                
-                img.crossOrigin = 'anonymous';
-                
-                img.onload = function() {
-                    // Calculate new dimensions while maintaining aspect ratio
-                    const maxWidth = 1920;
-                    const maxHeight = 1080;
-                    let { width, height } = img;
-                    
-                    if (width > maxWidth || height > maxHeight) {
-                        const ratio = Math.min(maxWidth / width, maxHeight / height);
-                        width *= ratio;
-                        height *= ratio;
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    
-                    // Draw image with white background for transparent images
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillRect(0, 0, width, height);
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // Convert to WebP with quality 0.85
-                    canvas.toBlob((blob) => {
-                        if (blob) {
-                            // Create new file with WebP extension
-                            const webpFile = new File([blob], filename.replace(/\.[^/.]+$/, '.webp'), {
-                                type: 'image/webp',
-                                lastModified: Date.now()
-                            });
-                            resolve(webpFile);
-                        } else {
-                            reject(new Error('WebP conversion failed'));
-                        }
-                    }, 'image/webp', 0.85);
-                };
-                
-                img.onerror = () => reject(new Error('Image loading failed'));
-                img.src = imageUrl;
-            });
-        }
-
-        // Convert existing image to WebP and replace it
-        async function convertExistingImageToWebP(filename, imagePath) {
-            if (!currentRoute) {
-                showNotification('Aktif rota bulunamadı', 'error');
-                return;
-            }
-
-            const routeId = getRouteId(currentRoute);
-            if (!routeId) {
-                showNotification('Rota ID bulunamadı', 'error');
-                return;
-            }
-
-            if (!confirm(`"${filename}" dosyasını WebP formatına dönüştürmek istediğinizden emin misiniz?\n\nBu işlem orijinal dosya ile değiştirilecektir.`)) {
-                return;
-            }
-
-            try {
-                showNotification('Resim WebP formatına dönüştürülüyor...', 'info');
-                
-                // Convert the image to WebP
-                const webpFile = await convertImageUrlToWebP(imagePath, filename);
-                
-                // Create form data for upload
-                const formData = new FormData();
-                formData.append('file', webpFile);
-                formData.append('caption', `WebP dönüştürülmüş: ${filename}`);
-                
-                // Try to replace existing file if supported
-                try {
-                    formData.append('replace_existing', 'true');
-                } catch (e) {
-                    // Some servers might not support this parameter
-                    console.log('replace_existing parameter not supported');
-                }
-
-                // Upload the converted WebP file
-                const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    body: formData
-                });
-
-                if (response.ok) {
-                    showNotification(`"${filename}" başarıyla WebP formatına dönüştürüldü!`, 'success');
-                    
-                    // Wait a moment for the server to process the file
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
-                    // Reload media to show the updated file
-                    console.log('Reloading media after WebP conversion...');
-                    await loadRouteMediaForEdit(routeId);
-                    
-                    // Additional verification - check if the WebP file is now visible
-                    setTimeout(async () => {
-                        try {
-                            const verifyResponse = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
-                                credentials: 'include'
-                            });
-                            if (verifyResponse.ok) {
-                                const verifyData = await verifyResponse.json();
-                                console.log('Verification - Media after WebP conversion:', verifyData);
-                                
-                                // Check if WebP file exists
-                                const webpFile = Array.isArray(verifyData) ? verifyData : (verifyData.media || []);
-                                const hasWebP = webpFile.some(m => 
-                                    (m.filename || m.name || '').toLowerCase().endsWith('.webp') ||
-                                    (m.path || m.file_path || '').toLowerCase().endsWith('.webp')
-                                );
-                                
-                                if (hasWebP) {
-                                    console.log('✅ WebP file successfully verified in media list');
-                                } else {
-                                    console.warn('⚠️ WebP file not found in media list after conversion');
-                                }
-                            }
-                        } catch (verifyError) {
-                            console.warn('Verification failed:', verifyError);
-                        }
-                    }, 2000);
-                } else {
-                    const error = await response.json();
-                    throw new Error(error.error || 'WebP dönüştürme başarısız');
-                }
-            } catch (error) {
-                console.error('WebP conversion error:', error);
-                showNotification('WebP dönüştürme hatası: ' + error.message, 'error');
-            }
-        }
+        // EXIF location extraction is now handled automatically during upload
+        // All images are uploaded in their original format to preserve GPS data
 
         // Debug media display issues
         function debugMediaDisplay(routeId) {
@@ -4224,20 +4114,8 @@
                 return;
             }
 
+            // Always upload original file to preserve EXIF data
             let fileToUpload = file;
-            const keepOriginal = document.getElementById('routeMediaKeepOriginal')?.checked;
-
-            if (mediaType === 'image' && !filename.endsWith('.webp') && !keepOriginal) {
-                try {
-                    showNotification('Resim WebP formatına dönüştürülüyor...', 'info');
-                    fileToUpload = await convertImageToWebP(file);
-                    showNotification('Resim WebP formatına dönüştürüldü!', 'success');
-                } catch (error) {
-                    console.warn('WebP conversion failed, using original file:', error);
-                    fileToUpload = file;
-                    showNotification('WebP dönüştürme başarısız, orijinal dosya kullanılıyor', 'warning');
-                }
-            }
 
             const formData = new FormData();
             // Backend API expects the uploaded file under the 'file' field name
@@ -4303,6 +4181,54 @@
                         await loadRouteMedia(getRouteId(currentRoute));
                     } catch (e) {
                         console.warn('Old loadRouteMedia failed:', e);
+                    }
+                }
+
+                // For images, automatically try to extract EXIF location data
+                if (mediaType === 'image') {
+                    try {
+                        showNotification('📸 EXIF konum bilgisi aranıyor...', 'info');
+                        
+                        // Get the uploaded filename (might be different from original due to WebP conversion)
+                        const uploadedFilename = result.media?.filename || fileToUpload.name;
+                        
+                        // Try to automatically extract location from EXIF
+                        const locationResponse = await fetch(`${apiBase}/admin/routes/${getRouteId(currentRoute)}/media/${uploadedFilename}/location/auto`, {
+                            method: 'POST',
+                            credentials: 'include'
+                        });
+
+                        if (locationResponse.ok) {
+                            const locationData = await locationResponse.json();
+                            if (locationData.success && locationData.media) {
+                                const lat = parseFloat(locationData.media.lat ?? locationData.media.latitude);
+                                const lng = parseFloat(locationData.media.lng ?? locationData.media.longitude);
+                                
+                                if (isFinite(lat) && isFinite(lng)) {
+                                    showNotification(`🎯 EXIF konum bilgisi otomatik olarak eklendi!\n📍 Konum: ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 'success');
+                                    
+                                    // Refresh media display to show the new location
+                                    await loadRouteMediaForEdit(getRouteId(currentRoute));
+                                    
+                                    // Update map markers
+                                    refreshPhotoLocationMarkers();
+                                    
+                                    // Update elevation chart
+                                    if (window.routeElevationChart) {
+                                        refreshPhotoLocationMarkers();
+                                    }
+                                } else {
+                                    showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı', 'info');
+                                }
+                            } else {
+                                showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı', 'info');
+                            }
+                        } else {
+                            showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı', 'info');
+                        }
+                    } catch (exifError) {
+                        console.warn('EXIF extraction failed:', exifError);
+                        showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi çıkarılamadı', 'info');
                     }
                 }
 
@@ -4678,24 +4604,37 @@
                                                     <i class="fas fa-times"></i>
                                                 </button>
                                             </div>
+                                            <div class="location-source-info">
+                                                <small class="text-success">
+                                                    <i class="fas fa-check-circle"></i> Konum otomatik olarak EXIF'ten çıkarıldı
+                                                </small>
+                                            </div>
                                         </div>` :
                                         `<div class="location-badge location-missing">
                                             <i class="fas fa-map-marker-alt text-muted"></i>
                                             <span class="text-muted">Konum yok</span>
-                                            <button class="btn-location-add" onclick="addPhotoLocation('${filename}')" title="Konum Ekle">
-                                                <i class="fas fa-plus"></i>
-                                            </button>
+                                            <div class="location-actions">
+                                                <button class="btn-location-add" onclick="addPhotoLocation('${filename}')" title="EXIF'ten Konum Çıkar">
+                                                    <i class="fas fa-magic"></i>
+                                                </button>
+                                                <button class="btn-location-edit" onclick="addPhotoLocation('${filename}')" title="Manuel Konum Ekle">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                            <div class="location-source-info">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-info-circle"></i> EXIF konum bilgisi yok veya çıkarılamadı
+                                                </small>
+                                            </div>
                                         </div>`
                                     }
                                     
-                                    <!-- WebP Conversion Button for Images (only show for non-WebP images) -->
-                                    ${isImage && !filename.toLowerCase().endsWith('.webp') ? 
-                                        `<div class="webp-conversion-actions mt-2">
-                                            <button class="btn btn-sm btn-outline-info" onclick="convertExistingImageToWebP('${filename}', '${rawPath}')" title="WebP formatına dönüştür">
-                                                <i class="fas fa-compress"></i> WebP'ye Dönüştür
-                                            </button>
-                                        </div>` : ''
-                                    }
+                                    <!-- EXIF Location Info -->
+                                    <div class="exif-info mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-camera"></i> EXIF GPS bilgisi korundu
+                                        </small>
+                                    </div>
                                     
                                     <!-- Debug Button for API Testing -->
                                     <div class="debug-actions mt-1">
@@ -5423,6 +5362,112 @@
             };
 
             input.click();
+        }
+
+        // Automatically extract EXIF location for all photos without location
+        async function autoExtractAllPhotoLocations() {
+            if (!currentRoute) {
+                showNotification('Aktif rota bulunamadı', 'error');
+                return;
+            }
+
+            const routeId = getRouteId(currentRoute);
+            if (!routeId) {
+                showNotification('Rota ID bulunamadı', 'error');
+                return;
+            }
+
+            try {
+                showNotification('Tüm fotoğraflar için EXIF konum bilgisi aranıyor...', 'info');
+
+                // Get current media files
+                const mediaResponse = await fetch(`${apiBase}/admin/routes/${routeId}/media`, { credentials: 'include' });
+                if (!mediaResponse.ok) {
+                    throw new Error('Medya dosyaları alınamadı');
+                }
+
+                const mediaJson = await mediaResponse.json();
+                const mediaItems = Array.isArray(mediaJson) ? mediaJson : (Array.isArray(mediaJson.media) ? mediaJson.media : []);
+                
+                // Filter for images without location
+                const imagesWithoutLocation = mediaItems.filter(m => 
+                    m.media_type === 'image' && 
+                    !(m.lat || m.latitude) && 
+                    !(m.lng || m.longitude || m.lon)
+                );
+
+                if (imagesWithoutLocation.length === 0) {
+                    showNotification('Konum belirlenmemiş fotoğraf bulunamadı', 'info');
+                    return;
+                }
+
+                showNotification(`${imagesWithoutLocation.length} fotoğraf için EXIF konum bilgisi aranıyor...`, 'info');
+
+                let extractedCount = 0;
+                let failedCount = 0;
+
+                for (const media of imagesWithoutLocation) {
+                    const filename = media.filename || media.name || media.path?.split('/').pop() || 'Unknown';
+                    
+                    try {
+                        // Try to extract location from EXIF
+                        const locationResponse = await fetch(`${apiBase}/admin/routes/${routeId}/media/${filename}/location/auto`, {
+                            method: 'POST',
+                            credentials: 'include'
+                        });
+
+                        if (locationResponse.ok) {
+                            const locationData = await locationResponse.json();
+                            if (locationData.success && locationData.media) {
+                                const lat = parseFloat(locationData.media.lat ?? locationData.media.latitude);
+                                const lng = parseFloat(locationData.media.lng ?? locationData.media.longitude);
+                                
+                                if (isFinite(lat) && isFinite(lng)) {
+                                    extractedCount++;
+                                    console.log(`✅ EXIF location extracted for ${filename}: ${lat}, ${lng}`);
+                                } else {
+                                    failedCount++;
+                                    console.log(`❌ Invalid coordinates for ${filename}`);
+                                }
+                            } else {
+                                failedCount++;
+                                console.log(`❌ No EXIF location found for ${filename}`);
+                            }
+                        } else {
+                            failedCount++;
+                            console.log(`❌ EXIF extraction failed for ${filename}`);
+                        }
+                    } catch (error) {
+                        failedCount++;
+                        console.error(`Error extracting location for ${filename}:`, error);
+                    }
+
+                    // Small delay to avoid overwhelming the server
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                // Show results
+                if (extractedCount > 0) {
+                    showNotification(`🎯 ${extractedCount} fotoğraf için EXIF konum bilgisi başarıyla çıkarıldı!${failedCount > 0 ? ` (${failedCount} başarısız)` : ''}`, 'success');
+                    
+                    // Refresh media display
+                    await loadRouteMediaForEdit(routeId);
+                    
+                    // Update map markers
+                    refreshPhotoLocationMarkers();
+                    
+                    // Update elevation chart
+                    if (window.routeElevationChart) {
+                        refreshPhotoLocationMarkers();
+                    }
+                } else {
+                    showNotification(`❌ Hiçbir fotoğraf için EXIF konum bilgisi çıkarılamadı (${failedCount} başarısız)`, 'warning');
+                }
+
+            } catch (error) {
+                console.error('Error in auto EXIF extraction:', error);
+                showNotification('Otomatik EXIF çıkarma hatası: ' + error.message, 'error');
+            }
         }
 
         // Clear all photo locations
@@ -6294,7 +6339,7 @@
                                     <small class="form-help">
                                         Desteklenen formatlar: Görsel (JPG, PNG, GIF), Video (MP4, AVI, MOV),
                                         Ses (MP3, WAV, OGG), 3D Model (GLB, GLTF, OBJ, FBX)<br>
-                                        📸 Görseller isteğe bağlı olarak WebP formatına dönüştürülür
+                                        📸 Tüm fotoğraflar orijinal formatlarında yüklenir ve EXIF GPS bilgisi korunur
                                     </small>
                                 </div>
 
@@ -6326,13 +6371,10 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="routeMediaKeepOriginal">
-                                        <label class="form-check-label" for="routeMediaKeepOriginal">
-                                            Orijinal dosyayı (EXIF ile) yükle
-                                        </label>
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>EXIF Korunuyor:</strong> Tüm fotoğraflar orijinal formatlarında yüklenir ve GPS konum bilgisi otomatik olarak çıkarılır.
                                     </div>
-                                    <small class="form-help">Seçilmezse görseller WebP formatına dönüştürülür.</small>
                                 </div>
 
                                 <button type="button" class="btn btn-primary" onclick="uploadRouteMedia()">
@@ -6345,10 +6387,30 @@
                             <div class="photo-location-management">
                                 <h5><i class="fas fa-map-marker-alt me-2"></i>Fotoğraf Konum Yönetimi</h5>
                                 <div class="photo-location-info">
-                                    <p class="text-muted">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        Her fotoğraf için ayrı konum belirleyebilirsiniz. Konum belirlenen fotoğraflar harita ve yükseklik profili üzerinde gösterilecektir.
-                                    </p>
+                                    <div class="alert alert-info">
+                                        <h6><i class="fas fa-info-circle me-2"></i>Fotoğraf Konum Yönetimi</h6>
+                                        <p class="mb-2">
+                                            Her fotoğraf için ayrı konum belirleyebilirsiniz. Konum belirlenen fotoğraflar harita ve yükseklik profili üzerinde gösterilecektir.
+                                        </p>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6 class="text-success"><i class="fas fa-magic me-1"></i>Otomatik EXIF Çıkarma</h6>
+                                                <ul class="small text-muted">
+                                                    <li>Fotoğraf yüklendiğinde EXIF GPS bilgisi otomatik olarak çıkarılır</li>
+                                                    <li>EXIF konum bilgisi olan fotoğraflar haritada otomatik gösterilir</li>
+                                                    <li>"EXIF'ten Otomatik Çıkar" butonu ile mevcut fotoğraflar işlenebilir</li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6 class="text-primary"><i class="fas fa-map-marker-alt me-1"></i>Manuel Konum Ekleme</h6>
+                                                <ul class="small text-muted">
+                                                    <li>Haritaya tıklayarak manuel konum belirleyebilirsiniz</li>
+                                                    <li>CSV dosyası ile toplu konum içe/dışa aktarımı yapabilirsiniz</li>
+                                                    <li>Rota koordinatlarına göre otomatik konum atama mümkün</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <div class="photo-location-controls">
@@ -6359,6 +6421,10 @@
                                     <button type="button" class="btn btn-outline-success btn-sm" onclick="batchSetPhotoLocations()" id="batchLocationBtn">
                                         <i class="fas fa-layer-group me-1"></i>
                                         Toplu Konum Ata
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info btn-sm" onclick="autoExtractAllPhotoLocations()" id="autoExtractBtn" title="Tüm fotoğraflar için EXIF konum bilgisi otomatik çıkar">
+                                        <i class="fas fa-magic me-1"></i>
+                                        EXIF'ten Otomatik Çıkar
                                     </button>
                                     <button type="button" class="btn btn-outline-info btn-sm" onclick="exportPhotoLocations()" id="exportLocationsBtn">
                                         <i class="fas fa-download me-1"></i>
