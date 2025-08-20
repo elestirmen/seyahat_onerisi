@@ -169,6 +169,7 @@ class POIMediaManager:
                         return float(ratio[0]) / float(ratio[1])
                     return float(ratio)
 
+
                 def _to_degrees(value):
                     d = _to_float(value[0])
                     m = _to_float(value[1])
@@ -186,6 +187,7 @@ class POIMediaManager:
 
                 lng = _to_degrees(gps_longitude)
                 if gps_long_ref in ['W']:
+
                     lng = -lng
 
                 return lat, lng
