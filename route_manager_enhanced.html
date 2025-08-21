@@ -1495,6 +1495,7 @@
     <script src="static/js/api-client.js"></script>
     <script src="static/js/navigation-manager.js"></script>
     <script src="static/js/route-admin-manager.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <script>
         // Yönetim arayüzü için RouteAdminManager'ı başlat
         if (window.RouteAdminManager) {
@@ -1509,6 +1510,40 @@
         if (window.rateLimiter) {
             console.log('✅ Rate limiting aktif - API çağrıları sınırlandırılacak');
         }
+
+        let pendingExifLocation = null;
+
+        document.addEventListener('change', function (e) {
+            if (e.target && e.target.id === 'routeMediaFile' && e.target.files && e.target.files[0]) {
+                const file = e.target.files[0];
+                pendingExifLocation = null;
+                try {
+                    EXIF.getData(file, function () {
+                        const lat = EXIF.getTag(this, 'GPSLatitude');
+                        const lon = EXIF.getTag(this, 'GPSLongitude');
+                        const latRef = EXIF.getTag(this, 'GPSLatitudeRef') || 'N';
+                        const lonRef = EXIF.getTag(this, 'GPSLongitudeRef') || 'E';
+
+                        if (lat && lon) {
+                            const toFloat = (v) => (v.numerator ? v.numerator / v.denominator : v);
+                            const dmsToDec = (dms, ref) => {
+                                const dd = toFloat(dms[0]) + toFloat(dms[1]) / 60 + toFloat(dms[2]) / 3600;
+                                return (ref === 'S' || ref === 'W') ? -dd : dd;
+                            };
+                            pendingExifLocation = {
+                                lat: dmsToDec(lat, latRef),
+                                lng: dmsToDec(lon, lonRef)
+                            };
+                            console.info(`EXIF GPS bulundu: ${pendingExifLocation.lat}, ${pendingExifLocation.lng}`);
+                        } else {
+                            console.info('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı');
+                        }
+                    });
+                } catch (exifError) {
+                    console.warn('EXIF extraction failed:', exifError);
+                }
+            }
+        }, true);
 
         // Tüm rotaları haritadan kaldır
         function clearAllRoutesFromMap() {
@@ -3926,51 +3961,19 @@
                 // Reload media
                 await loadRouteMediaForEdit(getRouteId(currentRoute));
 
-                // For images, automatically try to extract EXIF location data
+                // For images, place marker from previously extracted EXIF GPS
                 if (mediaType === 'image') {
-                    try {
-                        showNotification('📸 EXIF konum bilgisi aranıyor...', 'info');
-                        
-                        // Get the uploaded filename (might be different from original due to WebP conversion)
-                        const uploadedFilename = result.media?.filename || fileToUpload.name;
-                        
-                        // Try to automatically extract location from EXIF
-                        const locationResponse = await fetch(`${apiBase}/admin/routes/${getRouteId(currentRoute)}/media/${uploadedFilename}/location/auto`, {
-                            method: 'POST',
-                            credentials: 'include'
-                        });
-
-                        if (locationResponse.ok) {
-                            const locationData = await locationResponse.json();
-                            if (locationData.success && locationData.media) {
-                                const lat = parseFloat(locationData.media.lat ?? locationData.media.latitude);
-                                const lng = parseFloat(locationData.media.lng ?? locationData.media.longitude);
-                                
-                                if (isFinite(lat) && isFinite(lng)) {
-                                    showNotification(`🎯 EXIF konum bilgisi otomatik olarak eklendi!\n📍 Konum: ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 'success');
-                                    
-                                    // Refresh media display to show the new location
-                                    await loadRouteMediaForEdit(getRouteId(currentRoute));
-                                    
-                                    // Update map markers
-                                    refreshPhotoLocationMarkers();
-                                    
-                                    // Update elevation chart
-                                    if (window.routeElevationChart) {
-                                        refreshPhotoLocationMarkers();
-                                    }
-                                } else {
-                                    showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı', 'info');
-                                }
-                            } else {
-                                showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı', 'info');
-                            }
-                        } else {
-                            showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı', 'info');
+                    const uploadedFilename = result.media?.filename || fileToUpload.name;
+                    if (pendingExifLocation) {
+                        try {
+                            await updatePhotoLocation(uploadedFilename, pendingExifLocation.lat, pendingExifLocation.lng);
+                            refreshPhotoLocationMarkers();
+                        } catch (exifError) {
+                            console.warn('EXIF location update failed:', exifError);
                         }
-                    } catch (exifError) {
-                        console.warn('EXIF extraction failed:', exifError);
-                        showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi çıkarılamadı', 'info');
+                        pendingExifLocation = null;
+                    } else {
+                        console.info('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı');
                     }
                 }
 
@@ -4399,51 +4402,19 @@
                     }
                 }
 
-                // For images, automatically try to extract EXIF location data
+                // For images, place marker from previously extracted EXIF GPS
                 if (mediaType === 'image') {
-                    try {
-                        showNotification('📸 EXIF konum bilgisi aranıyor...', 'info');
-                        
-                        // Get the uploaded filename (might be different from original due to WebP conversion)
-                        const uploadedFilename = result.media?.filename || fileToUpload.name;
-                        
-                        // Try to automatically extract location from EXIF
-                        const locationResponse = await fetch(`${apiBase}/admin/routes/${getRouteId(currentRoute)}/media/${uploadedFilename}/location/auto`, {
-                            method: 'POST',
-                            credentials: 'include'
-                        });
-
-                        if (locationResponse.ok) {
-                            const locationData = await locationResponse.json();
-                            if (locationData.success && locationData.media) {
-                                const lat = parseFloat(locationData.media.lat ?? locationData.media.latitude);
-                                const lng = parseFloat(locationData.media.lng ?? locationData.media.longitude);
-                                
-                                if (isFinite(lat) && isFinite(lng)) {
-                                    showNotification(`🎯 EXIF konum bilgisi otomatik olarak eklendi!\n📍 Konum: ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 'success');
-                                    
-                                    // Refresh media display to show the new location
-                                    await loadRouteMediaForEdit(getRouteId(currentRoute));
-                                    
-                                    // Update map markers
-                                    refreshPhotoLocationMarkers();
-                                    
-                                    // Update elevation chart
-                                    if (window.routeElevationChart) {
-                                        refreshPhotoLocationMarkers();
-                                    }
-                                } else {
-                                    showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı', 'info');
-                                }
-                            } else {
-                                showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı', 'info');
-                            }
-                        } else {
-                            showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı', 'info');
+                    const uploadedFilename = result.media?.filename || fileToUpload.name;
+                    if (pendingExifLocation) {
+                        try {
+                            await updatePhotoLocation(uploadedFilename, pendingExifLocation.lat, pendingExifLocation.lng);
+                            refreshPhotoLocationMarkers();
+                        } catch (exifError) {
+                            console.warn('EXIF location update failed:', exifError);
                         }
-                    } catch (exifError) {
-                        console.warn('EXIF extraction failed:', exifError);
-                        showNotification('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi çıkarılamadı', 'info');
+                        pendingExifLocation = null;
+                    } else {
+                        console.info('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı');
                     }
                 }
 
