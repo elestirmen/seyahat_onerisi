@@ -3847,43 +3847,52 @@ async function createNavigationRoute(fromCoord, toCoord, routeName, distanceKm) 
     }
 }
 
-// Refresh media markers for current displayed route
-window.refreshCurrentRouteMedia = async function() {
-    console.log('🔄 Refreshing media markers for current displayed route');
-    
-    // Get the currently displayed route from the map
-    if (!predefinedMap || !predefinedMapInitialized) {
-        console.warn('⚠️ Predefined map not initialized');
-        showNotification('Harita henüz yüklenmedi', 'warning');
-        return;
-    }
-    
-    // Try to find the current route from the map layers
-    let currentRoute = null;
-    for (const layer of predefinedMapLayers) {
-        if (layer.routeData) {
-            currentRoute = layer.routeData;
-            break;
+// Refresh media markers for a given route
+async function refreshMediaMarkers(routeId = window.currentRouteId) {
+    console.log('🔄 Refreshing media markers for route:', routeId);
+
+    // Determine current route if not explicitly provided
+    if (!routeId) {
+        if (!predefinedMap || !predefinedMapInitialized) {
+            console.warn('⚠️ Predefined map not initialized');
+            showNotification('Harita henüz yüklenmedi', 'warning');
+            return;
+        }
+
+        // Try to find the current route from the map layers
+        for (const layer of predefinedMapLayers) {
+            if (layer.routeData) {
+                routeId = layer.routeData.id || layer.routeData._id;
+                break;
+            }
+        }
+
+        if (!routeId) {
+            console.warn('⚠️ No current route found on map');
+            showNotification('Haritada görüntülenen rota bulunamadı', 'warning');
+            return;
         }
     }
-    
-    if (!currentRoute) {
-        console.warn('⚠️ No current route found on map');
-        showNotification('Haritada görüntülenen rota bulunamadı', 'warning');
-        return;
-    }
-    
-    console.log('🔄 Refreshing media for route:', currentRoute.name || currentRoute.id);
-    
+
+    // Store the current route globally
+    window.currentRouteId = routeId;
+
     // Use the existing refresh function
-    const success = await window.refreshPredefinedRouteMedia(currentRoute.id || currentRoute._id);
-    
+    const success = await window.refreshPredefinedRouteMedia(routeId);
+
     if (success) {
         showNotification('Medya işaretleri başarıyla yenilendi', 'success');
     } else {
         showNotification('Medya işaretleri yenilenirken hata oluştu', 'error');
     }
-};
+}
+
+// Expose globally and bind button click
+window.refreshMediaMarkers = refreshMediaMarkers;
+
+document.getElementById('refreshMediaBtn')?.addEventListener('click', () => {
+    refreshMediaMarkers();
+});
 
 // Refresh media markers for predefined route
 window.refreshPredefinedRouteMedia = async function(routeId) {
@@ -8004,10 +8013,12 @@ async function selectPredefinedRoute(route) {
     };
     
     await displayRoute();
-    
+
     // Store selected route for reference
     window.currentSelectedRoute = route;
-    
+    window.currentRouteId = route.id || route._id;
+    await refreshMediaMarkers(window.currentRouteId);
+
     console.log('🏁 === ROUTE SELECTION PROCESS COMPLETED ===');
 }
 
