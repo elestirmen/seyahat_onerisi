@@ -3847,8 +3847,10 @@ async function createNavigationRoute(fromCoord, toCoord, routeName, distanceKm) 
     }
 }
 
+// Refresh media markers for a given route
 async function refreshMediaMarkers(routeId = window.currentRouteId) {
-    console.log('🔄 Refreshing media markers for route:', routeId);
+    const targetId = routeId ?? window.currentRouteId;
+    console.log('🔄 Refreshing media markers for route:', targetId);
 
     if (!predefinedMap || !predefinedMapInitialized) {
         console.warn('⚠️ Predefined map not initialized');
@@ -3856,33 +3858,22 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
         return false;
     }
 
-    // Determine which route to refresh
-    let effectiveRouteId = routeId;
-    if (!effectiveRouteId) {
-        for (const layer of predefinedMapLayers) {
-            if (layer.routeData) {
-                effectiveRouteId = layer.routeData.id || layer.routeData._id;
-                break;
-            }
-        }
-    }
-
-    if (!effectiveRouteId) {
-        console.warn('⚠️ No current route found on map');
-        showNotification('Haritada görüntülenen rota bulunamadı', 'warning');
+    if (!targetId) {
+        console.warn('⚠️ No route id specified for media refresh');
+        showNotification('Rota belirlenemedi', 'warning');
 
         return false;
     }
 
     try {
-        const route = predefinedRoutes.find(r => (r.id || r._id) === effectiveRouteId);
+        const route = predefinedRoutes.find(r => (r.id || r._id) === targetId);
         if (!route) {
-            console.error('❌ Route not found:', effectiveRouteId);
-            showNotification('Medya işaretleri yenilenirken hata oluştu', 'error');
+            console.error('❌ Route not found:', targetId);
             return false;
         }
 
-        const mediaResp = await fetch(`${apiBase}/routes/${effectiveRouteId}/media`);
+        const mediaResp = await fetch(`${apiBase}/routes/${targetId}/media`);
+
         if (!mediaResp.ok) {
             console.error('❌ Failed to load route media:', mediaResp.status);
             showNotification('Medya işaretleri yenilenirken hata oluştu', 'error');
@@ -3895,7 +3886,7 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
 
         console.log('📸 Found', locatedMedia.length, 'located media items');
 
-        // Remove existing media markers
+
         const existingMediaMarkers = predefinedMapLayers.filter(layer =>
             layer.options && layer.options.className === 'media-marker'
         );
@@ -3937,12 +3928,13 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
                 predefinedElevationChart.setMediaMarkers(locatedMedia);
             }
 
-            console.log('✅ Media markers refreshed successfully');
+
             showNotification('Medya işaretleri başarıyla yenilendi', 'success');
             return true;
         } else {
             console.log('ℹ️ No located media found for this route');
-            showNotification('Medya işaretleri yenilenirken hata oluştu', 'error');
+            showNotification('Bu rota için konumlu medya bulunamadı', 'info');
+
             return false;
         }
 
@@ -3952,6 +3944,7 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
         return false;
     }
 }
+
 window.refreshMediaMarkers = refreshMediaMarkers;
 
 document.getElementById('refreshMediaBtn')?.addEventListener('click', () => {
@@ -5478,7 +5471,7 @@ async function displayRouteOnMap(route) {
                             predefinedElevationChart.destroy();
                         }
                         predefinedElevationChart = new ElevationChart('predefinedElevationChartContainer', predefinedMap);
-                        
+
                         // Use elevation_profile from database if available
                         if (route.elevation_profile && route.elevation_profile.points) {
                             console.log('📊 Using pre-calculated elevation profile from database');
@@ -5491,49 +5484,10 @@ async function displayRouteOnMap(route) {
                                 }
                             });
                         }
-                        // Load route media and overlay camera markers + elevation markers
-                        try {
-                            const mediaResp = await fetch(`${apiBase}/routes/${route.id}/media`);
-                            if (mediaResp.ok) {
-                                const mediaJson = await mediaResp.json();
-                                const mediaItems = Array.isArray(mediaJson) ? mediaJson : (mediaJson.media || []);
-                                const locatedMedia = mediaItems.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
-                                if (locatedMedia.length > 0) {
-                                    // Add media markers to the map with enhanced icons
-                                    if (locatedMedia.length > 0) {
-                                        console.log('📸 Adding', locatedMedia.length, 'media markers to predefined map');
-                                        locatedMedia.forEach((media, index) => {
-                                            const lat = parseFloat(media.lat ?? media.latitude);
-                                            const lng = parseFloat(media.lng ?? media.longitude ?? media.lon);
-                                            if (!isFinite(lat) || !isFinite(lng)) return;
-                                            
-                                            // Create enhanced media marker icon based on media type
-                                            const mediaType = media.media_type || 'image';
-                                            const mediaIcon = createMediaMarkerIcon(mediaType, media);
-                                            
-                                            const mediaMarker = L.marker([lat, lng], {
-                                                icon: mediaIcon,
-                                                title: media.caption || `Medya ${index + 1}`
-                                            }).addTo(predefinedMap);
-                                            mediaMarker.routeId = route.id || route._id;
-                                            
-                                            // Create enhanced popup content
-                                            const popupContent = createMediaPopupContent(media);
-                                            mediaMarker.bindPopup(popupContent, {
-                                                maxWidth: 300,
-                                                minWidth: 250,
-                                                className: 'media-popup'
-                                            });
-                                            
-                                            predefinedMapLayers.push(mediaMarker);
-                                        });
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            console.warn('Could not load route media for predefined map:', e);
-                        }
                     }
+
+                    window.currentRouteId = route.id || route._id;
+                    await refreshMediaMarkers(window.currentRouteId);
                     return;
                 }
             }
@@ -5660,7 +5614,7 @@ async function displayRouteOnMap(route) {
                         predefinedElevationChart.destroy();
                     }
                     predefinedElevationChart = new ElevationChart('predefinedElevationChartContainer', predefinedMap);
-                    
+
                     // Use elevation_profile from database if available
                     if (route.elevation_profile && route.elevation_profile.points) {
                         console.log('📊 Using pre-calculated elevation profile from database');
@@ -5675,51 +5629,11 @@ async function displayRouteOnMap(route) {
                             }))
                         });
                     }
-                    // Overlay media markers for POI-based routes
-                    try {
-                        const mediaResp = await fetch(`${apiBase}/routes/${route.id}/media`);
-                        if (mediaResp.ok) {
-                            const mediaJson = await mediaResp.json();
-                            const mediaItems = Array.isArray(mediaJson) ? mediaJson : (mediaJson.media || []);
-                            const locatedMedia = mediaItems.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
-                            if (locatedMedia.length > 0 && predefinedElevationChart) {
-                                predefinedElevationChart.setMediaMarkers(locatedMedia);
-                            }
-                            
-                            // Add enhanced media markers to the map
-                            if (locatedMedia.length > 0) {
-                                console.log('📸 Adding', locatedMedia.length, 'media markers to POI-based predefined map');
-                                locatedMedia.forEach((media, index) => {
-                                    const lat = parseFloat(media.lat ?? media.latitude);
-                                    const lng = parseFloat(media.lng ?? media.longitude ?? media.lon);
-                                    if (!isFinite(lat) || !isFinite(lng)) return;
-                                    
-                                    // Create enhanced media marker icon based on media type
-                                    const mediaType = media.media_type || 'image';
-                                    const mediaIcon = createMediaMarkerIcon(mediaType, media);
-                                    
-                                    const mediaMarker = L.marker([lat, lng], {
-                                        icon: mediaIcon,
-                                        title: media.caption || `Medya ${index + 1}`
-                                    }).addTo(predefinedMap);
-                                    mediaMarker.routeId = route.id || route._id;
-                                    
-                                    // Create enhanced popup content
-                                    const popupContent = createMediaPopupContent(media);
-                                    mediaMarker.bindPopup(popupContent, {
-                                        maxWidth: 300,
-                                        minWidth: 250,
-                                        className: 'media-popup'
-                                    });
-                                    
-                                    predefinedMapLayers.push(mediaMarker);
-                                });
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('Could not load route media for POI-based predefined route:', e);
-                    }
                 }
+
+                window.currentRouteId = route.id || route._id;
+                await refreshMediaMarkers(window.currentRouteId);
+                return;
             } else {
                 console.warn('⚠️ No valid POI coordinates found');
             }
