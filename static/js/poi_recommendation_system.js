@@ -3870,6 +3870,7 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
     if (!effectiveRouteId) {
         console.warn('⚠️ No current route found on map');
         showNotification('Haritada görüntülenen rota bulunamadı', 'warning');
+
         return false;
     }
 
@@ -7992,9 +7993,12 @@ async function selectPredefinedRoute(route) {
     window.currentRouteId = route.id || route._id;
     await refreshMediaMarkers(window.currentRouteId);
 
+
     // Store selected route for reference
     window.currentSelectedRoute = route;
-    
+    window.currentRouteId = route.id || route._id;
+    await refreshMediaMarkers(window.currentRouteId);
+
     console.log('🏁 === ROUTE SELECTION PROCESS COMPLETED ===');
 }
 

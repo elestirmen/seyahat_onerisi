@@ -8408,3 +8408,7 @@ odern Recommendations UX Styles */
 }
 
 }
+
+#refreshMediaBtn {
+    display: none;
+}
