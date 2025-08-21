@@ -1496,6 +1496,7 @@
     <script src="static/js/navigation-manager.js"></script>
     <script src="static/js/route-admin-manager.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+
     <script>
         // Yönetim arayüzü için RouteAdminManager'ı başlat
         if (window.RouteAdminManager) {
@@ -1542,6 +1543,7 @@
                 } catch (exifError) {
                     console.warn('EXIF extraction failed:', exifError);
                 }
+
             }
         }, true);
 
@@ -3974,6 +3976,7 @@
                         pendingExifLocation = null;
                     } else {
                         console.info('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı');
+
                     }
                 }
 
@@ -4415,6 +4418,7 @@
                         pendingExifLocation = null;
                     } else {
                         console.info('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı');
+
                     }
                 }
 
