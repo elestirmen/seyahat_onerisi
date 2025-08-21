@@ -3861,6 +3861,7 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
     if (!targetId) {
         console.warn('⚠️ No route id specified for media refresh');
         showNotification('Rota belirlenemedi', 'warning');
+
         return false;
     }
 
@@ -3872,8 +3873,10 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
         }
 
         const mediaResp = await fetch(`${apiBase}/routes/${targetId}/media`);
+
         if (!mediaResp.ok) {
             console.error('❌ Failed to load route media:', mediaResp.status);
+            showNotification('Medya işaretleri yenilenirken hata oluştu', 'error');
             return false;
         }
 
@@ -3882,6 +3885,7 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
         const locatedMedia = mediaItems.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
 
         console.log('📸 Found', locatedMedia.length, 'located media items');
+
 
         const existingMediaMarkers = predefinedMapLayers.filter(layer =>
             layer.options && layer.options.className === 'media-marker'
@@ -3924,11 +3928,13 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
                 predefinedElevationChart.setMediaMarkers(locatedMedia);
             }
 
+
             showNotification('Medya işaretleri başarıyla yenilendi', 'success');
             return true;
         } else {
             console.log('ℹ️ No located media found for this route');
             showNotification('Bu rota için konumlu medya bulunamadı', 'info');
+
             return false;
         }
 
@@ -7896,10 +7902,17 @@ async function selectPredefinedRoute(route) {
     };
     
     await displayRoute();
-    
+
+    // Store current route id globally and refresh its media markers
+    window.currentRouteId = route.id || route._id;
+    await refreshMediaMarkers(window.currentRouteId);
+
+
     // Store selected route for reference
     window.currentSelectedRoute = route;
-    
+    window.currentRouteId = route.id || route._id;
+    await refreshMediaMarkers(window.currentRouteId);
+
     console.log('🏁 === ROUTE SELECTION PROCESS COMPLETED ===');
 }
 
