@@ -1484,8 +1484,42 @@
     </div>
 
 
-
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+    <script>
+    (function () {
+      const fileInput =
+        document.querySelector('#photoInput') ||
+        document.querySelector('input[type="file"][name*="image" i]') ||
+        document.querySelector('input[type="file"]');
+
+      if (!fileInput) return;
+
+      const dmsToDec = (arr, ref) => {
+        if (!arr) return null;
+        const [d, m, s] = arr;
+        let v = d + m / 60 + s / 3600;
+        return (ref === 'S' || ref === 'W') ? -v : v;
+      };
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        // EXIF mutlaka ORİJİNAL File üzerinden ve canvas/preview ÖNCESİNDE okunmalı
+        if (!window.EXIF) return; // exif-js yoksa sessizce geç (veya dinamik yükleme ekleyebilirsin)
+
+        EXIF.getData(file, function () {
+          const lat = dmsToDec(EXIF.getTag(this, 'GPSLatitude'), EXIF.getTag(this, 'GPSLatitudeRef'));
+          const lon = dmsToDec(EXIF.getTag(this, 'GPSLongitude'), EXIF.getTag(this, 'GPSLongitudeRef'));
+          if (lat != null && lon != null && typeof window.setLocationFromLatLon === 'function') {
+            window.setLocationFromLatLon(lat, lon, { zoom: 16 }); // **MANUEL AKIŞLA AYNI FONKSİYON**
+          }
+          // EXIF yoksa hiçbir şeyi bozma; mevcut önizleme/resize/yükleme akışı olduğu gibi sürsün.
+        });
+      }, { capture: true }); // Diğer handler'lardan önce çalışsın
+    })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -1865,6 +1899,27 @@
         let allPoisForAssociation = [];
         let csrfToken = null;
         let defaultWorkspaceActionsHTML = '';
+
+        // Helper to place marker and update form from coordinates
+        window.setLocationFromLatLon = function(lat, lon, opts = {}) {
+            const latInput = document.getElementById('newCoordinateLat');
+            const lngInput = document.getElementById('newCoordinateLng');
+            if (latInput) latInput.value = lat.toFixed(6);
+            if (lngInput) lngInput.value = lon.toFixed(6);
+
+            if (map) {
+                if (!window._manualLocationMarker) {
+                    window._manualLocationMarker = L.marker([lat, lon], { draggable: true }).addTo(map);
+                } else {
+                    window._manualLocationMarker.setLatLng([lat, lon]);
+                }
+                if (opts.zoom) {
+                    map.setView([lat, lon], opts.zoom);
+                } else {
+                    map.panTo([lat, lon]);
+                }
+            }
+        };
 
         // Rate limiting için
         let lastLoadTime = 0;
@@ -5031,13 +5086,17 @@
         // Handle map click for photo location selection
         function handleMapClickForPhotoLocation(e) {
             if (!photoLocationMode || !selectedPhotoForLocation) return;
-            
+
             const lat = e.latlng.lat;
             const lng = e.latlng.lng;
-            
+
+            if (typeof window.setLocationFromLatLon === 'function') {
+                window.setLocationFromLatLon(lat, lng);
+            }
+
             // Update photo location
             updatePhotoLocation(selectedPhotoForLocation, lat, lng);
-            
+
             // Exit location selection mode
             disablePhotoLocationSelection();
         }
@@ -5928,8 +5987,9 @@
         function getCurrentMapLocation() {
             if (map && map.getCenter) {
                 const center = map.getCenter();
-                document.getElementById('newCoordinateLat').value = center.lat.toFixed(6);
-                document.getElementById('newCoordinateLng').value = center.lng.toFixed(6);
+                if (typeof window.setLocationFromLatLon === 'function') {
+                    window.setLocationFromLatLon(center.lat, center.lng);
+                }
                 showNotification('Harita merkezi koordinatları alındı', 'info');
             } else {
                 showNotification('Harita henüz yüklenmemiş', 'error');
@@ -6246,8 +6306,9 @@
                 // Only add coordinates if we're in edit mode and the coordinate form is visible
                 const coordinateForm = document.querySelector('.coordinate-input-form');
                 if (coordinateForm && coordinateForm.style.display !== 'none') {
-                    document.getElementById('newCoordinateLat').value = e.latlng.lat.toFixed(6);
-                    document.getElementById('newCoordinateLng').value = e.latlng.lng.toFixed(6);
+                    if (typeof window.setLocationFromLatLon === 'function') {
+                        window.setLocationFromLatLon(e.latlng.lat, e.latlng.lng);
+                    }
                     showNotification('Haritadan koordinat alındı. Nokta adı ve açıklama ekleyip "Koordinat Ekle" butonuna tıklayın.', 'info');
                 }
             };
