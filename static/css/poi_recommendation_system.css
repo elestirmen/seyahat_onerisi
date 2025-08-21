@@ -4735,10 +4735,10 @@
             pointer-events: auto !important;
         }
 
-        /* Ensure markers stay in place */
+        /* Ensure markers stay anchored to their coordinates */
         .leaflet-marker-icon,
         .custom-poi-marker {
-            position: relative !important;
+            position: absolute !important;
         }
 
         /* Remove problematic animations */
