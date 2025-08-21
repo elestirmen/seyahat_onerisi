@@ -1260,6 +1260,69 @@
                 opacity: 1;
             }
         }
+
+        /* Upload Progress Modal Styles */
+        .upload-progress-container {
+            padding: 20px 0;
+        }
+
+        .upload-stats {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .current-file-info {
+            margin: 20px 0;
+        }
+
+        .upload-log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .progress {
+            height: 25px;
+            border-radius: 12px;
+            background-color: #e9ecef;
+        }
+
+        .progress-bar {
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            line-height: 25px;
+        }
     </style>
 </head>
 <body>
@@ -3875,9 +3938,20 @@
             }
 
             const files = Array.from(fileInput.files);
+            
+            // Show progress modal
+            const progressModal = showUploadProgressModal(files.length);
+            
             let uploadedCount = 0;
+            let successCount = 0;
+            let errorCount = 0;
+            
             for (let index = 0; index < files.length; index++) {
                 const file = files[index];
+                
+                // Update progress modal
+                updateUploadProgress(progressModal, index + 1, files.length, file.name, successCount, errorCount);
+                
                 const filename = file.name.toLowerCase();
 
                 // Auto-detect media type per file
@@ -3892,6 +3966,7 @@
                     mediaType = 'model_3d';
                 } else {
                     showNotification(`Dosya türü tespit edilemedi: ${file.name}`, 'error');
+                    errorCount++;
                     continue;
                 }
 
@@ -3899,6 +3974,7 @@
                 const maxSize = getMediaMaxSize(mediaType) * 1024 * 1024;
                 if (file.size > maxSize) {
                     showNotification(`Dosya boyutu ${getMediaMaxSize(mediaType)}MB'dan küçük olmalıdır.\n\nSeçilen dosya: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`, 'error');
+                    errorCount++;
                     continue;
                 }
 
@@ -3915,13 +3991,11 @@
                 let fileToUpload = file;
                 if (mediaType === 'image' && !filename.endsWith('.webp')) {
                     try {
-                        showNotification(`Resim WebP'ye dönüştürülüyor: ${file.name}`, 'info');
+                        updateUploadProgress(progressModal, index + 1, files.length, `${file.name} (WebP'ye dönüştürülüyor...)`, successCount, errorCount);
                         fileToUpload = await convertImageToWebP(file);
-                        showNotification(`Dönüştürüldü: ${file.name}`, 'success');
                     } catch (error) {
                         console.warn('WebP conversion failed, using original file:', error);
                         fileToUpload = file;
-                        showNotification(`WebP dönüşümü başarısız, orijinal kullanılıyor: ${file.name}`, 'warning');
                     }
                 }
 
@@ -3949,12 +4023,6 @@
 
                     const result = await response.json();
 
-                    if (result.media && result.media.compression_ratio && result.media.compression_ratio !== "0%") {
-                        showNotification(`${getMediaTypeIcon(mediaType)} ${file.name} yüklendi (📦 ${result.media.compression_ratio})`, 'success');
-                    } else {
-                        showNotification(`${getMediaTypeIcon(mediaType)} ${file.name} yüklendi`, 'success');
-                    }
-
                     // Update location for images using EXIF (fallback to pendingExifLocation)
                     if (mediaType === 'image') {
                         const uploadedFilename = result.media?.filename || fileToUpload.name;
@@ -3970,16 +4038,29 @@
                         }
                     }
 
+                    successCount++;
                     uploadedCount++;
                 } catch (error) {
                     console.error('Media upload error:', error);
-                    showNotification(`Medya yükleme hatası (${file.name}): ${error.message}`, 'error');
+                    errorCount++;
                 }
             }
 
             // After processing all files
             if (uploadedCount > 0) {
-                // Close modal
+                // Close progress modal
+                closeUploadProgressModal(progressModal);
+                
+                // Show final summary
+                if (errorCount === 0) {
+                    showNotification(`✅ Tüm dosyalar başarıyla yüklendi! (${successCount} dosya)`, 'success');
+                } else if (successCount === 0) {
+                    showNotification(`❌ Hiçbir dosya yüklenemedi! (${errorCount} hata)`, 'error');
+                } else {
+                    showNotification(`⚠️ Kısmi başarı: ${successCount} başarılı, ${errorCount} hatalı`, 'warning');
+                }
+
+                // Close upload modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('routeMediaUploadModal'));
                 if (modal) modal.hide();
 
@@ -3991,6 +4072,9 @@
                 // Wait a moment for the server to process the uploads
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 await loadRouteMediaForEdit(getRouteId(currentRoute));
+            } else {
+                closeUploadProgressModal(progressModal);
+                showNotification('Hiçbir dosya yüklenemedi', 'error');
             }
         }
 
@@ -4039,6 +4123,142 @@
                 img.onerror = () => reject(new Error('Image loading failed'));
                 img.src = URL.createObjectURL(file);
             });
+        }
+
+        // Show upload progress modal
+        function showUploadProgressModal(totalFiles) {
+            const modalId = 'uploadProgressModal';
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById(modalId);
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            const modalHtml = `
+                <div class="modal fade" id="${modalId}" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-upload me-2"></i>
+                                    Medya Dosyaları Yükleniyor
+                                </h5>
+                            </div>
+                            <div class="modal-body">
+                                <div class="upload-progress-container">
+                                    <div class="progress mb-3">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                             role="progressbar" 
+                                             style="width: 0%" 
+                                             id="uploadProgressBar">
+                                            0%
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="upload-stats mb-3">
+                                        <div class="row text-center">
+                                            <div class="col-4">
+                                                <div class="stat-item">
+                                                    <div class="stat-number text-primary" id="currentFileNumber">0</div>
+                                                    <div class="stat-label">Mevcut Dosya</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="stat-item">
+                                                    <div class="stat-number text-success" id="successCount">0</div>
+                                                    <div class="stat-label">Başarılı</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="stat-item">
+                                                    <div class="stat-number text-danger" id="errorCount">0</div>
+                                                    <div class="stat-label">Hatalı</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="current-file-info">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-file me-2"></i>
+                                            <span id="currentFileName">Dosya hazırlanıyor...</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="upload-log" id="uploadLog" style="max-height: 200px; overflow-y: auto;">
+                                        <!-- Upload log entries will be added here -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" onclick="closeUploadProgressModal('${modalId}')" id="cancelUploadBtn">
+                                    <i class="fas fa-times me-1"></i>İptal
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById(modalId));
+            modal.show();
+
+            return {
+                modalId: modalId,
+                modal: modal,
+                totalFiles: totalFiles
+            };
+        }
+
+        // Update upload progress
+        function updateUploadProgress(progressModal, currentFile, totalFiles, fileName, successCount, errorCount) {
+            const progressBar = document.getElementById('uploadProgressBar');
+            const currentFileNumber = document.getElementById('currentFileNumber');
+            const successCountEl = document.getElementById('successCount');
+            const errorCountEl = document.getElementById('errorCount');
+            const currentFileName = document.getElementById('currentFileName');
+            const uploadLog = document.getElementById('uploadLog');
+
+            // Update progress bar
+            const progress = Math.round((currentFile / totalFiles) * 100);
+            progressBar.style.width = progress + '%';
+            progressBar.textContent = progress + '%';
+
+            // Update stats
+            currentFileNumber.textContent = currentFile;
+            successCountEl.textContent = successCount;
+            errorCountEl.textContent = errorCount;
+
+            // Update current file name
+            currentFileName.textContent = fileName;
+
+            // Add log entry
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry mb-2';
+            logEntry.innerHTML = `
+                <small class="text-muted">${new Date().toLocaleTimeString()}</small>
+                <span class="ms-2">${fileName}</span>
+            `;
+            uploadLog.appendChild(logEntry);
+            uploadLog.scrollTop = uploadLog.scrollHeight;
+        }
+
+        // Close upload progress modal
+        function closeUploadProgressModal(progressModal) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById(progressModal.modalId));
+            if (modal) {
+                modal.hide();
+            }
+            // Remove modal from DOM
+            const modalElement = document.getElementById(progressModal.modalId);
+            if (modalElement) {
+                modalElement.remove();
+            }
         }
 
         // Convert existing image URL to WebP format
@@ -4305,9 +4525,20 @@
             }
 
             const files = Array.from(fileInput.files);
+            
+            // Show progress modal
+            const progressModal = showUploadProgressModal(files.length);
+            
             let uploadedCount = 0;
+            let successCount = 0;
+            let errorCount = 0;
+            
             for (let index = 0; index < files.length; index++) {
                 const file = files[index];
+                
+                // Update progress modal
+                updateUploadProgress(progressModal, index + 1, files.length, file.name, successCount, errorCount);
+                
                 const filename = file.name.toLowerCase();
 
                 // Auto-detect media type per file
@@ -4323,6 +4554,7 @@
                         mediaType = 'model_3d';
                     } else {
                         showNotification(`Dosya türü tespit edilemedi: ${file.name}`, 'error');
+                        errorCount++;
                         continue;
                     }
                 }
@@ -4331,6 +4563,7 @@
                 const maxSize = getMediaMaxSize(mediaType) * 1024 * 1024;
                 if (file.size > maxSize) {
                     showNotification(`Dosya boyutu ${getMediaMaxSize(mediaType)}MB'dan küçük olmalıdır.\n\nSeçilen dosya: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`, 'error');
+                    errorCount++;
                     continue;
                 }
 
@@ -4347,13 +4580,11 @@
                 let fileToUpload = file;
                 if (mediaType === 'image' && !filename.endsWith('.webp')) {
                     try {
-                        showNotification(`Resim WebP'ye dönüştürülüyor: ${file.name}`, 'info');
+                        updateUploadProgress(progressModal, index + 1, files.length, `${file.name} (WebP'ye dönüştürülüyor...)`, successCount, errorCount);
                         fileToUpload = await convertImageToWebP(file);
-                        showNotification(`Dönüştürüldü: ${file.name}`, 'success');
                     } catch (error) {
                         console.warn('WebP conversion failed, using original file:', error);
                         fileToUpload = file;
-                        showNotification(`WebP dönüşümü başarısız, orijinal kullanılıyor: ${file.name}`, 'warning');
                     }
                 }
 
@@ -4381,12 +4612,6 @@
 
                     const result = await response.json();
 
-                    if (result.media && result.media.compression_ratio && result.media.compression_ratio !== "0%") {
-                        showNotification(`${getMediaTypeIcon(mediaType)} ${file.name} yüklendi (📦 ${result.media.compression_ratio})`, 'success');
-                    } else {
-                        showNotification(`${getMediaTypeIcon(mediaType)} ${file.name} yüklendi`, 'success');
-                    }
-
                     // Update location for images using EXIF (fallback to pendingExifLocation)
                     if (mediaType === 'image') {
                         const uploadedFilename = result.media?.filename || fileToUpload.name;
@@ -4402,15 +4627,28 @@
                         }
                     }
 
+                    successCount++;
                     uploadedCount++;
                 } catch (error) {
                     console.error('Media upload error:', error);
-                    showNotification(`Medya yükleme hatası (${file.name}): ${error.message}`, 'error');
+                    errorCount++;
                 }
             }
 
             // After processing all files
             if (uploadedCount > 0) {
+                // Close progress modal
+                closeUploadProgressModal(progressModal);
+                
+                // Show final summary
+                if (errorCount === 0) {
+                    showNotification(`✅ Tüm dosyalar başarıyla yüklendi! (${successCount} dosya)`, 'success');
+                } else if (successCount === 0) {
+                    showNotification(`❌ Hiçbir dosya yüklenemedi! (${errorCount} hata)`, 'error');
+                } else {
+                    showNotification(`⚠️ Kısmi başarı: ${successCount} başarılı, ${errorCount} hatalı`, 'warning');
+                }
+
                 // Clear form fields
                 fileInput.value = '';
                 document.getElementById('routeMediaCaption').value = '';
@@ -4448,6 +4686,9 @@
                         console.warn('Old loadRouteMedia failed:', e);
                     }
                 }
+            } else {
+                closeUploadProgressModal(progressModal);
+                showNotification('Hiçbir dosya yüklenemedi', 'error');
             }
         }
 
