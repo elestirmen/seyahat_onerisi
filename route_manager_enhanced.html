@@ -1489,6 +1489,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <script src="static/js/map-layer-control.js"></script>
     <script src="static/js/rate-limiter.js"></script>
     <script src="static/js/elevation-chart.js"></script>
@@ -5031,13 +5032,12 @@
         // Handle map click for photo location selection
         function handleMapClickForPhotoLocation(e) {
             if (!photoLocationMode || !selectedPhotoForLocation) return;
-            
+
             const lat = e.latlng.lat;
             const lng = e.latlng.lng;
-            
-            // Update photo location
-            updatePhotoLocation(selectedPhotoForLocation, lat, lng);
-            
+
+            setLocationFromLatLon(lat, lng, { zoom: 16 });
+
             // Exit location selection mode
             disablePhotoLocationSelection();
         }
@@ -5925,11 +5925,37 @@
             
             showNotification('Koordinat başarıyla eklendi', 'success');
         }
+
+        function setLocationFromLatLon(lat, lon, opts = {}) {
+            const latInput = document.getElementById('newCoordinateLat');
+            const lngInput = document.getElementById('newCoordinateLng');
+            if (latInput) latInput.value = lat.toFixed(6);
+            if (lngInput) lngInput.value = lon.toFixed(6);
+
+            if (typeof selectedPhotoForLocation === 'string') {
+                updatePhotoLocation(selectedPhotoForLocation, lat, lon);
+            }
+
+            if (map) {
+                if (!window.manualLocationMarker) {
+                    window.manualLocationMarker = L.marker([lat, lon]).addTo(map);
+                } else {
+                    window.manualLocationMarker.setLatLng([lat, lon]);
+                }
+                if (opts.zoom) {
+                    map.setView([lat, lon], opts.zoom);
+                } else {
+                    map.panTo([lat, lon]);
+                }
+            }
+        }
+
+        window.setLocationFromLatLon = setLocationFromLatLon;
+
         function getCurrentMapLocation() {
             if (map && map.getCenter) {
                 const center = map.getCenter();
-                document.getElementById('newCoordinateLat').value = center.lat.toFixed(6);
-                document.getElementById('newCoordinateLng').value = center.lng.toFixed(6);
+                setLocationFromLatLon(center.lat, center.lng);
                 showNotification('Harita merkezi koordinatları alındı', 'info');
             } else {
                 showNotification('Harita henüz yüklenmemiş', 'error');
@@ -8632,6 +8658,40 @@
                 map.fitBounds(group.getBounds(), { padding: [20, 20] });
             }
         }
+    </script>
+    <script>
+    (function () {
+      const fileInput =
+        document.querySelector('#photoInput') ||
+        document.querySelector('input[type="file"][name*="image" i]') ||
+        document.querySelector('input[type="file"]');
+
+      if (!fileInput) return;
+
+      const dmsToDec = (arr, ref) => {
+        if (!arr) return null;
+        const [d,m,s] = arr;
+        let v = d + m/60 + s/3600;
+        return (ref === 'S' || ref === 'W') ? -v : v;
+      };
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        // EXIF mutlaka ORİJİNAL File üzerinden ve canvas/preview ÖNCESİNDE okunmalı
+        if (!window.EXIF) return; // exif-js yoksa sessizce geç (veya dinamik yükleme ekleyebilirsin)
+
+        EXIF.getData(file, function () {
+          const lat = dmsToDec(EXIF.getTag(this,'GPSLatitude'),  EXIF.getTag(this,'GPSLatitudeRef'));
+          const lon = dmsToDec(EXIF.getTag(this,'GPSLongitude'), EXIF.getTag(this,'GPSLongitudeRef'));
+          if (lat != null && lon != null && typeof window.setLocationFromLatLon === 'function') {
+            window.setLocationFromLatLon(lat, lon, { zoom: 16 }); // **MANUEL AKIŞLA AYNI FONKSİYON**
+          }
+          // EXIF yoksa hiçbir şeyi bozma; mevcut önizleme/resize/yükleme akışı olduğu gibi sürsün.
+        });
+      }, { capture: true }); // Diğer handler'lardan önce çalışsın
+    })();
     </script>
 </body>
 
