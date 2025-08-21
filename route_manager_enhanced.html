@@ -1495,6 +1495,82 @@
     <script src="static/js/api-client.js"></script>
     <script src="static/js/navigation-manager.js"></script>
     <script src="static/js/route-admin-manager.js"></script>
+    <script src="https://unpkg.com/exifreader/dist/exif-reader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+    <script>
+    async function __readGpsFromFile(file){
+      // 1) ExifReader (HEIC/WebP/JPEG; XMP dahil)
+      try{
+        const tags = await ExifReader.load(file, { expanded:true, includeXmp:true });
+        let lat = tags?.gps?.Latitude ?? tags?.exif?.GPSLatitude?.value ?? tags?.xmp?.exif?.GPSLatitude?.value;
+        let lon = tags?.gps?.Longitude ?? tags?.exif?.GPSLongitude?.value ?? tags?.xmp?.exif?.GPSLongitude?.value;
+        if (typeof lat === 'string') lat = __parseDMS(lat);
+        if (typeof lon === 'string') lon = __parseDMS(lon);
+        if (typeof lat === 'number' && typeof lon === 'number') return {lat, lon};
+      }catch(_){ }
+
+      // 2) exif-js fallback (JPEG/TIFF)
+      if (window.EXIF){
+        return await new Promise((resolve)=>{
+          EXIF.getData(file, function(){
+            const dmsToDec=(arr,ref)=>{ if(!arr) return null;
+              const [d,m,s]=arr; let v=d+m/60+s/3600; return (ref==='S'||ref==='W')?-v:v; };
+            const lat = dmsToDec(EXIF.getTag(this,'GPSLatitude'),  EXIF.getTag(this,'GPSLatitudeRef'));
+            const lon = dmsToDec(EXIF.getTag(this,'GPSLongitude'), EXIF.getTag(this,'GPSLongitudeRef'));
+            resolve({lat, lon});
+          });
+        });
+      }
+      return {lat:null, lon:null};
+    }
+
+    // "38 deg 32' 18.81\" N" gibi string -> ondalık
+    function __parseDMS(s){
+      // rakamları sırayla yakala
+      const m = String(s).match(/(-?\d+(?:\.\d+)?)|([NSEW])/gi);
+      if(!m) return null;
+      let nums = m.filter(x=>!/[NSEW]/i.test(x)).map(Number);
+      const ref = (m.find(x=>/[NSEW]/i.test(x))||'').toUpperCase();
+      const [D=0,M=0,S=0]=nums;
+      let v = D + M/60 + S/3600;
+      return (ref==='S' || ref==='W') ? -v : v;
+    }
+
+    // Manuel akışın tek giriş kapısı: var olan fonksiyonu kullan, yoksa generik yerleştir.
+    function __placeViaManualFlow(lat, lon){
+      if (typeof window.setLocationFromLatLon === 'function') return window.setLocationFromLatLon(lat, lon, {zoom:16});
+      if (typeof window.placeMarker === 'function') return window.placeMarker(lat, lon);
+      // generik Leaflet fallback (mevcut map değişkenini tahmin et)
+      const map = window.routeMap || window.map || window.leafletMap;
+      if (!map || typeof L==='undefined') return;
+      if (!window.__photoMarker) window.__photoMarker = L.marker([lat,lon],{draggable:true}).addTo(map);
+      else window.__photoMarker.setLatLng([lat,lon]);
+      try{ map.setView([lat,lon], 16); }catch(_){ }
+      (document.getElementById('lat') || document.querySelector('[name="lat"]'))?.setAttribute('value', lat);
+      (document.getElementById('lon') || document.getElementById('lng') || document.querySelector('[name="lon"],[name="lng"]'))?.setAttribute('value', lon);
+    }
+    </script>
+    <script>
+    (function attachPhotoExif(){
+      const input = document.querySelector('#photoInput') 
+                 || document.querySelector('input[type="file"][name*="image" i]') 
+                 || document.querySelector('input[type="file"]');
+      if(!input) return;
+
+      input.addEventListener('change', async (e)=>{
+        const file = e.target.files?.[0];
+        if(!file) return;
+
+        const {lat, lon} = await __readGpsFromFile(file);
+        if (typeof lat === 'number' && typeof lon === 'number' && isFinite(lat) && isFinite(lon)){
+          __placeViaManualFlow(lat, lon);   // **MANUELLE AYNI AKIŞ**
+        } else {
+          // Sadece bilgi: eski "EXIF yok" uyarısını/alertini bastır; kullanıcıyı rahatsız etme
+          console.info('EXIF GPS bulunamadı; manuel akış devam ediyor.');
+        }
+      }, { capture:true }); // diğer handler'lardan önce
+    })();
+    </script>
     <script>
         // Yönetim arayüzü için RouteAdminManager'ı başlat
         if (window.RouteAdminManager) {
