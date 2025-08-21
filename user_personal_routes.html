@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https://*; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self';">
+    <title>Ürgüp POI Önerileri - Size Özel Yerler Keşfedin</title>
+    <!-- Design System CSS -->
+    <link rel="stylesheet" href="static/css/design-tokens.css">
+    <link rel="stylesheet" href="static/css/layout-system.css">
+    <link rel="stylesheet" href="static/css/components.css">
+    <link rel="stylesheet" href="static/css/ux-enhancements.css">
+    <link rel="stylesheet" href="static/css/poi_recommendation_system.css">
+
+    <style>
+        /* Media location markers - enhanced styling */
+        .media-marker {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            border: 2px solid white;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+            font-size: 12px;
+        }
+
+        .media-marker.image {
+            background: #f59e0b;
+        }
+
+        .media-marker.video {
+            background: #ef4444;
+        }
+
+        .media-marker.audio {
+            background: #10b981;
+        }
+
+        .media-marker.model_3d {
+            background: #6366f1;
+        }
+    </style>
+    
+    <!-- External Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    
+    <!-- Touch Optimizations -->
+    <script src="static/js/touch-optimizations.js"></script>
+    
+    <!-- UX Enhancement Manager -->
+    <script src="static/js/ux-enhancement-manager.js" defer></script>
+    
+    <!-- Loading and Performance -->
+    <script src="static/js/loading-performance.js" defer></script>
+    
+    <!-- Performance Optimizations -->
+    <link rel="stylesheet" href="static/css/performance-optimizations.css">
+    <script src="static/js/performance-optimizations.js" defer></script>
+</head>
+
+<body>
+    <div class="container container-xl">
+        <div class="header">
+            <h1><i class="fas fa-map-marked-alt"></i> Ürgüp POI Önerileri</h1>
+            <p>Tercihlerinizi belirleyin, size özel yerler keşfedin</p>
+        </div>
+
+        <div class="content p-6 md:p-8 lg:p-12">
+            <nav class="user-nav">
+                <a href="user_personal_routes.html">Kişisel Rotalarım</a>
+                <a href="user_ready_routes.html">Hazır Rotalar</a>
+            </nav>
+
+            <!-- Dynamic Routes Content -->
+            <div class="tab-content active" id="dynamicRoutesContent">
+                <div class="preferences-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-sliders-h"></i>
+                        Tercihlerinizi Belirleyin
+                    </h2>
+                    <p style="color: #666; font-size: 1rem; margin-bottom: 25px; text-align: center; line-height: 1.6;"
+                        class="preferences-description">
+                        Aşağıdaki kategorilerde ilgi seviyenizi belirtin.
+                        <strong>İlgilenmiyorum</strong>'dan <strong>Kesinlikle İhtiyacım Var</strong>'a kadar seçenekler
+                        arasından seçim yapın.
+                    </p>
+
+                <div class="preferences-container">
+                    <!-- Mobile-optimized preference sliders -->
+                    <div class="preferences-grid">
+                        <div class="preference-item" data-category="doga">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-tree"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Doğa</span>
+                                    <span class="preference-value" id="doga-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="doga">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="yemek">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-utensils"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Yemek</span>
+                                    <span class="preference-value" id="yemek-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="yemek">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="tarihi">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-landmark"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Tarih</span>
+                                    <span class="preference-value" id="tarihi-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="tarihi">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="eglence">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-gamepad"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Eğlence</span>
+                                    <span class="preference-value" id="eglence-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="eglence">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="sanat_kultur">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-palette"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Sanat & Kültür</span>
+                                    <span class="preference-value" id="sanat_kultur-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="sanat_kultur">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="macera">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-mountain"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Macera</span>
+                                    <span class="preference-value" id="macera-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="macera">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="rahatlatici">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-spa"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Rahatlatıcı</span>
+                                    <span class="preference-value" id="rahatlatici-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="rahatlatici">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="spor">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-running"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Spor</span>
+                                    <span class="preference-value" id="spor-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="spor">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="alisveris">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-shopping-bag"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Alışveriş</span>
+                                    <span class="preference-value" id="alisveris-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="alisveris">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preference-item" data-category="gece_hayati">
+                            <div class="preference-header">
+                                <div class="preference-icon">
+                                    <i class="fas fa-moon"></i>
+                                </div>
+                                <div class="preference-info">
+                                    <span class="preference-title">Gece Hayatı</span>
+                                    <span class="preference-value" id="gece_hayati-value">İlgilenmiyorum</span>
+                                </div>
+                            </div>
+                            <div class="preference-slider-container">
+                                <input type="range" min="0" max="4" value="0" step="1" 
+                                       class="preference-slider" id="gece_hayati">
+                                <div class="slider-track-labels">
+                                    <span class="track-label">İlgim yok</span>
+                                    <span class="track-label">Az ilgim var</span>
+                                    <span class="track-label">İlgim var</span>
+                                    <span class="track-label">Çok ilgim var</span>
+                                    <span class="track-label">Kesinlikle</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Selection Buttons -->
+                    <div class="quick-selection-section">
+                        <h3 class="quick-selection-title">
+                            <i class="fas fa-magic"></i>
+                            Hızlı Seçim
+                        </h3>
+                        <div class="quick-selection-buttons">
+                            <button class="quick-btn" data-preset="nature-lover">
+                                <i class="fas fa-leaf"></i>
+                                <span>Doğa Sever</span>
+                            </button>
+                            <button class="quick-btn" data-preset="culture-enthusiast">
+                                <i class="fas fa-university"></i>
+                                <span>Kültür Meraklısı</span>
+                            </button>
+                            <button class="quick-btn" data-preset="foodie">
+                                <i class="fas fa-utensils"></i>
+                                <span>Lezzet Avcısı</span>
+                            </button>
+                            <button class="quick-btn" data-preset="adventure-seeker">
+                                <i class="fas fa-mountain"></i>
+                                <span>Macera Arayan</span>
+                            </button>
+                            <button class="quick-btn" data-preset="relaxation">
+                                <i class="fas fa-spa"></i>
+                                <span>Dinlenmek İsteyen</span>
+                            </button>
+                            <button class="quick-btn" data-preset="reset">
+                                <i class="fas fa-undo"></i>
+                                <span>Sıfırla</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                    <button class="recommend-btn" id="recommendBtn">
+                        <i class="fas fa-magic btn-icon"></i>
+                        <span class="btn-text">Önerilerimi Getir</span>
+                    </button>
+                </div>
+
+                    <div class="results-section" id="resultsSection">
+                        <h2 class="section-title">
+                            <i class="fas fa-star"></i>
+                            Size Özel Öneriler
+                        </h2>
+
+                        <div id="loadingIndicator" class="loading">
+                            <div class="loading__spinner"></div>
+                            <p class="loading__text">Öneriler hazırlanıyor...</p>
+                        </div>
+
+                        <div id="recommendationResults"></div>
+
+                        <div id="mapSection" style="display: none; margin-top: 30px;">
+                            <h3 class="section-title">
+                                <i class="fas fa-map-marked-alt"></i>
+                                Öneriler Haritası
+                            </h3>
+                            <p style="color: #666; font-size: 1rem; margin-bottom: 20px; text-align: center; line-height: 1.6;">
+                                Önerilen yerleri harita üzerinde görün ve detaylarına ulaşın. Marker'lara tıklayarak daha fazla bilgi alabilirsiniz.
+                            </p>
+                            <div id="mapContainer" class="map-container-enhanced"></div>
+                            <!-- Elevation Chart Container -->
+                            <div id="elevationChartContainer" class="elevation-chart-hidden"></div>
+                        </div>
+
+                        <div id="routeSection" style="display: none; margin-top: 30px;">
+                            <h3 class="section-title">
+                                <i class="fas fa-route"></i>
+                                Rota Planlayıcı
+                            </h3>
+                            <div
+                                style="background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3);">
+                                <div id="routeContainer">
+                                    <p style="text-align: center; color: #666; font-style: italic;">Rota oluşturmak için
+                                        POI'leri seçin</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+    <!-- Route Context Menu -->
+    <div id="routeContextMenu" class="route-context-menu">
+        <div class="route-context-menu-header">
+            <h3 class="route-context-menu-title">
+                <i class="fas fa-route"></i>
+                <span id="routeContextMenuTitle">Rota Seçenekleri</span>
+            </h3>
+            <p class="route-context-menu-subtitle" id="routeContextMenuSubtitle">Rotanız için mevcut işlemler</p>
+        </div>
+
+        <!-- Route Stats -->
+        <div class="route-context-stats" id="routeContextStats">
+            <h4><i class="fas fa-chart-bar"></i> Rota Özeti</h4>
+            <div class="route-context-stats-grid">
+                <div class="route-context-stat-item">
+                    <span class="icon">📏</span>
+                    <span class="value" id="contextDistance">-- km</span>
+                </div>
+                <div class="route-context-stat-item">
+                    <span class="icon">⏱️</span>
+                    <span class="value" id="contextDuration">-- dk</span>
+                </div>
+                <div class="route-context-stat-item">
+                    <span class="icon">📍</span>
+                    <span class="value" id="contextStops">-- durak</span>
+                </div>
+                <div class="route-context-stat-item">
+                    <span class="icon">🏷️</span>
+                    <span class="value" id="contextCategories">-- kategori</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Route Steps Preview -->
+        <div class="route-context-group">
+            <h4 class="route-context-menu-group-title">Rota Durakları</h4>
+            <div class="route-context-steps" id="routeContextSteps">
+                <!-- Route steps will be populated here -->
+            </div>
+        </div>
+
+        <div class="route-context-menu-divider"></div>
+
+        <!-- Action Menu Items -->
+        <div class="route-context-group">
+            <h4 class="route-context-menu-group-title">Rota İşlemleri</h4>
+            
+            <button class="route-context-menu-item" onclick="RouteContextMenu.showRouteDetails()">
+                <i class="route-context-menu-icon fas fa-info-circle"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Detaylı Bilgi</div>
+                    <div class="sub-text">Rota hakkında kapsamlı bilgi görüntüle</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item success" onclick="RouteContextMenu.optimizeRoute()">
+                <i class="route-context-menu-icon fas fa-magic"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Optimize Et</div>
+                    <div class="sub-text">En verimli sıralamayı bul</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item" onclick="RouteContextMenu.focusOnMap()">
+                <i class="route-context-menu-icon fas fa-search-location"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Haritada Göster</div>
+                    <div class="sub-text">Rotanın tamamını haritada odakla</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item" onclick="RouteContextMenu.shareRoute()">
+                <i class="route-context-menu-icon fas fa-share-alt"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Paylaş</div>
+                    <div class="sub-text">Link oluştur veya dışa aktar</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <div class="route-context-menu-divider"></div>
+
+        <div class="route-context-group">
+            <h4 class="route-context-menu-group-title">Navigasyon</h4>
+            
+            <button class="route-context-menu-item" onclick="RouteContextMenu.openInGoogleMaps()">
+                <i class="route-context-menu-icon fab fa-google"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Google Maps'te Aç</div>
+                    <div class="sub-text">Navigasyon için Google Maps'te görüntüle</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-external-link-alt"></i>
+            </button>
+
+            <button class="route-context-menu-item" onclick="RouteContextMenu.downloadRoute()">
+                <i class="route-context-menu-icon fas fa-download"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı İndir</div>
+                    <div class="sub-text">GPX veya JSON formatında kaydet</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <div class="route-context-menu-divider"></div>
+
+        <div class="route-context-group">
+            <h4 class="route-context-menu-group-title">Düzenleme</h4>
+            
+            <button class="route-context-menu-item warning" onclick="RouteContextMenu.editRoute()">
+                <i class="route-context-menu-icon fas fa-edit"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Düzenle</div>
+                    <div class="sub-text">Durakları yeniden düzenle veya ekle/çıkar</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item" onclick="RouteContextMenu.reverseRoute()">
+                <i class="route-context-menu-icon fas fa-exchange-alt"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Ters Çevir</div>
+                    <div class="sub-text">Son durağı başlangıç yap</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item danger" onclick="RouteContextMenu.clearRoute()">
+                <i class="route-context-menu-icon fas fa-trash"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Temizle</div>
+                    <div class="sub-text">Tüm durakları kaldır ve baştan başla</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Media Modal Overlay -->
+    <div id="mediaModal" class="media-modal">
+        <div class="media-modal-content">
+            <div class="media-modal-header">
+                <h3 class="media-modal-title" id="mediaModalTitle">Medya Görüntüleyici</h3>
+                <button class="media-modal-close" id="mediaModalClose" aria-label="Kapat">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="media-modal-body" id="mediaModalBody">
+                <div class="loading">
+                    <div class="loading__spinner"></div>
+                    <p class="loading__text">Medya yükleniyor...</p>
+                </div>
+            </div>
+
+            <!-- Navigation Controls -->
+            <button class="media-navigation media-nav-prev media-nav-btn" id="mediaPrevBtn" aria-label="Önceki">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="media-navigation media-nav-next media-nav-btn" id="mediaNextBtn" aria-label="Sonraki">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+
+            <!-- Media Counter -->
+            <div class="media-counter" id="mediaCounter" style="display: none;">
+                1 / 1
+            </div>
+
+            <!-- Thumbnail Strip -->
+            <div class="media-thumbnails" id="mediaThumbnails" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/marslan390/BeautifyMarker/leaflet-beautify-marker-icon.min.js"></script>
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/marslan390/BeautifyMarker/leaflet-beautify-marker-icon.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@3.0.0/Control.FullScreen.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@3.0.0/Control.FullScreen.css" />
+
+    <!-- Route Details Panel -->
+    <div id="routeDetailsPanel" class="route-details-panel">
+        <div class="route-header">
+            <h3>Rota Detayları</h3>
+            <button class="close-btn" onclick="RouteDetailsPanel.hide()">×</button>
+        </div>
+
+        <div class="route-summary">
+            <div class="summary-item">
+                <i class="fas fa-route"></i>
+                <span id="routeDistance">-- km</span>
+            </div>
+            <div class="summary-item">
+                <i class="fas fa-clock"></i>
+                <span id="routeDuration">-- saat</span>
+            </div>
+            <div class="summary-item">
+                <i class="fas fa-map-marker-alt"></i>
+                <span id="routeStops">-- durak</span>
+            </div>
+            <div class="summary-item">
+                <i class="fas fa-walking"></i>
+                <span id="routeType">--</span>
+            </div>
+        </div>
+
+        <div class="elevation-section" id="elevationSection">
+            <h4>Yükseklik Profili</h4>
+            <div style="height: 120px; position: relative; background: #f8f9fa; border-radius: 8px; overflow: hidden;">
+                <canvas id="elevationChart" width="300" height="120"></canvas>
+            </div>
+            <div class="elevation-stats">
+                <span id="minElevation">Min: --m</span>
+                <span id="maxElevation">Max: --m</span>
+                <span id="totalAscent">↗ --m</span>
+                <span id="totalDescent">↘ --m</span>
+            </div>
+        </div>
+
+        <div class="stops-section">
+            <h4>
+                Duraklar
+                <span class="stops-count" id="stopsCount">0</span>
+            </h4>
+            <div class="stops-list" id="stopsList">
+                <!-- Durak listesi buraya dinamik olarak eklenecek -->
+            </div>
+        </div>
+
+        <div class="segments-section" id="segmentsSection" style="display: none;">
+            <h4>Rota Segmentleri</h4>
+            <div class="segments-list" id="segmentsList">
+                <!-- Segment listesi buraya dinamik olarak eklenecek -->
+            </div>
+        </div>
+
+        <div class="export-section">
+            <button class="export-btn map-view" onclick="RouteDetailsPanel.showInFullscreenMap()" id="showInMapBtn" style="display: none;">
+                <i class="fas fa-map"></i>
+                Haritada Göster
+            </button>
+            <button class="export-btn google-maps" onclick="RouteDetailsPanel.exportToGoogleMaps()">
+                <i class="fab fa-google"></i>
+                Google Maps'e Aktar
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script src="static/js/rate-limiter.js"></script>
+    <script src="static/js/elevation-chart.js"></script>
+    <script src="static/js/map-layer-control.js"></script>
+    <script src="assets/js/user_shared.js"></script>
+    <script>
+      const { initMap, fetchJSON, fitRoute } = window.UserShared;
+    </script>
+    <script src="static/js/poi_recommendation_system.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+</body>
+
+</html>

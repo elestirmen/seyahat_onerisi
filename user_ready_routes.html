@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https://*; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self';">
+    <title>Ürgüp POI Önerileri - Size Özel Yerler Keşfedin</title>
+    <!-- Design System CSS -->
+    <link rel="stylesheet" href="static/css/design-tokens.css">
+    <link rel="stylesheet" href="static/css/layout-system.css">
+    <link rel="stylesheet" href="static/css/components.css">
+    <link rel="stylesheet" href="static/css/ux-enhancements.css">
+    <link rel="stylesheet" href="static/css/poi_recommendation_system.css">
+
+    <style>
+        /* Media location markers - enhanced styling */
+        .media-marker {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            border: 2px solid white;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+            font-size: 12px;
+        }
+
+        .media-marker.image {
+            background: #f59e0b;
+        }
+
+        .media-marker.video {
+            background: #ef4444;
+        }
+
+        .media-marker.audio {
+            background: #10b981;
+        }
+
+        .media-marker.model_3d {
+            background: #6366f1;
+        }
+    </style>
+    
+    <!-- External Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    
+    <!-- Touch Optimizations -->
+    <script src="static/js/touch-optimizations.js"></script>
+    
+    <!-- UX Enhancement Manager -->
+    <script src="static/js/ux-enhancement-manager.js" defer></script>
+    
+    <!-- Loading and Performance -->
+    <script src="static/js/loading-performance.js" defer></script>
+    
+    <!-- Performance Optimizations -->
+    <link rel="stylesheet" href="static/css/performance-optimizations.css">
+    <script src="static/js/performance-optimizations.js" defer></script>
+</head>
+
+<body>
+    <div class="container container-xl">
+        <div class="header">
+            <h1><i class="fas fa-map-marked-alt"></i> Ürgüp POI Önerileri</h1>
+            <p>Tercihlerinizi belirleyin, size özel yerler keşfedin</p>
+        </div>
+
+        <div class="content p-6 md:p-8 lg:p-12">
+            <nav class="user-nav">
+                <a href="user_personal_routes.html">Kişisel Rotalarım</a>
+                <a href="user_ready_routes.html">Hazır Rotalar</a>
+            </nav>
+
+            <!-- Predefined Routes Content -->
+            <div class="tab-content" id="predefinedRoutesContent">
+                <div class="predefined-routes-section">
+                    <div class="predefined-routes-header">
+                        <div class="section-header-content">
+                            <h2 class="section-title">
+                                <i class="fas fa-route"></i>
+                                Hazır Rotalar
+                            </h2>
+                            <p class="predefined-routes-description">
+                                Uzmanlar tarafından önceden hazırlanmış rotalar arasından seçim yapın.
+                                Her rota farklı deneyimler ve zorluk seviyeleri sunar.
+                            </p>
+                        </div>
+
+                        <div class="route-search">
+                            <input type="search" id="routeSearchInput" class="form-control" placeholder="Rota ara...">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshAllRouteMedia()" title="Tüm rota medyalarını yenile">
+                                <i class="fas fa-sync-alt"></i>
+                                <span>Medyayı Yenile</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleMediaDisplayMode()" title="Medya görüntüleme modunu değiştir">
+                                <i class="fas fa-toggle-on"></i>
+                                <span>Özel İçerik</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-success btn-sm" onclick="refreshCurrentRouteMedia()" title="Mevcut rotanın medya işaretlerini yenile" id="refreshMediaBtn" style="display: none;">
+                                <i class="fas fa-camera"></i>
+                                <span>Medya İşaretlerini Yenile</span>
+                            </button>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="routes-quick-stats" id="routesQuickStats">
+                            <div class="quick-stat-item">
+                                <div class="stat-icon">
+                                    <i class="fas fa-route"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <span class="stat-number" id="totalRoutesCount">-</span>
+                                    <span class="stat-label">Toplam Rota</span>
+                                </div>
+                            </div>
+                            <div class="quick-stat-item">
+                                <div class="stat-icon">
+                                    <i class="fas fa-filter"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <span class="stat-number" id="filteredRoutesCount">-</span>
+                                    <span class="stat-label">Filtrelenmiş</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Enhanced Route Filters -->
+                    <button class="filters-open-btn" id="openFiltersBtn">Filtreleri Aç</button>
+                    <div class="route-filters-enhanced">
+                        <div class="filters-content" id="filtersContent">
+                            <div class="filters-header">
+                                <h3 class="filters-title">
+                                    <i class="fas fa-sliders-h"></i>
+                                    Filtreler
+                                </h3>
+                                <button class="filters-toggle-btn" id="filtersToggleBtn">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div class="filter-chips-container">
+                                <div class="filter-chip-group">
+                                    <label class="filter-chip-label">Rota Tipi</label>
+                                    <div class="filter-chips" id="routeTypeChips">
+                                        <button class="filter-chip active" data-value="">
+                                            <i class="fas fa-globe"></i>
+                                            <span>Tümü</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="walking">
+                                            <i class="fas fa-walking"></i>
+                                            <span>Yürüyüş</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="hiking">
+                                            <i class="fas fa-hiking"></i>
+                                            <span>Doğa</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="cycling">
+                                            <i class="fas fa-bicycle"></i>
+                                            <span>Bisiklet</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="driving">
+                                            <i class="fas fa-car"></i>
+                                            <span>Araç</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="filter-chip-group">
+                                    <label class="filter-chip-label">Zorluk</label>
+                                    <div class="filter-chips" id="difficultyChips">
+                                        <button class="filter-chip active" data-value="">
+                                            <i class="fas fa-star"></i>
+                                            <span>Tümü</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="1">
+                                            <i class="fas fa-leaf"></i>
+                                            <span>Kolay</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="2">
+                                            <i class="fas fa-mountain"></i>
+                                            <span>Orta</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="3">
+                                            <i class="fas fa-fire"></i>
+                                            <span>Zor</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="4">
+                                            <i class="fas fa-bolt"></i>
+                                            <span>Çok Zor</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="5">
+                                            <i class="fas fa-crown"></i>
+                                            <span>Uzman</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="filter-chip-group">
+                                    <label class="filter-chip-label">Süre</label>
+                                    <div class="filter-chips" id="durationChips">
+                                        <button class="filter-chip active" data-value="">
+                                            <i class="fas fa-clock"></i>
+                                            <span>Tümü</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="0-60">
+                                            <i class="fas fa-hourglass-start"></i>
+                                            <span>&lt; 1 saat</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="60-180">
+                                            <i class="fas fa-hourglass-half"></i>
+                                            <span>1-3 saat</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="180-360">
+                                            <i class="fas fa-hourglass-end"></i>
+                                            <span>3-6 saat</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="360-999">
+                                            <i class="fas fa-calendar-day"></i>
+                                            <span>6+ saat</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="filter-chip-group">
+                                    <label class="filter-chip-label">Favoriler</label>
+                                    <div class="filter-chips" id="favoriteChips">
+                                        <button class="filter-chip active" data-value="">
+                                            <i class="fas fa-list"></i>
+                                            <span>Tümü</span>
+                                        </button>
+                                        <button class="filter-chip" data-value="favorites">
+                                            <i class="fas fa-star"></i>
+                                            <span>Favoriler</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="filters-actions">
+                                <button class="filter-clear-btn" id="clearFiltersBtn">
+                                    <i class="fas fa-times"></i>
+                                    <span>Temizle</span>
+                                </button>
+                                <button class="filter-apply-btn" id="applyFiltersBtn">
+                                    <i class="fas fa-check"></i>
+                                    <span>Uygula</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Routes Loading -->
+                    <div id="routesLoadingIndicator" class="loading">
+                        <div class="loading__spinner"></div>
+                        <p class="loading__text">Hazır rotalar yükleniyor...</p>
+                    </div>
+
+                    <!-- Map and Routes Container -->
+                    <div class="routes-map-container">
+                        <!-- Map View -->
+                        <div id="mapView" class="predefined-map-container">
+                            <div id="predefinedRoutesMap" class="predefined-routes-map">
+                                <div class="map-loading" id="predefinedMapLoading">
+                                    <div class="loading__spinner"></div>
+                                    <p class="loading__text">Harita yükleniyor...</p>
+                                </div>
+                            </div>
+                            <!-- Elevation Chart for Predefined Routes -->
+                            <div id="predefinedElevationChartContainer" class="elevation-chart-hidden"></div>
+                            <!-- Map Controls -->
+                            <div class="map-controls">
+                                <button class="map-control-btn" id="clearMapBtn" title="Haritayı Temizle">
+                                    <i class="fas fa-eraser"></i>
+                                </button>
+                                <button class="map-control-btn" id="fitMapBtn" title="Rotalara Odaklan">
+                                    <i class="fas fa-expand-arrows-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- List View -->
+                        <div id="listView">
+                            <template id="predefinedRouteCardTemplate">
+                                <div class="route-card">
+                                    <div class="route-card-image">
+                                        <img src="https://via.placeholder.com/400x200?text=Rota" alt="Rota önizlemesi" data-placeholder="https://via.placeholder.com/400x200?text=Rota" onerror="handleImageError(event)">
+                                    </div>
+                                    <div class="route-card-content">
+                                        <div class="route-card-header">
+                                            <h3 class="route-card-title"></h3>
+                                            <button class="favorite-btn" aria-label="Favorilere ekle">
+                                                <i class="fas fa-star"></i>
+                                            </button>
+                                            <p class="route-card-description"></p>
+                                        </div>
+                                        <div class="route-card-meta">
+                                            <div class="route-meta-item" aria-label="Mesafe">
+                                                <span class="route-distance">0 km</span>
+                                            </div>
+                                            <div class="route-meta-item" aria-label="Süre">
+                                                <i class="fas fa-clock"></i>
+                                                <span></span>
+                                            </div>
+                                            <div class="route-meta-item" aria-label="Durak sayısı">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                                <span></span>
+                                            </div>
+                                            <div class="route-meta-item" aria-label="Zorluk">
+                                                <i class="fas fa-mountain"></i>
+                                                <div class="difficulty-stars"></div>
+                                            </div>
+                                        </div>
+                                        <div class="route-mini-map"></div>
+                                    </div>
+                                </div>
+                            </template>
+                            <div id="predefinedRoutesList" class="predefined-routes-list" aria-live="polite"></div>
+                        </div>
+                    </div>
+
+                    <!-- No Routes Message -->
+                    <div id="noRoutesMessage" class="no-routes-message" style="display: none;">
+                        <i class="fas fa-info-circle"></i>
+                        <p>Seçilen kriterlere uygun rota bulunamadı.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Route Context Menu -->
+    <div id="routeContextMenu" class="route-context-menu">
+        <div class="route-context-menu-header">
+            <h3 class="route-context-menu-title">
+                <i class="fas fa-route"></i>
+                <span id="routeContextMenuTitle">Rota Seçenekleri</span>
+            </h3>
+            <p class="route-context-menu-subtitle" id="routeContextMenuSubtitle">Rotanız için mevcut işlemler</p>
+        </div>
+
+        <!-- Route Stats -->
+        <div class="route-context-stats" id="routeContextStats">
+            <h4><i class="fas fa-chart-bar"></i> Rota Özeti</h4>
+            <div class="route-context-stats-grid">
+                <div class="route-context-stat-item">
+                    <span class="icon">📏</span>
+                    <span class="value" id="contextDistance">-- km</span>
+                </div>
+                <div class="route-context-stat-item">
+                    <span class="icon">⏱️</span>
+                    <span class="value" id="contextDuration">-- dk</span>
+                </div>
+                <div class="route-context-stat-item">
+                    <span class="icon">📍</span>
+                    <span class="value" id="contextStops">-- durak</span>
+                </div>
+                <div class="route-context-stat-item">
+                    <span class="icon">🏷️</span>
+                    <span class="value" id="contextCategories">-- kategori</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Route Steps Preview -->
+        <div class="route-context-group">
+            <h4 class="route-context-menu-group-title">Rota Durakları</h4>
+            <div class="route-context-steps" id="routeContextSteps">
+                <!-- Route steps will be populated here -->
+            </div>
+        </div>
+
+        <div class="route-context-menu-divider"></div>
+
+        <!-- Action Menu Items -->
+        <div class="route-context-group">
+            <h4 class="route-context-menu-group-title">Rota İşlemleri</h4>
+            
+            <button class="route-context-menu-item" onclick="RouteContextMenu.showRouteDetails()">
+                <i class="route-context-menu-icon fas fa-info-circle"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Detaylı Bilgi</div>
+                    <div class="sub-text">Rota hakkında kapsamlı bilgi görüntüle</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item success" onclick="RouteContextMenu.optimizeRoute()">
+                <i class="route-context-menu-icon fas fa-magic"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Optimize Et</div>
+                    <div class="sub-text">En verimli sıralamayı bul</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item" onclick="RouteContextMenu.focusOnMap()">
+                <i class="route-context-menu-icon fas fa-search-location"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Haritada Göster</div>
+                    <div class="sub-text">Rotanın tamamını haritada odakla</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item" onclick="RouteContextMenu.shareRoute()">
+                <i class="route-context-menu-icon fas fa-share-alt"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Paylaş</div>
+                    <div class="sub-text">Link oluştur veya dışa aktar</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <div class="route-context-menu-divider"></div>
+
+        <div class="route-context-group">
+            <h4 class="route-context-menu-group-title">Navigasyon</h4>
+            
+            <button class="route-context-menu-item" onclick="RouteContextMenu.openInGoogleMaps()">
+                <i class="route-context-menu-icon fab fa-google"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Google Maps'te Aç</div>
+                    <div class="sub-text">Navigasyon için Google Maps'te görüntüle</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-external-link-alt"></i>
+            </button>
+
+            <button class="route-context-menu-item" onclick="RouteContextMenu.downloadRoute()">
+                <i class="route-context-menu-icon fas fa-download"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı İndir</div>
+                    <div class="sub-text">GPX veya JSON formatında kaydet</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <div class="route-context-menu-divider"></div>
+
+        <div class="route-context-group">
+            <h4 class="route-context-menu-group-title">Düzenleme</h4>
+            
+            <button class="route-context-menu-item warning" onclick="RouteContextMenu.editRoute()">
+                <i class="route-context-menu-icon fas fa-edit"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Düzenle</div>
+                    <div class="sub-text">Durakları yeniden düzenle veya ekle/çıkar</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item" onclick="RouteContextMenu.reverseRoute()">
+                <i class="route-context-menu-icon fas fa-exchange-alt"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Ters Çevir</div>
+                    <div class="sub-text">Son durağı başlangıç yap</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+
+            <button class="route-context-menu-item danger" onclick="RouteContextMenu.clearRoute()">
+                <i class="route-context-menu-icon fas fa-trash"></i>
+                <div class="route-context-menu-text">
+                    <div class="main-text">Rotayı Temizle</div>
+                    <div class="sub-text">Tüm durakları kaldır ve baştan başla</div>
+                </div>
+                <i class="route-context-menu-arrow fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Media Modal Overlay -->
+    <div id="mediaModal" class="media-modal">
+        <div class="media-modal-content">
+            <div class="media-modal-header">
+                <h3 class="media-modal-title" id="mediaModalTitle">Medya Görüntüleyici</h3>
+                <button class="media-modal-close" id="mediaModalClose" aria-label="Kapat">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="media-modal-body" id="mediaModalBody">
+                <div class="loading">
+                    <div class="loading__spinner"></div>
+                    <p class="loading__text">Medya yükleniyor...</p>
+                </div>
+            </div>
+
+            <!-- Navigation Controls -->
+            <button class="media-navigation media-nav-prev media-nav-btn" id="mediaPrevBtn" aria-label="Önceki">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="media-navigation media-nav-next media-nav-btn" id="mediaNextBtn" aria-label="Sonraki">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+
+            <!-- Media Counter -->
+            <div class="media-counter" id="mediaCounter" style="display: none;">
+                1 / 1
+            </div>
+
+            <!-- Thumbnail Strip -->
+            <div class="media-thumbnails" id="mediaThumbnails" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/marslan390/BeautifyMarker/leaflet-beautify-marker-icon.min.js"></script>
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/marslan390/BeautifyMarker/leaflet-beautify-marker-icon.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@3.0.0/Control.FullScreen.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@3.0.0/Control.FullScreen.css" />
+
+    <!-- Route Details Panel -->
+    <div id="routeDetailsPanel" class="route-details-panel">
+        <div class="route-header">
+            <h3>Rota Detayları</h3>
+            <button class="close-btn" onclick="RouteDetailsPanel.hide()">×</button>
+        </div>
+
+        <div class="route-summary">
+            <div class="summary-item">
+                <i class="fas fa-route"></i>
+                <span id="routeDistance">-- km</span>
+            </div>
+            <div class="summary-item">
+                <i class="fas fa-clock"></i>
+                <span id="routeDuration">-- saat</span>
+            </div>
+            <div class="summary-item">
+                <i class="fas fa-map-marker-alt"></i>
+                <span id="routeStops">-- durak</span>
+            </div>
+            <div class="summary-item">
+                <i class="fas fa-walking"></i>
+                <span id="routeType">--</span>
+            </div>
+        </div>
+
+        <div class="elevation-section" id="elevationSection">
+            <h4>Yükseklik Profili</h4>
+            <div style="height: 120px; position: relative; background: #f8f9fa; border-radius: 8px; overflow: hidden;">
+                <canvas id="elevationChart" width="300" height="120"></canvas>
+            </div>
+            <div class="elevation-stats">
+                <span id="minElevation">Min: --m</span>
+                <span id="maxElevation">Max: --m</span>
+                <span id="totalAscent">↗ --m</span>
+                <span id="totalDescent">↘ --m</span>
+            </div>
+        </div>
+
+        <div class="stops-section">
+            <h4>
+                Duraklar
+                <span class="stops-count" id="stopsCount">0</span>
+            </h4>
+            <div class="stops-list" id="stopsList">
+                <!-- Durak listesi buraya dinamik olarak eklenecek -->
+            </div>
+        </div>
+
+        <div class="segments-section" id="segmentsSection" style="display: none;">
+            <h4>Rota Segmentleri</h4>
+            <div class="segments-list" id="segmentsList">
+                <!-- Segment listesi buraya dinamik olarak eklenecek -->
+            </div>
+        </div>
+
+        <div class="export-section">
+            <button class="export-btn map-view" onclick="RouteDetailsPanel.showInFullscreenMap()" id="showInMapBtn" style="display: none;">
+                <i class="fas fa-map"></i>
+                Haritada Göster
+            </button>
+            <button class="export-btn google-maps" onclick="RouteDetailsPanel.exportToGoogleMaps()">
+                <i class="fab fa-google"></i>
+                Google Maps'e Aktar
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script src="static/js/rate-limiter.js"></script>
+    <script src="static/js/elevation-chart.js"></script>
+    <script src="static/js/map-layer-control.js"></script>
+    <script src="assets/js/user_shared.js"></script>
+    <script>
+      const { initMap, fetchJSON, fitRoute } = window.UserShared;
+    </script>
+    <script src="static/js/poi_recommendation_system.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+</body>
+
+</html>

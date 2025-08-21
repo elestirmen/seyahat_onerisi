@@ -9385,85 +9385,6 @@ window.runAllSeparateTabMapTests = async function() {
 };
 
 // Initialize everything when DOM is loaded
-document.addEventListener('DOMContentLoaded', async function () {
-    console.log('🚀 DOM loaded, initializing...');
-    
-    AppState.isInitialized = true;
-
-    // Load categories first
-    await withErrorHandling(loadCategories, 'Loading categories')();
-
-    // Initialize route tabs
-    initializeRouteTabs();
-    
-    // Initialize main map early so it's ready for route selection
-    setTimeout(async () => {
-        const mapContainer = document.getElementById('mapContainer');
-        if (mapContainer) {
-            console.log('🗺️ Pre-initializing main map for better UX...');
-            await initializeMainMap();
-        }
-    }, 1000); // Wait 1 second after page load
-
-    // Feature detection for touch support
-    const supportsTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    if (supportsTouch) {
-        document.body.classList.add('touch-device');
-    }
-
-    // Initialize all components
-    try {
-        initializeTouchSupport();
-        checkSecurityContext();
-
-        // Wait for loading manager to be available
-        const initializeLoadingManager = () => {
-            if (window.loadingManager) {
-                console.log('✅ Loading manager initialized');
-                // Setup lazy loading for any existing images
-                if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
-                    try {
-                        window.lazyLoader.setupImageLazyLoading();
-                    } catch (error) {
-                        console.warn('Lazy loading setup error:', error);
-                    }
-                }
-            } else {
-                console.log('⏳ Loading manager not yet available, will use fallbacks');
-            }
-        };
-
-        // Listen for loading manager ready event
-        window.addEventListener('loadingManagerReady', initializeLoadingManager);
-
-        // Also try immediately in case it's already loaded
-        setTimeout(initializeLoadingManager, 100);
-
-        // Location dialog click outside to close
-        const locationOverlay = document.getElementById('locationPermissionOverlay');
-        if (locationOverlay) {
-            locationOverlay.addEventListener('click', function (e) {
-                if (e.target === locationOverlay) {
-                    closeLocationDialog();
-                }
-            });
-        }
-        initializeSliders();
-        setupEventListeners();
-        console.log('✅ All components initialized');
-    } catch (error) {
-        console.error('❌ Initialization error:', error);
-    }
-
-    //             // Debug function - remove after fixing
-    //             setTimeout(function () {
-    //                 try {
-    //                     debugElements();
-    //                 } catch (error) {
-    //                     console.error('❌ Debug error:', error);
-    //                 }
-    //             }, 1000);
-});
 
 //         // Debug function to check elements
 //         function debugElements() {
@@ -11473,8 +11394,16 @@ window.RouteContextMenu = RouteContextMenu;
 // Close the commented duplicate event listener section
 */
 
-function initializeApp() {
+async function initializeApp() {
     console.log('🔧 Initializing application components...');
+
+    if (typeof loadCategories === 'function') {
+        try {
+            await loadCategories();
+        } catch (err) {
+            console.error('Category loading failed:', err);
+        }
+    }
 
     if (typeof initializeTouchSupport === 'function') {
         try {
@@ -11484,27 +11413,78 @@ function initializeApp() {
         }
     }
 
-    if (typeof initializeRouteTabs === 'function') {
+    const dynamicTab = document.getElementById('dynamicRoutesTab');
+    const predefinedTab = document.getElementById('predefinedRoutesTab');
+    const hasTabs = dynamicTab && predefinedTab;
+    const hasPredefined = document.getElementById('predefinedRoutesList');
+    const hasDynamic = document.querySelector('.preference-slider');
+
+    if (hasTabs && typeof initializeRouteTabs === 'function') {
         try {
             initializeRouteTabs();
         } catch (err) {
             console.error('Route tabs initialization failed:', err);
         }
+    } else if (hasPredefined && typeof initializePredefinedRoutes === 'function') {
+        try {
+            initializePredefinedRoutes();
+            currentTab = 'predefined-routes';
+        } catch (err) {
+            console.error('Predefined routes initialization failed:', err);
+        }
+        if (typeof initializePredefinedMap === 'function') {
+            try {
+                await initializePredefinedMap();
+            } catch (err) {
+                console.error('Predefined map initialization failed:', err);
+            }
+        }
+        const params = new URLSearchParams(window.location.search);
+        const routeIdParam = params.get('routeId');
+        if (routeIdParam && typeof selectPredefinedRoute === 'function') {
+            const trySelect = () => {
+                const route = predefinedRoutes.find(r => String(r.id || r._id) === routeIdParam);
+                if (route) {
+                    selectPredefinedRoute(route);
+                } else {
+                    setTimeout(trySelect, 500);
+                }
+            };
+            trySelect();
+        }
     }
 
-    if (typeof initializeMainMap === 'function') {
+    if (hasDynamic) {
+        if (typeof initializeSliders === 'function') {
+            try {
+                initializeSliders();
+            } catch (err) {
+                console.error('Slider initialization failed:', err);
+            }
+        }
+        if (typeof setupEventListeners === 'function') {
+            try {
+                setupEventListeners();
+            } catch (err) {
+                console.error('Event listener setup failed:', err);
+            }
+        }
+    }
+
+    if (document.getElementById('mapContainer') && typeof initializeMainMap === 'function') {
         try {
-            initializeMainMap();
+            await initializeMainMap();
         } catch (err) {
             console.error('Main map initialization failed:', err);
         }
     }
 
-    // Initialize enhanced filter system
-    try {
-        initializeEnhancedFilters();
-    } catch (err) {
-        console.error('Enhanced filters initialization failed:', err);
+    if (document.getElementById('routeTypeChips')) {
+        try {
+            initializeEnhancedFilters();
+        } catch (err) {
+            console.error('Enhanced filters initialization failed:', err);
+        }
     }
 
     console.log('✅ Application components initialized');
