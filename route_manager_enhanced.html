@@ -1489,6 +1489,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <script src="static/js/map-layer-control.js"></script>
     <script src="static/js/rate-limiter.js"></script>
     <script src="static/js/elevation-chart.js"></script>
@@ -1870,6 +1871,19 @@
         let lastLoadTime = 0;
         const minLoadInterval = 2000; // 2 saniye minimum aralık
         let loadingInProgress = false;
+
+        // YENİ: ortak tek giriş noktası
+        function setLocationFromLatLon(lat, lon, options = {}) {
+            if (!window.photoMarker)
+                window.photoMarker = L.marker([lat, lon], { draggable: true }).addTo(map);
+            else
+                window.photoMarker.setLatLng([lat, lon]);
+
+            try { map.setView([lat, lon], options.zoom ?? 16); } catch (e) {}
+
+            (document.getElementById('lat') || document.querySelector('[name="lat"]'))?.setAttribute('value', lat);
+            (document.getElementById('lon') || document.getElementById('lng') || document.querySelector('[name="lon"],[name="lng"]'))?.setAttribute('value', lon);
+        }
 
         // --- Helpers: ID and parsing ---
         function getRouteId(route) {
@@ -5031,16 +5045,42 @@
         // Handle map click for photo location selection
         function handleMapClickForPhotoLocation(e) {
             if (!photoLocationMode || !selectedPhotoForLocation) return;
-            
+
             const lat = e.latlng.lat;
             const lng = e.latlng.lng;
-            
-            // Update photo location
+
+            // ESKI: konum yerleştirme kodu setLocationFromLatLon'a taşındı
+            setLocationFromLatLon(lat, lng, { zoom: 16 });
+
+            // Update photo location on server
             updatePhotoLocation(selectedPhotoForLocation, lat, lng);
-            
+
             // Exit location selection mode
             disablePhotoLocationSelection();
         }
+
+        document.getElementById('btn-manual-location')?.addEventListener('click', () => {
+            const center = map?.getCenter?.();
+            if (!center) return;
+            const lat = center.lat;
+            const lon = center.lng;
+            setLocationFromLatLon(lat, lon, { zoom: 16 });
+        });
+
+        function dmsToDec(arr, ref) { if(!arr) return null; const [d,m,s]=arr; let v=d+m/60+s/3600; return (ref==='S'||ref==='W')?-v:v; }
+
+        document.querySelector('input[type="file"]')?.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (!file || !window.EXIF) return;
+
+            EXIF.getData(file, function () {
+                const lat = dmsToDec(EXIF.getTag(this,'GPSLatitude'),  EXIF.getTag(this,'GPSLatitudeRef'));
+                const lon = dmsToDec(EXIF.getTag(this,'GPSLongitude'), EXIF.getTag(this,'GPSLongitudeRef'));
+                if (lat != null && lon != null) {
+                    setLocationFromLatLon(lat, lon, { zoom: 16 });
+                }
+            });
+        }, { capture: true });
 
         // Add location to a photo
         async function addPhotoLocation(filename) {
