@@ -1495,7 +1495,8 @@
     <script src="static/js/api-client.js"></script>
     <script src="static/js/navigation-manager.js"></script>
     <script src="static/js/route-admin-manager.js"></script>
-    <script src="https://unpkg.com/exifreader@4.12.0/dist/exif-reader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+
     <script>
         // Yönetim arayüzü için RouteAdminManager'ı başlat
         if (window.RouteAdminManager) {
@@ -1511,52 +1512,38 @@
             console.log('✅ Rate limiting aktif - API çağrıları sınırlandırılacak');
         }
 
-        // Pending EXIF GPS location extracted from selected file
         let pendingExifLocation = null;
 
-        // Convert DMS format to decimal degrees
-        function dmsToDecimal(dms, ref) {
-            if (!dms) return null;
-            const toFloat = (v) => {
-                if (typeof v === 'number') return v;
-                if (v && typeof v === 'object' && 'numerator' in v && 'denominator' in v) {
-                    return v.numerator / v.denominator;
-                }
-                return parseFloat(v) || 0;
-            };
-            const [deg, min, sec] = dms.map(toFloat);
-            let dec = deg + (min || 0) / 60 + (sec || 0) / 3600;
-            if (ref === 'S' || ref === 'W') dec = -dec;
-            return dec;
-        }
+        document.addEventListener('change', function (e) {
+            if (e.target && e.target.id === 'routeMediaFile' && e.target.files && e.target.files[0]) {
+                const file = e.target.files[0];
+                pendingExifLocation = null;
+                try {
+                    EXIF.getData(file, function () {
+                        const lat = EXIF.getTag(this, 'GPSLatitude');
+                        const lon = EXIF.getTag(this, 'GPSLongitude');
+                        const latRef = EXIF.getTag(this, 'GPSLatitudeRef') || 'N';
+                        const lonRef = EXIF.getTag(this, 'GPSLongitudeRef') || 'E';
 
-        // Extract EXIF GPS data from a File object
-        async function extractExifLocation(file) {
-            pendingExifLocation = null;
-            try {
-                const buffer = await file.arrayBuffer();
-                const tags = ExifReader.load(buffer);
-                if (tags && tags.gpsLatitude && tags.gpsLongitude) {
-                    const lat = dmsToDecimal(tags.gpsLatitude.value, tags.gpsLatitudeRef?.value);
-                    const lng = dmsToDecimal(tags.gpsLongitude.value, tags.gpsLongitudeRef?.value);
-                    if (isFinite(lat) && isFinite(lng)) {
-                        pendingExifLocation = { lat, lng };
-                        console.info(`EXIF GPS bulundu: ${lat}, ${lng}`);
-                    } else {
-                        console.info('EXIF GPS parse edilemedi');
-                    }
-                } else {
-                    console.info('EXIF konum bilgisi bulunamadı');
+                        if (lat && lon) {
+                            const toFloat = (v) => (v.numerator ? v.numerator / v.denominator : v);
+                            const dmsToDec = (dms, ref) => {
+                                const dd = toFloat(dms[0]) + toFloat(dms[1]) / 60 + toFloat(dms[2]) / 3600;
+                                return (ref === 'S' || ref === 'W') ? -dd : dd;
+                            };
+                            pendingExifLocation = {
+                                lat: dmsToDec(lat, latRef),
+                                lng: dmsToDec(lon, lonRef)
+                            };
+                            console.info(`EXIF GPS bulundu: ${pendingExifLocation.lat}, ${pendingExifLocation.lng}`);
+                        } else {
+                            console.info('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı');
+                        }
+                    });
+                } catch (exifError) {
+                    console.warn('EXIF extraction failed:', exifError);
                 }
-            } catch (err) {
-                console.info('EXIF okunamadı:', err);
-            }
-        }
 
-        // Listen for file selection before any other handlers
-        document.addEventListener('change', (e) => {
-            if (e.target && e.target.id === 'routeMediaFile' && e.target.files?.[0]) {
-                extractExifLocation(e.target.files[0]);
             }
         }, true);
 
@@ -3976,19 +3963,20 @@
                 // Reload media
                 await loadRouteMediaForEdit(getRouteId(currentRoute));
 
-                // For images, use EXIF GPS data if available
+                // For images, place marker from previously extracted EXIF GPS
                 if (mediaType === 'image') {
                     const uploadedFilename = result.media?.filename || fileToUpload.name;
                     if (pendingExifLocation) {
-                        console.info('EXIF GPS bulundu, konum güncelleniyor', pendingExifLocation);
                         try {
                             await updatePhotoLocation(uploadedFilename, pendingExifLocation.lat, pendingExifLocation.lng);
-                        } catch (e) {
-                            console.warn('EXIF konumu uygulanamadı:', e);
+                            refreshPhotoLocationMarkers();
+                        } catch (exifError) {
+                            console.warn('EXIF location update failed:', exifError);
                         }
                         pendingExifLocation = null;
                     } else {
-                        console.info('EXIF konum bilgisi bulunamadı');
+                        console.info('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı');
+
                     }
                 }
 
@@ -4417,19 +4405,20 @@
                     }
                 }
 
-                // For images, use EXIF GPS data if available
+                // For images, place marker from previously extracted EXIF GPS
                 if (mediaType === 'image') {
                     const uploadedFilename = result.media?.filename || fileToUpload.name;
                     if (pendingExifLocation) {
-                        console.info('EXIF GPS bulundu, konum güncelleniyor', pendingExifLocation);
                         try {
                             await updatePhotoLocation(uploadedFilename, pendingExifLocation.lat, pendingExifLocation.lng);
-                        } catch (e) {
-                            console.warn('EXIF konumu uygulanamadı:', e);
+                            refreshPhotoLocationMarkers();
+                        } catch (exifError) {
+                            console.warn('EXIF location update failed:', exifError);
                         }
                         pendingExifLocation = null;
                     } else {
-                        console.info('EXIF konum bilgisi bulunamadı');
+                        console.info('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı');
+
                     }
                 }
 
