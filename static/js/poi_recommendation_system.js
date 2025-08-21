@@ -3947,9 +3947,6 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
 
 window.refreshMediaMarkers = refreshMediaMarkers;
 
-document.getElementById('refreshMediaBtn')?.addEventListener('click', () => {
-    refreshMediaMarkers();
-});
 
 // Export predefined route to Google Earth (for hiking trails)
 function exportPredefinedRouteToGoogleEarth(routeId) {
@@ -5459,12 +5456,6 @@ async function displayRouteOnMap(route) {
                     
                     console.log('✅ Route with POIs displayed on predefined map');
                     
-                    // Show refresh media button
-                    const refreshMediaBtn = document.getElementById('refreshMediaBtn');
-                    if (refreshMediaBtn) {
-                        refreshMediaBtn.style.display = 'inline-flex';
-                    }
-                    
                     // Create elevation chart for predefined route with geometry
                     if (window.ElevationChart && coords && coords.length > 1) {
                         if (predefinedElevationChart) {
@@ -5602,12 +5593,6 @@ async function displayRouteOnMap(route) {
                 
                 console.log('✅ Route POIs displayed on predefined map');
                 
-                // Show refresh media button
-                const refreshMediaBtn = document.getElementById('refreshMediaBtn');
-                if (refreshMediaBtn) {
-                    refreshMediaBtn.style.display = 'inline-flex';
-                }
-                
                 // Create elevation chart for predefined route
                 if (window.ElevationChart && validPois.length > 1) {
                     if (predefinedElevationChart) {
@@ -5675,11 +5660,6 @@ function clearPredefinedMapContent() {
         console.log('✅ Predefined map content cleared');
     }
     
-    // Hide refresh media button when no route is displayed
-    const refreshMediaBtn = document.getElementById('refreshMediaBtn');
-    if (refreshMediaBtn) {
-        refreshMediaBtn.style.display = 'none';
-    }
 }
 
 // Create enhanced media marker icon based on media type
