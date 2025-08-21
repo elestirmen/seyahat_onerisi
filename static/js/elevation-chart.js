@@ -475,14 +475,34 @@ class ElevationChart {
                 this.mediaOverlayPoints.forEach(mediaPoint => {
                     const x = padding + (mediaPoint.distance / maxDistance) * chartWidth;
                     const y = height - padding - ((mediaPoint.elevation - minElevation) / elevationRange) * chartHeight;
-                    const type = mediaPoint.media?.media_type || 'image';
-                    const iconMap = { image: '📷', video: '🎥', audio: '🎵', model_3d: '🧊', unknown: '📍' };
-                    const iconChar = iconMap[type] || iconMap.unknown;
+                    const type = mediaPoint.media?.media_type || mediaPoint.media?.type || 'image';
+
+                    const styleMap = {
+                        image: { color: '#f59e0b', icon: '\\uf030' }, // camera
+                        video: { color: '#ef4444', icon: '\\uf03d' }, // video
+                        audio: { color: '#10b981', icon: '\\uf001' }, // music
+                        model_3d: { color: '#6366f1', icon: '\\uf1b2' }, // cube
+                        unknown: { color: '#6b7280', icon: '\\uf03e' } // image icon as fallback
+                    };
+
+                    const cfg = styleMap[type] || styleMap.unknown;
+
                     ctx.save();
-                    ctx.font = '16px sans-serif';
+                    // Draw marker background
+                    ctx.beginPath();
+                    ctx.arc(x, y, 8, 0, 2 * Math.PI);
+                    ctx.fillStyle = cfg.color;
+                    ctx.fill();
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // Draw Font Awesome icon
+                    ctx.font = '900 10px "Font Awesome 6 Free"';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(iconChar, x, y);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(cfg.icon, x, y + 1);
                     ctx.restore();
                 });
             }
