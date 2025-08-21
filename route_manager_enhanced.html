@@ -8626,12 +8626,114 @@
             showNotification(`${layerType} katmanı özelliği yakında eklenecek`, 'info');
         }
 
-        function fitMapToRoutes() {
-            if (Object.keys(routeLayers).length > 0) {
-                const group = new L.featureGroup(Object.values(routeLayers));
-                map.fitBounds(group.getBounds(), { padding: [20, 20] });
-            }
+    function fitMapToRoutes() {
+        if (Object.keys(routeLayers).length > 0) {
+            const group = new L.featureGroup(Object.values(routeLayers));
+            map.fitBounds(group.getBounds(), { padding: [20, 20] });
         }
+    }
+    </script>
+    <script src="https://unpkg.com/exifreader/dist/exif-reader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+    <script>
+    (() => {
+      // UYARILARI BASTIR: Mevcut kodun gösterdiği "EXIF konum..." alert'lerini konsola indir.
+      const _alert = window.alert;
+      window.alert = function(msg) {
+        if (String(msg).includes('EXIF') && String(msg).includes('konum')) {
+          console.info('[info]', msg);
+          return; // alert gösterme
+        }
+        return _alert.apply(this, arguments);
+      };
+
+      // DMS -> decimal yardımcıları
+      const __dmsToDec = (arr, ref) => {
+        if (!arr) return null;
+        const [d, m, s] = arr;
+        let v = Number(d) + Number(m)/60 + Number(s)/3600;
+        if (ref === 'S' || ref === 'W') v = -v;
+        return v;
+      };
+      const __parseDMS = (s) => {
+        const m = String(s).match(/(-?\d+(?:\.\d+)?)|([NSEW])/gi);
+        if (!m) return null;
+        const nums = m.filter(x => !/[NSEW]/i.test(x)).map(Number);
+        const ref  = (m.find(x => /[NSEW]/i.test(x)) || '').toUpperCase();
+        const [D=0,M=0,S=0] = nums;
+        let v = D + M/60 + S/3600;
+        return (ref==='S' || ref==='W') ? -v : v;
+      };
+
+      // Manuel akış giriş noktası: Sayfada hangisi varsa onu kullan.
+      function __placeViaManualFlow(lat, lon) {
+        // 1) Doğrudan sizin fonksiyonlarınız
+        if (typeof window.setLocationFromLatLon === 'function')
+          return window.setLocationFromLatLon(lat, lon, { zoom: 16 });
+        if (typeof window.addManualLocation === 'function')
+          return window.addManualLocation(lat, lon);
+
+        // 2) Manuel buton varsa tetiklemeden önce form alanlarını doldur
+        const latInput = document.getElementById('lat') || document.querySelector('[name="lat"]');
+        const lonInput = document.getElementById('lon') || document.getElementById('lng') || document.querySelector('[name="lon"],[name="lng"]');
+        if (latInput) latInput.value = lat;
+        if (lonInput) lonInput.value = lon;
+
+        const manualBtn = document.querySelector('#btn-manual-location, #manual-location-btn, button[data-action="manual-location"]');
+        if (manualBtn) manualBtn.click();
+
+        // 3) Son çare Leaflet: global harita değişkenini sez ve marker koy
+        const map = window.routeMap || window.map || window.leafletMap;
+        if (map && typeof L !== 'undefined') {
+          if (!window.__photoMarker) window.__photoMarker = L.marker([lat, lon], { draggable: true }).addTo(map);
+          else window.__photoMarker.setLatLng([lat, lon]);
+          try { map.setView([lat, lon], 16); } catch(e) {}
+        }
+      }
+
+      async function __readGpsFromFile(file) {
+        // 1) ExifReader (JPEG/HEIC/WEBP dahil; XMP de dahil)
+        try {
+          const tags = await ExifReader.load(file, { expanded: true, includeXmp: true });
+          let lat = tags?.gps?.Latitude ?? tags?.exif?.GPSLatitude?.value ?? tags?.xmp?.exif?.GPSLatitude?.value;
+          let lon = tags?.gps?.Longitude ?? tags?.exif?.GPSLongitude?.value ?? tags?.xmp?.exif?.GPSLongitude?.value;
+          if (typeof lat === 'string') lat = __parseDMS(lat);
+          if (typeof lon === 'string') lon = __parseDMS(lon);
+          if (typeof lat === 'number' && typeof lon === 'number') return { lat, lon };
+        } catch (e) { /* sessiz geç */ }
+
+        // 2) exif-js fallback (JPEG/TIFF)
+        if (window.EXIF) {
+          return await new Promise((resolve) => {
+            EXIF.getData(file, function() {
+              const lat = __dmsToDec(EXIF.getTag(this, 'GPSLatitude'),  EXIF.getTag(this, 'GPSLatitudeRef'));
+              const lon = __dmsToDec(EXIF.getTag(this, 'GPSLongitude'), EXIF.getTag(this, 'GPSLongitudeRef'));
+              resolve({ lat, lon });
+            });
+          });
+        }
+
+        return { lat: null, lon: null };
+      }
+
+      // TÜM file input'larını en erken aşamada yakala (canvas/preview'den önce)
+      document.addEventListener('change', async (e) => {
+        const el = e.target;
+        if (!(el && el.matches && el.matches('input[type="file"]'))) return;
+
+        const file = el.files && el.files[0];
+        if (!file) return;
+
+        const { lat, lon } = await __readGpsFromFile(file);
+
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+          __placeViaManualFlow(lat, lon); // Manuel akışla aynı sonuç
+          console.info('[gps] Foto EXIF GPS bulundu:', lat, lon);
+        } else {
+          console.info('[gps] EXIF GPS bulunamadı (dosyada yok ya da EXIF kilitli). Manuel akış devam.');
+        }
+      }, { capture: true, passive: true });
+    })();
     </script>
     <script src="https://unpkg.com/exifreader/dist/exif-reader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
