@@ -1492,6 +1492,7 @@
     <script src="static/js/map-layer-control.js"></script>
     <script src="static/js/rate-limiter.js"></script>
     <script src="static/js/elevation-chart.js"></script>
+    <script src="assets/js/elevation-media-markers.js"></script>
     <script src="static/js/api-client.js"></script>
     <script src="static/js/navigation-manager.js"></script>
     <script src="static/js/route-admin-manager.js"></script>
@@ -1820,13 +1821,22 @@
                                     });
 
                                                         // Pass to elevation chart so markers appear on profile
-                    if (window.routeElevationChart) {
-                        window.routeElevationChart.setMediaMarkers(locatedMedia);
+                    if (window.initElevationMediaMarkers && window.routeElevationChart && window.routeElevationChart.elevationData) {
+                        initElevationMediaMarkers({
+                            map,
+                            elevationControl: window.routeElevationChart,
+                            trackCoords: window.routeElevationChart.elevationData,
+                            mediaList: locatedMedia,
+                            createOrGetMarker: media => photoLocationMarkers[media.filename] || photoLocationMarkers[media.id]
+                        });
                     }
                     
                     // Store located media for elevation chart updates
                     if (window.routeElevationChart && locatedMedia.length > 0) {
-                        window.routeElevationChart.setPhotoLocations(locatedMedia);
+                        // Legacy compatibility retained if needed
+                        if (window.routeElevationChart.setPhotoLocations) {
+                            window.routeElevationChart.setPhotoLocations(locatedMedia);
+                        }
                     }
                                 }
                             } catch (e) {
@@ -4628,11 +4638,23 @@
                                 .addTo(map);
                             poiMarkersLayer.addLayer(mk);
                         });
-                        if (window.routeElevationChart) {
-                            window.routeElevationChart.setMediaMarkers(located);
+                        if (window.initElevationMediaMarkers && window.routeElevationChart && window.routeElevationChart.elevationData) {
+                            initElevationMediaMarkers({
+                                map,
+                                elevationControl: window.routeElevationChart,
+                                trackCoords: window.routeElevationChart.elevationData,
+                                mediaList: located,
+                                createOrGetMarker: media => photoLocationMarkers[media.id] || photoLocationMarkers[media.filename]
+                            });
                         }
-                    } else if (window.routeElevationChart) {
-                        window.routeElevationChart.setMediaMarkers([]);
+                    } else if (window.initElevationMediaMarkers && window.routeElevationChart) {
+                        initElevationMediaMarkers({
+                            map,
+                            elevationControl: window.routeElevationChart,
+                            trackCoords: window.routeElevationChart.elevationData || [],
+                            mediaList: [],
+                            createOrGetMarker: () => null
+                        });
                     }
                 } catch (e) {
                     console.warn('Medya konumları haritaya eklenemedi:', e);
@@ -5376,8 +5398,14 @@
                     });
 
                     // Update elevation chart
-                    if (window.routeElevationChart) {
-                        window.routeElevationChart.setMediaMarkers(locatedMedia);
+                    if (window.initElevationMediaMarkers && window.routeElevationChart && window.routeElevationChart.elevationData) {
+                        initElevationMediaMarkers({
+                            map,
+                            elevationControl: window.routeElevationChart,
+                            trackCoords: window.routeElevationChart.elevationData,
+                            mediaList: locatedMedia,
+                            createOrGetMarker: media => photoLocationMarkers[media.filename] || photoLocationMarkers[media.id]
+                        });
                     }
                 }
             } catch (error) {
@@ -5772,24 +5800,28 @@
 
         // Enhanced elevation chart integration for photo locations
         function enhanceElevationChartWithPhotoLocations() {
-            if (!window.routeElevationChart) return;
-            
-            // Add photo location markers to elevation chart
-            const locatedMedia = Object.values(photoLocationMarkers).map(marker => {
+            if (!window.routeElevationChart || !window.initElevationMediaMarkers) return;
+
+            // Collect photo locations from map markers
+            const mediaList = Object.entries(photoLocationMarkers).map(([id, marker]) => {
                 const latlng = marker.getLatLng();
-                const filename = marker.options.filename || 'Unknown';
                 return {
-                    filename: filename,
-                    latitude: latlng.lat,
-                    longitude: latlng.lng,
+                    id,
                     lat: latlng.lat,
-                    lng: latlng.lng
+                    lng: latlng.lng,
+                    thumbnailUrl: marker.options?.thumbnailUrl
                 };
             });
-            
-            if (locatedMedia.length > 0) {
-                window.routeElevationChart.setMediaMarkers(locatedMedia);
-                console.log('Photo locations added to elevation chart:', locatedMedia.length);
+
+            if (mediaList.length > 0 && window.routeElevationChart.elevationData) {
+                initElevationMediaMarkers({
+                    map,
+                    elevationControl: window.routeElevationChart,
+                    trackCoords: window.routeElevationChart.elevationData,
+                    mediaList,
+                    createOrGetMarker: media => photoLocationMarkers[media.id]
+                });
+                console.log('Photo locations added to elevation chart:', mediaList.length);
             }
         }
 
