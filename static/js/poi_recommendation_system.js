@@ -5482,13 +5482,7 @@ async function displayRouteOnMap(route) {
                     
                     console.log('✅ Route with POIs displayed on predefined map');
                     
-                    // Show refresh media button
-                    const refreshMediaBtn = document.getElementById('refreshMediaBtn');
-                    if (refreshMediaBtn) {
-                        refreshMediaBtn.style.display = 'inline-flex';
-                    }
-                    
-                    // Create elevation chart for predefined route with geometry
+                      // Create elevation chart for predefined route with geometry
                     if (window.ElevationChart && coords && coords.length > 1) {
                         if (predefinedElevationChart) {
                             predefinedElevationChart.destroy();
@@ -5496,59 +5490,17 @@ async function displayRouteOnMap(route) {
                         predefinedElevationChart = new ElevationChart('predefinedElevationChartContainer', predefinedMap);
                         
                         // Use elevation_profile from database if available
-                        if (route.elevation_profile && route.elevation_profile.points) {
-                            console.log('📊 Using pre-calculated elevation profile from database');
-                            await predefinedElevationChart.loadElevationProfile(route.elevation_profile);
-                        } else {
-                            console.log('📊 Calculating elevation profile from geometry');
-                            await predefinedElevationChart.loadRouteElevation({
-                                geometry: {
-                                    coordinates: coords
-                                }
-                            });
-                        }
-                        // Load route media and overlay camera markers + elevation markers
-                        try {
-                            const mediaResp = await fetch(`${apiBase}/routes/${route.id}/media`);
-                            if (mediaResp.ok) {
-                                const mediaJson = await mediaResp.json();
-                                const mediaItems = Array.isArray(mediaJson) ? mediaJson : (mediaJson.media || []);
-                                const locatedMedia = mediaItems.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
-                                if (locatedMedia.length > 0) {
-                                    // Add media markers to the map with enhanced icons
-                                    if (locatedMedia.length > 0) {
-                                        console.log('📸 Adding', locatedMedia.length, 'media markers to predefined map');
-                                        locatedMedia.forEach((media, index) => {
-                                            const lat = parseFloat(media.lat ?? media.latitude);
-                                            const lng = parseFloat(media.lng ?? media.longitude ?? media.lon);
-                                            if (!isFinite(lat) || !isFinite(lng)) return;
-                                            
-                                            // Create enhanced media marker icon based on media type
-                                            const mediaType = media.media_type || 'image';
-                                            const mediaIcon = createMediaMarkerIcon(mediaType, media);
-                                            
-                                            const mediaMarker = L.marker([lat, lng], {
-                                                icon: mediaIcon,
-                                                title: media.caption || `Medya ${index + 1}`
-                                            }).addTo(predefinedMap);
-                                            mediaMarker.routeId = route.id || route._id;
-                                            
-                                            // Create enhanced popup content
-                                            const popupContent = createMediaPopupContent(media);
-                                            mediaMarker.bindPopup(popupContent, {
-                                                maxWidth: 300,
-                                                minWidth: 250,
-                                                className: 'media-popup'
-                                            });
-                                            
-                                            predefinedMapLayers.push(mediaMarker);
-                                        });
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            console.warn('Could not load route media for predefined map:', e);
-                        }
+                      if (route.elevation_profile && route.elevation_profile.points) {
+                              console.log('📊 Using pre-calculated elevation profile from database');
+                              await predefinedElevationChart.loadElevationProfile(route.elevation_profile);
+                      } else {
+                              console.log('📊 Calculating elevation profile from geometry');
+                              await predefinedElevationChart.loadRouteElevation({
+                                      geometry: {
+                                              coordinates: coords
+                                      }
+                              });
+                      }
                     }
                     return;
                 }
@@ -8003,13 +7955,19 @@ async function selectPredefinedRoute(route) {
         }, 500); // Increased delay for modal animation
     };
     
-    await displayRoute();
-    
-    // Store selected route for reference
-    window.currentSelectedRoute = route;
-    
-    console.log('🏁 === ROUTE SELECTION PROCESS COMPLETED ===');
-}
+      await displayRoute();
+
+      // Güncel rota ID'sini sakla ve medya işaretlerini yükle
+      window.currentRouteId = route.id || route._id;
+      if (window.updateMediaMarkers) {
+          await window.updateMediaMarkers(window.currentRouteId);
+      }
+
+      // Store selected route for reference
+      window.currentSelectedRoute = route;
+
+      console.log('🏁 === ROUTE SELECTION PROCESS COMPLETED ===');
+  }
 
 function displaySelectedRoute(route, pois) {
     const recommendationResults = document.getElementById('recommendationResults');
