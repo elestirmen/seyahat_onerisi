@@ -1496,6 +1496,7 @@
     <script src="static/js/api-client.js"></script>
     <script src="static/js/navigation-manager.js"></script>
     <script src="static/js/route-admin-manager.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <script>
         // Yönetim arayüzü için RouteAdminManager'ı başlat
         if (window.RouteAdminManager) {
@@ -8655,6 +8656,38 @@
                 showNotification(`Rotalar silinemedi`, 'error');
             }
         }
+
+        // YENİ: ortak tek giriş noktasi
+        function setLocationFromLatLon(lat, lon, options = {}) {
+            if (!window.photoMarker) window.photoMarker = L.marker([lat, lon], { draggable: true }).addTo(map);
+            else window.photoMarker.setLatLng([lat, lon]);
+
+            try { map.setView([lat, lon], options.zoom ?? 16); } catch (e) {}
+
+            (document.getElementById('lat') || document.querySelector('[name="lat"]'))?.setAttribute('value', lat);
+            (document.getElementById('lon') || document.getElementById('lng') || document.querySelector('[name="lon"],[name="lng"]'))?.setAttribute('value', lon);
+        }
+
+        // ESKİ kodun içeriğini buraya taşımayın; sadece koordinatı hesaplayıp çağırın
+        document.getElementById('btn-manual-location')?.addEventListener('click', () => {
+            const { lat, lon } = window.manualLocationSelection || {};
+            if (lat != null && lon != null) setLocationFromLatLon(lat, lon, { zoom: 16 });
+        });
+
+        function dmsToDec(arr, ref){ if(!arr) return null; const [d,m,s]=arr; let v=d+m/60+s/3600; return (ref==='S'||ref==='W')?-v:v; }
+
+        document.querySelector('input[type="file"]')?.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (!file || !window.EXIF) return;
+
+            EXIF.getData(file, function () {
+                const lat = dmsToDec(EXIF.getTag(this,'GPSLatitude'),  EXIF.getTag(this,'GPSLatitudeRef'));
+                const lon = dmsToDec(EXIF.getTag(this,'GPSLongitude'), EXIF.getTag(this,'GPSLongitudeRef'));
+                if (lat != null && lon != null) {
+                    setLocationFromLatLon(lat, lon, { zoom: 16 }); // **AYNI AKIŞ**
+                }
+            });
+        }, { capture: true });
 
         function toggleMapLayer(layerType) {
             // TODO: Implement map layer switching
