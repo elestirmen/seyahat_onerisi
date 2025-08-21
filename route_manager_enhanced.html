@@ -1515,35 +1515,9 @@
         let pendingExifLocation = null;
 
         document.addEventListener('change', function (e) {
-            if (e.target && e.target.id === 'routeMediaFile' && e.target.files && e.target.files[0]) {
-                const file = e.target.files[0];
+            if (e.target && e.target.id === 'routeMediaFile' && e.target.files && e.target.files.length > 0) {
+                // For multiple selections, don't set a single global location; handled per-file later
                 pendingExifLocation = null;
-                try {
-                    EXIF.getData(file, function () {
-                        const lat = EXIF.getTag(this, 'GPSLatitude');
-                        const lon = EXIF.getTag(this, 'GPSLongitude');
-                        const latRef = EXIF.getTag(this, 'GPSLatitudeRef') || 'N';
-                        const lonRef = EXIF.getTag(this, 'GPSLongitudeRef') || 'E';
-
-                        if (lat && lon) {
-                            const toFloat = (v) => (v.numerator ? v.numerator / v.denominator : v);
-                            const dmsToDec = (dms, ref) => {
-                                const dd = toFloat(dms[0]) + toFloat(dms[1]) / 60 + toFloat(dms[2]) / 3600;
-                                return (ref === 'S' || ref === 'W') ? -dd : dd;
-                            };
-                            pendingExifLocation = {
-                                lat: dmsToDec(lat, latRef),
-                                lng: dmsToDec(lon, lonRef)
-                            };
-                            console.info(`EXIF GPS bulundu: ${pendingExifLocation.lat}, ${pendingExifLocation.lng}`);
-                        } else {
-                            console.info('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı');
-                        }
-                    });
-                } catch (exifError) {
-                    console.warn('EXIF extraction failed:', exifError);
-                }
-
             }
         }, true);
 
@@ -1562,6 +1536,32 @@
             if (window.routeElevationChart) {
                 window.routeElevationChart.hideChart();
             }
+        }
+
+        // Helper: extract EXIF GPS from a File, returns {lat, lng} or null
+        async function extractExifLocation(file) {
+            return new Promise((resolve) => {
+                try {
+                    EXIF.getData(file, function () {
+                        const lat = EXIF.getTag(this, 'GPSLatitude');
+                        const lon = EXIF.getTag(this, 'GPSLongitude');
+                        const latRef = EXIF.getTag(this, 'GPSLatitudeRef') || 'N';
+                        const lonRef = EXIF.getTag(this, 'GPSLongitudeRef') || 'E';
+                        if (lat && lon) {
+                            const toFloat = (v) => (v.numerator ? v.numerator / v.denominator : v);
+                            const dmsToDec = (dms, ref) => {
+                                const dd = toFloat(dms[0]) + toFloat(dms[1]) / 60 + toFloat(dms[2]) / 3600;
+                                return (ref === 'S' || ref === 'W') ? -dd : dd;
+                            };
+                            resolve({ lat: dmsToDec(lat, latRef), lng: dmsToDec(lon, lonRef) });
+                        } else {
+                            resolve(null);
+                        }
+                    });
+                } catch (_) {
+                    resolve(null);
+                }
+            });
         }
 
         // POI'lerden dinamik rota oluştur
@@ -3812,7 +3812,7 @@
                                 <form id="routeMediaUploadForm">
                                     <div class="mb-3">
                                         <label for="routeMediaFile" class="form-label">Medya Dosyası</label>
-                                        <input type="file" class="form-control" id="routeMediaFile" accept="image/*,video/*,audio/*" required>
+                                        <input type="file" class="form-control" id="routeMediaFile" accept="image/*,video/*,audio/*" multiple required>
                                         <div class="form-text">
                                             Desteklenen formatlar: JPG, PNG, GIF, MP4, MP3, vb.<br>
                                             <small class="text-info">📸 Resimler isteğe bağlı olarak WebP formatına dönüştürülür (daha iyi sıkıştırma)</small>
@@ -3874,71 +3874,111 @@
                 return;
             }
 
-            const file = fileInput.files[0];
-            const filename = file.name.toLowerCase();
+            const files = Array.from(fileInput.files);
+            let uploadedCount = 0;
+            for (let index = 0; index < files.length; index++) {
+                const file = files[index];
+                const filename = file.name.toLowerCase();
 
-            // Auto-detect media type
-            let mediaType = 'auto';
-            if (filename.match(/\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/)) {
-                mediaType = 'image';
-            } else if (filename.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)$/)) {
-                mediaType = 'video';
-            } else if (filename.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/)) {
-                mediaType = 'audio';
-            } else if (filename.match(/\.(glb|gltf|obj|fbx|dae|ply|stl)$/)) {
-                mediaType = 'model_3d';
-            } else {
-                showNotification('Dosya türü tespit edilemedi. Lütfen medya türünü manuel olarak seçin.', 'error');
-                return;
-            }
-
-            // File size check
-            const maxSize = getMediaMaxSize(mediaType) * 1024 * 1024;
-            if (file.size > maxSize) {
-                showNotification(`Dosya boyutu ${getMediaMaxSize(mediaType)}MB'dan küçük olmalıdır.\n\nSeçilen dosya: ${(file.size / 1024 / 1024).toFixed(1)}MB`, 'error');
-                return;
-            }
-
-            let fileToUpload = file;
-
-            // Convert images to WebP format for better compression
-            if (mediaType === 'image' && !filename.endsWith('.webp')) {
-                try {
-                    showNotification('Resim WebP formatına dönüştürülüyor...', 'info');
-                    fileToUpload = await convertImageToWebP(file);
-                    showNotification('Resim WebP formatına dönüştürüldü!', 'success');
-                } catch (error) {
-                    console.warn('WebP conversion failed, using original file:', error);
-                    fileToUpload = file;
-                    showNotification('WebP dönüştürme başarısız, orijinal dosya kullanılıyor', 'warning');
-                }
-            }
-
-            const formData = new FormData();
-            formData.append('file', fileToUpload);
-            formData.append('caption', mediaCaption);
-            formData.append('is_primary', isPrimary);
-
-            try {
-                const response = await fetch(`${apiBase}/admin/routes/${getRouteId(currentRoute)}/media`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Medya yükleme başarısız');
-                }
-
-                const result = await response.json();
-
-                if (result.media && result.media.compression_ratio && result.media.compression_ratio !== "0%") {
-                    showNotification(`${getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!\n📦 Boyut azalması: ${result.media.compression_ratio}`, 'success');
+                // Auto-detect media type per file
+                let mediaType = 'auto';
+                if (filename.match(/\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/)) {
+                    mediaType = 'image';
+                } else if (filename.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)$/)) {
+                    mediaType = 'video';
+                } else if (filename.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/)) {
+                    mediaType = 'audio';
+                } else if (filename.match(/\.(glb|gltf|obj|fbx|dae|ply|stl)$/)) {
+                    mediaType = 'model_3d';
                 } else {
-                    showNotification(`${getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!`, 'success');
+                    showNotification(`Dosya türü tespit edilemedi: ${file.name}`, 'error');
+                    continue;
                 }
 
+                // File size check per file
+                const maxSize = getMediaMaxSize(mediaType) * 1024 * 1024;
+                if (file.size > maxSize) {
+                    showNotification(`Dosya boyutu ${getMediaMaxSize(mediaType)}MB'dan küçük olmalıdır.\n\nSeçilen dosya: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`, 'error');
+                    continue;
+                }
+
+                // Extract EXIF from original image, if applicable
+                let exifLocation = null;
+                if (mediaType === 'image') {
+                    try {
+                        exifLocation = await extractExifLocation(file);
+                    } catch (exErr) {
+                        console.warn('EXIF extraction failed:', exErr);
+                    }
+                }
+
+                let fileToUpload = file;
+                if (mediaType === 'image' && !filename.endsWith('.webp')) {
+                    try {
+                        showNotification(`Resim WebP'ye dönüştürülüyor: ${file.name}`, 'info');
+                        fileToUpload = await convertImageToWebP(file);
+                        showNotification(`Dönüştürüldü: ${file.name}`, 'success');
+                    } catch (error) {
+                        console.warn('WebP conversion failed, using original file:', error);
+                        fileToUpload = file;
+                        showNotification(`WebP dönüşümü başarısız, orijinal kullanılıyor: ${file.name}`, 'warning');
+                    }
+                }
+
+                const formData = new FormData();
+                formData.append('file', fileToUpload);
+                formData.append('caption', mediaCaption);
+                // Only first file can be primary if checked
+                formData.append('is_primary', index === 0 && isPrimary);
+
+                try {
+                    const response = await fetch(`${apiBase}/admin/routes/${getRouteId(currentRoute)}/media`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        let errorMsg = 'Medya yükleme başarısız';
+                        try {
+                            const error = await response.json();
+                            errorMsg = error.error || errorMsg;
+                        } catch (_) { /* ignore JSON parse error */ }
+                        throw new Error(errorMsg);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.media && result.media.compression_ratio && result.media.compression_ratio !== "0%") {
+                        showNotification(`${getMediaTypeIcon(mediaType)} ${file.name} yüklendi (📦 ${result.media.compression_ratio})`, 'success');
+                    } else {
+                        showNotification(`${getMediaTypeIcon(mediaType)} ${file.name} yüklendi`, 'success');
+                    }
+
+                    // Update location for images using EXIF (fallback to pendingExifLocation)
+                    if (mediaType === 'image') {
+                        const uploadedFilename = result.media?.filename || fileToUpload.name;
+                        const loc = exifLocation || pendingExifLocation;
+                        if (loc) {
+                            try {
+                                await updatePhotoLocation(uploadedFilename, loc.lat, loc.lng);
+                                refreshPhotoLocationMarkers();
+                            } catch (exifError) {
+                                console.warn('EXIF location update failed:', exifError);
+                            }
+                            if (pendingExifLocation) pendingExifLocation = null;
+                        }
+                    }
+
+                    uploadedCount++;
+                } catch (error) {
+                    console.error('Media upload error:', error);
+                    showNotification(`Medya yükleme hatası (${file.name}): ${error.message}`, 'error');
+                }
+            }
+
+            // After processing all files
+            if (uploadedCount > 0) {
                 // Close modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('routeMediaUploadModal'));
                 if (modal) modal.hide();
@@ -3948,32 +3988,9 @@
                 document.getElementById('routeMediaCaption').value = '';
                 document.getElementById('routeMediaPrimary').checked = false;
 
-                // Wait a moment for the server to process the upload
+                // Wait a moment for the server to process the uploads
                 await new Promise(resolve => setTimeout(resolve, 1000));
-
-                // Reload media
                 await loadRouteMediaForEdit(getRouteId(currentRoute));
-
-                // For images, place marker from previously extracted EXIF GPS
-                if (mediaType === 'image') {
-                    const uploadedFilename = result.media?.filename || fileToUpload.name;
-                    if (pendingExifLocation) {
-                        try {
-                            await updatePhotoLocation(uploadedFilename, pendingExifLocation.lat, pendingExifLocation.lng);
-                            refreshPhotoLocationMarkers();
-                        } catch (exifError) {
-                            console.warn('EXIF location update failed:', exifError);
-                        }
-                        pendingExifLocation = null;
-                    } else {
-                        console.info('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı');
-
-                    }
-                }
-
-            } catch (error) {
-                console.error('Media upload error:', error);
-                showNotification('Medya yükleme hatası: ' + error.message, 'error');
             }
         }
 
@@ -4287,88 +4304,125 @@
                 return;
             }
 
-            const file = fileInput.files[0];
-            const filename = file.name.toLowerCase();
+            const files = Array.from(fileInput.files);
+            let uploadedCount = 0;
+            for (let index = 0; index < files.length; index++) {
+                const file = files[index];
+                const filename = file.name.toLowerCase();
 
-            // Auto-detect media type
-            let mediaType = mediaTypeSelect.value;
-            if (mediaType === 'auto') {
-                if (filename.match(/\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/)) {
-                    mediaType = 'image';
-                } else if (filename.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)$/)) {
-                    mediaType = 'video';
-                } else if (filename.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/)) {
-                    mediaType = 'audio';
-                } else if (filename.match(/\.(glb|gltf|obj|fbx|dae|ply|stl)$/)) {
-                    mediaType = 'model_3d';
-                } else {
-                    showNotification('Dosya türü tespit edilemedi. Lütfen medya türünü manuel olarak seçin.', 'error');
-                    return;
+                // Auto-detect media type per file
+                let mediaType = mediaTypeSelect.value;
+                if (mediaType === 'auto') {
+                    if (filename.match(/\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/)) {
+                        mediaType = 'image';
+                    } else if (filename.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)$/)) {
+                        mediaType = 'video';
+                    } else if (filename.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/)) {
+                        mediaType = 'audio';
+                    } else if (filename.match(/\.(glb|gltf|obj|fbx|dae|ply|stl)$/)) {
+                        mediaType = 'model_3d';
+                    } else {
+                        showNotification(`Dosya türü tespit edilemedi: ${file.name}`, 'error');
+                        continue;
+                    }
                 }
-            }
 
-            // File size check
-            const maxSize = getMediaMaxSize(mediaType) * 1024 * 1024;
-            if (file.size > maxSize) {
-                showNotification(`Dosya boyutu ${getMediaMaxSize(mediaType)}MB'dan küçük olmalıdır.\n\nSeçilen dosya: ${(file.size / 1024 / 1024).toFixed(1)}MB`, 'error');
-                return;
-            }
+                // File size check per file
+                const maxSize = getMediaMaxSize(mediaType) * 1024 * 1024;
+                if (file.size > maxSize) {
+                    showNotification(`Dosya boyutu ${getMediaMaxSize(mediaType)}MB'dan küçük olmalıdır.\n\nSeçilen dosya: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`, 'error');
+                    continue;
+                }
 
-            let fileToUpload = file;
+                // Extract EXIF from original image, if applicable
+                let exifLocation = null;
+                if (mediaType === 'image') {
+                    try {
+                        exifLocation = await extractExifLocation(file);
+                    } catch (exErr) {
+                        console.warn('EXIF extraction failed:', exErr);
+                    }
+                }
 
-            if (mediaType === 'image' && !filename.endsWith('.webp')) {
+                let fileToUpload = file;
+                if (mediaType === 'image' && !filename.endsWith('.webp')) {
+                    try {
+                        showNotification(`Resim WebP'ye dönüştürülüyor: ${file.name}`, 'info');
+                        fileToUpload = await convertImageToWebP(file);
+                        showNotification(`Dönüştürüldü: ${file.name}`, 'success');
+                    } catch (error) {
+                        console.warn('WebP conversion failed, using original file:', error);
+                        fileToUpload = file;
+                        showNotification(`WebP dönüşümü başarısız, orijinal kullanılıyor: ${file.name}`, 'warning');
+                    }
+                }
+
+                const formData = new FormData();
+                formData.append('file', fileToUpload);
+                formData.append('caption', mediaCaption);
+                // Only first file can be primary if checked
+                formData.append('is_primary', index === 0 && isPrimary);
+
                 try {
-                    showNotification('Resim WebP formatına dönüştürülüyor...', 'info');
-                    fileToUpload = await convertImageToWebP(file);
-                    showNotification('Resim WebP formatına dönüştürüldü!', 'success');
+                    const response = await fetch(`${apiBase}/admin/routes/${getRouteId(currentRoute)}/media`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        let errorMsg = 'Medya yükleme başarısız';
+                        try {
+                            const error = await response.json();
+                            errorMsg = error.error || errorMsg;
+                        } catch (_) { /* ignore JSON parse error */ }
+                        throw new Error(errorMsg);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.media && result.media.compression_ratio && result.media.compression_ratio !== "0%") {
+                        showNotification(`${getMediaTypeIcon(mediaType)} ${file.name} yüklendi (📦 ${result.media.compression_ratio})`, 'success');
+                    } else {
+                        showNotification(`${getMediaTypeIcon(mediaType)} ${file.name} yüklendi`, 'success');
+                    }
+
+                    // Update location for images using EXIF (fallback to pendingExifLocation)
+                    if (mediaType === 'image') {
+                        const uploadedFilename = result.media?.filename || fileToUpload.name;
+                        const loc = exifLocation || pendingExifLocation;
+                        if (loc) {
+                            try {
+                                await updatePhotoLocation(uploadedFilename, loc.lat, loc.lng);
+                                refreshPhotoLocationMarkers();
+                            } catch (exifError) {
+                                console.warn('EXIF location update failed:', exifError);
+                            }
+                            if (pendingExifLocation) pendingExifLocation = null;
+                        }
+                    }
+
+                    uploadedCount++;
                 } catch (error) {
-                    console.warn('WebP conversion failed, using original file:', error);
-                    fileToUpload = file;
-                    showNotification('WebP dönüştürme başarısız, orijinal dosya kullanılıyor', 'warning');
+                    console.error('Media upload error:', error);
+                    showNotification(`Medya yükleme hatası (${file.name}): ${error.message}`, 'error');
                 }
             }
 
-            const formData = new FormData();
-            // Backend API expects the uploaded file under the 'file' field name
-            // Using a different key results in the server thinking no file was provided
-            // and returning a 404/HTML error page which then breaks JSON parsing
-            formData.append('file', fileToUpload);
-            formData.append('caption', mediaCaption);
-            formData.append('is_primary', isPrimary);
-
-            try {
-                const response = await fetch(`${apiBase}/admin/routes/${getRouteId(currentRoute)}/media`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Medya yükleme başarısız');
-                }
-
-                const result = await response.json();
-
-                if (result.media && result.media.compression_ratio && result.media.compression_ratio !== "0%") {
-                    showNotification(`${getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!\n📦 Boyut azalması: ${result.media.compression_ratio}`, 'success');
-                } else {
-                    showNotification(`${getMediaTypeIcon(mediaType)} ${mediaType.toUpperCase()} başarıyla yüklendi!`, 'success');
-                }
-
+            // After processing all files
+            if (uploadedCount > 0) {
                 // Clear form fields
                 fileInput.value = '';
                 document.getElementById('routeMediaCaption').value = '';
                 document.getElementById('routeMediaPrimary').checked = false;
                 mediaTypeSelect.value = 'auto';
 
-                // Wait a moment for the server to process the upload
+                // Wait a moment for the server to process the uploads
                 await new Promise(resolve => setTimeout(resolve, 1000));
 
                 // Reload media with retry logic
                 let retryCount = 0;
                 const maxRetries = 5;
-                
                 while (retryCount < maxRetries) {
                     try {
                         console.log(`Reloading media, attempt ${retryCount + 1}`);
@@ -4394,27 +4448,6 @@
                         console.warn('Old loadRouteMedia failed:', e);
                     }
                 }
-
-                // For images, place marker from previously extracted EXIF GPS
-                if (mediaType === 'image') {
-                    const uploadedFilename = result.media?.filename || fileToUpload.name;
-                    if (pendingExifLocation) {
-                        try {
-                            await updatePhotoLocation(uploadedFilename, pendingExifLocation.lat, pendingExifLocation.lng);
-                            refreshPhotoLocationMarkers();
-                        } catch (exifError) {
-                            console.warn('EXIF location update failed:', exifError);
-                        }
-                        pendingExifLocation = null;
-                    } else {
-                        console.info('📸 Fotoğraf yüklendi ancak EXIF konum bilgisi bulunamadı');
-
-                    }
-                }
-
-            } catch (error) {
-                console.error('Media upload error:', error);
-                showNotification('Medya yükleme hatası: ' + error.message, 'error');
             }
         }
 
@@ -6517,7 +6550,7 @@
                                         Medya Dosyası Seç
                                     </label>
                                     <input type="file" class="form-input" id="routeMediaFile"
-                                        accept="image/*,video/*,audio/*,.glb,.gltf,.obj,.fbx,.dae,.ply,.stl">
+                                        accept="image/*,video/*,audio/*,.glb,.gltf,.obj,.fbx,.dae,.ply,.stl" multiple>
                                     <small class="form-help">
                                         Desteklenen formatlar: Görsel (JPG, PNG, GIF), Video (MP4, AVI, MOV),
                                         Ses (MP3, WAV, OGG), 3D Model (GLB, GLTF, OBJ, FBX)<br>
