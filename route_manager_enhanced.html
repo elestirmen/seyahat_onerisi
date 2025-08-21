@@ -1496,6 +1496,7 @@
     <script src="static/js/api-client.js"></script>
     <script src="static/js/navigation-manager.js"></script>
     <script src="static/js/route-admin-manager.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <script>
         // Yönetim arayüzü için RouteAdminManager'ı başlat
         if (window.RouteAdminManager) {
@@ -5940,11 +5941,29 @@
             
             showNotification('Koordinat başarıyla eklendi', 'success');
         }
+        function setLocationFromLatLon(lat, lon, opts = {}) {
+            if (!map) return;
+
+            if (!window.manualLocationMarker) {
+                window.manualLocationMarker = L.marker([lat, lon], { draggable: true }).addTo(map);
+            } else {
+                window.manualLocationMarker.setLatLng([lat, lon]);
+            }
+
+            const latInput = document.getElementById('newCoordinateLat');
+            const lngInput = document.getElementById('newCoordinateLng');
+            if (latInput) latInput.value = lat.toFixed(6);
+            if (lngInput) lngInput.value = lon.toFixed(6);
+
+            const zoom = opts.zoom || map.getZoom();
+            map.setView([lat, lon], zoom);
+        }
+        window.setLocationFromLatLon = setLocationFromLatLon;
+
         function getCurrentMapLocation() {
             if (map && map.getCenter) {
                 const center = map.getCenter();
-                document.getElementById('newCoordinateLat').value = center.lat.toFixed(6);
-                document.getElementById('newCoordinateLng').value = center.lng.toFixed(6);
+                setLocationFromLatLon(center.lat, center.lng);
                 showNotification('Harita merkezi koordinatları alındı', 'info');
             } else {
                 showNotification('Harita henüz yüklenmemiş', 'error');
@@ -8647,6 +8666,36 @@
                 map.fitBounds(group.getBounds(), { padding: [20, 20] });
             }
         }
+        (function () {
+            const fileInput =
+                document.querySelector('#photoInput') ||
+                document.querySelector('input[type="file"][name*="image" i]') ||
+                document.querySelector('input[type="file"]');
+
+            if (!fileInput) return;
+
+            const dmsToDec = (arr, ref) => {
+                if (!arr) return null;
+                const [d, m, s] = arr;
+                let v = d + m / 60 + s / 3600;
+                return (ref === 'S' || ref === 'W') ? -v : v;
+            };
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+
+                if (!window.EXIF) return;
+
+                EXIF.getData(file, function () {
+                    const lat = dmsToDec(EXIF.getTag(this, 'GPSLatitude'), EXIF.getTag(this, 'GPSLatitudeRef'));
+                    const lon = dmsToDec(EXIF.getTag(this, 'GPSLongitude'), EXIF.getTag(this, 'GPSLongitudeRef'));
+                    if (lat != null && lon != null && typeof window.setLocationFromLatLon === 'function') {
+                        window.setLocationFromLatLon(lat, lon, { zoom: 16 });
+                    }
+                });
+            }, { capture: true });
+        })();
     </script>
     <script>
     (function () {
