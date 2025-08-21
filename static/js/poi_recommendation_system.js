@@ -3847,85 +3847,56 @@ async function createNavigationRoute(fromCoord, toCoord, routeName, distanceKm) 
     }
 }
 
-// Refresh media markers for a given route
 async function refreshMediaMarkers(routeId = window.currentRouteId) {
     console.log('🔄 Refreshing media markers for route:', routeId);
 
-    // Determine current route if not explicitly provided
-    if (!routeId) {
-        if (!predefinedMap || !predefinedMapInitialized) {
-            console.warn('⚠️ Predefined map not initialized');
-            showNotification('Harita henüz yüklenmedi', 'warning');
-            return;
-        }
+    if (!predefinedMap || !predefinedMapInitialized) {
+        console.warn('⚠️ Predefined map not initialized');
+        showNotification('Harita henüz yüklenmedi', 'warning');
+        return false;
+    }
 
-        // Try to find the current route from the map layers
+    // Determine which route to refresh
+    let effectiveRouteId = routeId;
+    if (!effectiveRouteId) {
         for (const layer of predefinedMapLayers) {
             if (layer.routeData) {
-                routeId = layer.routeData.id || layer.routeData._id;
+                effectiveRouteId = layer.routeData.id || layer.routeData._id;
                 break;
             }
         }
-
-        if (!routeId) {
-            console.warn('⚠️ No current route found on map');
-            showNotification('Haritada görüntülenen rota bulunamadı', 'warning');
-            return;
-        }
     }
 
-    // Store the current route globally
-    window.currentRouteId = routeId;
+    if (!effectiveRouteId) {
+        console.warn('⚠️ No current route found on map');
+        showNotification('Haritada görüntülenen rota bulunamadı', 'warning');
 
-    // Use the existing refresh function
-    const success = await window.refreshPredefinedRouteMedia(routeId);
-
-    if (success) {
-        showNotification('Medya işaretleri başarıyla yenilendi', 'success');
-    } else {
-        showNotification('Medya işaretleri yenilenirken hata oluştu', 'error');
-    }
-}
-
-// Expose globally and bind button click
-window.refreshMediaMarkers = refreshMediaMarkers;
-
-document.getElementById('refreshMediaBtn')?.addEventListener('click', () => {
-    refreshMediaMarkers();
-});
-
-// Refresh media markers for predefined route
-window.refreshPredefinedRouteMedia = async function(routeId) {
-    console.log('🔄 Refreshing media markers for predefined route:', routeId);
-    
-    if (!predefinedMap || !predefinedMapInitialized) {
-        console.warn('⚠️ Predefined map not initialized');
         return false;
     }
-    
+
     try {
-        // Find the route
-        const route = predefinedRoutes.find(r => (r.id || r._id) === routeId);
+        const route = predefinedRoutes.find(r => (r.id || r._id) === effectiveRouteId);
         if (!route) {
-            console.error('❌ Route not found:', routeId);
+            console.error('❌ Route not found:', effectiveRouteId);
+            showNotification('Medya işaretleri yenilenirken hata oluştu', 'error');
             return false;
         }
-        
-        // Load media for the route
-        const mediaResp = await fetch(`${apiBase}/routes/${routeId}/media`);
+
+        const mediaResp = await fetch(`${apiBase}/routes/${effectiveRouteId}/media`);
         if (!mediaResp.ok) {
             console.error('❌ Failed to load route media:', mediaResp.status);
+            showNotification('Medya işaretleri yenilenirken hata oluştu', 'error');
             return false;
         }
-        
+
         const mediaJson = await mediaResp.json();
         const mediaItems = Array.isArray(mediaJson) ? mediaJson : (mediaJson.media || []);
         const locatedMedia = mediaItems.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
-        
+
         console.log('📸 Found', locatedMedia.length, 'located media items');
-        
+
         // Remove existing media markers
-        const existingMediaMarkers = predefinedMapLayers.filter(layer => 
+        const existingMediaMarkers = predefinedMapLayers.filter(layer =>
             layer.options && layer.options.className === 'media-marker'
         );
         existingMediaMarkers.forEach(marker => {
@@ -3935,53 +3906,57 @@ window.refreshPredefinedRouteMedia = async function(routeId) {
                 predefinedMapLayers.splice(index, 1);
             }
         });
-        
-        // Add new media markers
+
         if (locatedMedia.length > 0) {
             console.log('📸 Adding', locatedMedia.length, 'media markers to predefined map');
             locatedMedia.forEach((media, index) => {
                 const lat = parseFloat(media.lat ?? media.latitude);
                 const lng = parseFloat(media.lng ?? media.longitude ?? media.lon);
                 if (!isFinite(lat) || !isFinite(lng)) return;
-                
-                // Create enhanced media marker icon based on media type
+
                 const mediaType = media.media_type || 'image';
                 const mediaIcon = createMediaMarkerIcon(mediaType, media);
-                
+
                 const mediaMarker = L.marker([lat, lng], {
                     icon: mediaIcon,
                     title: media.caption || `Medya ${index + 1}`
                 }).addTo(predefinedMap);
                 mediaMarker.routeId = route.id || route._id;
-                
-                // Create enhanced popup content
+
                 const popupContent = createMediaPopupContent(media);
                 mediaMarker.bindPopup(popupContent, {
                     maxWidth: 300,
                     minWidth: 250,
                     className: 'media-popup'
                 });
-                
+
                 predefinedMapLayers.push(mediaMarker);
             });
-            
-            // Update elevation chart if available
+
             if (predefinedElevationChart) {
                 predefinedElevationChart.setMediaMarkers(locatedMedia);
             }
-            
+
             console.log('✅ Media markers refreshed successfully');
+            showNotification('Medya işaretleri başarıyla yenilendi', 'success');
             return true;
         } else {
             console.log('ℹ️ No located media found for this route');
+            showNotification('Medya işaretleri yenilenirken hata oluştu', 'error');
             return false;
         }
-        
+
     } catch (error) {
         console.error('❌ Error refreshing media markers:', error);
+        showNotification('Medya işaretleri yenilenirken hata oluştu', 'error');
         return false;
     }
-};
+}
+window.refreshMediaMarkers = refreshMediaMarkers;
+
+document.getElementById('refreshMediaBtn')?.addEventListener('click', () => {
+    refreshMediaMarkers();
+});
 
 // Export predefined route to Google Earth (for hiking trails)
 function exportPredefinedRouteToGoogleEarth(routeId) {
@@ -8013,6 +7988,11 @@ async function selectPredefinedRoute(route) {
     };
     
     await displayRoute();
+
+    // Store current route id globally and refresh its media markers
+    window.currentRouteId = route.id || route._id;
+    await refreshMediaMarkers(window.currentRouteId);
+
 
     // Store selected route for reference
     window.currentSelectedRoute = route;
