@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <style>
         :root {
             --route-primary: #2563eb;
@@ -1529,6 +1530,7 @@
     <script src="static/js/api-client.js"></script>
     <script src="static/js/navigation-manager.js"></script>
     <script src="static/js/route-admin-manager.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <script>
         // Yönetim arayüzü için RouteAdminManager'ı başlat
         if (window.RouteAdminManager) {
@@ -5074,14 +5076,32 @@
             document.getElementById('enablePhotoLocationBtn').innerHTML = '<i class="fas fa-crosshairs me-1"></i>Haritadan Konum Seç';
             document.getElementById('enablePhotoLocationBtn').classList.remove('btn-danger');
             document.getElementById('enablePhotoLocationBtn').classList.add('btn-outline-primary');
-            
+
             if (map) {
                 map.getContainer().classList.remove('select-location');
                 map.off('click', handleMapClickForPhotoLocation);
             }
-            
+
             selectedPhotoForLocation = null;
         }
+
+        function setLocationFromLatLon(lat, lon, opts = {}) {
+            if (selectedPhotoForLocation) {
+                updatePhotoLocation(selectedPhotoForLocation, lat, lon);
+            }
+            if (map) {
+                if (opts.zoom) {
+                    map.setView([lat, lon], opts.zoom);
+                } else {
+                    map.panTo([lat, lon]);
+                }
+            }
+            const latInput = document.querySelector('#photoLat') || document.querySelector('input[name*="lat" i]');
+            const lonInput = document.querySelector('#photoLng') || document.querySelector('input[name*="lon" i]');
+            if (latInput) latInput.value = lat;
+            if (lonInput) lonInput.value = lon;
+        }
+        window.setLocationFromLatLon = setLocationFromLatLon;
 
         // Handle map click for photo location selection
         function handleMapClickForPhotoLocation(e) {
@@ -5098,6 +5118,7 @@
             updatePhotoLocation(selectedPhotoForLocation, lat, lng);
 
             // Exit location selection mode
+
             disablePhotoLocationSelection();
         }
 
@@ -5984,12 +6005,32 @@
             
             showNotification('Koordinat başarıyla eklendi', 'success');
         }
+        function setLocationFromLatLon(lat, lon, opts = {}) {
+            if (!map) return;
+
+            if (!window.manualLocationMarker) {
+                window.manualLocationMarker = L.marker([lat, lon], { draggable: true }).addTo(map);
+            } else {
+                window.manualLocationMarker.setLatLng([lat, lon]);
+            }
+
+            const latInput = document.getElementById('newCoordinateLat');
+            const lngInput = document.getElementById('newCoordinateLng');
+            if (latInput) latInput.value = lat.toFixed(6);
+            if (lngInput) lngInput.value = lon.toFixed(6);
+
+            const zoom = opts.zoom || map.getZoom();
+            map.setView([lat, lon], zoom);
+        }
+        window.setLocationFromLatLon = setLocationFromLatLon;
+
         function getCurrentMapLocation() {
             if (map && map.getCenter) {
                 const center = map.getCenter();
                 if (typeof window.setLocationFromLatLon === 'function') {
                     window.setLocationFromLatLon(center.lat, center.lng);
                 }
+
                 showNotification('Harita merkezi koordinatları alındı', 'info');
             } else {
                 showNotification('Harita henüz yüklenmemiş', 'error');
@@ -8693,6 +8734,68 @@
                 map.fitBounds(group.getBounds(), { padding: [20, 20] });
             }
         }
+        (function () {
+            const fileInput =
+                document.querySelector('#photoInput') ||
+                document.querySelector('input[type="file"][name*="image" i]') ||
+                document.querySelector('input[type="file"]');
+
+            if (!fileInput) return;
+
+            const dmsToDec = (arr, ref) => {
+                if (!arr) return null;
+                const [d, m, s] = arr;
+                let v = d + m / 60 + s / 3600;
+                return (ref === 'S' || ref === 'W') ? -v : v;
+            };
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+
+                if (!window.EXIF) return;
+
+                EXIF.getData(file, function () {
+                    const lat = dmsToDec(EXIF.getTag(this, 'GPSLatitude'), EXIF.getTag(this, 'GPSLatitudeRef'));
+                    const lon = dmsToDec(EXIF.getTag(this, 'GPSLongitude'), EXIF.getTag(this, 'GPSLongitudeRef'));
+                    if (lat != null && lon != null && typeof window.setLocationFromLatLon === 'function') {
+                        window.setLocationFromLatLon(lat, lon, { zoom: 16 });
+                    }
+                });
+            }, { capture: true });
+        })();
+    </script>
+    <script>
+    (function () {
+      const fileInput =
+        document.querySelector('#photoInput') ||
+        document.querySelector('input[type="file"][name*="image" i]') ||
+        document.querySelector('input[type="file"]');
+
+      if (!fileInput) return;
+
+      const dmsToDec = (arr, ref) => {
+        if (!arr) return null;
+        const [d, m, s] = arr;
+        let v = d + m / 60 + s / 3600;
+        return (ref === 'S' || ref === 'W') ? -v : v;
+      };
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        if (!window.EXIF) return;
+
+        EXIF.getData(file, function () {
+          const lat = dmsToDec(EXIF.getTag(this,'GPSLatitude'),  EXIF.getTag(this,'GPSLatitudeRef'));
+          const lon = dmsToDec(EXIF.getTag(this,'GPSLongitude'), EXIF.getTag(this,'GPSLongitudeRef'));
+          if (lat != null && lon != null && typeof window.setLocationFromLatLon === 'function') {
+            window.setLocationFromLatLon(lat, lon, { zoom: 16 });
+          }
+        });
+      }, { capture: true });
+    })();
     </script>
 </body>
 
