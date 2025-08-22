@@ -64,6 +64,9 @@
     <!-- Performance Optimizations -->
     <link rel="stylesheet" href="static/css/performance-optimizations.css">
     <script src="static/js/performance-optimizations.js" defer></script>
+    
+    <!-- Mobile Optimizations -->
+    <script src="static/js/mobile-optimizations.js" defer></script>
 </head>
 
 <body>
@@ -472,6 +475,26 @@
 
                     <!-- Enhanced Route Filters -->
                     <button class="filters-open-btn" id="openFiltersBtn">Filtreleri Aç</button>
+                    <!-- Mobile Slide-up Filter Panel -->
+                    <div class="mobile-filter-panel" id="mobileFilterPanel">
+                        <div class="mobile-filter-handle">
+                            <div class="filter-handle-bar"></div>
+                        </div>
+                        <div class="mobile-filter-content">
+                            <div class="mobile-filter-header">
+                                <h3 class="mobile-filter-title">
+                                    <i class="fas fa-sliders-h"></i>
+                                    Filtreler
+                                </h3>
+                                <button class="mobile-filter-close" id="mobileFilterClose">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="mobile-filter-body">
+                                <!-- Filter content will be injected here -->
+                            </div>
+                        </div>
+                    </div>
                     <div class="route-filters-enhanced">
                         <div class="filters-content" id="filtersContent">
                             <div class="filters-header">
@@ -620,6 +643,16 @@
                                 <button class="map-control-btn" id="fitMapBtn" title="Rotalara Odaklan">
                                     <i class="fas fa-expand-arrows-alt"></i>
                                 </button>
+                                <!-- Mobile Full-Screen Toggle -->
+                                <button class="map-control-btn mobile-fullscreen-btn" id="fullscreenMapBtn" title="Tam Ekran">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                            <!-- Mobile Map Toggle FAB -->
+                            <div class="mobile-map-fab" id="mapViewToggleFab">
+                                <button class="fab-button" id="mapListToggleBtn" title="Harita/Liste Geçiş">
+                                    <i class="fas fa-layer-group"></i>
+                                </button>
                             </div>
                         </div>
 
@@ -628,14 +661,11 @@
                             <template id="predefinedRouteCardTemplate">
                                 <div class="route-card">
                                     <div class="route-card-image">
-                                        <img src="https://via.placeholder.com/400x200?text=Rota" alt="Rota önizlemesi" data-placeholder="https://via.placeholder.com/400x200?text=Rota" onerror="handleImageError(event)">
+                                        <img src="https://via.placeholder.com/100x120?text=Rota" alt="Rota önizlemesi" data-placeholder="https://via.placeholder.com/100x120?text=Rota" onerror="handleImageError(event)">
                                     </div>
                                     <div class="route-card-content">
                                         <div class="route-card-header">
                                             <h3 class="route-card-title"></h3>
-                                            <button class="favorite-btn" aria-label="Favorilere ekle">
-                                                <i class="fas fa-star"></i>
-                                            </button>
                                             <p class="route-card-description"></p>
                                         </div>
                                         <div class="route-card-meta">
@@ -655,7 +685,18 @@
                                                 <div class="difficulty-stars"></div>
                                             </div>
                                         </div>
-                                        <div class="route-mini-map"></div>
+                                    </div>
+                                    <!-- Mobile Quick Actions -->
+                                    <div class="route-card-actions">
+                                        <button class="route-quick-action favorite" aria-label="Favorilere ekle" title="Favorilere ekle">
+                                            <i class="fas fa-heart"></i>
+                                        </button>
+                                        <button class="route-quick-action navigate" aria-label="Navigasyon" title="Navigasyon">
+                                            <i class="fas fa-directions"></i>
+                                        </button>
+                                        <button class="route-quick-action share" aria-label="Paylaş" title="Paylaş">
+                                            <i class="fas fa-share-alt"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </template>
