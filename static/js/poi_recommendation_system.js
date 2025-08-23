@@ -1,4 +1,106 @@
 // Rate limiting bilgilendirme mesajı
+// Test function to verify category mappings are working
+window.testCategoryMappings = function() {
+    console.log('🧪 Testing category mappings...');
+    
+    // Test actual API categories
+    const apiCategories = ['kulturel_miras', 'dogal_miras', 'macera_spor', 'konaklama_hizmet', 'gastronomi'];
+    
+    console.log('🔍 Testing API categories:');
+    apiCategories.forEach(category => {
+        const style = getCategoryStyle(category);
+        const displayName = getCategoryDisplayName(category);
+        
+        console.log(`🏷️ ${category}:`, {
+            color: style.color,
+            icon: style.iconClass,
+            displayName: displayName,
+            fallbackToDiger: style.category === 'diger'
+        });
+        
+        if (style.category === 'diger') {
+            console.warn(`⚠️ Category '${category}' is still falling back to 'diger'!`);
+        }
+    });
+    
+    // Test main categories
+    const mainCategories = ['gastronomik', 'kulturel', 'sanatsal', 'doga_macera', 'konaklama', 'alisveris', 'eglence', 'spor'];
+    
+    console.log('🔍 Testing main categories:');
+    mainCategories.forEach(category => {
+        const style = getCategoryStyle(category);
+        const displayName = getCategoryDisplayName(category);
+        
+        console.log(`🏷️ ${category}:`, {
+            color: style.color,
+            icon: style.iconClass,
+            displayName: displayName
+        });
+    });
+    
+    console.log('✅ Category mapping test complete');
+    
+    // Test marker creation
+    console.log('🧪 Testing marker creation...');
+    const testPOI = {
+        name: 'Test POI',
+        category: 'gastronomik',
+        latitude: 38.6,
+        longitude: 34.8
+    };
+    
+    try {
+        const marker = createCategoryMarker(testPOI.latitude, testPOI.longitude, testPOI, 0);
+        console.log('✅ Marker created successfully:', marker);
+        return { success: true, marker: marker };
+    } catch (error) {
+        console.error('❌ Error creating marker:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+// Test function to verify category consistency between systems
+window.testCategoryConsistency = function() {
+    console.log('🧪 Testing category consistency between poi_manager_enhanced and poi_recommendation_system...');
+    
+    if (typeof window.getAllCategories !== 'function') {
+        console.error('❌ Centralized category configuration not loaded!');
+        return;
+    }
+    
+    const centralCategories = window.getAllCategories();
+    console.log('🏷️ Central categories loaded:', centralCategories.length);
+    
+    // Test each category
+    centralCategories.forEach(category => {
+        console.log(`🔍 Testing category: ${category.name}`);
+        
+        // Test main category
+        const style = getCategoryStyle(category.name);
+        console.log(`  ✅ ${category.name}:`, {
+            displayName: getCategoryDisplayName(category.name),
+            color: style.color,
+            icon: style.iconClass,
+            expectedColor: category.color,
+            expectedIcon: `fas fa-${category.icon}`
+        });
+        
+        // Test aliases
+        if (category.aliases) {
+            category.aliases.forEach(alias => {
+                const aliasStyle = getCategoryStyle(alias);
+                console.log(`  ✅ ${alias} (alias):`, {
+                    displayName: getCategoryDisplayName(alias),
+                    color: aliasStyle.color,
+                    icon: aliasStyle.iconClass
+                });
+            });
+        }
+    });
+    
+    console.log('✅ Category consistency test complete');
+};
+
 // Test function to verify all API categories have proper mappings
 window.testCategoryMappings = function() {
     console.log('🧪 Testing category mappings...');
@@ -475,8 +577,11 @@ const AppState = {
     intervals: new Set()
 };
 
-// Rating categories with their display names and icons
-const ratingCategories = {
+// Import centralized category configuration
+// Note: This will be loaded via script tag in HTML for browser compatibility
+
+// Rating categories with their display names and icons (from centralized config)
+const ratingCategories = window.RATING_CATEGORIES || {
     'doga': { name: 'Doğa', icon: 'fas fa-tree' },
     'yemek': { name: 'Yemek', icon: 'fas fa-utensils' },
     'tarihi': { name: 'Tarih', icon: 'fas fa-landmark' },
@@ -489,130 +594,168 @@ const ratingCategories = {
     'gece_hayati': { name: 'Gece Hayatı', icon: 'fas fa-moon' }
 };
 
-// Dynamic category data (will be loaded from API)
+// Dynamic category data (will be loaded from API or centralized config)
 let categoryData = {};
 
-// Fallback category display names
-const fallbackCategoryNames = {
-    // Original mappings
-    'doga_macera': 'Doğa & Macera',
-    'gastronomik': 'Gastronomi',
-    'konaklama': 'Konaklama',
-    'kulturel': 'Kültürel',
-    'sanatsal': 'Sanatsal',
-    'dini': 'Dini Yapılar',
-    'tarihi': 'Tarihi Yapılar',
-    'mimari': 'Mimari Yapılar',
-    'mezarlik': 'Mezarlık Alanları',
-    'saray_kale': 'Saray ve Kaleler',
-    'diger': 'Diğer',
-    
-    // API category display names
-    'seyir_noktalari': 'Seyir Noktaları',
-    'macera_spor': 'Macera & Spor',
-    'yasayan_kultur': 'Yaşayan Kültür',
-    'konaklama_hizmet': 'Konaklama & Hizmet',
-    'kulturel_miras': 'Kültürel Miras',
-    'dogal_guzellilk': 'Doğal Güzellik',
-    'dogal_miras': 'Doğal Miras',
-    'gastronomi': 'Gastronomi',
-    'yemek_icecek': 'Yemek & İçecek',
-    'alisveris_el_sanatlari': 'Alışveriş & El Sanatları',
-    'eglence_aktivite': 'Eğlence & Aktivite',
-    'ulasilabilirlik': 'Ulaşılabilirlik'
-};
+// Use centralized category configuration if available
+const fallbackCategoryNames = {};
+const fallbackCategoryStyles = {};
+const iconMap = {};
+const categoryIconAliases = {};
 
-// Fallback category colors for markers (Font Awesome icons are defined separately)
-const fallbackCategoryStyles = {
-    // Original mappings
-    'doga_macera': { color: '#2ecc71' },
-    'gastronomik': { color: '#e74c3c' },
-    'konaklama': { color: '#9b59b6' },
-    'kulturel': { color: '#3498db' },
-    'sanatsal': { color: '#f39c12' },
-    'dini': { color: '#8B4513' },
-    'tarihi': { color: '#CD853F' },
-    'mimari': { color: '#4682B4' },
-    'mezarlik': { color: '#696969' },
-    'saray_kale': { color: '#B8860B' },
-    'diger': { color: '#708090' },
+// Initialize from centralized config
+if (typeof window !== 'undefined' && window.createIconMap) {
+    console.log('✅ Centralized POI category configuration detected!');
     
-    // API category colors
-    'seyir_noktalari': { color: '#2ecc71' },      // Green for viewpoints
-    'macera_spor': { color: '#e67e22' },          // Orange for adventure/sports  
-    'yasayan_kultur': { color: '#8B4513' },       // Brown for living culture/religious
-    'konaklama_hizmet': { color: '#9b59b6' },     // Purple for accommodation
-    'kulturel_miras': { color: '#3498db' },       // Blue for cultural heritage
-    'dogal_guzellilk': { color: '#27ae60' },      // Dark green for natural beauty
-    'dogal_miras': { color: '#16a085' },          // Teal for natural heritage
-    'gastronomi': { color: '#e74c3c' },           // Red for gastronomy
-    'yemek_icecek': { color: '#e74c3c' },         // Red for food/drink
-    'alisveris_el_sanatlari': { color: '#f39c12' }, // Orange for shopping/crafts
-    'eglence_aktivite': { color: '#e91e63' },     // Pink for entertainment
-    'ulasilabilirlik': { color: '#34495e' }       // Dark blue for accessibility
-};
-
-// Font Awesome icon classes matching poi_manager_enhanced.html + API categories
-const iconMap = {
-    // Original mappings
-    'gastronomik': 'fas fa-utensils',
-    'kulturel': 'fas fa-landmark',
-    'sanatsal': 'fas fa-palette',
-    'doga_macera': 'fas fa-hiking',
-    'konaklama': 'fas fa-bed',
-    'alisveris': 'fas fa-shopping-cart',
-    'eglence': 'fas fa-music',
-    'spor': 'fas fa-dumbbell',
-    'dini': 'fas fa-mosque',
-    'tarihi': 'fas fa-landmark',
-    'mimari': 'fas fa-building',
-    'mezarlik': 'fas fa-cross',
-    'saray_kale': 'fas fa-chess-rook',
-    'doga': 'fas fa-tree',
-    'yemek': 'fas fa-utensils',
-    'diger': 'fas fa-map-marker-alt',
+    const iconMapData = window.createIconMap();
+    const colorMapData = window.createColorMap();
+    const aliasMapData = window.createAliasMap();
     
-    // API category mappings
-    'seyir_noktalari': 'fas fa-mountain',
-    'macera_spor': 'fas fa-hiking',
-    'yasayan_kultur': 'fas fa-mosque',
-    'konaklama_hizmet': 'fas fa-bed',
-    'kulturel_miras': 'fas fa-landmark',
-    'dogal_guzellilk': 'fas fa-tree',
-    'dogal_miras': 'fas fa-leaf',
-    'gastronomi': 'fas fa-utensils',
-    'yemek_icecek': 'fas fa-utensils',
-    'alisveris_el_sanatlari': 'fas fa-shopping-cart',
-    'eglence_aktivite': 'fas fa-music',
-    'ulasilabilirlik': 'fas fa-road'
-};
-
-// Map rating category keys to icon map categories + API categories
-const categoryIconAliases = {
-    'doga': 'doga',
-    'macera': 'doga_macera',
-    'yemek': 'gastronomik',
-    'sanat_kultur': 'kulturel',
-    'eglence': 'eglence',
-    'rahatlatici': 'diger',
-    'spor': 'spor',
-    'alisveris': 'alisveris',
-    'gece_hayati': 'eglence',
+    console.log('🗺️ Icon map data:', iconMapData);
+    console.log('🎨 Color map data:', colorMapData);
+    console.log('🔗 Alias map data:', aliasMapData);
     
-    // API category aliases
-    'seyir_noktalari': 'seyir_noktalari',
-    'macera_spor': 'macera_spor', 
-    'yasayan_kultur': 'yasayan_kultur',
-    'konaklama_hizmet': 'konaklama_hizmet',
-    'kulturel_miras': 'kulturel_miras',
-    'dogal_guzellilk': 'dogal_guzellilk',
-    'dogal_miras': 'dogal_miras',
-    'gastronomi': 'gastronomi',
-    'yemek_icecek': 'yemek_icecek',
-    'alisveris_el_sanatlari': 'alisveris_el_sanatlari',
-    'eglence_aktivite': 'eglence_aktivite',
-    'ulasilabilirlik': 'ulasilabilirlik'
-};
+    Object.assign(iconMap, iconMapData);
+    Object.assign(fallbackCategoryStyles, colorMapData);
+    Object.assign(categoryIconAliases, aliasMapData);
+    
+    // Create display names map
+    const allCategories = window.getAllCategories();
+    console.log('📊 All categories from centralized config:', allCategories);
+    
+    allCategories.forEach(category => {
+        fallbackCategoryNames[category.name] = category.display_name;
+        if (category.aliases) {
+            category.aliases.forEach(alias => {
+                fallbackCategoryNames[alias] = category.display_name;
+            });
+        }
+    });
+    
+    console.log('✅ Centralized POI category configuration loaded successfully');
+    console.log('📋 Available icon categories:', Object.keys(iconMap).length);
+    console.log('🎨 Available color categories:', Object.keys(fallbackCategoryStyles).length);
+    console.log('🗺️ Available alias categories:', Object.keys(categoryIconAliases).length);
+    console.log('📝 Available display names:', Object.keys(fallbackCategoryNames).length);
+    
+    // Test a few categories
+    console.log('🧪 Testing centralized config:');
+    ['gastronomik', 'kulturel', 'doga_macera', 'macera_spor', 'gastronomi'].forEach(testCat => {
+        if (window.getCategoryStyle) {
+            const testResult = window.getCategoryStyle(testCat);
+            console.log(`  ${testCat}:`, testResult);
+        }
+    });
+    
+} else {
+    console.warn('⚠️ Centralized POI category configuration not available, using fallback configuration');
+    
+    // Fallback configuration for when centralized config is not loaded
+    Object.assign(fallbackCategoryNames, {
+        'gastronomik': '🍽️ Gastronomik',
+        'kulturel': '🏛️ Kültürel', 
+        'sanatsal': '🎨 Sanatsal',
+        'doga_macera': '🌿 Doğa & Macera',
+        'konaklama': '🏨 Konaklama',
+        'alisveris': '🛍️ Alışveriş',
+        'eglence': '🎪 Eğlence',
+        'spor': '⚽ Spor',
+        'diger': 'Diğer',
+        // API category display names
+        'kulturel_miras': '🏛️ Kültürel Miras',
+        'dogal_miras': '🍃 Doğal Miras',
+        'macera_spor': '⛰️ Macera & Spor',
+        'konaklama_hizmet': '🏨 Konaklama & Hizmet',
+        'gastronomi': '🍽️ Gastronomi',
+        'seyir_noktalari': '⛰️ Seyir Noktaları',
+        'yasayan_kultur': '🕌 Yaşayan Kültür',
+        'dogal_guzellilk': '🌿 Doğal Güzellik',
+        'yemek_icecek': '🍽️ Yemek & İçecek',
+        'alisveris_el_sanatlari': '🛍️ Alışveriş & El Sanatları',
+        'eglence_aktivite': '🎪 Eğlence & Aktivite',
+        'ulasilabilirlik': '🚗 Ulaşılabilirlik'
+    });
+    
+    Object.assign(fallbackCategoryStyles, {
+        'gastronomik': { color: '#e74c3c' },
+        'kulturel': { color: '#3498db' },
+        'sanatsal': { color: '#2ecc71' },
+        'doga_macera': { color: '#f39c12' },
+        'konaklama': { color: '#9b59b6' },
+        'alisveris': { color: '#f39c12' },
+        'eglence': { color: '#e74c3c' },
+        'spor': { color: '#34495e' },
+        'diger': { color: '#708090' },
+        // API category mappings
+        'kulturel_miras': { color: '#3498db' },
+        'dogal_miras': { color: '#16a085' },
+        'macera_spor': { color: '#e67e22' },
+        'konaklama_hizmet': { color: '#9b59b6' },
+        'gastronomi': { color: '#e74c3c' },
+        'seyir_noktalari': { color: '#2ecc71' },
+        'yasayan_kultur': { color: '#8B4513' },
+        'dogal_guzellilk': { color: '#27ae60' },
+        'yemek_icecek': { color: '#e74c3c' },
+        'alisveris_el_sanatlari': { color: '#f39c12' },
+        'eglence_aktivite': { color: '#e91e63' },
+        'ulasilabilirlik': { color: '#34495e' }
+    });
+    
+    Object.assign(iconMap, {
+        'gastronomik': 'fas fa-utensils',
+        'kulturel': 'fas fa-landmark',
+        'sanatsal': 'fas fa-palette',
+        'doga_macera': 'fas fa-hiking',
+        'konaklama': 'fas fa-bed',
+        'alisveris': 'fas fa-shopping-cart',
+        'eglence': 'fas fa-music',
+        'spor': 'fas fa-dumbbell',
+        'diger': 'fas fa-map-marker-alt',
+        // API category mappings
+        'kulturel_miras': 'fas fa-landmark',
+        'dogal_miras': 'fas fa-leaf',
+        'macera_spor': 'fas fa-hiking',
+        'konaklama_hizmet': 'fas fa-bed',
+        'gastronomi': 'fas fa-utensils',
+        'seyir_noktalari': 'fas fa-mountain',
+        'yasayan_kultur': 'fas fa-mosque',
+        'dogal_guzellilk': 'fas fa-tree',
+        'yemek_icecek': 'fas fa-utensils',
+        'alisveris_el_sanatlari': 'fas fa-shopping-cart',
+        'eglence_aktivite': 'fas fa-music',
+        'ulasilabilirlik': 'fas fa-road'
+    });
+    
+    Object.assign(categoryIconAliases, {
+        'gastronomik': 'gastronomik',
+        'kulturel': 'kulturel',
+        'sanatsal': 'sanatsal',
+        'doga_macera': 'doga_macera',
+        'konaklama': 'konaklama',
+        'alisveris': 'alisveris',
+        'eglence': 'eglence',
+        'spor': 'spor',
+        // API category aliases (self-referencing)
+        'kulturel_miras': 'kulturel_miras',
+        'dogal_miras': 'dogal_miras',
+        'macera_spor': 'macera_spor',
+        'konaklama_hizmet': 'konaklama_hizmet',
+        'gastronomi': 'gastronomi',
+        'seyir_noktalari': 'seyir_noktalari',
+        'yasayan_kultur': 'yasayan_kultur',
+        'dogal_guzellilk': 'dogal_guzellilk',
+        'yemek_icecek': 'yemek_icecek',
+        'alisveris_el_sanatlari': 'alisveris_el_sanatlari',
+        'eglence_aktivite': 'eglence_aktivite',
+        'ulasilabilirlik': 'ulasilabilirlik'
+    });
+    
+    console.log('🗺️ Fallback configuration loaded:', {
+        iconMap: Object.keys(iconMap).length,
+        styles: Object.keys(fallbackCategoryStyles).length,
+        aliases: Object.keys(categoryIconAliases).length
+    });
+}
 
 /**
  * Get category style (color and icon) for POI markers
@@ -620,30 +763,47 @@ const categoryIconAliases = {
  * @returns {object} Style object with color and icon
  */
 function getCategoryStyle(category) {
+    console.log('🔍 getCategoryStyle called with category:', category);
+    
+    // Use centralized category configuration if available and not the same function
+    if (typeof window !== 'undefined' && window.getCategoryStyle && window.getCategoryStyle !== getCategoryStyle) {
+        console.log('✅ Using centralized category configuration');
+        const result = window.getCategoryStyle(category);
+        console.log('🎨 Centralized result:', result);
+        return {
+            color: result.color,
+            iconClass: result.iconClass,
+            category: result.category
+        };
+    }
+    
+    console.log('⚠️ Using fallback category configuration');
+    
+    // Fallback to local configuration
     // Normalize category key
     const normalizedCategory = category ? category.toLowerCase().trim() : 'diger';
+    console.log('🔄 Normalized category:', normalizedCategory);
     
     // Check if it's a rating category that needs alias mapping
     const mappedCategory = categoryIconAliases[normalizedCategory] || normalizedCategory;
+    console.log('🗺️ Mapped category:', mappedCategory);
     
     // Get style from fallback styles
-    const style = fallbackCategoryStyles[mappedCategory] || fallbackCategoryStyles['diger'];
+    const style = fallbackCategoryStyles[mappedCategory] || fallbackCategoryStyles['diger'] || { color: '#708090' };
+    console.log('🎨 Fallback style:', style);
     
     // Get Font Awesome icon class
-    const iconClass = iconMap[mappedCategory] || iconMap['diger'];
+    const iconClass = iconMap[mappedCategory] || iconMap['diger'] || 'fas fa-map-marker-alt';
+    console.log('🏷️ Icon class:', iconClass);
     
-    // Debug logging for undefined iconClass
-    if (!iconClass) {
-        console.warn('⚠️ iconClass is undefined for category:', category, 'normalized:', normalizedCategory, 'mapped:', mappedCategory);
-        console.warn('📋 Available iconMap keys:', Object.keys(iconMap));
-        console.warn('📋 categoryIconAliases:', categoryIconAliases);
-    }
-    
-    return {
+    const result = {
         color: style.color,
-        iconClass: iconClass || 'fas fa-map-marker-alt', // Fallback icon
+        iconClass: iconClass,
         category: mappedCategory
     };
+    
+    console.log('🎯 Final getCategoryStyle result:', result);
+    return result;
 }
 
 /**
@@ -652,6 +812,12 @@ function getCategoryStyle(category) {
  * @returns {string} Display name
  */
 function getCategoryDisplayName(category) {
+    // Use centralized category configuration if available and not the same function
+    if (typeof window !== 'undefined' && window.getCategoryDisplayName && window.getCategoryDisplayName !== getCategoryDisplayName) {
+        return window.getCategoryDisplayName(category);
+    }
+    
+    // Fallback to local configuration
     const normalizedCategory = category ? category.toLowerCase().trim() : 'diger';
     const mappedCategory = categoryIconAliases[normalizedCategory] || normalizedCategory;
     
@@ -673,11 +839,21 @@ function getCategoryDisplayName(category) {
  * @returns {L.Marker} Leaflet marker
  */
 function createCategoryMarker(lat, lng, poi, index = 0) {
+    console.log('🏷️ Creating marker for POI:', poi.name, 'Category:', poi.category);
+    
     const categoryStyle = getCategoryStyle(poi.category || 'diger');
+    console.log('🎨 Category style for', poi.category, ':', categoryStyle);
     
     // Create custom marker with poi_manager_enhanced styling: EXACT same approach
     const categoryColor = categoryStyle.color;
     const categoryIcon = categoryStyle.iconClass.replace('fas fa-', ''); // Remove fas fa- prefix
+    
+    console.log('🔍 Final marker styling:', {
+        category: poi.category,
+        color: categoryColor,
+        icon: categoryIcon,
+        fullIconClass: categoryStyle.iconClass
+    });
     
     const marker = L.marker([lat, lng], {
         icon: L.divIcon({

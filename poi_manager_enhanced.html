@@ -1987,6 +1987,7 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="static/js/map-layer-control.js"></script>
     <script src="static/js/rate-limiter.js"></script>
+    <script src="static/js/poi-categories.js"></script>
     <script>
         // Rate limiting bilgilendirme mesajı
         if (window.rateLimiter) {
@@ -2086,6 +2087,12 @@
             }
 
             getFallbackCategories() {
+                // Use centralized category configuration if available
+                if (typeof window !== 'undefined' && window.getFallbackCategories) {
+                    return window.getFallbackCategories();
+                }
+                
+                // Fallback to local categories
                 return [
                     { "name": "gastronomik", "display_name": "🍽️ Gastronomik", "color": "#e74c3c", "icon": "utensils" },
                     { "name": "kulturel", "display_name": "🏛️ Kültürel", "color": "#3498db", "icon": "landmark" },
@@ -2096,6 +2103,19 @@
                     { "name": "eglence", "display_name": "🎪 Eğlence", "color": "#e74c3c", "icon": "music" },
                     { "name": "spor", "display_name": "⚽ Spor", "color": "#34495e", "icon": "dumbbell" }
                 ];
+            }
+
+            // Helper function to get category by name using centralized config
+            getCategoryByName(categoryName) {
+                if (typeof window !== 'undefined' && window.getCategoryByName) {
+                    return window.getCategoryByName(categoryName);
+                }
+                
+                // Fallback to local search
+                return this.categories.find(cat => 
+                    cat.name === categoryName || 
+                    (cat.aliases && cat.aliases.includes(categoryName))
+                );
             }
 
             async loadPOIs() {
