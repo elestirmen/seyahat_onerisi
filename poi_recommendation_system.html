@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https://*; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self';">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https://*; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self';">
     <title>Ürgüp POI Önerileri - Size Özel Yerler Keşfedin</title>
     <!-- Design System CSS -->
     <link rel="stylesheet" href="static/css/design-tokens.css">
@@ -43,28 +44,744 @@
         .media-marker.model_3d {
             background: #6366f1;
         }
+
+        /* Mobile View Toggle Styles */
+        .mobile-view-toggle {
+            display: none;
+            margin-bottom: 20px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+        }
+
+        .view-toggle-buttons {
+            display: flex;
+            gap: 4px;
+        }
+
+        .view-toggle-btn {
+            flex: 1;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #718096;
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+
+        .view-toggle-btn.active {
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(45, 55, 72, 0.3);
+        }
+
+        .view-toggle-btn:not(.active):hover {
+            background: rgba(45, 55, 72, 0.05);
+            color: var(--text-color);
+        }
+
+        .view-toggle-btn i {
+            font-size: 1.1rem;
+        }
+
+        /* Enhanced Routes Map Container */
+        .routes-map-container {
+            position: relative;
+            background: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+            min-height: 500px;
+        }
+
+        .predefined-map-container {
+            position: relative;
+            height: 500px;
+            width: 100%;
+        }
+
+        .predefined-routes-map {
+            height: 100%;
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .routes-list-view {
+            padding: 20px;
+        }
+
+        /* Map Controls Enhancement */
+        .map-controls {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 1000;
+        }
+
+        .map-control-btn {
+            width: 44px;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            color: #2d3748;
+            font-size: 16px;
+            touch-action: manipulation;
+        }
+
+        .map-control-btn:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .back-to-list-btn {
+            display: none;
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            color: white;
+            border: none;
+        }
+
+        .back-to-list-btn:hover {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .mobile-view-toggle {
+                display: block;
+            }
+
+            /* Improve container padding for mobile */
+            .container {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .content {
+                padding: 20px 16px;
+            }
+
+            /* Better header for mobile */
+            .header {
+                padding: 24px 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            /* Improve preferences section for mobile */
+            .preferences-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .preference-item {
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 16px;
+                padding: 20px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                transition: all 0.3s ease;
+            }
+
+            .preference-item:active {
+                transform: scale(0.98);
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            .preference-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 16px;
+            }
+
+            .preference-icon {
+                width: 44px;
+                height: 44px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+                color: white;
+                font-size: 1.2rem;
+                flex-shrink: 0;
+            }
+
+            .preference-info {
+                flex: 1;
+                margin-left: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .preference-title {
+                font-size: 1.1rem;
+                font-weight: 700;
+                color: var(--text-color);
+                line-height: 1.2;
+            }
+
+            .preference-value {
+                font-size: 0.9rem;
+                color: #718096;
+                font-weight: 600;
+            }
+
+            .preference-slider-container {
+                position: relative;
+            }
+
+            .preference-slider {
+                width: 100%;
+                height: 8px;
+                border-radius: 4px;
+                background: #e2e8f0;
+                outline: none;
+                -webkit-appearance: none;
+                appearance: none;
+                cursor: pointer;
+                touch-action: pan-x;
+            }
+
+            .preference-slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+                cursor: pointer;
+                border: 3px solid white;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+                transition: all 0.3s ease;
+            }
+
+            .preference-slider::-webkit-slider-thumb:active {
+                transform: scale(1.2);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            }
+
+            .preference-slider::-moz-range-thumb {
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+                cursor: pointer;
+                border: 3px solid white;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+                transition: all 0.3s ease;
+            }
+
+            .slider-track-labels {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 8px;
+                padding: 0 12px;
+            }
+
+            .track-label {
+                font-size: 0.7rem;
+                color: #a0aec0;
+                text-align: center;
+                flex: 1;
+                line-height: 1.2;
+            }
+
+            /* Quick selection buttons mobile optimization */
+            .quick-selection-section {
+                margin-top: 24px;
+                padding-top: 24px;
+                border-top: 1px solid #e2e8f0;
+            }
+
+            .quick-selection-title {
+                font-size: 1.1rem;
+                font-weight: 700;
+                color: var(--text-color);
+                margin-bottom: 16px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .quick-selection-buttons {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .quick-btn {
+                padding: 16px 12px;
+                background: #ffffff;
+                border: 2px solid #e2e8f0;
+                border-radius: 12px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: #718096;
+                min-height: 80px;
+                touch-action: manipulation;
+            }
+
+            .quick-btn:active {
+                transform: scale(0.95);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .quick-btn:hover,
+            .quick-btn.active {
+                background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+                color: white;
+                border-color: var(--primary-color);
+                box-shadow: 0 4px 12px rgba(45, 55, 72, 0.3);
+            }
+
+            .quick-btn i {
+                font-size: 1.2rem;
+            }
+
+            /* Recommend button mobile optimization */
+            .recommend-btn {
+                width: 100%;
+                padding: 18px 24px;
+                font-size: 1.1rem;
+                margin: 32px 0;
+                border-radius: 16px;
+            }
+
+            .routes-map-container {
+                min-height: 400px;
+            }
+
+            .predefined-map-container {
+                height: 400px;
+                display: none;
+            }
+
+            .predefined-map-container.active {
+                display: block;
+            }
+
+            .routes-list-view {
+                display: block;
+            }
+
+            .routes-list-view.hidden {
+                display: none;
+            }
+
+            .back-to-list-btn {
+                display: flex;
+            }
+
+            /* Enhanced Route Cards for Mobile */
+            .route-card {
+                margin-bottom: 16px;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+                border: 1px solid #e2e8f0;
+                background: #ffffff;
+                transition: all 0.3s ease;
+                touch-action: manipulation;
+            }
+
+            .route-card:active {
+                transform: scale(0.98);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .route-card-content {
+                padding: 16px;
+            }
+
+            .route-card-header {
+                margin-bottom: 12px;
+            }
+
+            .route-card-title {
+                font-size: 1.1rem;
+                font-weight: 700;
+                color: var(--text-color);
+                margin: 0 0 8px 0;
+                line-height: 1.3;
+            }
+
+            .route-card-description {
+                font-size: 0.9rem;
+                color: #666;
+                margin: 0;
+                line-height: 1.4;
+            }
+
+            .route-card-meta {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                align-items: center;
+            }
+
+            .route-meta-item {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 0.85rem;
+                color: #718096;
+                background: #f8f9fa;
+                padding: 6px 10px;
+                border-radius: 8px;
+                border: 1px solid #e2e8f0;
+            }
+
+            .route-meta-item i {
+                font-size: 0.8rem;
+                color: var(--primary-color);
+            }
+
+            .route-card-actions {
+                display: flex;
+                justify-content: space-around;
+                padding: 12px 16px;
+                background: #f8f9fa;
+                border-top: 1px solid #e2e8f0;
+            }
+
+            .route-quick-action {
+                width: 44px;
+                height: 44px;
+                border: none;
+                border-radius: 12px;
+                background: transparent;
+                color: #718096;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.1rem;
+                touch-action: manipulation;
+            }
+
+            .route-quick-action:hover,
+            .route-quick-action:active {
+                background: rgba(45, 55, 72, 0.1);
+                color: var(--primary-color);
+                transform: scale(1.05);
+            }
+
+            .route-quick-action.favorite.active {
+                color: #e53e3e;
+                background: rgba(229, 62, 62, 0.1);
+            }
+
+            /* Filter Panel Mobile Optimization */
+            .route-filters-enhanced {
+                margin-bottom: 20px;
+            }
+
+            .mobile-filter-panel {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: #ffffff;
+                border-radius: 20px 20px 0 0;
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+                z-index: 10000;
+                transform: translateY(100%);
+                transition: transform 0.3s ease;
+                max-height: 70vh;
+                overflow: hidden;
+            }
+
+            .mobile-filter-panel.active {
+                transform: translateY(0);
+            }
+
+            .mobile-filter-handle {
+                padding: 12px;
+                display: flex;
+                justify-content: center;
+                cursor: pointer;
+            }
+
+            .filter-handle-bar {
+                width: 40px;
+                height: 4px;
+                background: #cbd5e0;
+                border-radius: 2px;
+            }
+
+            .mobile-filter-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px 20px;
+                border-bottom: 1px solid #e2e8f0;
+            }
+
+            .mobile-filter-title {
+                font-size: 1.2rem;
+                font-weight: 700;
+                color: var(--text-color);
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .mobile-filter-close {
+                width: 36px;
+                height: 36px;
+                border: none;
+                background: #f8f9fa;
+                border-radius: 8px;
+                color: #718096;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.3s ease;
+            }
+
+            .mobile-filter-close:hover {
+                background: #e2e8f0;
+                color: var(--text-color);
+            }
+
+            .mobile-filter-body {
+                padding: 20px;
+                max-height: calc(70vh - 120px);
+                overflow-y: auto;
+            }
+
+            .filters-open-btn {
+                display: block;
+                width: 100%;
+                padding: 12px 20px;
+                background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+                color: white;
+                border: none;
+                border-radius: 12px;
+                font-size: 1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                margin-bottom: 20px;
+                touch-action: manipulation;
+            }
+
+            .filters-open-btn:hover {
+                background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(45, 55, 72, 0.3);
+            }
+
+            .route-filters-enhanced .filters-content {
+                display: none;
+            }
+
+            /* Filter Chips Mobile Optimization */
+            .filter-chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-bottom: 16px;
+            }
+
+            .filter-chip {
+                padding: 8px 12px;
+                border: 2px solid #e2e8f0;
+                border-radius: 20px;
+                background: #ffffff;
+                color: #718096;
+                font-size: 0.85rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                min-height: 36px;
+                touch-action: manipulation;
+            }
+
+            .filter-chip.active {
+                background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+                color: white;
+                border-color: var(--primary-color);
+                box-shadow: 0 2px 8px rgba(45, 55, 72, 0.3);
+            }
+
+            .filter-chip:not(.active):hover {
+                border-color: #cbd5e0;
+                background: #f8f9fa;
+            }
+
+            .filter-chip i {
+                font-size: 0.8rem;
+            }
+
+            /* Quick Stats Mobile */
+            .routes-quick-stats {
+                display: flex;
+                gap: 12px;
+                margin-bottom: 20px;
+                overflow-x: auto;
+                padding-bottom: 4px;
+            }
+
+            .quick-stat-item {
+                flex-shrink: 0;
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                padding: 12px 16px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                min-width: 120px;
+            }
+
+            .stat-icon {
+                width: 32px;
+                height: 32px;
+                background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 0.9rem;
+            }
+
+            .stat-content {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .stat-number {
+                font-size: 1.1rem;
+                font-weight: 700;
+                color: var(--text-color);
+                line-height: 1;
+            }
+
+            .stat-label {
+                font-size: 0.75rem;
+                color: #718096;
+                line-height: 1;
+            }
+        }
+
+        /* Tablet Responsive Styles */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .routes-map-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                min-height: 600px;
+            }
+
+            .predefined-map-container {
+                height: 600px;
+            }
+
+            .routes-list-view {
+                max-height: 600px;
+                overflow-y: auto;
+            }
+        }
+
+        /* Desktop Styles */
+        @media (min-width: 1025px) {
+            .routes-map-container {
+                display: grid;
+                grid-template-columns: 2fr 1fr;
+                gap: 24px;
+                min-height: 700px;
+            }
+
+            .predefined-map-container {
+                height: 700px;
+            }
+
+            .routes-list-view {
+                max-height: 700px;
+                overflow-y: auto;
+                padding: 24px;
+            }
+
+            .route-card {
+                margin-bottom: 20px;
+                transition: all 0.3s ease;
+            }
+
+            .route-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+            }
+        }
     </style>
-    
+
     <!-- External Dependencies -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-    
+
     <!-- Touch Optimizations -->
     <script src="static/js/touch-optimizations.js"></script>
-    
+
     <!-- UX Enhancement Manager -->
     <script src="static/js/ux-enhancement-manager.js" defer></script>
-    
+
     <!-- Loading and Performance -->
     <script src="static/js/loading-performance.js" defer></script>
-    
+
     <!-- Performance Optimizations -->
     <link rel="stylesheet" href="static/css/performance-optimizations.css">
     <script src="static/js/performance-optimizations.js" defer></script>
-    
+
     <!-- Mobile Optimizations -->
     <script src="static/js/mobile-optimizations.js" defer></script>
 </head>
@@ -105,274 +822,278 @@
                         arasından seçim yapın.
                     </p>
 
-                <div class="preferences-container">
-                    <!-- Mobile-optimized preference sliders -->
-                    <div class="preferences-grid">
-                        <div class="preference-item" data-category="doga">
-                            <div class="preference-header">
-                                <div class="preference-icon">
-                                    <i class="fas fa-tree"></i>
+                    <div class="preferences-container">
+                        <!-- Mobile-optimized preference sliders -->
+                        <div class="preferences-grid" role="group" aria-label="Tercih ayarları">
+                            <div class="preference-item" data-category="doga">
+                                <div class="preference-header">
+                                    <div class="preference-icon">
+                                        <i class="fas fa-tree"></i>
+                                    </div>
+                                    <div class="preference-info">
+                                        <span class="preference-title">Doğa</span>
+                                        <span class="preference-value" id="doga-value">İlgilenmiyorum</span>
+                                    </div>
                                 </div>
-                                <div class="preference-info">
-                                    <span class="preference-title">Doğa</span>
-                                    <span class="preference-value" id="doga-value">İlgilenmiyorum</span>
+                                <div class="preference-slider-container">
+                                    <input type="range" min="0" max="4" value="0" step="1" class="preference-slider"
+                                        id="doga" aria-label="Doğa kategorisi ilgi seviyesi" touch-action="pan-x">
+                                    <div class="slider-track-labels">
+                                        <span class="track-label">İlgim yok</span>
+                                        <span class="track-label">Az ilgim var</span>
+                                        <span class="track-label">İlgim var</span>
+                                        <span class="track-label">Çok ilgim var</span>
+                                        <span class="track-label">Kesinlikle</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="preference-slider-container">
-                                <input type="range" min="0" max="4" value="0" step="1" 
-                                       class="preference-slider" id="doga">
-                                <div class="slider-track-labels">
-                                    <span class="track-label">İlgim yok</span>
-                                    <span class="track-label">Az ilgim var</span>
-                                    <span class="track-label">İlgim var</span>
-                                    <span class="track-label">Çok ilgim var</span>
-                                    <span class="track-label">Kesinlikle</span>
+
+                            <div class="preference-item" data-category="yemek">
+                                <div class="preference-header">
+                                    <div class="preference-icon">
+                                        <i class="fas fa-utensils"></i>
+                                    </div>
+                                    <div class="preference-info">
+                                        <span class="preference-title">Yemek</span>
+                                        <span class="preference-value" id="yemek-value">İlgilenmiyorum</span>
+                                    </div>
+                                </div>
+                                <div class="preference-slider-container">
+                                    <input type="range" min="0" max="4" value="0" step="1" class="preference-slider"
+                                        id="yemek" aria-label="Yemek kategorisi ilgi seviyesi" touch-action="pan-x">
+                                    <div class="slider-track-labels">
+                                        <span class="track-label">İlgim yok</span>
+                                        <span class="track-label">Az ilgim var</span>
+                                        <span class="track-label">İlgim var</span>
+                                        <span class="track-label">Çok ilgim var</span>
+                                        <span class="track-label">Kesinlikle</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="preference-item" data-category="tarihi">
+                                <div class="preference-header">
+                                    <div class="preference-icon">
+                                        <i class="fas fa-landmark"></i>
+                                    </div>
+                                    <div class="preference-info">
+                                        <span class="preference-title">Tarih</span>
+                                        <span class="preference-value" id="tarihi-value">İlgilenmiyorum</span>
+                                    </div>
+                                </div>
+                                <div class="preference-slider-container">
+                                    <input type="range" min="0" max="4" value="0" step="1" class="preference-slider"
+                                        id="tarihi" aria-label="Tarih kategorisi ilgi seviyesi" touch-action="pan-x">
+                                    <div class="slider-track-labels">
+                                        <span class="track-label">İlgim yok</span>
+                                        <span class="track-label">Az ilgim var</span>
+                                        <span class="track-label">İlgim var</span>
+                                        <span class="track-label">Çok ilgim var</span>
+                                        <span class="track-label">Kesinlikle</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="preference-item" data-category="eglence">
+                                <div class="preference-header">
+                                    <div class="preference-icon">
+                                        <i class="fas fa-gamepad"></i>
+                                    </div>
+                                    <div class="preference-info">
+                                        <span class="preference-title">Eğlence</span>
+                                        <span class="preference-value" id="eglence-value">İlgilenmiyorum</span>
+                                    </div>
+                                </div>
+                                <div class="preference-slider-container">
+                                    <input type="range" min="0" max="4" value="0" step="1" class="preference-slider"
+                                        id="eglence" aria-label="Eğlence kategorisi ilgi seviyesi" touch-action="pan-x">
+                                    <div class="slider-track-labels">
+                                        <span class="track-label">İlgim yok</span>
+                                        <span class="track-label">Az ilgim var</span>
+                                        <span class="track-label">İlgim var</span>
+                                        <span class="track-label">Çok ilgim var</span>
+                                        <span class="track-label">Kesinlikle</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="preference-item" data-category="sanat_kultur">
+                                <div class="preference-header">
+                                    <div class="preference-icon">
+                                        <i class="fas fa-palette"></i>
+                                    </div>
+                                    <div class="preference-info">
+                                        <span class="preference-title">Sanat & Kültür</span>
+                                        <span class="preference-value" id="sanat_kultur-value">İlgilenmiyorum</span>
+                                    </div>
+                                </div>
+                                <div class="preference-slider-container">
+                                    <input type="range" min="0" max="4" value="0" step="1" class="preference-slider"
+                                        id="sanat_kultur" aria-label="Sanat ve kültür kategorisi ilgi seviyesi"
+                                        touch-action="pan-x">
+                                    <div class="slider-track-labels">
+                                        <span class="track-label">İlgim yok</span>
+                                        <span class="track-label">Az ilgim var</span>
+                                        <span class="track-label">İlgim var</span>
+                                        <span class="track-label">Çok ilgim var</span>
+                                        <span class="track-label">Kesinlikle</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="preference-item" data-category="macera">
+                                <div class="preference-header">
+                                    <div class="preference-icon">
+                                        <i class="fas fa-mountain"></i>
+                                    </div>
+                                    <div class="preference-info">
+                                        <span class="preference-title">Macera</span>
+                                        <span class="preference-value" id="macera-value">İlgilenmiyorum</span>
+                                    </div>
+                                </div>
+                                <div class="preference-slider-container">
+                                    <input type="range" min="0" max="4" value="0" step="1" class="preference-slider"
+                                        id="macera" aria-label="Macera kategorisi ilgi seviyesi" touch-action="pan-x">
+                                    <div class="slider-track-labels">
+                                        <span class="track-label">İlgim yok</span>
+                                        <span class="track-label">Az ilgim var</span>
+                                        <span class="track-label">İlgim var</span>
+                                        <span class="track-label">Çok ilgim var</span>
+                                        <span class="track-label">Kesinlikle</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="preference-item" data-category="rahatlatici">
+                                <div class="preference-header">
+                                    <div class="preference-icon">
+                                        <i class="fas fa-spa"></i>
+                                    </div>
+                                    <div class="preference-info">
+                                        <span class="preference-title">Rahatlatıcı</span>
+                                        <span class="preference-value" id="rahatlatici-value">İlgilenmiyorum</span>
+                                    </div>
+                                </div>
+                                <div class="preference-slider-container">
+                                    <input type="range" min="0" max="4" value="0" step="1" class="preference-slider"
+                                        id="rahatlatici" aria-label="Rahatlatıcı kategorisi ilgi seviyesi"
+                                        touch-action="pan-x">
+                                    <div class="slider-track-labels">
+                                        <span class="track-label">İlgim yok</span>
+                                        <span class="track-label">Az ilgim var</span>
+                                        <span class="track-label">İlgim var</span>
+                                        <span class="track-label">Çok ilgim var</span>
+                                        <span class="track-label">Kesinlikle</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="preference-item" data-category="spor">
+                                <div class="preference-header">
+                                    <div class="preference-icon">
+                                        <i class="fas fa-running"></i>
+                                    </div>
+                                    <div class="preference-info">
+                                        <span class="preference-title">Spor</span>
+                                        <span class="preference-value" id="spor-value">İlgilenmiyorum</span>
+                                    </div>
+                                </div>
+                                <div class="preference-slider-container">
+                                    <input type="range" min="0" max="4" value="0" step="1" class="preference-slider"
+                                        id="spor" aria-label="Spor kategorisi ilgi seviyesi" touch-action="pan-x">
+                                    <div class="slider-track-labels">
+                                        <span class="track-label">İlgim yok</span>
+                                        <span class="track-label">Az ilgim var</span>
+                                        <span class="track-label">İlgim var</span>
+                                        <span class="track-label">Çok ilgim var</span>
+                                        <span class="track-label">Kesinlikle</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="preference-item" data-category="alisveris">
+                                <div class="preference-header">
+                                    <div class="preference-icon">
+                                        <i class="fas fa-shopping-bag"></i>
+                                    </div>
+                                    <div class="preference-info">
+                                        <span class="preference-title">Alışveriş</span>
+                                        <span class="preference-value" id="alisveris-value">İlgilenmiyorum</span>
+                                    </div>
+                                </div>
+                                <div class="preference-slider-container">
+                                    <input type="range" min="0" max="4" value="0" step="1" class="preference-slider"
+                                        id="alisveris" aria-label="Alışveriş kategorisi ilgi seviyesi"
+                                        touch-action="pan-x">
+                                    <div class="slider-track-labels">
+                                        <span class="track-label">İlgim yok</span>
+                                        <span class="track-label">Az ilgim var</span>
+                                        <span class="track-label">İlgim var</span>
+                                        <span class="track-label">Çok ilgim var</span>
+                                        <span class="track-label">Kesinlikle</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="preference-item" data-category="gece_hayati">
+                                <div class="preference-header">
+                                    <div class="preference-icon">
+                                        <i class="fas fa-moon"></i>
+                                    </div>
+                                    <div class="preference-info">
+                                        <span class="preference-title">Gece Hayatı</span>
+                                        <span class="preference-value" id="gece_hayati-value">İlgilenmiyorum</span>
+                                    </div>
+                                </div>
+                                <div class="preference-slider-container">
+                                    <input type="range" min="0" max="4" value="0" step="1" class="preference-slider"
+                                        id="gece_hayati" aria-label="Gece hayatı kategorisi ilgi seviyesi"
+                                        touch-action="pan-x">
+                                    <div class="slider-track-labels">
+                                        <span class="track-label">İlgim yok</span>
+                                        <span class="track-label">Az ilgim var</span>
+                                        <span class="track-label">İlgim var</span>
+                                        <span class="track-label">Çok ilgim var</span>
+                                        <span class="track-label">Kesinlikle</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="preference-item" data-category="yemek">
-                            <div class="preference-header">
-                                <div class="preference-icon">
+                        <!-- Quick Selection Buttons -->
+                        <div class="quick-selection-section">
+                            <h3 class="quick-selection-title">
+                                <i class="fas fa-magic"></i>
+                                Hızlı Seçim
+                            </h3>
+                            <div class="quick-selection-buttons">
+                                <button class="quick-btn" data-preset="nature-lover">
+                                    <i class="fas fa-leaf"></i>
+                                    <span>Doğa Sever</span>
+                                </button>
+                                <button class="quick-btn" data-preset="culture-enthusiast">
+                                    <i class="fas fa-university"></i>
+                                    <span>Kültür Meraklısı</span>
+                                </button>
+                                <button class="quick-btn" data-preset="foodie">
                                     <i class="fas fa-utensils"></i>
-                                </div>
-                                <div class="preference-info">
-                                    <span class="preference-title">Yemek</span>
-                                    <span class="preference-value" id="yemek-value">İlgilenmiyorum</span>
-                                </div>
-                            </div>
-                            <div class="preference-slider-container">
-                                <input type="range" min="0" max="4" value="0" step="1" 
-                                       class="preference-slider" id="yemek">
-                                <div class="slider-track-labels">
-                                    <span class="track-label">İlgim yok</span>
-                                    <span class="track-label">Az ilgim var</span>
-                                    <span class="track-label">İlgim var</span>
-                                    <span class="track-label">Çok ilgim var</span>
-                                    <span class="track-label">Kesinlikle</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="preference-item" data-category="tarihi">
-                            <div class="preference-header">
-                                <div class="preference-icon">
-                                    <i class="fas fa-landmark"></i>
-                                </div>
-                                <div class="preference-info">
-                                    <span class="preference-title">Tarih</span>
-                                    <span class="preference-value" id="tarihi-value">İlgilenmiyorum</span>
-                                </div>
-                            </div>
-                            <div class="preference-slider-container">
-                                <input type="range" min="0" max="4" value="0" step="1" 
-                                       class="preference-slider" id="tarihi">
-                                <div class="slider-track-labels">
-                                    <span class="track-label">İlgim yok</span>
-                                    <span class="track-label">Az ilgim var</span>
-                                    <span class="track-label">İlgim var</span>
-                                    <span class="track-label">Çok ilgim var</span>
-                                    <span class="track-label">Kesinlikle</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="preference-item" data-category="eglence">
-                            <div class="preference-header">
-                                <div class="preference-icon">
-                                    <i class="fas fa-gamepad"></i>
-                                </div>
-                                <div class="preference-info">
-                                    <span class="preference-title">Eğlence</span>
-                                    <span class="preference-value" id="eglence-value">İlgilenmiyorum</span>
-                                </div>
-                            </div>
-                            <div class="preference-slider-container">
-                                <input type="range" min="0" max="4" value="0" step="1" 
-                                       class="preference-slider" id="eglence">
-                                <div class="slider-track-labels">
-                                    <span class="track-label">İlgim yok</span>
-                                    <span class="track-label">Az ilgim var</span>
-                                    <span class="track-label">İlgim var</span>
-                                    <span class="track-label">Çok ilgim var</span>
-                                    <span class="track-label">Kesinlikle</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="preference-item" data-category="sanat_kultur">
-                            <div class="preference-header">
-                                <div class="preference-icon">
-                                    <i class="fas fa-palette"></i>
-                                </div>
-                                <div class="preference-info">
-                                    <span class="preference-title">Sanat & Kültür</span>
-                                    <span class="preference-value" id="sanat_kultur-value">İlgilenmiyorum</span>
-                                </div>
-                            </div>
-                            <div class="preference-slider-container">
-                                <input type="range" min="0" max="4" value="0" step="1" 
-                                       class="preference-slider" id="sanat_kultur">
-                                <div class="slider-track-labels">
-                                    <span class="track-label">İlgim yok</span>
-                                    <span class="track-label">Az ilgim var</span>
-                                    <span class="track-label">İlgim var</span>
-                                    <span class="track-label">Çok ilgim var</span>
-                                    <span class="track-label">Kesinlikle</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="preference-item" data-category="macera">
-                            <div class="preference-header">
-                                <div class="preference-icon">
+                                    <span>Lezzet Avcısı</span>
+                                </button>
+                                <button class="quick-btn" data-preset="adventure-seeker">
                                     <i class="fas fa-mountain"></i>
-                                </div>
-                                <div class="preference-info">
-                                    <span class="preference-title">Macera</span>
-                                    <span class="preference-value" id="macera-value">İlgilenmiyorum</span>
-                                </div>
-                            </div>
-                            <div class="preference-slider-container">
-                                <input type="range" min="0" max="4" value="0" step="1" 
-                                       class="preference-slider" id="macera">
-                                <div class="slider-track-labels">
-                                    <span class="track-label">İlgim yok</span>
-                                    <span class="track-label">Az ilgim var</span>
-                                    <span class="track-label">İlgim var</span>
-                                    <span class="track-label">Çok ilgim var</span>
-                                    <span class="track-label">Kesinlikle</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="preference-item" data-category="rahatlatici">
-                            <div class="preference-header">
-                                <div class="preference-icon">
+                                    <span>Macera Arayan</span>
+                                </button>
+                                <button class="quick-btn" data-preset="relaxation">
                                     <i class="fas fa-spa"></i>
-                                </div>
-                                <div class="preference-info">
-                                    <span class="preference-title">Rahatlatıcı</span>
-                                    <span class="preference-value" id="rahatlatici-value">İlgilenmiyorum</span>
-                                </div>
-                            </div>
-                            <div class="preference-slider-container">
-                                <input type="range" min="0" max="4" value="0" step="1" 
-                                       class="preference-slider" id="rahatlatici">
-                                <div class="slider-track-labels">
-                                    <span class="track-label">İlgim yok</span>
-                                    <span class="track-label">Az ilgim var</span>
-                                    <span class="track-label">İlgim var</span>
-                                    <span class="track-label">Çok ilgim var</span>
-                                    <span class="track-label">Kesinlikle</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="preference-item" data-category="spor">
-                            <div class="preference-header">
-                                <div class="preference-icon">
-                                    <i class="fas fa-running"></i>
-                                </div>
-                                <div class="preference-info">
-                                    <span class="preference-title">Spor</span>
-                                    <span class="preference-value" id="spor-value">İlgilenmiyorum</span>
-                                </div>
-                            </div>
-                            <div class="preference-slider-container">
-                                <input type="range" min="0" max="4" value="0" step="1" 
-                                       class="preference-slider" id="spor">
-                                <div class="slider-track-labels">
-                                    <span class="track-label">İlgim yok</span>
-                                    <span class="track-label">Az ilgim var</span>
-                                    <span class="track-label">İlgim var</span>
-                                    <span class="track-label">Çok ilgim var</span>
-                                    <span class="track-label">Kesinlikle</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="preference-item" data-category="alisveris">
-                            <div class="preference-header">
-                                <div class="preference-icon">
-                                    <i class="fas fa-shopping-bag"></i>
-                                </div>
-                                <div class="preference-info">
-                                    <span class="preference-title">Alışveriş</span>
-                                    <span class="preference-value" id="alisveris-value">İlgilenmiyorum</span>
-                                </div>
-                            </div>
-                            <div class="preference-slider-container">
-                                <input type="range" min="0" max="4" value="0" step="1" 
-                                       class="preference-slider" id="alisveris">
-                                <div class="slider-track-labels">
-                                    <span class="track-label">İlgim yok</span>
-                                    <span class="track-label">Az ilgim var</span>
-                                    <span class="track-label">İlgim var</span>
-                                    <span class="track-label">Çok ilgim var</span>
-                                    <span class="track-label">Kesinlikle</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="preference-item" data-category="gece_hayati">
-                            <div class="preference-header">
-                                <div class="preference-icon">
-                                    <i class="fas fa-moon"></i>
-                                </div>
-                                <div class="preference-info">
-                                    <span class="preference-title">Gece Hayatı</span>
-                                    <span class="preference-value" id="gece_hayati-value">İlgilenmiyorum</span>
-                                </div>
-                            </div>
-                            <div class="preference-slider-container">
-                                <input type="range" min="0" max="4" value="0" step="1" 
-                                       class="preference-slider" id="gece_hayati">
-                                <div class="slider-track-labels">
-                                    <span class="track-label">İlgim yok</span>
-                                    <span class="track-label">Az ilgim var</span>
-                                    <span class="track-label">İlgim var</span>
-                                    <span class="track-label">Çok ilgim var</span>
-                                    <span class="track-label">Kesinlikle</span>
-                                </div>
+                                    <span>Dinlenmek İsteyen</span>
+                                </button>
+                                <button class="quick-btn" data-preset="reset">
+                                    <i class="fas fa-undo"></i>
+                                    <span>Sıfırla</span>
+                                </button>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Quick Selection Buttons -->
-                    <div class="quick-selection-section">
-                        <h3 class="quick-selection-title">
-                            <i class="fas fa-magic"></i>
-                            Hızlı Seçim
-                        </h3>
-                        <div class="quick-selection-buttons">
-                            <button class="quick-btn" data-preset="nature-lover">
-                                <i class="fas fa-leaf"></i>
-                                <span>Doğa Sever</span>
-                            </button>
-                            <button class="quick-btn" data-preset="culture-enthusiast">
-                                <i class="fas fa-university"></i>
-                                <span>Kültür Meraklısı</span>
-                            </button>
-                            <button class="quick-btn" data-preset="foodie">
-                                <i class="fas fa-utensils"></i>
-                                <span>Lezzet Avcısı</span>
-                            </button>
-                            <button class="quick-btn" data-preset="adventure-seeker">
-                                <i class="fas fa-mountain"></i>
-                                <span>Macera Arayan</span>
-                            </button>
-                            <button class="quick-btn" data-preset="relaxation">
-                                <i class="fas fa-spa"></i>
-                                <span>Dinlenmek İsteyen</span>
-                            </button>
-                            <button class="quick-btn" data-preset="reset">
-                                <i class="fas fa-undo"></i>
-                                <span>Sıfırla</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
 
                     <button class="recommend-btn" id="recommendBtn">
                         <i class="fas fa-magic btn-icon"></i>
@@ -380,338 +1101,363 @@
                     </button>
                 </div>
 
-                    <div class="results-section" id="resultsSection">
-                        <h2 class="section-title">
-                            <i class="fas fa-star"></i>
-                            Size Özel Öneriler
-                        </h2>
+                <div class="results-section" id="resultsSection">
+                    <h2 class="section-title">
+                        <i class="fas fa-star"></i>
+                        Size Özel Öneriler
+                    </h2>
 
-                        <div id="loadingIndicator" class="loading">
-                            <div class="loading__spinner"></div>
-                            <p class="loading__text">Öneriler hazırlanıyor...</p>
-                        </div>
-
-                        <div id="recommendationResults"></div>
-
-                        <div id="mapSection" style="display: none; margin-top: 30px;">
-                            <h3 class="section-title">
-                                <i class="fas fa-map-marked-alt"></i>
-                                Öneriler Haritası
-                            </h3>
-                            <p style="color: #666; font-size: 1rem; margin-bottom: 20px; text-align: center; line-height: 1.6;">
-                                Önerilen yerleri harita üzerinde görün ve detaylarına ulaşın. Marker'lara tıklayarak daha fazla bilgi alabilirsiniz.
-                            </p>
-                            <div id="mapContainer" class="map-container-enhanced"></div>
-                            <!-- Elevation Chart Container -->
-                            <div id="elevationChartContainer" class="elevation-chart-hidden"></div>
-                        </div>
-
-                        <div id="routeSection" style="display: none; margin-top: 30px;">
-                            <h3 class="section-title">
-                                <i class="fas fa-route"></i>
-                                Rota Planlayıcı
-                            </h3>
-                            <div
-                                style="background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3);">
-                                <div id="routeContainer">
-                                    <p style="text-align: center; color: #666; font-style: italic;">Rota oluşturmak için
-                                        POI'leri seçin</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Predefined Routes Content -->
-            <div class="tab-content" id="predefinedRoutesContent">
-                <div class="predefined-routes-section">
-                    <div class="predefined-routes-header">
-                        <div class="section-header-content">
-                            <h2 class="section-title">
-                                <i class="fas fa-route"></i>
-                                Hazır Rotalar
-                            </h2>
-                            <p class="predefined-routes-description">
-                                Uzmanlar tarafından önceden hazırlanmış rotalar arasından seçim yapın.
-                                Her rota farklı deneyimler ve zorluk seviyeleri sunar.
-                            </p>
-                        </div>
-
-                        <div class="route-search">
-                            <input type="search" id="routeSearchInput" class="form-control" placeholder="Rota ara...">
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshAllRouteMedia()" title="Tüm rota medyalarını yenile">
-                                <i class="fas fa-sync-alt"></i>
-                                <span>Medyayı Yenile</span>
-                            </button>
-                            <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleMediaDisplayMode()" title="Medya görüntüleme modunu değiştir">
-                                <i class="fas fa-toggle-on"></i>
-                                <span>Özel İçerik</span>
-                            </button>
-                        </div>
-
-                        <!-- Quick Stats -->
-                        <div class="routes-quick-stats" id="routesQuickStats">
-                            <div class="quick-stat-item">
-                                <div class="stat-icon">
-                                    <i class="fas fa-route"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <span class="stat-number" id="totalRoutesCount">-</span>
-                                    <span class="stat-label">Toplam Rota</span>
-                                </div>
-                            </div>
-                            <div class="quick-stat-item">
-                                <div class="stat-icon">
-                                    <i class="fas fa-filter"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <span class="stat-number" id="filteredRoutesCount">-</span>
-                                    <span class="stat-label">Filtrelenmiş</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Enhanced Route Filters -->
-                    <button class="filters-open-btn" id="openFiltersBtn">Filtreleri Aç</button>
-                    <!-- Mobile Slide-up Filter Panel -->
-                    <div class="mobile-filter-panel" id="mobileFilterPanel">
-                        <div class="mobile-filter-handle">
-                            <div class="filter-handle-bar"></div>
-                        </div>
-                        <div class="mobile-filter-content">
-                            <div class="mobile-filter-header">
-                                <h3 class="mobile-filter-title">
-                                    <i class="fas fa-sliders-h"></i>
-                                    Filtreler
-                                </h3>
-                                <button class="mobile-filter-close" id="mobileFilterClose">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <div class="mobile-filter-body">
-                                <!-- Filter content will be injected here -->
-                            </div>
-                        </div>
-                    </div>
-                    <div class="route-filters-enhanced">
-                        <div class="filters-content" id="filtersContent">
-                            <div class="filters-header">
-                                <h3 class="filters-title">
-                                    <i class="fas fa-sliders-h"></i>
-                                    Filtreler
-                                </h3>
-                                <button class="filters-toggle-btn" id="filtersToggleBtn">
-                                    <i class="fas fa-chevron-down"></i>
-                                </button>
-                            </div>
-                            <div class="filter-chips-container">
-                                <div class="filter-chip-group">
-                                    <label class="filter-chip-label">Rota Tipi</label>
-                                    <div class="filter-chips" id="routeTypeChips">
-                                        <button class="filter-chip active" data-value="">
-                                            <i class="fas fa-globe"></i>
-                                            <span>Tümü</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="walking">
-                                            <i class="fas fa-walking"></i>
-                                            <span>Yürüyüş</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="hiking">
-                                            <i class="fas fa-hiking"></i>
-                                            <span>Doğa</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="cycling">
-                                            <i class="fas fa-bicycle"></i>
-                                            <span>Bisiklet</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="driving">
-                                            <i class="fas fa-car"></i>
-                                            <span>Araç</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div class="filter-chip-group">
-                                    <label class="filter-chip-label">Zorluk</label>
-                                    <div class="filter-chips" id="difficultyChips">
-                                        <button class="filter-chip active" data-value="">
-                                            <i class="fas fa-star"></i>
-                                            <span>Tümü</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="1">
-                                            <i class="fas fa-leaf"></i>
-                                            <span>Kolay</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="2">
-                                            <i class="fas fa-mountain"></i>
-                                            <span>Orta</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="3">
-                                            <i class="fas fa-fire"></i>
-                                            <span>Zor</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="4">
-                                            <i class="fas fa-bolt"></i>
-                                            <span>Çok Zor</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="5">
-                                            <i class="fas fa-crown"></i>
-                                            <span>Uzman</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div class="filter-chip-group">
-                                    <label class="filter-chip-label">Süre</label>
-                                    <div class="filter-chips" id="durationChips">
-                                        <button class="filter-chip active" data-value="">
-                                            <i class="fas fa-clock"></i>
-                                            <span>Tümü</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="0-60">
-                                            <i class="fas fa-hourglass-start"></i>
-                                            <span>&lt; 1 saat</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="60-180">
-                                            <i class="fas fa-hourglass-half"></i>
-                                            <span>1-3 saat</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="180-360">
-                                            <i class="fas fa-hourglass-end"></i>
-                                            <span>3-6 saat</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="360-999">
-                                            <i class="fas fa-calendar-day"></i>
-                                            <span>6+ saat</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div class="filter-chip-group">
-                                    <label class="filter-chip-label">Favoriler</label>
-                                    <div class="filter-chips" id="favoriteChips">
-                                        <button class="filter-chip active" data-value="">
-                                            <i class="fas fa-list"></i>
-                                            <span>Tümü</span>
-                                        </button>
-                                        <button class="filter-chip" data-value="favorites">
-                                            <i class="fas fa-star"></i>
-                                            <span>Favoriler</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="filters-actions">
-                                <button class="filter-clear-btn" id="clearFiltersBtn">
-                                    <i class="fas fa-times"></i>
-                                    <span>Temizle</span>
-                                </button>
-                                <button class="filter-apply-btn" id="applyFiltersBtn">
-                                    <i class="fas fa-check"></i>
-                                    <span>Uygula</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Routes Loading -->
-                    <div id="routesLoadingIndicator" class="loading">
+                    <div id="loadingIndicator" class="loading">
                         <div class="loading__spinner"></div>
-                        <p class="loading__text">Hazır rotalar yükleniyor...</p>
+                        <p class="loading__text">Öneriler hazırlanıyor...</p>
                     </div>
 
-                    <!-- Map and Routes Container -->
-                    <div class="routes-map-container">
-                        <!-- Map View -->
-                        <div id="mapView" class="predefined-map-container">
-                            <div id="predefinedRoutesMap" class="predefined-routes-map">
-                                <div class="map-loading" id="predefinedMapLoading">
-                                    <div class="loading__spinner"></div>
-                                    <p class="loading__text">Harita yükleniyor...</p>
-                                </div>
-                            </div>
-                            <!-- Elevation Chart for Predefined Routes -->
-                            <div id="predefinedElevationChartContainer" class="elevation-chart-hidden"></div>
-                            <!-- Map Controls -->
-                            <div class="map-controls">
-                                <button class="map-control-btn" id="clearMapBtn" title="Haritayı Temizle">
-                                    <i class="fas fa-eraser"></i>
-                                </button>
-                                <button class="map-control-btn" id="fitMapBtn" title="Rotalara Odaklan">
-                                    <i class="fas fa-expand-arrows-alt"></i>
-                                </button>
-                                <!-- Mobile Full-Screen Toggle -->
-                                <button class="map-control-btn mobile-fullscreen-btn" id="fullscreenMapBtn" title="Tam Ekran">
-                                    <i class="fas fa-expand"></i>
-                                </button>
-                            </div>
-                            <!-- Mobile Map Toggle FAB -->
-                            <div class="mobile-map-fab" id="mapViewToggleFab">
-                                <button class="fab-button" id="mapListToggleBtn" title="Harita/Liste Geçiş">
-                                    <i class="fas fa-layer-group"></i>
-                                </button>
-                            </div>
-                        </div>
+                    <div id="recommendationResults"></div>
 
-                        <!-- List View -->
-                        <div id="listView">
-                            <template id="predefinedRouteCardTemplate">
-                                <div class="route-card">
-                                    <div class="route-card-image">
-                                        <img src="https://via.placeholder.com/100x120?text=Rota" alt="Rota önizlemesi" data-placeholder="https://via.placeholder.com/100x120?text=Rota" onerror="handleImageError(event)">
-                                    </div>
-                                    <div class="route-card-content">
-                                        <div class="route-card-header">
-                                            <h3 class="route-card-title"></h3>
-                                            <p class="route-card-description"></p>
-                                        </div>
-                                        <div class="route-card-meta">
-                                            <div class="route-meta-item" aria-label="Mesafe">
-                                                <span class="route-distance">0 km</span>
-                                            </div>
-                                            <div class="route-meta-item" aria-label="Süre">
-                                                <i class="fas fa-clock"></i>
-                                                <span></span>
-                                            </div>
-                                            <div class="route-meta-item" aria-label="Durak sayısı">
-                                                <i class="fas fa-map-marker-alt"></i>
-                                                <span></span>
-                                            </div>
-                                            <div class="route-meta-item" aria-label="Zorluk">
-                                                <i class="fas fa-mountain"></i>
-                                                <div class="difficulty-stars"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <!-- Mobile Quick Actions -->
-                                    <div class="route-card-actions">
-                                        <button class="route-quick-action favorite" aria-label="Favorilere ekle" title="Favorilere ekle">
-                                            <i class="fas fa-heart"></i>
-                                        </button>
-                                        <button class="route-quick-action navigate" aria-label="Navigasyon" title="Navigasyon">
-                                            <i class="fas fa-directions"></i>
-                                        </button>
-                                        <button class="route-quick-action share" aria-label="Paylaş" title="Paylaş">
-                                            <i class="fas fa-share-alt"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </template>
-                            <div id="predefinedRoutesList" class="predefined-routes-list" aria-live="polite"></div>
-                        </div>
+                    <div id="mapSection" style="display: none; margin-top: 30px;">
+                        <h3 class="section-title">
+                            <i class="fas fa-map-marked-alt"></i>
+                            Öneriler Haritası
+                        </h3>
+                        <p
+                            style="color: #666; font-size: 1rem; margin-bottom: 20px; text-align: center; line-height: 1.6;">
+                            Önerilen yerleri harita üzerinde görün ve detaylarına ulaşın. Marker'lara tıklayarak daha
+                            fazla bilgi alabilirsiniz.
+                        </p>
+                        <div id="mapContainer" class="map-container-enhanced"></div>
+                        <!-- Elevation Chart Container -->
+                        <div id="elevationChartContainer" class="elevation-chart-hidden"></div>
                     </div>
 
-                    <!-- No Routes Message -->
-                    <div id="noRoutesMessage" class="no-routes-message" style="display: none;">
-                        <i class="fas fa-info-circle"></i>
-                        <p>Seçilen kriterlere uygun rota bulunamadı.</p>
+                    <div id="routeSection" style="display: none; margin-top: 30px;">
+                        <h3 class="section-title">
+                            <i class="fas fa-route"></i>
+                            Rota Planlayıcı
+                        </h3>
+                        <div
+                            style="background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3);">
+                            <div id="routeContainer">
+                                <p style="text-align: center; color: #666; font-style: italic;">Rota oluşturmak için
+                                    POI'leri seçin</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Predefined Routes Content -->
+        <div class="tab-content" id="predefinedRoutesContent">
+            <div class="predefined-routes-section">
+                <div class="predefined-routes-header">
+                    <div class="section-header-content">
+                        <h2 class="section-title">
+                            <i class="fas fa-route"></i>
+                            Hazır Rotalar
+                        </h2>
+                        <p class="predefined-routes-description">
+                            Uzmanlar tarafından önceden hazırlanmış rotalar arasından seçim yapın.
+                            Her rota farklı deneyimler ve zorluk seviyeleri sunar.
+                        </p>
+                    </div>
+
+                    <div class="route-search">
+                        <input type="search" id="routeSearchInput" class="form-control" placeholder="Rota ara...">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshAllRouteMedia()"
+                            title="Tüm rota medyalarını yenile">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Medyayı Yenile</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleMediaDisplayMode()"
+                            title="Medya görüntüleme modunu değiştir">
+                            <i class="fas fa-toggle-on"></i>
+                            <span>Özel İçerik</span>
+                        </button>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="routes-quick-stats" id="routesQuickStats">
+                        <div class="quick-stat-item">
+                            <div class="stat-icon">
+                                <i class="fas fa-route"></i>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-number" id="totalRoutesCount">-</span>
+                                <span class="stat-label">Toplam Rota</span>
+                            </div>
+                        </div>
+                        <div class="quick-stat-item">
+                            <div class="stat-icon">
+                                <i class="fas fa-filter"></i>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-number" id="filteredRoutesCount">-</span>
+                                <span class="stat-label">Filtrelenmiş</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Route Filters -->
+                <button class="filters-open-btn" id="openFiltersBtn" style="display: none;">
+                    <i class="fas fa-sliders-h"></i>
+                    Filtreleri Aç
+                </button>
+
+                <!-- Mobile Slide-up Filter Panel -->
+                <div class="mobile-filter-panel" id="mobileFilterPanel">
+                    <div class="mobile-filter-handle">
+                        <div class="filter-handle-bar"></div>
+                    </div>
+                    <div class="mobile-filter-content">
+                        <div class="mobile-filter-header">
+                            <h3 class="mobile-filter-title">
+                                <i class="fas fa-sliders-h"></i>
+                                Filtreler
+                            </h3>
+                            <button class="mobile-filter-close" id="mobileFilterClose">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="mobile-filter-body">
+                            <!-- Filter content will be injected here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="route-filters-enhanced">
+                    <div class="filters-content" id="filtersContent">
+                        <div class="filters-header">
+                            <h3 class="filters-title">
+                                <i class="fas fa-sliders-h"></i>
+                                Filtreler
+                            </h3>
+                            <button class="filters-toggle-btn" id="filtersToggleBtn">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div class="filter-chips-container">
+                            <div class="filter-chip-group">
+                                <label class="filter-chip-label">Rota Tipi</label>
+                                <div class="filter-chips" id="routeTypeChips">
+                                    <button class="filter-chip active" data-value="">
+                                        <i class="fas fa-globe"></i>
+                                        <span>Tümü</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="walking">
+                                        <i class="fas fa-walking"></i>
+                                        <span>Yürüyüş</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="hiking">
+                                        <i class="fas fa-hiking"></i>
+                                        <span>Doğa</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="cycling">
+                                        <i class="fas fa-bicycle"></i>
+                                        <span>Bisiklet</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="driving">
+                                        <i class="fas fa-car"></i>
+                                        <span>Araç</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="filter-chip-group">
+                                <label class="filter-chip-label">Zorluk</label>
+                                <div class="filter-chips" id="difficultyChips">
+                                    <button class="filter-chip active" data-value="">
+                                        <i class="fas fa-star"></i>
+                                        <span>Tümü</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="1">
+                                        <i class="fas fa-leaf"></i>
+                                        <span>Kolay</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="2">
+                                        <i class="fas fa-mountain"></i>
+                                        <span>Orta</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="3">
+                                        <i class="fas fa-fire"></i>
+                                        <span>Zor</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="4">
+                                        <i class="fas fa-bolt"></i>
+                                        <span>Çok Zor</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="5">
+                                        <i class="fas fa-crown"></i>
+                                        <span>Uzman</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="filter-chip-group">
+                                <label class="filter-chip-label">Süre</label>
+                                <div class="filter-chips" id="durationChips">
+                                    <button class="filter-chip active" data-value="">
+                                        <i class="fas fa-clock"></i>
+                                        <span>Tümü</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="0-60">
+                                        <i class="fas fa-hourglass-start"></i>
+                                        <span>&lt; 1 saat</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="60-180">
+                                        <i class="fas fa-hourglass-half"></i>
+                                        <span>1-3 saat</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="180-360">
+                                        <i class="fas fa-hourglass-end"></i>
+                                        <span>3-6 saat</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="360-999">
+                                        <i class="fas fa-calendar-day"></i>
+                                        <span>6+ saat</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="filter-chip-group">
+                                <label class="filter-chip-label">Favoriler</label>
+                                <div class="filter-chips" id="favoriteChips">
+                                    <button class="filter-chip active" data-value="">
+                                        <i class="fas fa-list"></i>
+                                        <span>Tümü</span>
+                                    </button>
+                                    <button class="filter-chip" data-value="favorites">
+                                        <i class="fas fa-star"></i>
+                                        <span>Favoriler</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="filters-actions">
+                            <button class="filter-clear-btn" id="clearFiltersBtn">
+                                <i class="fas fa-times"></i>
+                                <span>Temizle</span>
+                            </button>
+                            <button class="filter-apply-btn" id="applyFiltersBtn">
+                                <i class="fas fa-check"></i>
+                                <span>Uygula</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Routes Loading -->
+                <div id="routesLoadingIndicator" class="loading">
+                    <div class="loading__spinner"></div>
+                    <p class="loading__text">Hazır rotalar yükleniyor...</p>
+                </div>
+
+                <!-- Mobile View Toggle -->
+                <div class="mobile-view-toggle">
+                    <div class="view-toggle-buttons">
+                        <button class="view-toggle-btn active" data-view="list" id="listViewBtn">
+                            <i class="fas fa-list"></i>
+                            <span>Liste</span>
+                        </button>
+                        <button class="view-toggle-btn" data-view="map" id="mapViewBtn">
+                            <i class="fas fa-map"></i>
+                            <span>Harita</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Map and Routes Container -->
+                <div class="routes-map-container">
+                    <!-- Map View -->
+                    <div id="mapView" class="predefined-map-container">
+                        <div id="predefinedRoutesMap" class="predefined-routes-map">
+                            <div class="map-loading" id="predefinedMapLoading">
+                                <div class="loading__spinner"></div>
+                                <p class="loading__text">Harita yükleniyor...</p>
+                            </div>
+                        </div>
+                        <!-- Elevation Chart for Predefined Routes -->
+                        <div id="predefinedElevationChartContainer" class="elevation-chart-hidden"></div>
+                        <!-- Map Controls -->
+                        <div class="map-controls">
+                            <button class="map-control-btn" id="clearMapBtn" title="Haritayı Temizle">
+                                <i class="fas fa-eraser"></i>
+                            </button>
+                            <button class="map-control-btn" id="fitMapBtn" title="Rotalara Odaklan">
+                                <i class="fas fa-expand-arrows-alt"></i>
+                            </button>
+                            <!-- Mobile Full-Screen Toggle -->
+                            <button class="map-control-btn mobile-fullscreen-btn" id="fullscreenMapBtn"
+                                title="Tam Ekran">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                            <!-- Back to List Button (Mobile) -->
+                            <button class="map-control-btn back-to-list-btn" id="backToListBtn" title="Listeye Dön">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- List View -->
+                    <div id="listView" class="routes-list-view">
+                        <template id="predefinedRouteCardTemplate">
+                            <div class="route-card">
+                                <div class="route-card-image">
+                                    <img src="https://via.placeholder.com/100x120?text=Rota" alt="Rota önizlemesi"
+                                        data-placeholder="https://via.placeholder.com/100x120?text=Rota"
+                                        onerror="handleImageError(event)">
+                                </div>
+                                <div class="route-card-content">
+                                    <div class="route-card-header">
+                                        <h3 class="route-card-title"></h3>
+                                        <p class="route-card-description"></p>
+                                    </div>
+                                    <div class="route-card-meta">
+                                        <div class="route-meta-item" aria-label="Mesafe">
+                                            <span class="route-distance">0 km</span>
+                                        </div>
+                                        <div class="route-meta-item" aria-label="Süre">
+                                            <i class="fas fa-clock"></i>
+                                            <span></span>
+                                        </div>
+                                        <div class="route-meta-item" aria-label="Durak sayısı">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            <span></span>
+                                        </div>
+                                        <div class="route-meta-item" aria-label="Zorluk">
+                                            <i class="fas fa-mountain"></i>
+                                            <div class="difficulty-stars"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Mobile Quick Actions -->
+                                <div class="route-card-actions">
+                                    <button class="route-quick-action favorite" aria-label="Favorilere ekle"
+                                        title="Favorilere ekle">
+                                        <i class="fas fa-heart"></i>
+                                    </button>
+                                    <button class="route-quick-action navigate" aria-label="Navigasyon"
+                                        title="Navigasyon">
+                                        <i class="fas fa-directions"></i>
+                                    </button>
+                                    <button class="route-quick-action share" aria-label="Paylaş" title="Paylaş">
+                                        <i class="fas fa-share-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                        <div id="predefinedRoutesList" class="predefined-routes-list" aria-live="polite"></div>
+                    </div>
+                </div>
+
+                <!-- No Routes Message -->
+                <div id="noRoutesMessage" class="no-routes-message" style="display: none;">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Seçilen kriterlere uygun rota bulunamadı.</p>
+                </div>
+            </div>
+        </div>
+    </div>
     </div>
     <!-- Route Context Menu -->
     <div id="routeContextMenu" class="route-context-menu">
@@ -759,7 +1505,7 @@
         <!-- Action Menu Items -->
         <div class="route-context-group">
             <h4 class="route-context-menu-group-title">Rota İşlemleri</h4>
-            
+
             <button class="route-context-menu-item" onclick="RouteContextMenu.showRouteDetails()">
                 <i class="route-context-menu-icon fas fa-info-circle"></i>
                 <div class="route-context-menu-text">
@@ -801,7 +1547,7 @@
 
         <div class="route-context-group">
             <h4 class="route-context-menu-group-title">Navigasyon</h4>
-            
+
             <button class="route-context-menu-item" onclick="RouteContextMenu.openInGoogleMaps()">
                 <i class="route-context-menu-icon fab fa-google"></i>
                 <div class="route-context-menu-text">
@@ -825,7 +1571,7 @@
 
         <div class="route-context-group">
             <h4 class="route-context-menu-group-title">Düzenleme</h4>
-            
+
             <button class="route-context-menu-item warning" onclick="RouteContextMenu.editRoute()">
                 <i class="route-context-menu-icon fas fa-edit"></i>
                 <div class="route-context-menu-text">
@@ -957,7 +1703,8 @@
         </div>
 
         <div class="export-section">
-            <button class="export-btn map-view" onclick="RouteDetailsPanel.showInFullscreenMap()" id="showInMapBtn" style="display: none;">
+            <button class="export-btn map-view" onclick="RouteDetailsPanel.showInFullscreenMap()" id="showInMapBtn"
+                style="display: none;">
                 <i class="fas fa-map"></i>
                 Haritada Göster
             </button>
@@ -974,6 +1721,226 @@
     <script src="static/js/map-layer-control.js"></script>
     <script src="static/js/poi_recommendation_system.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+
+    <script>
+        // Mobile View Toggle Functionality
+        document.addEventListener('DOMContentLoaded', function () {
+            const listViewBtn = document.getElementById('listViewBtn');
+            const mapViewBtn = document.getElementById('mapViewBtn');
+            const mapView = document.getElementById('mapView');
+            const listView = document.getElementById('listView');
+            const backToListBtn = document.getElementById('backToListBtn');
+            const openFiltersBtn = document.getElementById('openFiltersBtn');
+            const mobileFilterPanel = document.getElementById('mobileFilterPanel');
+            const mobileFilterClose = document.getElementById('mobileFilterClose');
+
+            // View toggle functionality
+            function switchToListView() {
+                listViewBtn.classList.add('active');
+                mapViewBtn.classList.remove('active');
+                mapView.classList.remove('active');
+                listView.classList.remove('hidden');
+            }
+
+            function switchToMapView() {
+                mapViewBtn.classList.add('active');
+                listViewBtn.classList.remove('active');
+                mapView.classList.add('active');
+                listView.classList.add('hidden');
+
+                // Trigger map resize if needed
+                if (window.predefinedRoutesMap) {
+                    setTimeout(() => {
+                        window.predefinedRoutesMap.invalidateSize();
+                    }, 300);
+                }
+            }
+
+            // Event listeners
+            if (listViewBtn) {
+                listViewBtn.addEventListener('click', switchToListView);
+            }
+
+            if (mapViewBtn) {
+                mapViewBtn.addEventListener('click', switchToMapView);
+            }
+
+            if (backToListBtn) {
+                backToListBtn.addEventListener('click', switchToListView);
+            }
+
+            // Mobile filter panel functionality
+            if (openFiltersBtn && mobileFilterPanel) {
+                openFiltersBtn.addEventListener('click', function () {
+                    mobileFilterPanel.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                });
+            }
+
+            if (mobileFilterClose) {
+                mobileFilterClose.addEventListener('click', function () {
+                    mobileFilterPanel.classList.remove('active');
+                    document.body.style.overflow = '';
+                });
+            }
+
+            // Close filter panel on backdrop click
+            if (mobileFilterPanel) {
+                mobileFilterPanel.addEventListener('click', function (e) {
+                    if (e.target === mobileFilterPanel) {
+                        mobileFilterPanel.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
+                });
+
+                // Handle swipe down to close
+                let startY = 0;
+                const filterHandle = mobileFilterPanel.querySelector('.mobile-filter-handle');
+
+                if (filterHandle) {
+                    filterHandle.addEventListener('touchstart', function (e) {
+                        startY = e.touches[0].clientY;
+                    });
+
+                    filterHandle.addEventListener('touchmove', function (e) {
+                        const currentY = e.touches[0].clientY;
+                        const diff = currentY - startY;
+
+                        if (diff > 50) {
+                            mobileFilterPanel.classList.remove('active');
+                            document.body.style.overflow = '';
+                        }
+                    });
+                }
+            }
+
+            // Enhanced touch interactions for route cards
+            const routeCards = document.querySelectorAll('.route-card');
+            routeCards.forEach(card => {
+                let touchStartTime = 0;
+                let touchStartX = 0;
+                let touchStartY = 0;
+
+                card.addEventListener('touchstart', function (e) {
+                    touchStartTime = Date.now();
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                });
+
+                card.addEventListener('touchend', function (e) {
+                    const touchEndTime = Date.now();
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const touchEndY = e.changedTouches[0].clientY;
+
+                    const timeDiff = touchEndTime - touchStartTime;
+                    const xDiff = Math.abs(touchEndX - touchStartX);
+                    const yDiff = Math.abs(touchEndY - touchStartY);
+
+                    // If it's a quick tap (not a scroll)
+                    if (timeDiff < 300 && xDiff < 10 && yDiff < 10) {
+                        // Handle route card tap
+                        const routeId = card.dataset.routeId;
+                        if (routeId && typeof window.showRouteDetails === 'function') {
+                            window.showRouteDetails(routeId);
+                        }
+                    }
+                });
+            });
+
+            // Responsive behavior
+            function handleResize() {
+                const isMobile = window.innerWidth <= 768;
+
+                if (!isMobile) {
+                    // Reset mobile-specific states on desktop
+                    if (mobileFilterPanel) {
+                        mobileFilterPanel.classList.remove('active');
+                    }
+                    document.body.style.overflow = '';
+
+                    // Show both views on desktop/tablet
+                    mapView.classList.remove('active');
+                    listView.classList.remove('hidden');
+                }
+            }
+
+            window.addEventListener('resize', handleResize);
+            handleResize(); // Initial call
+
+            // Improve scroll performance on mobile
+            if ('ontouchstart' in window) {
+                document.addEventListener('touchstart', function () { }, { passive: true });
+                document.addEventListener('touchmove', function () { }, { passive: true });
+            }
+
+            // Add haptic feedback for supported devices
+            function addHapticFeedback(element) {
+                if (element && 'vibrate' in navigator) {
+                    element.addEventListener('click', function () {
+                        navigator.vibrate(10); // Short vibration
+                    });
+                }
+            }
+
+            // Add haptic feedback to interactive elements
+            [listViewBtn, mapViewBtn, backToListBtn, openFiltersBtn].forEach(addHapticFeedback);
+        });
+
+        // Enhanced route card interactions
+        function handleRouteCardClick(routeId) {
+            // Add visual feedback
+            const card = document.querySelector(`[data-route-id="${routeId}"]`);
+            if (card) {
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    card.style.transform = '';
+                }, 150);
+            }
+
+            // Handle route selection logic
+            if (typeof window.selectRoute === 'function') {
+                window.selectRoute(routeId);
+            }
+        }
+
+        // Optimize filter chip interactions for mobile
+        function initializeMobileFilterChips() {
+            const filterChips = document.querySelectorAll('.filter-chip');
+
+            filterChips.forEach(chip => {
+                chip.addEventListener('click', function () {
+                    // Add visual feedback
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 100);
+
+                    // Toggle active state
+                    const isActive = this.classList.contains('active');
+                    const group = this.closest('.filter-chips');
+
+                    if (group) {
+                        // Remove active from siblings
+                        group.querySelectorAll('.filter-chip').forEach(sibling => {
+                            sibling.classList.remove('active');
+                        });
+                    }
+
+                    if (!isActive) {
+                        this.classList.add('active');
+                    }
+
+                    // Trigger filter update
+                    if (typeof window.updateRouteFilters === 'function') {
+                        window.updateRouteFilters();
+                    }
+                });
+            });
+        }
+
+        // Initialize mobile enhancements when DOM is ready
+        document.addEventListener('DOMContentLoaded', initializeMobileFilterChips);
+    </script>
 </body>
 
 </html>

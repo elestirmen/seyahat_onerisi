@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Import Validation Test</title>
+</head>
+<body>
+    <div id="status">Testing imports...</div>
+    <script type="module">
+        try {
+            console.log('🧪 Testing all imports...');
+            
+            // Test individual imports
+            const { TabController } = await import('./static/js/poi-tabs/tab-controller.js');
+            const { DynamicRoutesController } = await import('./static/js/poi-tabs/dynamic-routes/dynamic-routes.js');
+            const { PredefinedRoutesController } = await import('./static/js/poi-tabs/predefined-routes/predefined-routes.js');
+            const { API_BASE, LOADING_MESSAGES, ERROR_MESSAGES } = await import('./static/js/poi-tabs/shared/constants.js');
+            const { showNotification } = await import('./static/js/poi-tabs/shared/utils.js');
+            
+            document.getElementById('status').innerHTML = `
+                <h2 style="color: green;">✅ All imports successful!</h2>
+                <ul style="text-align: left;">
+                    <li><strong>TabController:</strong> ${typeof TabController}</li>
+                    <li><strong>DynamicRoutesController:</strong> ${typeof DynamicRoutesController}</li>
+                    <li><strong>PredefinedRoutesController:</strong> ${typeof PredefinedRoutesController}</li>
+                    <li><strong>API_BASE:</strong> ${API_BASE}</li>
+                    <li><strong>showNotification:</strong> ${typeof showNotification}</li>
+                </ul>
+                <p style="color: green; font-weight: bold;">🎉 Ready to test tab switching!</p>
+            `;
+            
+            console.log('✅ All module imports validated successfully');
+            
+        } catch (error) {
+            document.getElementById('status').innerHTML = `
+                <h2 style="color: red;">❌ Import validation failed</h2>
+                <p><strong>Error:</strong> ${error.message}</p>
+                <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${error.stack}</pre>
+            `;
+            console.error('❌ Import validation error:', error);
+        }
+    </script>
+</body>
+</html>

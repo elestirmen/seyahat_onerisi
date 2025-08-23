@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tab Controller Final Test</title>
+</head>
+<body>
+    <div id="status">Testing complete tab system...</div>
+    <script type="module">
+        try {
+            console.log('🧪 Testing complete tab controller system...');
+            
+            // Import all modules
+            const { TabController } = await import('./static/js/poi-tabs/tab-controller.js');
+            const { DynamicRoutesController } = await import('./static/js/poi-tabs/dynamic-routes/dynamic-routes.js');
+            const { PredefinedRoutesController } = await import('./static/js/poi-tabs/predefined-routes/predefined-routes.js');
+            
+            // Test controller creation (without automatic initialization)
+            const tabController = new TabController();
+            
+            // Register tabs
+            tabController.registerTab('dynamic-routes', DynamicRoutesController, {
+                stylesheets: ['static/css/poi-tabs/dynamic-routes.css'],
+                scripts: []
+            });
+            
+            tabController.registerTab('predefined-routes', PredefinedRoutesController, {
+                stylesheets: ['static/css/poi-tabs/predefined-routes.css'],
+                scripts: []
+            });
+            
+            // Try to load initial tab
+            await tabController.loadInitialTab();
+            
+            document.getElementById('status').innerHTML = `
+                <h2 style="color: green;">✅ Tab system test successful!</h2>
+                <ul style="text-align: left;">
+                    <li><strong>TabController:</strong> Created successfully</li>
+                    <li><strong>Dynamic Routes:</strong> Registered</li>
+                    <li><strong>Predefined Routes:</strong> Registered</li>
+                    <li><strong>Initial Tab:</strong> ${tabController.getActiveTab() || 'Ready to load'}</li>
+                </ul>
+                <p style="color: green; font-weight: bold;">🎉 Ready for production use!</p>
+            `;
+            
+            console.log('✅ Complete tab system test passed');
+            
+        } catch (error) {
+            document.getElementById('status').innerHTML = `
+                <h2 style="color: red;">❌ Tab system test failed</h2>
+                <p><strong>Error:</strong> ${error.message}</p>
+                <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${error.stack}</pre>
+            `;
+            console.error('❌ Tab system test failed:', error);
+        }
+    </script>
+</body>
+</html>

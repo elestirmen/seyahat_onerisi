@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Module Import Test</title>
+</head>
+<body>
+    <h1>Module Import Test</h1>
+    <div id="status">Testing imports...</div>
+
+    <script type="module">
+        try {
+            // Test imports
+            const { TabController } = await import('./static/js/poi-tabs/tab-controller.js');
+            const { DynamicRoutesController } = await import('./static/js/poi-tabs/dynamic-routes/dynamic-routes.js');
+            const { PredefinedRoutesController } = await import('./static/js/poi-tabs/predefined-routes/predefined-routes.js');
+            const { API_BASE } = await import('./static/js/poi-tabs/shared/constants.js');
+            
+            document.getElementById('status').innerHTML = `
+                <p style="color: green;">✅ All imports successful!</p>
+                <ul>
+                    <li>TabController: ${typeof TabController}</li>
+                    <li>DynamicRoutesController: ${typeof DynamicRoutesController}</li>
+                    <li>PredefinedRoutesController: ${typeof PredefinedRoutesController}</li>
+                    <li>API_BASE: ${API_BASE}</li>
+                </ul>
+            `;
+            
+            console.log('✅ All module imports working correctly');
+            
+        } catch (error) {
+            document.getElementById('status').innerHTML = `
+                <p style="color: red;">❌ Import failed: ${error.message}</p>
+            `;
+            console.error('❌ Import error:', error);
+        }
+    </script>
+</body>
+</html>
