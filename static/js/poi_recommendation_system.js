@@ -6150,13 +6150,15 @@ function showDetailedPOIModal(poi, media = { images: [], videos: [], audio: [], 
         </div>
     `;
     
-    // Remove existing modal if any
+    // Check if Bootstrap modal exists, if not create a fallback
     const existingModal = document.getElementById('poiDetailModal');
     if (existingModal) {
-        existingModal.remove();
+        console.log('✅ Using existing Bootstrap modal');
+        return;
     }
     
-    // Add modal to page
+    console.warn('⚠️ Bootstrap modal not found, creating fallback modal');
+    // Add modal to page only if it doesn't exist
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     
     // Add close functionality
@@ -6195,7 +6197,20 @@ function showBasicPOIModal(poiName) {
 function closeDetailedPOIModal() {
     const modal = document.getElementById('poiDetailModal');
     if (modal) {
-        modal.remove();
+        // Use Bootstrap modal hide instead of removing
+        try {
+            const bootstrapModal = bootstrap.Modal.getInstance(modal);
+            if (bootstrapModal) {
+                bootstrapModal.hide();
+            } else {
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+            }
+        } catch (error) {
+            console.warn('Error closing modal:', error);
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+        }
     }
 }
 // Fallback function for route display when standard method fails
@@ -10685,13 +10700,13 @@ function createPOICards(pois) {
                 </div>
                 <div class="poi-media-preview"></div>
                 <div class="poi-card__actions">
-                    <button class="btn btn--secondary btn--sm" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
+                    <button class="btn btn--info btn--sm" onclick="event.stopPropagation(); showPOIDetail('${poi.id || poi._id}')">
+                        <i class="fas fa-info-circle"></i> Detaylar
+                    </button>
+                    <button class="btn btn--secondary btn--sm" onclick="event.stopPropagation(); focusOnMap(${poi.latitude}, ${poi.longitude})">
                         <i class="fas fa-map-marker-alt"></i> Haritada Göster
                     </button>
-                    <button class="btn btn--primary btn--sm" onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')">
-                        <i class="fab fa-google"></i> Google Maps
-                    </button>
-                    <button class="btn btn--success btn--sm" onclick="addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})">
+                    <button class="btn btn--success btn--sm" onclick="event.stopPropagation(); addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})">
                         <i class="fas fa-plus"></i> Rotaya Ekle
                     </button>
                 </div>
@@ -11992,10 +12007,13 @@ function updateMapWithPOIs(allPOIs) {
                     </div>
                     ${poi.description ? `<p class="poi-description">${poi.description}</p>` : ''}
                     <div class="poi-popup-actions">
-                        <button onclick="openInGoogleMaps('${poi.name}', [${poi.latitude}, ${poi.longitude}])" class="popup-btn">
+                        <button onclick="showPOIDetail('${poi._id || poi.id}', ${JSON.stringify(poi).replace(/"/g, '&quot;')})" class="popup-btn">
+                            <i class="fas fa-info-circle"></i> Detaylar
+                        </button>
+                        <button onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" class="popup-btn">
                             <i class="fas fa-external-link-alt"></i> Google Maps
                         </button>
-                        <button onclick="addToRoute(${poi._id || index})" class="popup-btn">
+                        <button onclick="addToRoute(${JSON.stringify(poi).replace(/"/g, '&quot;')})" class="popup-btn">
                             <i class="fas fa-plus"></i> Rotaya Ekle
                         </button>
                     </div>
@@ -12038,6 +12056,15 @@ function initializePOICardsMedia() {
     poiCards.forEach((card, index) => {
         const poiId = card.dataset.poiId;
         if (!poiId) return;
+        
+        // Make card clickable to open detail modal
+        card.style.cursor = 'pointer';
+        card.onclick = (e) => {
+            // Prevent triggering if clicking on action buttons
+            if (e.target.closest('.poi-card__actions')) return;
+            
+            showPOIDetail(poiId);
+        };
         
         // Load media for this POI card with a small delay to prevent overwhelming the server
         setTimeout(() => {
@@ -12109,3 +12136,772 @@ function displayPOICardMedia(mediaItems, previewElement) {
         `;
     }
 }
+
+// POI Detail Modal System
+let currentPOIData = null;
+// Note: currentMediaItems and currentMediaIndex are already declared above
+
+// Wait for Bootstrap to be loaded
+function waitForBootstrap() {
+    return new Promise((resolve) => {
+        if (typeof bootstrap !== 'undefined') {
+            resolve();
+            return;
+        }
+        
+        // Check every 100ms for Bootstrap
+        const checkBootstrap = setInterval(() => {
+            if (typeof bootstrap !== 'undefined') {
+                clearInterval(checkBootstrap);
+                resolve();
+            }
+        }, 100);
+        
+        // Timeout after 5 seconds
+        setTimeout(() => {
+            clearInterval(checkBootstrap);
+            console.warn('Bootstrap not loaded after 5 seconds, proceeding anyway');
+            resolve();
+        }, 5000);
+    });
+}
+
+// Ensure POI modal exists
+function ensurePOIModalExists() {
+    let modalElement = document.getElementById('poiDetailModal');
+    
+    if (!modalElement) {
+        console.warn('⚠️ POI modal not found, creating fallback');
+        
+        // Create a basic modal structure
+        const modalHTML = `
+            <div class="modal fade" id="poiDetailModal" tabindex="-1" aria-labelledby="poiDetailModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header border-0 pb-0">
+                            <div class="poi-modal-header w-100">
+                                <div class="poi-modal-title-section">
+                                    <h4 class="modal-title" id="poiDetailModalLabel">POI Detayları</h4>
+                                    <div class="poi-modal-category-badge" id="poiModalCategory"></div>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                        </div>
+                        <div class="modal-body p-0">
+                            <div class="poi-media-gallery" id="poiMediaGallery">
+                                <div class="media-gallery-container">
+                                    <div class="media-gallery-main" id="mediaGalleryMain">
+                                        <div class="no-media-placeholder">
+                                            <i class="fas fa-image fa-3x text-muted"></i>
+                                            <p class="text-muted mt-2">Bu POI için medya bulunamadı</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="poi-modal-content">
+                                <div class="container-fluid p-4">
+                                    <div class="row">
+                                        <div class="col-lg-8">
+                                            <div class="poi-description-section mb-4">
+                                                <h5 class="section-title">
+                                                    <i class="fas fa-info-circle text-primary me-2"></i>
+                                                    Açıklama
+                                                </h5>
+                                                <div class="poi-description-content" id="poiDescriptionContent">
+                                                    <p class="text-muted">Bu POI için açıklama bulunmuyor.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-4">
+                                            <div class="poi-quick-info">
+                                                <div class="quick-info-card">
+                                                    <h5 class="section-title">
+                                                        <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                                                        Konum Bilgileri
+                                                    </h5>
+                                                    <div class="quick-info-item">
+                                                        <span class="info-label">Koordinatlar:</span>
+                                                        <span class="info-value" id="poiCoordinates">-</span>
+                                                    </div>
+                                                    <div class="quick-info-item">
+                                                        <span class="info-label">Kategori:</span>
+                                                        <span class="info-value" id="poiCategoryInfo">-</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        modalElement = document.getElementById('poiDetailModal');
+        console.log('✅ Fallback POI modal created');
+    }
+    
+    return modalElement;
+}
+
+// Show POI detail modal
+async function showPOIDetail(poiId, poiData = null) {
+    console.log('🔍 Opening POI detail modal for ID:', poiId);
+    
+    // Wait for Bootstrap to be loaded
+    await waitForBootstrap();
+    
+    try {
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            await new Promise(resolve => {
+                document.addEventListener('DOMContentLoaded', resolve);
+            });
+        }
+        
+        // Ensure modal exists and get reference
+        const modalElement = ensurePOIModalExists();
+        if (!modalElement) {
+            console.error('❌ Failed to create or find modal element');
+            throw new Error('POI detail modal element could not be created');
+        }
+        
+        console.log('✅ Modal element ready:', modalElement);
+        
+        // Try Bootstrap 5 first, then fallback to manual show
+        let modal;
+        try {
+            modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        } catch (bootstrapError) {
+            console.warn('Bootstrap Modal failed, using fallback:', bootstrapError);
+            // Fallback: manually show modal
+            modalElement.classList.add('show');
+            modalElement.style.display = 'block';
+            modalElement.setAttribute('aria-modal', 'true');
+            modalElement.removeAttribute('aria-hidden');
+            
+            // Add backdrop
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            backdrop.id = 'poiModalBackdrop';
+            document.body.appendChild(backdrop);
+            
+            // Prevent body scroll
+            document.body.classList.add('modal-open');
+        }
+        
+        // Set loading state
+        document.getElementById('poiDetailModalLabel').textContent = 'Yükleniyor...';
+        document.getElementById('mediaGalleryMain').innerHTML = `
+            <div class="media-loading">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Yükleniyor...</span>
+                </div>
+            </div>
+        `;
+        
+        // Fetch POI data if not provided
+        let poi = poiData;
+        if (!poi) {
+            const response = await fetch(`${apiBase}/poi/${poiId}`);
+            if (!response.ok) {
+                throw new Error('POI bulunamadı');
+            }
+            poi = await response.json();
+        }
+        
+        currentPOIData = poi;
+        
+        // Update modal content
+        updatePOIModalContent(poi);
+        
+        // Load media
+        await loadPOIModalMedia(poiId);
+        
+        // Setup event listeners
+        setupPOIModalEventListeners();
+        
+        console.log('✅ POI detail modal loaded successfully');
+        
+    } catch (error) {
+        console.error('❌ Error loading POI detail:', error);
+        showPOIModalError('POI detayları yüklenirken hata oluştu: ' + error.message);
+    }
+}
+
+// Update POI modal content
+function updatePOIModalContent(poi) {
+    // Update title and category
+    document.getElementById('poiDetailModalLabel').textContent = poi.name;
+    
+    const categoryBadge = document.getElementById('poiModalCategory');
+    const categoryDisplayName = getCategoryDisplayName(poi.category);
+    const categoryStyle = getCategoryStyle(poi.category);
+    
+    categoryBadge.innerHTML = `
+        <i class="${categoryStyle.iconClass}" style="color: ${categoryStyle.color}; margin-right: 6px;"></i>
+        ${categoryDisplayName}
+    `;
+    categoryBadge.style.background = `linear-gradient(135deg, ${categoryStyle.color}20, ${categoryStyle.color}40)`;
+    categoryBadge.style.color = categoryStyle.color;
+    categoryBadge.style.border = `1px solid ${categoryStyle.color}40`;
+    
+    // Update description
+    const descriptionContent = document.getElementById('poiDescriptionContent');
+    if (poi.description && poi.description.trim()) {
+        descriptionContent.innerHTML = `<p>${poi.description}</p>`;
+    } else {
+        descriptionContent.innerHTML = '<p class="text-muted">Bu POI için açıklama bulunmuyor.</p>';
+    }
+    
+    // Update features/tags
+    const featuresSection = document.getElementById('poiFeaturesSection');
+    const featuresTags = document.getElementById('poiFeaturesTags');
+    
+    if (poi.tags && poi.tags.length > 0) {
+        featuresSection.style.display = 'block';
+        featuresTags.innerHTML = poi.tags.map(tag => 
+            `<span class="feature-tag">${tag}</span>`
+        ).join('');
+    } else {
+        featuresSection.style.display = 'none';
+    }
+    
+    // Update ratings
+    const ratingsSection = document.getElementById('poiRatingsSection');
+    const ratingsGrid = document.getElementById('poiRatingsGrid');
+    
+    if (poi.ratings && Object.keys(poi.ratings).length > 0) {
+        ratingsSection.style.display = 'block';
+        ratingsGrid.innerHTML = Object.entries(poi.ratings).map(([category, value]) => {
+            const categoryInfo = ratingCategories[category];
+            if (!categoryInfo || value === 0) return '';
+            
+            return `
+                <div class="rating-item">
+                    <div class="rating-label">
+                        <i class="${categoryInfo.icon}"></i>
+                        ${categoryInfo.name}
+                    </div>
+                    <div class="rating-bar">
+                        <div class="rating-fill" style="width: ${value}%"></div>
+                    </div>
+                    <div class="rating-value">${value}/100</div>
+                </div>
+            `;
+        }).filter(Boolean).join('');
+    } else {
+        ratingsSection.style.display = 'none';
+    }
+    
+    // Update coordinates
+    document.getElementById('poiCoordinates').textContent = 
+        `${poi.latitude.toFixed(6)}, ${poi.longitude.toFixed(6)}`;
+    
+    // Update category info
+    document.getElementById('poiCategoryInfo').textContent = categoryDisplayName;
+    
+    // Update recommendation score if available
+    const scoreSection = document.getElementById('poiRecommendationScore');
+    const scoreBadge = document.getElementById('poiScoreBadge');
+    
+    if (poi.recommendationScore !== undefined) {
+        scoreSection.style.display = 'block';
+        scoreBadge.textContent = `${poi.recommendationScore}%`;
+        scoreBadge.className = `badge ${poi.recommendationScore >= 70 ? 'bg-success' : poi.recommendationScore >= 40 ? 'bg-warning' : 'bg-secondary'}`;
+    } else {
+        scoreSection.style.display = 'none';
+    }
+}
+
+// Load POI modal media
+async function loadPOIModalMedia(poiId) {
+    try {
+        console.log('📸 Loading media for POI:', poiId);
+        
+        const response = await fetch(`${apiBase}/poi/${poiId}/media`);
+        if (!response.ok) {
+            console.log('ℹ️ No media found for POI');
+            showNoMediaPlaceholder();
+            return;
+        }
+        
+        const mediaData = await response.json();
+        const mediaItems = Array.isArray(mediaData) ? mediaData : (mediaData.media || []);
+        
+        if (mediaItems.length === 0) {
+            showNoMediaPlaceholder();
+            return;
+        }
+        
+        currentMediaItems = mediaItems;
+        currentMediaIndex = 0;
+        
+        // Display media gallery
+        displayMediaGallery();
+        
+        console.log(`✅ Loaded ${mediaItems.length} media items`);
+        
+    } catch (error) {
+        console.error('❌ Error loading media:', error);
+        showNoMediaPlaceholder();
+    }
+}
+
+// Display media gallery
+function displayMediaGallery() {
+    if (currentMediaItems.length === 0) {
+        showNoMediaPlaceholder();
+        return;
+    }
+    
+    // Display main media
+    displayMainMedia(currentMediaIndex);
+    
+    // Display thumbnails
+    displayMediaThumbnails();
+    
+    // Update navigation buttons
+    updateMediaNavigation();
+}
+
+// Display main media
+function displayMainMedia(index) {
+    const mainContainer = document.getElementById('mediaGalleryMain');
+    const mediaItem = currentMediaItems[index];
+    
+    if (!mediaItem) {
+        showNoMediaPlaceholder();
+        return;
+    }
+    
+    const mediaPath = mediaItem.path || mediaItem.url;
+    const mediaType = mediaItem.type || getMediaTypeFromPath(mediaPath);
+    
+    let mediaHTML = '';
+    
+    switch (mediaType) {
+        case 'image':
+            mediaHTML = `
+                <img src="/${mediaPath}" 
+                     alt="${mediaItem.caption || 'POI Görseli'}" 
+                     onclick="openMediaFullscreen(${index})"
+                     style="cursor: zoom-in;">
+            `;
+            break;
+            
+        case 'video':
+            mediaHTML = `
+                <video controls style="max-width: 100%; max-height: 100%;">
+                    <source src="/${mediaPath}" type="video/mp4">
+                    <source src="/${mediaPath}" type="video/webm">
+                    Tarayıcınız video oynatmayı desteklemiyor.
+                </video>
+            `;
+            break;
+            
+        case 'audio':
+            mediaHTML = `
+                <div class="audio-player-container" style="text-align: center; color: white;">
+                    <i class="fas fa-music fa-4x mb-3"></i>
+                    <h5>${mediaItem.caption || 'Ses Dosyası'}</h5>
+                    <audio controls style="width: 100%; max-width: 400px;">
+                        <source src="/${mediaPath}" type="audio/mpeg">
+                        <source src="/${mediaPath}" type="audio/wav">
+                        Tarayıcınız ses oynatmayı desteklemiyor.
+                    </audio>
+                </div>
+            `;
+            break;
+            
+        case 'model_3d':
+            mediaHTML = `
+                <div class="model-3d-container" style="text-align: center; color: white;">
+                    <i class="fas fa-cube fa-4x mb-3"></i>
+                    <h5>${mediaItem.caption || '3D Model'}</h5>
+                    <p>3D model görüntüleyici yükleniyor...</p>
+                    <model-viewer src="/${mediaPath}" 
+                                  alt="3D Model" 
+                                  auto-rotate 
+                                  camera-controls
+                                  style="width: 100%; height: 300px;">
+                    </model-viewer>
+                </div>
+            `;
+            break;
+            
+        default:
+            mediaHTML = `
+                <div class="unknown-media" style="text-align: center; color: white;">
+                    <i class="fas fa-file fa-4x mb-3"></i>
+                    <h5>${mediaItem.caption || 'Medya Dosyası'}</h5>
+                    <p>Bu medya türü desteklenmiyor.</p>
+                </div>
+            `;
+    }
+    
+    mainContainer.innerHTML = mediaHTML;
+}
+
+// Display media thumbnails
+function displayMediaThumbnails() {
+    const thumbnailsContainer = document.getElementById('mediaGalleryThumbnails');
+    
+    if (currentMediaItems.length <= 1) {
+        thumbnailsContainer.style.display = 'none';
+        return;
+    }
+    
+    thumbnailsContainer.style.display = 'flex';
+    
+    const thumbnailsHTML = currentMediaItems.map((mediaItem, index) => {
+        const mediaPath = mediaItem.thumbnail_path || mediaItem.path || mediaItem.url;
+        const mediaType = mediaItem.type || getMediaTypeFromPath(mediaPath);
+        const isActive = index === currentMediaIndex;
+        
+        let thumbnailContent = '';
+        
+        if (mediaType === 'image') {
+            thumbnailContent = `<img src="/${mediaPath}" alt="Thumbnail ${index + 1}">`;
+        } else {
+            const iconMap = {
+                'video': 'fas fa-play',
+                'audio': 'fas fa-music',
+                'model_3d': 'fas fa-cube'
+            };
+            const icon = iconMap[mediaType] || 'fas fa-file';
+            thumbnailContent = `<div class="media-thumbnail-icon"><i class="${icon}"></i></div>`;
+        }
+        
+        return `
+            <div class="media-thumbnail ${isActive ? 'active' : ''}" 
+                 onclick="selectMedia(${index})">
+                ${thumbnailContent}
+            </div>
+        `;
+    }).join('');
+    
+    thumbnailsContainer.innerHTML = thumbnailsHTML;
+}
+
+// Update media navigation
+function updateMediaNavigation() {
+    const prevBtn = document.getElementById('mediaPrevBtn');
+    const nextBtn = document.getElementById('mediaNextBtn');
+    
+    prevBtn.disabled = currentMediaIndex === 0;
+    nextBtn.disabled = currentMediaIndex === currentMediaItems.length - 1;
+    
+    if (currentMediaItems.length <= 1) {
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+    } else {
+        prevBtn.style.display = 'flex';
+        nextBtn.style.display = 'flex';
+    }
+}
+
+// Select media by index
+function selectMedia(index) {
+    if (index >= 0 && index < currentMediaItems.length) {
+        currentMediaIndex = index;
+        displayMainMedia(index);
+        displayMediaThumbnails();
+        updateMediaNavigation();
+    }
+}
+
+// Navigate to previous media
+function previousMedia() {
+    if (currentMediaIndex > 0) {
+        selectMedia(currentMediaIndex - 1);
+    }
+}
+
+// Navigate to next media
+function nextMedia() {
+    if (currentMediaIndex < currentMediaItems.length - 1) {
+        selectMedia(currentMediaIndex + 1);
+    }
+}
+
+// Open media in fullscreen
+function openMediaFullscreen(index) {
+    const mediaItem = currentMediaItems[index];
+    if (!mediaItem) return;
+    
+    const mediaPath = mediaItem.path || mediaItem.url;
+    const mediaType = mediaItem.type || getMediaTypeFromPath(mediaPath);
+    
+    if (mediaType !== 'image') return; // Only images for now
+    
+    const fullscreenDiv = document.createElement('div');
+    fullscreenDiv.className = 'media-fullscreen';
+    fullscreenDiv.innerHTML = `
+        <img src="/${mediaPath}" alt="${mediaItem.caption || 'POI Görseli'}">
+        <button class="fullscreen-close" onclick="closeMediaFullscreen()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    document.body.appendChild(fullscreenDiv);
+    document.body.style.overflow = 'hidden';
+    
+    // Close on ESC key
+    const handleKeydown = (e) => {
+        if (e.key === 'Escape') {
+            closeMediaFullscreen();
+            document.removeEventListener('keydown', handleKeydown);
+        }
+    };
+    document.addEventListener('keydown', handleKeydown);
+}
+
+// Close media fullscreen
+function closeMediaFullscreen() {
+    const fullscreenDiv = document.querySelector('.media-fullscreen');
+    if (fullscreenDiv) {
+        fullscreenDiv.remove();
+        document.body.style.overflow = '';
+    }
+}
+
+// Show no media placeholder
+function showNoMediaPlaceholder() {
+    document.getElementById('mediaGalleryMain').innerHTML = `
+        <div class="no-media-placeholder">
+            <i class="fas fa-image fa-3x text-muted"></i>
+            <p class="text-muted mt-2">Bu POI için medya bulunamadı</p>
+        </div>
+    `;
+    document.getElementById('mediaGalleryThumbnails').style.display = 'none';
+    document.getElementById('mediaPrevBtn').style.display = 'none';
+    document.getElementById('mediaNextBtn').style.display = 'none';
+}
+
+// Show POI modal error
+function showPOIModalError(message) {
+    const titleElement = document.getElementById('poiDetailModalLabel');
+    const mainElement = document.getElementById('mediaGalleryMain');
+    
+    if (titleElement) {
+        titleElement.textContent = 'Hata';
+    }
+    
+    if (mainElement) {
+        mainElement.innerHTML = `
+            <div class="no-media-placeholder">
+                <i class="fas fa-exclamation-triangle fa-3x text-danger"></i>
+                <p class="text-danger mt-2">${message}</p>
+            </div>
+        `;
+    } else {
+        // Fallback: show alert if modal elements are not found
+        alert('Hata: ' + message);
+    }
+}
+
+// Get media type from file path
+function getMediaTypeFromPath(path) {
+    if (!path) return 'unknown';
+    
+    const extension = path.split('.').pop().toLowerCase();
+    
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
+        return 'image';
+    } else if (['mp4', 'avi', 'mov', 'webm', 'mkv'].includes(extension)) {
+        return 'video';
+    } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(extension)) {
+        return 'audio';
+    } else if (['glb', 'gltf', 'obj', 'fbx', 'dae', 'ply', 'stl'].includes(extension)) {
+        return 'model_3d';
+    }
+    
+    return 'unknown';
+}
+
+// Setup POI modal event listeners
+function setupPOIModalEventListeners() {
+    // Media navigation
+    document.getElementById('mediaPrevBtn').onclick = previousMedia;
+    document.getElementById('mediaNextBtn').onclick = nextMedia;
+    
+    // Action buttons
+    document.getElementById('showOnMapBtn').onclick = () => {
+        if (currentPOIData) {
+            focusOnMap(currentPOIData.latitude, currentPOIData.longitude);
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('poiDetailModal')).hide();
+        }
+    };
+    
+    document.getElementById('addToRouteBtn').onclick = () => {
+        if (currentPOIData) {
+            addToRoute(currentPOIData);
+            showNotification(`"${currentPOIData.name}" rotaya eklendi`, 'success');
+        }
+    };
+    
+    document.getElementById('openInGoogleMapsBtn').onclick = () => {
+        if (currentPOIData) {
+            openInGoogleMaps(currentPOIData.latitude, currentPOIData.longitude, currentPOIData.name);
+        }
+    };
+    
+    document.getElementById('sharePoiBtn').onclick = () => {
+        if (currentPOIData) {
+            sharePOI(currentPOIData);
+        }
+    };
+    
+    // Keyboard navigation
+    const handleModalKeydown = (e) => {
+        if (document.getElementById('poiDetailModal').classList.contains('show')) {
+            switch (e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    previousMedia();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    nextMedia();
+                    break;
+                case 'Escape':
+                    closeMediaFullscreen();
+                    break;
+            }
+        }
+    };
+    
+    document.addEventListener('keydown', handleModalKeydown);
+}
+
+// Focus on map location
+function focusOnMap(lat, lng) {
+    if (map) {
+        map.setView([lat, lng], Math.max(map.getZoom(), 16), {
+            animate: true,
+            duration: 1
+        });
+        
+        // Add temporary highlight marker
+        const highlightMarker = L.circleMarker([lat, lng], {
+            color: '#ff0000',
+            fillColor: '#ff0000',
+            fillOpacity: 0.3,
+            radius: 20,
+            weight: 3
+        }).addTo(map);
+        
+        // Remove highlight after 3 seconds
+        setTimeout(() => {
+            map.removeLayer(highlightMarker);
+        }, 3000);
+    }
+}
+
+// Share POI
+function sharePOI(poi) {
+    const shareData = {
+        title: poi.name,
+        text: `${poi.name} - ${getCategoryDisplayName(poi.category)}`,
+        url: `${window.location.origin}${window.location.pathname}?poi=${poi._id || poi.id}`
+    };
+    
+    if (navigator.share) {
+        navigator.share(shareData).catch(console.error);
+    } else {
+        // Fallback: copy to clipboard
+        const shareText = `${shareData.title}\n${shareData.text}\n${shareData.url}`;
+        navigator.clipboard.writeText(shareText).then(() => {
+            showNotification('POI bilgileri panoya kopyalandı', 'success');
+        }).catch(() => {
+            showNotification('Paylaşım başarısız', 'error');
+        });
+    }
+}
+
+// Update POI card click handlers to open detail modal
+function updatePOICardClickHandlers() {
+    // Update existing POI cards to open detail modal
+    document.querySelectorAll('.poi-card[data-poi-id]').forEach(card => {
+        card.style.cursor = 'pointer';
+        card.onclick = (e) => {
+            // Prevent triggering if clicking on action buttons
+            if (e.target.closest('.poi-card__actions')) return;
+            
+            const poiId = card.dataset.poiId;
+            showPOIDetail(poiId);
+        };
+    });
+}
+
+// Close POI detail modal
+function closePOIDetailModal() {
+    const modalElement = document.getElementById('poiDetailModal');
+    if (!modalElement) return;
+    
+    try {
+        // Try Bootstrap 5 first
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+        } else {
+            throw new Error('No Bootstrap modal instance');
+        }
+    } catch (error) {
+        console.warn('Bootstrap modal close failed, using fallback:', error);
+        // Fallback: manually hide modal
+        modalElement.classList.remove('show');
+        modalElement.style.display = 'none';
+        modalElement.setAttribute('aria-hidden', 'true');
+        modalElement.removeAttribute('aria-modal');
+        
+        // Remove backdrop
+        const backdrop = document.getElementById('poiModalBackdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        
+        // Restore body scroll
+        document.body.classList.remove('modal-open');
+    }
+}
+
+// Add close button event listener when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Debug: Check if modal exists on page load
+    const modalElement = document.getElementById('poiDetailModal');
+    console.log('🔍 POI Modal check on DOM ready:', modalElement ? 'Found' : 'Not found');
+    
+    if (modalElement) {
+        console.log('✅ POI Modal element found on page load');
+        
+        const closeBtn = modalElement.querySelector('.btn-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closePOIDetailModal);
+        }
+        
+        // Close on backdrop click
+        modalElement.addEventListener('click', function(e) {
+            if (e.target === modalElement) {
+                closePOIDetailModal();
+            }
+        });
+        
+        // Close on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modalElement.classList.contains('show')) {
+                closePOIDetailModal();
+            }
+        });
+    } else {
+        console.error('❌ POI Modal element not found on page load!');
+        console.log('Available elements with "modal" in id:', 
+            Array.from(document.querySelectorAll('[id*="modal"]')).map(el => el.id));
+    }
+});

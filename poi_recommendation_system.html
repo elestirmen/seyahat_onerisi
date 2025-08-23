@@ -1179,6 +1179,145 @@
 
                 </div>
 
+                <!-- POI Detail Modal -->
+                <div class="modal fade" id="poiDetailModal" tabindex="-1" aria-labelledby="poiDetailModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                        <div class="modal-content">
+                            <div class="modal-header border-0 pb-0">
+                                <div class="poi-modal-header w-100">
+                                    <div class="poi-modal-title-section">
+                                        <h4 class="modal-title" id="poiDetailModalLabel">POI Detayları</h4>
+                                        <div class="poi-modal-category-badge" id="poiModalCategory"></div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                            </div>
+                            <div class="modal-body p-0">
+                                <!-- POI Media Gallery -->
+                                <div class="poi-media-gallery" id="poiMediaGallery">
+                                    <div class="media-gallery-container">
+                                        <div class="media-gallery-main" id="mediaGalleryMain">
+                                            <div class="no-media-placeholder">
+                                                <i class="fas fa-image fa-3x text-muted"></i>
+                                                <p class="text-muted mt-2">Bu POI için medya bulunamadı</p>
+                                            </div>
+                                        </div>
+                                        <div class="media-gallery-controls">
+                                            <button class="media-nav-btn prev-btn" id="mediaPrevBtn">
+                                                <i class="fas fa-chevron-left"></i>
+                                            </button>
+                                            <button class="media-nav-btn next-btn" id="mediaNextBtn">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </button>
+                                        </div>
+                                        <div class="media-gallery-thumbnails" id="mediaGalleryThumbnails"></div>
+                                    </div>
+                                </div>
+
+                                <!-- POI Information -->
+                                <div class="poi-modal-content">
+                                    <div class="container-fluid p-4">
+                                        <div class="row">
+                                            <div class="col-lg-8">
+                                                <!-- POI Description -->
+                                                <div class="poi-description-section mb-4">
+                                                    <h5 class="section-title">
+                                                        <i class="fas fa-info-circle text-primary me-2"></i>
+                                                        Açıklama
+                                                    </h5>
+                                                    <div class="poi-description-content" id="poiDescriptionContent">
+                                                        <p class="text-muted">Bu POI için açıklama bulunmuyor.</p>
+                                                    </div>
+                                                </div>
+
+                                                <!-- POI Features/Tags -->
+                                                <div class="poi-features-section mb-4" id="poiFeaturesSection"
+                                                    style="display: none;">
+                                                    <h5 class="section-title">
+                                                        <i class="fas fa-tags text-success me-2"></i>
+                                                        Özellikler
+                                                    </h5>
+                                                    <div class="poi-features-tags" id="poiFeaturesTags"></div>
+                                                </div>
+
+                                                <!-- POI Ratings -->
+                                                <div class="poi-ratings-section mb-4" id="poiRatingsSection"
+                                                    style="display: none;">
+                                                    <h5 class="section-title">
+                                                        <i class="fas fa-star text-warning me-2"></i>
+                                                        Nitelik Puanları
+                                                    </h5>
+                                                    <div class="poi-ratings-grid" id="poiRatingsGrid"></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-lg-4">
+                                                <!-- POI Quick Info -->
+                                                <div class="poi-quick-info">
+                                                    <div class="quick-info-card">
+                                                        <h5 class="section-title">
+                                                            <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                                                            Konum Bilgileri
+                                                        </h5>
+                                                        <div class="quick-info-item">
+                                                            <span class="info-label">Koordinatlar:</span>
+                                                            <span class="info-value" id="poiCoordinates">-</span>
+                                                        </div>
+                                                        <div class="quick-info-item">
+                                                            <span class="info-label">Kategori:</span>
+                                                            <span class="info-value" id="poiCategoryInfo">-</span>
+                                                        </div>
+                                                        <div class="quick-info-item" id="poiRecommendationScore"
+                                                            style="display: none;">
+                                                            <span class="info-label">Öneri Puanı:</span>
+                                                            <span class="info-value">
+                                                                <span class="badge bg-primary"
+                                                                    id="poiScoreBadge">-</span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- POI Actions -->
+                                                    <div class="poi-actions-card mt-3">
+                                                        <h5 class="section-title">
+                                                            <i class="fas fa-tools text-info me-2"></i>
+                                                            İşlemler
+                                                        </h5>
+                                                        <div class="poi-action-buttons">
+                                                            <button class="btn btn-primary btn-sm w-100 mb-2"
+                                                                id="showOnMapBtn">
+                                                                <i class="fas fa-map-marker-alt me-2"></i>
+                                                                Haritada Göster
+                                                            </button>
+                                                            <button class="btn btn-success btn-sm w-100 mb-2"
+                                                                id="addToRouteBtn">
+                                                                <i class="fas fa-plus me-2"></i>
+                                                                Rotaya Ekle
+                                                            </button>
+                                                            <button class="btn btn-info btn-sm w-100 mb-2"
+                                                                id="openInGoogleMapsBtn">
+                                                                <i class="fab fa-google me-2"></i>
+                                                                Google Maps'te Aç
+                                                            </button>
+                                                            <button class="btn btn-outline-secondary btn-sm w-100"
+                                                                id="sharePoiBtn">
+                                                                <i class="fas fa-share-alt me-2"></i>
+                                                                Paylaş
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="results-section" id="resultsSection">
                     <h2 class="section-title">
                         <i class="fas fa-star"></i>
