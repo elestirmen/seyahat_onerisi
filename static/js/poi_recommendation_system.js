@@ -5256,11 +5256,18 @@ function cleanupTabState(tabName) {
         }
     } else if (tabName === 'predefined-routes') {
         // Clean up predefined routes state
-        // Close any open modals
+        // Close route detail modal but NOT POI detail modal
         const routeModal = document.getElementById('routeDetailModal');
         if (routeModal && routeModal.classList.contains('show')) {
             closeRouteDetailModal();
         }
+        
+        // DON'T close POI detail modal - it should work across tabs
+        // const poiModal = document.getElementById('poiDetailModal');
+        // if (poiModal && poiModal.classList.contains('show')) {
+        //     // Keep POI modal open
+        // }
+        
         // Keep the predefined map instance but clear temporary highlights
         if (predefinedElevationChart) {
             predefinedElevationChart.destroy();
@@ -6010,7 +6017,7 @@ function createDetailedPOIPopup(poi, stopNumber) {
                 ">
                     <i class="fab fa-google" style="font-size: 10px;"></i> Maps
                 </button>
-                <button class="poi-popup-btn poi-popup-btn--primary" onclick="showPOIDetail('${poi.id || poi._id}'); event.stopPropagation();" style="
+                <button class="poi-popup-btn poi-popup-btn--primary" onclick="showPOIDetail('${poi.poi_id || poi.id || poi._id}'); event.stopPropagation();" style="
                     flex: 1; 
                     padding: 6px 8px; 
                     font-size: 11px; 
@@ -10591,15 +10598,15 @@ async function initializeMap(recommendationData) {
                                     gap: 6px;
                                     flex-wrap: wrap;
                                 ">
-                                    <button onclick="showPOIDetail('${poi.id || poi._id}')" 
+                                    <button onclick="showPOIDetail('${poi.poi_id || poi.id || poi._id}')" 
                                             style="background: #17a2b8; color: white; border: none; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                                         ℹ️ Detaylar
                                     </button>
-                                    <button onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" 
+                                    <button onclick="openInGoogleMaps(${poi.lat || poi.latitude}, ${poi.lon || poi.lng || poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" 
                                             style="background: #4285f4; color: white; border: none; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                                         🗺️ Google Maps
                                     </button>
-                                    <button onclick="addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})" 
+                                    <button onclick="addToRoute({id: '${poi.poi_id || poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.lat || poi.latitude}, longitude: ${poi.lon || poi.lng || poi.longitude}, category: '${poi.category}'})" 
                                             style="background: var(--primary-color); color: white; border: none; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                                         ➕ Rotaya Ekle
                                     </button>
@@ -10706,13 +10713,13 @@ function createPOICards(pois) {
                 </div>
                 <div class="poi-media-preview"></div>
                 <div class="poi-card__actions">
-                    <button class="btn btn--info btn--sm" onclick="event.stopPropagation(); showPOIDetail('${poi.id || poi._id}')">
+                    <button class="btn btn--info btn--sm" onclick="event.stopPropagation(); showPOIDetail('${poi.poi_id || poi.id || poi._id}')">
                         <i class="fas fa-info-circle"></i> Detaylar
                     </button>
                     <button class="btn btn--secondary btn--sm" onclick="event.stopPropagation(); focusOnMap(${poi.latitude}, ${poi.longitude})">
                         <i class="fas fa-map-marker-alt"></i> Haritada Göster
                     </button>
-                    <button class="btn btn--success btn--sm" onclick="event.stopPropagation(); addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})">
+                    <button class="btn btn--success btn--sm" onclick="event.stopPropagation(); addToRoute({id: '${poi.poi_id || poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.lat || poi.latitude}, longitude: ${poi.lon || poi.lng || poi.longitude}, category: '${poi.category}'})">
                         <i class="fas fa-plus"></i> Rotaya Ekle
                     </button>
                 </div>
@@ -10755,13 +10762,13 @@ function createModernPOICards(pois, type = 'primary') {
                 <button class="action-btn primary" onclick="event.stopPropagation(); focusOnMap(${poi.latitude}, ${poi.longitude})" title="Haritada Göster">
                     <i class="fas fa-map-marker-alt"></i>
                 </button>
-                <button class="action-btn secondary" onclick="event.stopPropagation(); openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" title="Google Maps'te Aç">
+                <button class="action-btn secondary" onclick="event.stopPropagation(); openInGoogleMaps(${poi.lat || poi.latitude}, ${poi.lon || poi.lng || poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" title="Google Maps'te Aç">
                     <i class="fab fa-google"></i>
                 </button>
-                <button class="action-btn success" onclick="event.stopPropagation(); addToRoute({id: '${poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.latitude}, longitude: ${poi.longitude}, category: '${poi.category}'})" title="Rotaya Ekle">
+                <button class="action-btn success" onclick="event.stopPropagation(); addToRoute({id: '${poi.poi_id || poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.lat || poi.latitude}, longitude: ${poi.lon || poi.lng || poi.longitude}, category: '${poi.category}'})" title="Rotaya Ekle">
                     <i class="fas fa-plus"></i>
                 </button>
-                <button class="action-btn info" onclick="event.stopPropagation(); showPOIDetails('${poi.id || poi._id}')" title="Detayları Göster">
+                <button class="action-btn info" onclick="event.stopPropagation(); showPOIDetails('${poi.poi_id || poi.id || poi._id}')" title="Detayları Göster">
                     <i class="fas fa-info"></i>
                 </button>
             </div>
@@ -12016,7 +12023,7 @@ function updateMapWithPOIs(allPOIs) {
                         <button onclick="showPOIDetail('${poi._id || poi.id}', ${JSON.stringify(poi).replace(/"/g, '&quot;')})" class="popup-btn">
                             <i class="fas fa-info-circle"></i> Detaylar
                         </button>
-                        <button onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" class="popup-btn">
+                        <button onclick="openInGoogleMaps(${poi.lat || poi.latitude}, ${poi.lon || poi.lng || poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" class="popup-btn">
                             <i class="fas fa-external-link-alt"></i> Google Maps
                         </button>
                         <button onclick="addToRoute(${JSON.stringify(poi).replace(/"/g, '&quot;')})" class="popup-btn">
@@ -12177,79 +12184,11 @@ function ensurePOIModalExists() {
     let modalElement = document.getElementById('poiDetailModal');
     
     if (!modalElement) {
-        console.warn('⚠️ POI modal not found, creating fallback');
-        
-        // Create a basic modal structure
-        const modalHTML = `
-            <div class="modal fade" id="poiDetailModal" tabindex="-1" aria-labelledby="poiDetailModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-                    <div class="modal-content">
-                        <div class="modal-header border-0 pb-0">
-                            <div class="poi-modal-header w-100">
-                                <div class="poi-modal-title-section">
-                                    <h4 class="modal-title" id="poiDetailModalLabel">POI Detayları</h4>
-                                    <div class="poi-modal-category-badge" id="poiModalCategory"></div>
-                                </div>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                        </div>
-                        <div class="modal-body p-0">
-                            <div class="poi-media-gallery" id="poiMediaGallery">
-                                <div class="media-gallery-container">
-                                    <div class="media-gallery-main" id="mediaGalleryMain">
-                                        <div class="no-media-placeholder">
-                                            <i class="fas fa-image fa-3x text-muted"></i>
-                                            <p class="text-muted mt-2">Bu POI için medya bulunamadı</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="poi-modal-content">
-                                <div class="container-fluid p-4">
-                                    <div class="row">
-                                        <div class="col-lg-8">
-                                            <div class="poi-description-section mb-4">
-                                                <h5 class="section-title">
-                                                    <i class="fas fa-info-circle text-primary me-2"></i>
-                                                    Açıklama
-                                                </h5>
-                                                <div class="poi-description-content" id="poiDescriptionContent">
-                                                    <p class="text-muted">Bu POI için açıklama bulunmuyor.</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-4">
-                                            <div class="poi-quick-info">
-                                                <div class="quick-info-card">
-                                                    <h5 class="section-title">
-                                                        <i class="fas fa-map-marker-alt text-danger me-2"></i>
-                                                        Konum Bilgileri
-                                                    </h5>
-                                                    <div class="quick-info-item">
-                                                        <span class="info-label">Koordinatlar:</span>
-                                                        <span class="info-value" id="poiCoordinates">-</span>
-                                                    </div>
-                                                    <div class="quick-info-item">
-                                                        <span class="info-label">Kategori:</span>
-                                                        <span class="info-value" id="poiCategoryInfo">-</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        modalElement = document.getElementById('poiDetailModal');
-        console.log('✅ Fallback POI modal created');
+        console.error('❌ POI modal not found in DOM! Modal should be in HTML.');
+        return null;
     }
     
+    console.log('✅ POI modal found in DOM');
     return modalElement;
 }
 
@@ -12280,25 +12219,78 @@ async function showPOIDetail(poiId, poiData = null) {
         // Try Bootstrap 5 first, then fallback to manual show
         let modal;
         try {
-            modal = new bootstrap.Modal(modalElement);
+            console.log('🔄 Attempting to show Bootstrap modal...');
+            modal = new bootstrap.Modal(modalElement, {
+                backdrop: true,
+                keyboard: true,
+                focus: true
+            });
             modal.show();
+            console.log('✅ Bootstrap modal shown successfully');
         } catch (bootstrapError) {
             console.warn('Bootstrap Modal failed, using fallback:', bootstrapError);
             // Fallback: manually show modal
             modalElement.classList.add('show');
             modalElement.style.display = 'block';
+            modalElement.style.zIndex = '10100';
             modalElement.setAttribute('aria-modal', 'true');
             modalElement.removeAttribute('aria-hidden');
             
             // Add backdrop
-            const backdrop = document.createElement('div');
+            let backdrop = document.getElementById('poiModalBackdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+            backdrop = document.createElement('div');
             backdrop.className = 'modal-backdrop fade show';
             backdrop.id = 'poiModalBackdrop';
+            backdrop.style.zIndex = '10099';
             document.body.appendChild(backdrop);
             
             // Prevent body scroll
             document.body.classList.add('modal-open');
+            console.log('✅ Manual modal fallback applied');
         }
+        
+        // Hide mobile filter panel if open
+        const mobileFilterPanel = document.getElementById('mobileFilterPanel');
+        if (mobileFilterPanel && mobileFilterPanel.classList.contains('active')) {
+            console.log('🔧 Hiding mobile filter panel to show modal');
+            mobileFilterPanel.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        
+        // Hide any other high z-index elements that might interfere
+        const highZIndexElements = document.querySelectorAll('[style*="z-index: 10000"], [style*="z-index:10000"]');
+        highZIndexElements.forEach(element => {
+            if (element.id !== 'poiDetailModal' && element.id !== 'poiModalBackdrop') {
+                console.log('🔧 Temporarily hiding high z-index element:', element.id || element.className);
+                element.style.zIndex = '999';
+            }
+        });
+        
+        // Force modal visibility
+        setTimeout(() => {
+            const modalCheck = document.getElementById('poiDetailModal');
+            if (modalCheck) {
+                console.log('🔍 Modal visibility check:', {
+                    display: modalCheck.style.display,
+                    visibility: modalCheck.style.visibility,
+                    zIndex: modalCheck.style.zIndex,
+                    classList: modalCheck.classList.toString(),
+                    offsetHeight: modalCheck.offsetHeight,
+                    offsetWidth: modalCheck.offsetWidth
+                });
+                
+                // Force show if hidden
+                if (modalCheck.style.display === 'none' || !modalCheck.classList.contains('show')) {
+                    console.log('🔧 Forcing modal visibility...');
+                    modalCheck.style.display = 'block';
+                    modalCheck.style.zIndex = '10100';
+                    modalCheck.classList.add('show');
+                }
+            }
+        }, 100);
         
         // Set loading state
         document.getElementById('poiDetailModalLabel').textContent = 'Yükleniyor...';
@@ -12313,11 +12305,14 @@ async function showPOIDetail(poiId, poiData = null) {
         // Fetch POI data if not provided
         let poi = poiData;
         if (!poi) {
+            console.log('🔍 Fetching POI data for ID:', poiId);
             const response = await fetch(`${apiBase}/poi/${poiId}`);
             if (!response.ok) {
+                console.error('❌ POI API response not OK:', response.status, response.statusText);
                 throw new Error('POI bulunamadı');
             }
             poi = await response.json();
+            console.log('✅ POI data fetched successfully:', poi);
         }
         
         currentPOIData = poi;

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POI Detail Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-poi {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .poi-info {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        .poi-id {
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>POI Detail Fix Test</h1>
+        <p>Bu test sayfası, hazır rotalardaki POI detay butonlarının düzgün çalışıp çalışmadığını test eder.</p>
+        
+        <h2>Test POI'leri</h2>
+        
+        <!-- Test POI with poi_id (predefined route style) -->
+        <div class="test-poi">
+            <h3>Test POI 1 (Predefined Route Style)</h3>
+            <div class="poi-info">
+                <div>Name: Göreme Açık Hava Müzesi</div>
+                <div>Category: tarihi</div>
+                <div class="poi-id">poi_id: 1</div>
+                <div>lat: 38.6425</div>
+                <div>lon: 34.8281</div>
+            </div>
+            <button class="test-button" onclick="testPOIDetail(createPredefinedRoutePOI())">
+                Test POI Detail (Predefined Route)
+            </button>
+        </div>
+        
+        <!-- Test POI with id (regular POI style) -->
+        <div class="test-poi">
+            <h3>Test POI 2 (Regular POI Style)</h3>
+            <div class="poi-info">
+                <div>Name: Uçhisar Kalesi</div>
+                <div>Category: tarihi</div>
+                <div class="poi-id">id: 2</div>
+                <div>latitude: 38.6367</div>
+                <div>longitude: 34.8047</div>
+            </div>
+            <button class="test-button" onclick="testPOIDetail(createRegularPOI())">
+                Test POI Detail (Regular POI)
+            </button>
+        </div>
+        
+        <div id="test-results" style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+            <h3>Test Results</h3>
+            <div id="results-content">Click the test buttons above to see results...</div>
+        </div>
+    </div>
+
+    <script>
+        // Mock API base
+        const apiBase = 'http://localhost:5560';
+        
+        // Create test POI objects
+        function createPredefinedRoutePOI() {
+            return {
+                poi_id: 1,
+                name: 'Göreme Açık Hava Müzesi',
+                category: 'tarihi',
+                lat: 38.6425,
+                lon: 34.8281,
+                description: 'Test POI from predefined route'
+            };
+        }
+        
+        function createRegularPOI() {
+            return {
+                id: 2,
+                name: 'Uçhisar Kalesi',
+                category: 'tarihi',
+                latitude: 38.6367,
+                longitude: 34.8047,
+                description: 'Test regular POI'
+            };
+        }
+        
+        // Test function
+        function testPOIDetail(poi) {
+            const resultsDiv = document.getElementById('results-content');
+            
+            // Test ID extraction logic
+            const extractedId = poi.poi_id || poi.id || poi._id;
+            
+            resultsDiv.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <strong>Testing POI:</strong> ${poi.name}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Original POI object:</strong><br>
+                    <pre style="background: #f8f9fa; padding: 10px; border-radius: 3px; font-size: 12px;">${JSON.stringify(poi, null, 2)}</pre>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Extracted ID:</strong> <span style="color: ${extractedId ? 'green' : 'red'};">${extractedId || 'undefined'}</span>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>API URL would be:</strong> <code>${apiBase}/poi/${extractedId}</code>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Status:</strong> <span style="color: ${extractedId ? 'green' : 'red'};">
+                        ${extractedId ? '✅ ID extracted successfully - POI detail should work' : '❌ No ID found - POI detail would fail'}
+                    </span>
+                </div>
+            `;
+            
+            // Test coordinate extraction
+            const lat = poi.lat || poi.latitude;
+            const lng = poi.lon || poi.lng || poi.longitude;
+            
+            resultsDiv.innerHTML += `
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ccc;">
+                    <strong>Coordinate Test:</strong><br>
+                    <div>Extracted lat: <span style="color: ${lat ? 'green' : 'red'};">${lat || 'undefined'}</span></div>
+                    <div>Extracted lng: <span style="color: ${lng ? 'green' : 'red'};">${lng || 'undefined'}</span></div>
+                    <div>Google Maps URL would be: <code>https://www.google.com/maps/search/?api=1&query=${lat},${lng}</code></div>
+                </div>
+            `;
+        }
+        
+        // Test the actual button generation
+        function generateTestButton(poi) {
+            const poiId = poi.poi_id || poi.id || poi._id;
+            const lat = poi.lat || poi.latitude;
+            const lng = poi.lon || poi.lng || poi.longitude;
+            
+            return `
+                <button onclick="showPOIDetail('${poiId}'); event.stopPropagation();" 
+                        style="background: #17a2b8; color: white; border: none; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer;">
+                    ℹ️ Detaylar (ID: ${poiId})
+                </button>
+                <button onclick="openInGoogleMaps(${lat}, ${lng}, '${poi.name.replace(/'/g, "\\'")}'); event.stopPropagation();" 
+                        style="background: #4285f4; color: white; border: none; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer;">
+                    🗺️ Google Maps
+                </button>
+            `;
+        }
+        
+        // Mock functions for testing
+        function showPOIDetail(poiId) {
+            alert(`showPOIDetail called with ID: ${poiId}`);
+        }
+        
+        function openInGoogleMaps(lat, lng, name) {
+            alert(`openInGoogleMaps called with: lat=${lat}, lng=${lng}, name=${name}`);
+        }
+        
+        console.log('POI Detail Fix Test page loaded');
+    </script>
+</body>
+</html>
