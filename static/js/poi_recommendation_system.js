@@ -6010,7 +6010,7 @@ function createDetailedPOIPopup(poi, stopNumber) {
                 ">
                     <i class="fab fa-google" style="font-size: 10px;"></i> Maps
                 </button>
-                <button class="poi-popup-btn poi-popup-btn--primary" onclick="loadDetailedPOIInfo('${poi.id || poi._id}', '${poi.name.replace(/'/g, "\\'")}'); event.stopPropagation();" style="
+                <button class="poi-popup-btn poi-popup-btn--primary" onclick="showPOIDetail('${poi.id || poi._id}'); event.stopPropagation();" style="
                     flex: 1; 
                     padding: 6px 8px; 
                     font-size: 11px; 
@@ -6036,8 +6036,6 @@ function createDetailedPOIPopup(poi, stopNumber) {
 
 // Trigger detailed POI information display
 function showPOIDetails(poiId) {
-    const titleEl = document.querySelector(`[data-poi-id="${poiId}"] .poi-title`);
-    const poiName = titleEl ? titleEl.textContent.trim() : '';
     // Haritada ilgili POI'ye odaklan
     const marker = markers.find(m => m.poiData && (m.poiData.id === poiId || m.poiData._id === poiId));
     if (marker && marker.poiData) {
@@ -6046,7 +6044,8 @@ function showPOIDetails(poiId) {
         focusOnMap(lat, lng);
     }
 
-    loadDetailedPOIInfo(poiId, poiName);
+    // Use the new unified POI detail function
+    showPOIDetail(poiId);
 }
 
 // Load detailed POI information (similar to recommendation system)
@@ -10197,6 +10196,9 @@ async function displayRecommendations(recommendationData) {
 
     container.innerHTML = html;
     
+    // Initialize POI card event listeners and media loading
+    initializePOICardsMedia();
+    
     // Smooth reveal animation
     container.style.opacity = '0';
     container.style.transform = 'translateY(20px)';
@@ -10589,6 +10591,10 @@ async function initializeMap(recommendationData) {
                                     gap: 6px;
                                     flex-wrap: wrap;
                                 ">
+                                    <button onclick="showPOIDetail('${poi.id || poi._id}')" 
+                                            style="background: #17a2b8; color: white; border: none; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                        ℹ️ Detaylar
+                                    </button>
                                     <button onclick="openInGoogleMaps(${poi.latitude}, ${poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" 
                                             style="background: #4285f4; color: white; border: none; padding: 6px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                                         🗺️ Google Maps
