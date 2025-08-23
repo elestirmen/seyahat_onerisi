@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https://*; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self';">
+        content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https://*; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' http://localhost:5560 https://*.openstreetmap.org https://*.tile.openstreetmap.org https://*.opentopomap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://api.open-elevation.com https://router.project-osrm.org;">
     <title>Ürgüp POI Önerileri - Size Özel Yerler Keşfedin</title>
     <!-- Design System CSS -->
     <link rel="stylesheet" href="static/css/design-tokens.css">
@@ -43,6 +43,47 @@
 
         .media-marker.model_3d {
             background: #6366f1;
+        }
+
+        /* POI Marker Styles */
+        .custom-poi-marker {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .poi-marker-body {
+            background: #708090 !important;
+        }
+
+        /* Font Awesome icon fixes for POI markers */
+        .poi-marker-container .fas,
+        .poi-marker-container .far,
+        .poi-marker-container .fab,
+        .poi-marker-circle .fas,
+        .poi-marker-circle .far,
+        .poi-marker-circle .fab {
+            font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "FontAwesome" !important;
+            font-weight: 900 !important;
+            -webkit-font-smoothing: antialiased;
+            display: inline-block !important;
+            font-style: normal;
+            font-variant: normal;
+            text-rendering: auto;
+            line-height: 1;
+        }
+
+        /* Ensure marker containers have proper styling */
+        .custom-poi-marker {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .poi-marker-circle {
+            transition: transform 0.2s ease;
+        }
+
+        .poi-marker-circle:hover {
+            transform: scale(1.1);
         }
 
         /* Mobile View Toggle Styles */
@@ -1099,6 +1140,46 @@
                         <i class="fas fa-magic btn-icon"></i>
                         <span class="btn-text">Önerilerimi Getir</span>
                     </button>
+
+                    <!-- Debug buttons for testing category system -->
+                    <div style="text-align: center; margin: 20px 0;">
+                        <button onclick="window.testCategorySystem()" style="
+                            background: #6c757d;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 8px;
+                            margin: 5px;
+                            cursor: pointer;
+                            font-size: 0.9rem;
+                        ">
+                            🧪 Test Category System
+                        </button>
+                        <button onclick="window.showCategoryPreview()" style="
+                            background: #28a745;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 8px;
+                            margin: 5px;
+                            cursor: pointer;
+                            font-size: 0.9rem;
+                        ">
+                            👁️ Preview Categories
+                        </button>
+                        <button onclick="window.testMarkersOnMap()" style="
+                            background: #17a2b8;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 8px;
+                            margin: 5px;
+                            cursor: pointer;
+                            font-size: 0.9rem;
+                        ">
+                            🗺️ Test Map Markers
+                        </button>
+                    </div>
                 </div>
 
                 <div class="results-section" id="resultsSection">

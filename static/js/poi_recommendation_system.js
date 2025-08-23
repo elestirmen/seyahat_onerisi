@@ -1,4 +1,29 @@
 // Rate limiting bilgilendirme mesajı
+// Test function to verify all API categories have proper mappings
+window.testCategoryMappings = function() {
+    console.log('🧪 Testing category mappings...');
+    
+    const apiCategories = ['kulturel_miras', 'dogal_miras', 'macera_spor', 'konaklama_hizmet', 'gastronomi'];
+    
+    apiCategories.forEach(category => {
+        const style = getCategoryStyle(category);
+        const displayName = getCategoryDisplayName(category);
+        
+        console.log(`🏷️ ${category}:`, {
+            color: style.color,
+            icon: style.iconClass,
+            displayName: displayName,
+            fallbackToDiger: style.category === 'diger'
+        });
+        
+        if (style.category === 'diger') {
+            console.warn(`⚠️ Category '${category}' is still falling back to 'diger'!`);
+        }
+    });
+    
+    console.log('✅ Category mapping test complete');
+};
+
 if (window.rateLimiter) {
     console.log('✅ Rate limiting aktif - POI recommendation system API çağrıları sınırlandırılacak');
 }
@@ -49,6 +74,332 @@ window.testPredefinedRouteMedia = async function(routeId) {
     } catch (error) {
         console.error('📡 API test error:', error);
         return { success: false, error: error.message };
+    }
+};
+
+// Debug function to inspect POI recommendation data
+window.debugPOIRecommendations = async function() {
+    console.log('🔍 Debugging POI recommendation data...');
+    
+    try {
+        // Test the same preferences that might be used in real recommendations
+        const testPreferences = {
+            doga: 80,
+            yemek: 60,
+            tarihi: 40,
+            sanat_kultur: 30,
+            eglence: 20,
+            macera: 50,
+            rahatlatici: 30,
+            spor: 10,
+            alisveris: 20,
+            gece_hayati: 10
+        };
+        
+        console.log('🚀 Making API request to /api/recommendations...');
+        const response = await fetch(`${apiBase}/recommendations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ preferences: testPreferences })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ API Response received:', data);
+            
+            // Inspect POI categories
+            const allPOIs = [...(data.highScore || []), ...(data.lowScore || [])];
+            console.log(`📋 Total POIs: ${allPOIs.length}`);
+            
+            if (allPOIs.length > 0) {
+                console.log('🔍 POI Category Analysis:');
+                const categoryStats = {};
+                
+                allPOIs.forEach((poi, index) => {
+                    if (index < 5) { // Log first 5 POIs in detail
+                        console.log(`POI ${index + 1}:`, {
+                            name: poi.name,
+                            category: poi.category,
+                            score: poi.recommendationScore,
+                            lat: poi.latitude,
+                            lng: poi.longitude
+                        });
+                        
+                        // Test category style mapping
+                        const style = getCategoryStyle(poi.category);
+                        console.log(`  Style for "${poi.category}":`, style);
+                    }
+                    
+                    // Count categories
+                    const cat = poi.category || 'undefined';
+                    categoryStats[cat] = (categoryStats[cat] || 0) + 1;
+                });
+                
+                console.log('📋 Category Statistics:', categoryStats);
+                
+                // Test marker creation for first POI
+                if (allPOIs.length > 0) {
+                    const testPOI = allPOIs[0];
+                    console.log('🧪 Testing marker creation for first POI:', testPOI.name);
+                    
+                    try {
+                        const testIcon = createCustomIcon(testPOI.category, testPOI.recommendationScore, false);
+                        console.log('✅ Successfully created icon:', testIcon);
+                        console.log('📋 Icon HTML preview:', testIcon.options.html.substring(0, 200) + '...');
+                    } catch (error) {
+                        console.error('❌ Error creating icon:', error);
+                    }
+                }
+                
+                return {
+                    success: true,
+                    totalPOIs: allPOIs.length,
+                    categories: categoryStats,
+                    samplePOIs: allPOIs.slice(0, 3)
+                };
+            } else {
+                console.warn('⚠️ No POIs found in API response');
+                return { success: false, error: 'No POIs in response' };
+            }
+        } else {
+            const errorText = await response.text();
+            console.error('❌ API Error:', response.status, errorText);
+            return { success: false, error: `API Error: ${response.status}` };
+        }
+    } catch (error) {
+        console.error('❌ Debug failed:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+// Simplified test function to verify poi_manager_enhanced style markers work
+window.testPOIMarkersStyle = function() {
+    console.log('🧪 Testing POI markers with poi_manager_enhanced style...');
+    
+    if (!map) {
+        console.error('❌ Map not initialized');
+        return;
+    }
+    
+    // Clear existing markers
+    markers.forEach(marker => marker.remove());
+    markers = [];
+    
+    // Test categories with exact poi_manager_enhanced approach
+    const testPOIs = [
+        { name: 'Doğa Testi', category: 'doga', lat: 38.645, lng: 34.815 },
+        { name: 'Yemek Testi', category: 'yemek', lat: 38.640, lng: 34.820 },
+        { name: 'Tarih Testi', category: 'tarihi', lat: 38.635, lng: 34.825 },
+        { name: 'Kültür Testi', category: 'kulturel', lat: 38.630, lng: 34.830 }
+    ];
+    
+    testPOIs.forEach((poi, index) => {
+        const categoryStyle = getCategoryStyle(poi.category);
+        const categoryColor = categoryStyle.color;
+        const categoryIcon = categoryStyle.iconClass.replace('fas fa-', '');
+        
+        console.log(`Creating marker for ${poi.name}:`, {
+            category: poi.category,
+            color: categoryColor,
+            icon: categoryIcon,
+            fullIconClass: categoryStyle.iconClass
+        });
+        
+        // Create marker with EXACT poi_manager_enhanced.html approach
+        const customIcon = L.divIcon({
+            className: 'custom-poi-marker',
+            html: `
+                <div class="poi-marker-container" style="background-color: ${categoryColor}">
+                    <i class="fas fa-${categoryIcon}"></i>
+                </div>
+            `,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+            popupAnchor: [0, -15]
+        });
+        
+        const marker = L.marker([poi.lat, poi.lng], { icon: customIcon })
+            .addTo(map)
+            .bindPopup(`
+                <div class="poi-popup">
+                    <div class="poi-popup-header">
+                        <i class="fas fa-${categoryIcon}" style="color: ${categoryColor}"></i>
+                        <strong>${poi.name}</strong>
+                    </div>
+                    <div class="poi-popup-category">Test Kategorisi: ${poi.category}</div>
+                    <div class="poi-popup-description">Bu bir test marker'ıdır.</div>
+                </div>
+            `);
+            
+        markers.push(marker);
+        
+        console.log(`✅ Created test marker ${index + 1}: ${poi.name}`);
+    });
+    
+    // Fit map to show all test markers
+    if (markers.length > 0) {
+        const group = new L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+    
+    console.log(`✅ Successfully created ${testPOIs.length} test POI markers`);
+    console.log('📝 If you see colored circular markers with white icons, the system is working!');
+    console.log('📝 If you see gray pins, there may be a CSS loading issue.');
+    
+    return {
+        success: true,
+        markersCreated: testPOIs.length,
+        testData: testPOIs
+    };
+};
+
+// Test function for category system
+window.testCategorySystem = function() {
+    console.log('🧪 Testing category system...');
+    
+    const testCategories = ['doga', 'yemek', 'tarihi', 'kulturel', 'gastronomik', 'diger'];
+    
+    testCategories.forEach(category => {
+        const style = getCategoryStyle(category);
+        console.log(`Category "${category}":`, style);
+    });
+    
+    console.log('📋 Fallback category styles:', fallbackCategoryStyles);
+    console.log('🗺️ Icon map:', iconMap);
+    console.log('🔗 Category aliases:', categoryIconAliases);
+};
+
+// Test markers on map
+window.testMarkersOnMap = function() {
+    if (!map) {
+        console.log('❌ Map not initialized yet');
+        return;
+    }
+    
+    // Clear existing markers
+    markers.forEach(marker => marker.remove());
+    markers = [];
+    
+    const testCategories = ['doga', 'yemek', 'tarihi', 'kulturel', 'gastronomik', 'sanatsal'];
+    const baseCoords = [38.6436, 34.8128]; // Ürgüp center
+    
+    testCategories.forEach((category, index) => {
+        const lat = baseCoords[0] + (Math.random() - 0.5) * 0.02;
+        const lng = baseCoords[1] + (Math.random() - 0.5) * 0.02;
+        const score = Math.floor(Math.random() * 40) + 60; // Random score 60-100
+        
+        const customIcon = createCustomIcon(category, score, false);
+        const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+        
+        const style = getCategoryStyle(category);
+        const displayName = getCategoryDisplayName(category);
+        
+        marker.bindPopup(`
+            <div style="text-align: center;">
+                <h4><i class="${style.iconClass}" style="color: ${style.color}; margin-right: 8px;"></i> ${displayName}</h4>
+                <p>Test POI ${index + 1}</p>
+                <p>Kategori: ${category}</p>
+                <p>Puan: ${score}</p>
+            </div>
+        `);
+        
+        markers.push(marker);
+    });
+    
+    console.log(`✅ Added ${testCategories.length} test markers to map`);
+};
+
+// Visual category preview function
+window.showCategoryPreview = function() {
+    const testCategories = ['doga', 'yemek', 'tarihi', 'kulturel', 'gastronomik', 'sanatsal', 'dini', 'diger'];
+    
+    let previewHTML = '<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0;">';
+    
+    testCategories.forEach(category => {
+        const style = getCategoryStyle(category);
+        const displayName = getCategoryDisplayName(category);
+        
+        previewHTML += `
+            <div style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                background: white;
+                min-width: 100px;
+            ">
+                <div class="poi-marker-container" style="background-color: ${style.color};">
+                    <i class="${style.iconClass}"></i>
+                </div>
+                <small style="text-align: center; font-size: 0.8rem; color: #666;">
+                    ${displayName}
+                </small>
+                <small style="text-align: center; font-size: 0.7rem; color: #999;">
+                    ${category}
+                </small>
+            </div>
+        `;
+    });
+    
+    previewHTML += '</div>';
+    
+    // Show in results section
+    const resultsSection = document.getElementById('recommendationResults');
+    if (resultsSection) {
+        resultsSection.innerHTML = `
+            <h3 style="text-align: center; color: #333; margin-bottom: 20px;">
+                <i class="fas fa-palette"></i> Kategori Önizlemesi - Yeni Stil
+            </h3>
+            <div style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center;">
+                <p style="margin: 0; color: #2e7d2e; font-weight: 500;">
+                    <i class="fas fa-check-circle"></i> İşte yeni kategori simgeleri! Eğer hala eski gri pin'ler görüyorsanız:
+                </p>
+                <p style="margin: 8px 0 0 0; color: #2e7d2e; font-size: 0.9rem;">
+                    <strong>Ctrl+F5</strong> (Windows) veya <strong>Cmd+Shift+R</strong> (Mac) ile sayfayı yenileyin
+                </p>
+            </div>
+            ${previewHTML}
+            <div style="text-align: center; margin-top: 20px; gap: 10px; display: flex; justify-content: center; flex-wrap: wrap;">
+                <button onclick="document.getElementById('recommendationResults').innerHTML=''" style="
+                    background: #dc3545;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                ">Temizle</button>
+                <button onclick="testPOIMarkersStyle()" style="
+                    background: #6f42c1;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                ">Test Harita Markerleri</button>
+                <button onclick="debugPOIRecommendations()" style="
+                    background: #fd7e14;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                ">API'yi Test Et</button>
+                <button onclick="location.reload(true)" style="
+                    background: #28a745;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                ">Sayfayı Yenile</button>
+            </div>
+        `;
+        
+        // Show the results section
+        resultsSection.style.display = 'block';
+        document.getElementById('resultsSection').style.display = 'block';
     }
 };
 
@@ -143,6 +494,7 @@ let categoryData = {};
 
 // Fallback category display names
 const fallbackCategoryNames = {
+    // Original mappings
     'doga_macera': 'Doğa & Macera',
     'gastronomik': 'Gastronomi',
     'konaklama': 'Konaklama',
@@ -153,51 +505,214 @@ const fallbackCategoryNames = {
     'mimari': 'Mimari Yapılar',
     'mezarlik': 'Mezarlık Alanları',
     'saray_kale': 'Saray ve Kaleler',
-    'diger': 'Diğer'
+    'diger': 'Diğer',
+    
+    // API category display names
+    'seyir_noktalari': 'Seyir Noktaları',
+    'macera_spor': 'Macera & Spor',
+    'yasayan_kultur': 'Yaşayan Kültür',
+    'konaklama_hizmet': 'Konaklama & Hizmet',
+    'kulturel_miras': 'Kültürel Miras',
+    'dogal_guzellilk': 'Doğal Güzellik',
+    'dogal_miras': 'Doğal Miras',
+    'gastronomi': 'Gastronomi',
+    'yemek_icecek': 'Yemek & İçecek',
+    'alisveris_el_sanatlari': 'Alışveriş & El Sanatları',
+    'eglence_aktivite': 'Eğlence & Aktivite',
+    'ulasilabilirlik': 'Ulaşılabilirlik'
 };
 
-// Fallback category colors and icons for markers
+// Fallback category colors for markers (Font Awesome icons are defined separately)
 const fallbackCategoryStyles = {
-    'doga_macera': { color: '#2ecc71', icon: '🌿' },
-    'gastronomik': { color: '#e74c3c', icon: '🍽️' },
-    'konaklama': { color: '#9b59b6', icon: '🏨' },
-    'kulturel': { color: '#3498db', icon: '🏛️' },
-    'sanatsal': { color: '#f39c12', icon: '🎨' },
-    'dini': { color: '#8B4513', icon: '🕌' },
-    'tarihi': { color: '#CD853F', icon: '🏛️' },
-    'mimari': { color: '#4682B4', icon: '🏗️' },
-    'mezarlik': { color: '#696969', icon: '⚰️' },
-    'saray_kale': { color: '#B8860B', icon: '🏰' },
-    'diger': { color: '#708090', icon: '📍' }
+    // Original mappings
+    'doga_macera': { color: '#2ecc71' },
+    'gastronomik': { color: '#e74c3c' },
+    'konaklama': { color: '#9b59b6' },
+    'kulturel': { color: '#3498db' },
+    'sanatsal': { color: '#f39c12' },
+    'dini': { color: '#8B4513' },
+    'tarihi': { color: '#CD853F' },
+    'mimari': { color: '#4682B4' },
+    'mezarlik': { color: '#696969' },
+    'saray_kale': { color: '#B8860B' },
+    'diger': { color: '#708090' },
+    
+    // API category colors
+    'seyir_noktalari': { color: '#2ecc71' },      // Green for viewpoints
+    'macera_spor': { color: '#e67e22' },          // Orange for adventure/sports  
+    'yasayan_kultur': { color: '#8B4513' },       // Brown for living culture/religious
+    'konaklama_hizmet': { color: '#9b59b6' },     // Purple for accommodation
+    'kulturel_miras': { color: '#3498db' },       // Blue for cultural heritage
+    'dogal_guzellilk': { color: '#27ae60' },      // Dark green for natural beauty
+    'dogal_miras': { color: '#16a085' },          // Teal for natural heritage
+    'gastronomi': { color: '#e74c3c' },           // Red for gastronomy
+    'yemek_icecek': { color: '#e74c3c' },         // Red for food/drink
+    'alisveris_el_sanatlari': { color: '#f39c12' }, // Orange for shopping/crafts
+    'eglence_aktivite': { color: '#e91e63' },     // Pink for entertainment
+    'ulasilabilirlik': { color: '#34495e' }       // Dark blue for accessibility
 };
 
-// Default Font Awesome icon classes for known categories
+// Font Awesome icon classes matching poi_manager_enhanced.html + API categories
 const iconMap = {
-    'doga_macera': 'fas fa-tree',
+    // Original mappings
     'gastronomik': 'fas fa-utensils',
-    'konaklama': 'fas fa-bed',
-    'kulturel': 'fas fa-university',
+    'kulturel': 'fas fa-landmark',
     'sanatsal': 'fas fa-palette',
+    'doga_macera': 'fas fa-hiking',
+    'konaklama': 'fas fa-bed',
+    'alisveris': 'fas fa-shopping-cart',
+    'eglence': 'fas fa-music',
+    'spor': 'fas fa-dumbbell',
     'dini': 'fas fa-mosque',
     'tarihi': 'fas fa-landmark',
     'mimari': 'fas fa-building',
     'mezarlik': 'fas fa-cross',
     'saray_kale': 'fas fa-chess-rook',
-    'diger': 'fas fa-map-marker-alt'
+    'doga': 'fas fa-tree',
+    'yemek': 'fas fa-utensils',
+    'diger': 'fas fa-map-marker-alt',
+    
+    // API category mappings
+    'seyir_noktalari': 'fas fa-mountain',
+    'macera_spor': 'fas fa-hiking',
+    'yasayan_kultur': 'fas fa-mosque',
+    'konaklama_hizmet': 'fas fa-bed',
+    'kulturel_miras': 'fas fa-landmark',
+    'dogal_guzellilk': 'fas fa-tree',
+    'dogal_miras': 'fas fa-leaf',
+    'gastronomi': 'fas fa-utensils',
+    'yemek_icecek': 'fas fa-utensils',
+    'alisveris_el_sanatlari': 'fas fa-shopping-cart',
+    'eglence_aktivite': 'fas fa-music',
+    'ulasilabilirlik': 'fas fa-road'
 };
 
-// Map rating category keys to icon map categories
+// Map rating category keys to icon map categories + API categories
 const categoryIconAliases = {
-    'doga': 'doga_macera',
+    'doga': 'doga',
     'macera': 'doga_macera',
     'yemek': 'gastronomik',
     'sanat_kultur': 'kulturel',
-    'eglence': 'diger',
+    'eglence': 'eglence',
     'rahatlatici': 'diger',
-    'spor': 'diger',
-    'alisveris': 'diger',
-    'gece_hayati': 'diger'
+    'spor': 'spor',
+    'alisveris': 'alisveris',
+    'gece_hayati': 'eglence',
+    
+    // API category aliases
+    'seyir_noktalari': 'seyir_noktalari',
+    'macera_spor': 'macera_spor', 
+    'yasayan_kultur': 'yasayan_kultur',
+    'konaklama_hizmet': 'konaklama_hizmet',
+    'kulturel_miras': 'kulturel_miras',
+    'dogal_guzellilk': 'dogal_guzellilk',
+    'dogal_miras': 'dogal_miras',
+    'gastronomi': 'gastronomi',
+    'yemek_icecek': 'yemek_icecek',
+    'alisveris_el_sanatlari': 'alisveris_el_sanatlari',
+    'eglence_aktivite': 'eglence_aktivite',
+    'ulasilabilirlik': 'ulasilabilirlik'
 };
+
+/**
+ * Get category style (color and icon) for POI markers
+ * @param {string} category - The category key
+ * @returns {object} Style object with color and icon
+ */
+function getCategoryStyle(category) {
+    // Normalize category key
+    const normalizedCategory = category ? category.toLowerCase().trim() : 'diger';
+    
+    // Check if it's a rating category that needs alias mapping
+    const mappedCategory = categoryIconAliases[normalizedCategory] || normalizedCategory;
+    
+    // Get style from fallback styles
+    const style = fallbackCategoryStyles[mappedCategory] || fallbackCategoryStyles['diger'];
+    
+    // Get Font Awesome icon class
+    const iconClass = iconMap[mappedCategory] || iconMap['diger'];
+    
+    // Debug logging for undefined iconClass
+    if (!iconClass) {
+        console.warn('⚠️ iconClass is undefined for category:', category, 'normalized:', normalizedCategory, 'mapped:', mappedCategory);
+        console.warn('📋 Available iconMap keys:', Object.keys(iconMap));
+        console.warn('📋 categoryIconAliases:', categoryIconAliases);
+    }
+    
+    return {
+        color: style.color,
+        iconClass: iconClass || 'fas fa-map-marker-alt', // Fallback icon
+        category: mappedCategory
+    };
+}
+
+/**
+ * Get display name for category
+ * @param {string} category - The category key
+ * @returns {string} Display name
+ */
+function getCategoryDisplayName(category) {
+    const normalizedCategory = category ? category.toLowerCase().trim() : 'diger';
+    const mappedCategory = categoryIconAliases[normalizedCategory] || normalizedCategory;
+    
+    // Check rating categories first
+    if (ratingCategories[normalizedCategory]) {
+        return ratingCategories[normalizedCategory].name;
+    }
+    
+    // Check fallback category names
+    return fallbackCategoryNames[mappedCategory] || fallbackCategoryNames['diger'] || 'Diğer';
+}
+
+/**
+ * Create enhanced POI marker with category-specific styling - Matching poi_manager_enhanced style
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {object} poi - POI data
+ * @param {number} index - POI index
+ * @returns {L.Marker} Leaflet marker
+ */
+function createCategoryMarker(lat, lng, poi, index = 0) {
+    const categoryStyle = getCategoryStyle(poi.category || 'diger');
+    
+    // Create custom marker with poi_manager_enhanced styling: EXACT same approach
+    const categoryColor = categoryStyle.color;
+    const categoryIcon = categoryStyle.iconClass.replace('fas fa-', ''); // Remove fas fa- prefix
+    
+    const marker = L.marker([lat, lng], {
+        icon: L.divIcon({
+            className: 'custom-poi-marker',
+            html: `
+                <div class="poi-marker-container" style="background-color: ${categoryColor}">
+                    <i class="fas fa-${categoryIcon}"></i>
+                </div>
+                <div class="poi-marker-number" style="
+                    position: absolute;
+                    top: -8px;
+                    right: -8px;
+                    background: #ff4757;
+                    color: white;
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 10px;
+                    font-weight: bold;
+                    border: 2px solid white;
+                    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                    z-index: 1001;
+                ">${index + 1}</div>
+            `,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+            popupAnchor: [0, -15]
+        })
+    });
+    
+    return marker;
+}
 
 // Load categories from API
 async function loadCategories() {
@@ -206,48 +721,39 @@ async function loadCategories() {
         const response = await fetch(`${apiBase}/categories`);
         
         if (response.ok) {
-            const categories = await response.json();
-            console.log('✅ Kategoriler yüklendi:', categories);
-            
-            // Global kategori verilerini güncelle
-            categoryData = {};
-            categories.forEach(category => {
-                // İkon için emoji çıkar (eğer varsa)
-                let iconEmoji = category.display_name.match(/^[\u{1F300}-\u{1F9FF}]/u);
-                if (!iconEmoji) {
-                    // Fallback emoji'leri kullan
-                    iconEmoji = fallbackCategoryStyles[category.name]?.icon || '📍';
-                } else {
-                    iconEmoji = iconEmoji[0];
-                }
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const categories = await response.json();
+                console.log('✅ Kategoriler yüklendi:', categories);
                 
-                categoryData[category.name] = {
-                    display_name: category.display_name,
-                    color: category.color,
-                    icon: iconEmoji,
-                    description: category.description
-                };
-            });
-            
-            console.log('✅ Kategori verileri güncellendi:', categoryData);
-            return true;
+                // Global kategori verilerini güncelle
+                categoryData = {};
+                categories.forEach(category => {
+                    // Font Awesome icon class kullan
+                    const iconClass = iconMap[category.name] || iconMap['diger'];
+                    
+                    categoryData[category.name] = {
+                        display_name: category.display_name,
+                        color: category.color,
+                        iconClass: iconClass,
+                        description: category.description
+                    };
+                });
+                
+                console.log('✅ Kategori verileri güncellendi:', categoryData);
+                return true;
+            } else {
+                console.warn('⚠️ API yanıtı JSON değil, fallback kullanılacak');
+                return false;
+            }
         } else {
-            console.warn('⚠️ Kategoriler yüklenemedi, fallback kullanılacak');
+            console.warn('⚠️ Kategoriler yüklenemedi (HTTP ' + response.status + '), fallback kullanılacak');
             return false;
         }
     } catch (error) {
-        console.error('❌ Kategori yükleme hatası:', error);
+        console.warn('⚠️ Kategori API\'sine erişilemiyor, fallback kullanılacak:', error.message);
         return false;
     }
-}
-
-// Get category display name (dynamic)
-function getCategoryDisplayName(category) {
-    const mapped = categoryIconAliases[category] || category;
-    if (categoryData[category]) {
-        return categoryData[category].display_name;
-    }
-    return fallbackCategoryNames[mapped] || mapped;
 }
 
 // Get category color (dynamic)
@@ -259,42 +765,19 @@ function getCategoryColor(category) {
     return fallbackCategoryStyles[mapped]?.color || '#666666';
 }
 
-// Get category icon (dynamic)
+// Get category icon (dynamic) - returns Font Awesome class
 function getCategoryIcon(category) {
-    let icon;
+    let iconClass;
 
     // Önce API'den yüklenen kategori ikonunu kullan
-    if (categoryData[category] && categoryData[category].icon) {
-        icon = categoryData[category].icon;
-    } else if (ratingCategories[category]?.icon) {
-        // Sonra ratingCategories'teki ikonlara bak
-        icon = ratingCategories[category].icon;
+    if (categoryData[category] && categoryData[category].iconClass) {
+        iconClass = categoryData[category].iconClass;
     } else {
         const mapped = categoryIconAliases[category] || category;
-
-        if (iconMap[mapped]) {
-            icon = iconMap[mapped];
-        } else {
-            // Son çare olarak emoji tabanlı ikonlara düş
-            icon = fallbackCategoryStyles[mapped]?.icon || '📍';
-        }
+        iconClass = iconMap[mapped] || iconMap['diger'];
     }
 
-    // Font Awesome sınıfları için <i> etiketi oluştur
-    if (typeof icon === 'string' && /^(fas|far|fab)\s/.test(icon)) {
-        return `<i class="${icon}"></i>`;
-    }
-
-    // Emoji veya ham HTML'i doğrudan döndür
-    return icon;
-}
-
-// Get category style (dynamic)
-function getCategoryStyle(category) {
-    return {
-        color: getCategoryColor(category),
-        icon: getCategoryIcon(category)
-    };
+    return `<i class="${iconClass}"></i>`;
 }
 
 // Route Details Panel Class
@@ -412,8 +895,8 @@ class RouteDetailsPanel {
         if (startLocation) {
             stopsHTML += `
                         <div class="stop-item" onclick="RouteDetailsPanel.highlightStop(${startLocation.latitude}, ${startLocation.longitude})">
-                            <div class="stop-icon" style="background: #28a745;">
-                                🏁
+                            <div class="stop-icon" style="background: #28a745; color: white; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-flag-checkered"></i>
                             </div>
                             <div class="stop-info">
                                 <div class="stop-name">${startLocation.name || 'Başlangıç Noktası'}</div>
@@ -435,8 +918,8 @@ class RouteDetailsPanel {
 
             stopsHTML += `
                         <div class="stop-item" onclick="RouteDetailsPanel.highlightStop(${lat}, ${lng})">
-                            <div class="stop-icon" style="background: ${categoryStyle.color};">
-                                ${categoryStyle.icon}
+                            <div class="stop-icon" style="background: ${categoryStyle.color}; color: white; display: flex; align-items: center; justify-content: center;">
+                                <i class="${categoryStyle.iconClass}" style="font-size: 14px;"></i>
                             </div>
                             <div class="stop-info">
                                 <div class="stop-name">${poi.name}</div>
@@ -1277,8 +1760,11 @@ class RouteDetailsPanel {
                                     display: flex;
                                     align-items: center;
                                     justify-content: center;
-                                    font-size: 16px;
-                                ">${categoryStyle.icon}</div>`,
+                                    font-size: 14px;
+                                    border: 3px solid white;
+                                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                                    transition: transform 0.2s ease;
+                                "><i class="${categoryStyle.iconClass}" style="font-size: 14px; color: white;"></i></div>`,
                                 iconSize: [30, 30],
                                 iconAnchor: [15, 15],
                                 popupAnchor: [0, -15]
@@ -1572,65 +2058,46 @@ class RouteDetailsPanel {
         console.log(`🎯 Focused on segment ${segmentIndex + 1}: ${segment.from} → ${segment.to}`);
     }
 }
-// Create custom marker icons
+// Create custom marker icons - EXACTLY matching poi_manager_enhanced style
 function createCustomIcon(category, score, isLowScore = false) {
     const style = getCategoryStyle(category);
 
-    // Düşük puanlı POI'ler için daha silik ama renkli stil
-    const markerColor = isLowScore ? style.color : style.color;
-    const opacity = isLowScore ? '0.7' : '1';
-    const boxShadow = isLowScore ? '0 2px 6px rgba(0,0,0,0.2)' : '0 4px 12px rgba(0,0,0,0.3)';
-    const borderColor = isLowScore ? '#e5e7eb' : 'white';
-    const scoreBackgroundColor = isLowScore ? '#f9fafb' : 'white';
-    const scoreTextColor = isLowScore ? style.color : style.color;
+    // Use EXACT same approach as poi_manager_enhanced.html
+    const categoryColor = style.color;
+    const categoryIcon = style.iconClass.replace('fas fa-', ''); // Remove fas fa- prefix
+    const opacity = isLowScore ? '0.8' : '1';
+    const scoreBackgroundColor = '#ff4757';
+    const scoreTextColor = 'white';
 
-    const iconHTML = style.icon && style.icon.includes('<i')
-        ? style.icon.replace('<i', `<i style="transform: rotate(45deg); opacity: ${isLowScore ? '0.8' : '1'};"`)
-        : `<span style="transform: rotate(45deg); opacity: ${isLowScore ? '0.8' : '1'};">${style.icon}</span>`;
-
+    // Create marker HTML exactly like poi_manager_enhanced.html
     return L.divIcon({
+        className: 'custom-poi-marker',
         html: `
-            <div style="
-                background: ${markerColor};
-                width: 40px;
-                height: 40px;
-                border-radius: 50% 50% 50% 0;
-                border: 3px solid ${borderColor};
-                box-shadow: ${boxShadow};
+            <div class="poi-marker-container" style="background-color: ${categoryColor}; opacity: ${opacity};">
+                <i class="fas fa-${categoryIcon}"></i>
+            </div>
+            <div class="poi-marker-score" style="
+                position: absolute;
+                top: -6px;
+                right: -6px;
+                background: ${scoreBackgroundColor};
+                color: ${scoreTextColor};
+                border-radius: 50%;
+                width: 18px;
+                height: 18px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 18px;
-                transform: rotate(-45deg);
-                position: relative;
-                opacity: ${opacity};
-                ${isLowScore ? 'filter: grayscale(0.2) brightness(0.9);' : ''}
-            ">
-                ${iconHTML}
-                <div style="
-                    position: absolute;
-                    top: -8px;
-                    right: -8px;
-                    background: ${scoreBackgroundColor};
-                    color: ${scoreTextColor};
-                    border-radius: 50%;
-                    width: 20px;
-                    height: 20px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 10px;
-                    font-weight: bold;
-                    border: 2px solid ${markerColor};
-                    transform: rotate(45deg);
-                    opacity: ${isLowScore ? '0.8' : '1'};
-                ">${score}</div>
-            </div>
+                font-size: 9px;
+                font-weight: bold;
+                border: 2px solid white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                z-index: 10;
+            ">${score}</div>
         `,
-        className: `custom-poi-marker ${isLowScore ? 'low-score-marker' : 'high-score-marker'}`,
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
-        popupAnchor: [0, -40]
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -15]
     });
 }
 
@@ -5399,19 +5866,20 @@ async function displayRouteOnMap(route) {
                                     html: `<div style="
                                         background: ${categoryStyle.color};
                                         color: white;
-                                        width: 35px; 
-                                        height: 35px; 
+                                        width: 30px; 
+                                        height: 30px; 
                                         border-radius: 50%; 
                                         display: flex; 
                                         align-items: center; 
                                         justify-content: center; 
                                         font-weight: bold;
                                         border: 3px solid white;
-                                        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-                                        font-size: 16px;
+                                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                                        font-size: 14px;
                                         position: relative;
+                                        transition: transform 0.2s ease;
                                     ">
-                                        <span style="position: absolute; top: -2px;">${categoryStyle.icon}</span>
+                                        <i class="${categoryStyle.iconClass}" style="color: white; font-size: 14px;"></i>
                                         <span style="
                                             position: absolute;
                                             bottom: -8px;
@@ -5427,11 +5895,12 @@ async function displayRouteOnMap(route) {
                                             font-size: 11px; 
                                             font-weight: bold;
                                             border: 2px solid white;
+                                            z-index: 10;
                                         ">${index + 1}</span>
                                     </div>`,
-                                    iconSize: [35, 35],
-                                    iconAnchor: [17, 17],
-                                    popupAnchor: [0, -17]
+                                    iconSize: [30, 30],
+                                    iconAnchor: [15, 15],
+                                    popupAnchor: [0, -15]
                                 })
                             }).addTo(predefinedMap);
                             marker.routeId = route.id || route._id;
@@ -5510,19 +5979,20 @@ async function displayRouteOnMap(route) {
                             html: `<div style="
                                 background: ${categoryStyle.color};
                                 color: white;
-                                width: 35px; 
-                                height: 35px; 
+                                width: 30px; 
+                                height: 30px; 
                                 border-radius: 50%; 
                                 display: flex; 
                                 align-items: center; 
                                 justify-content: center; 
                                 font-weight: bold;
                                 border: 3px solid white;
-                                box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-                                font-size: 16px;
+                                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                                font-size: 14px;
                                 position: relative;
+                                transition: transform 0.2s ease;
                             ">
-                                <span style="position: absolute; top: -2px;">${categoryStyle.icon}</span>
+                                <i class="${categoryStyle.iconClass}" style="color: white; font-size: 14px;"></i>
                                 <span style="
                                     position: absolute;
                                     bottom: -8px;
@@ -5538,11 +6008,12 @@ async function displayRouteOnMap(route) {
                                     font-size: 11px; 
                                     font-weight: bold;
                                     border: 2px solid white;
+                                    z-index: 10;
                                 ">${index + 1}</span>
                             </div>`,
-                            iconSize: [35, 35],
-                            iconAnchor: [17, 17],
-                            popupAnchor: [0, -17]
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15],
+                            popupAnchor: [0, -15]
                         })
                     }).addTo(predefinedMap);
                     marker.routeId = route.id || route._id;
@@ -5797,7 +6268,7 @@ function createDetailedPOIPopup(poi, stopNumber) {
                     margin-right: 10px;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
                 ">
-                    ${categoryStyle.icon}
+                    <i class="${categoryStyle.iconClass}" style="font-size: 14px;"></i>
                 </div>
                 <div class="poi-popup-title-section" style="flex: 1;">
                     <h4 class="poi-popup-title" style="margin: 0; font-size: 16px; font-weight: 600; color: #333;">${poi.name}</h4>
@@ -5962,7 +6433,7 @@ function showDetailedPOIModal(poi, media = { images: [], videos: [], audio: [], 
                 <div class="route-detail-modal-header">
                     <h3 class="route-detail-modal-title">
                         <span style="background: ${categoryStyle.color}; padding: 4px 8px; border-radius: 50%; margin-right: 8px;">
-                            ${categoryStyle.icon}
+                            <i class="${categoryStyle.iconClass}" style="font-size: 14px;"></i>
                         </span>
                         ${poi.name}
                     </h3>
@@ -6116,10 +6587,10 @@ function displayRouteOnMapFallback(route) {
                                 font-weight: bold;
                                 border: 2px solid white;
                                 box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                                font-size: 14px;
+                                font-size: 12px;
                                 position: relative;
                             ">
-                                <span style="position: absolute; top: -1px;">${categoryStyle.icon}</span>
+                                <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 16px;"><i class="${categoryStyle.iconClass}" style="font-size: 14px;"></i></span>
                                 <span style="
                                     position: absolute;
                                     bottom: -6px;
@@ -8023,7 +8494,7 @@ async function displayRoutePOIsOnMap(pois) {
                             transform: rotate(-45deg);
                             position: relative;
                         ">
-                            <span style="transform: rotate(45deg);">${categoryStyle.icon}</span>
+                            <span style="transform: rotate(45deg);"><i class="${categoryStyle.iconClass}" style="font-size: 14px;"></i></span>
                             <div style="
                                 position: absolute;
                                 top: -8px;
@@ -9768,6 +10239,19 @@ async function getRecommendations() {
         const apiData = await response.json();
         console.log('API Response:', apiData);
 
+        // Debug: Log all unique categories from API response
+        const allPOIs = [...(apiData.highScore || []), ...(apiData.lowScore || [])];
+        const uniqueCategories = [...new Set(allPOIs.map(poi => poi.category).filter(Boolean))];
+        console.log('🔍 Unique categories from API:', uniqueCategories);
+        
+        // Debug: Check which categories are falling back to 'diger'
+        uniqueCategories.forEach(category => {
+            const style = getCategoryStyle(category);
+            if (style.category === 'diger' && category !== 'diger') {
+                console.warn(`⚠️ Category '${category}' is falling back to 'diger'`);
+            }
+        });
+
         if (window.loadingManager && typeof window.loadingManager.updateProgress === 'function') {
             try {
                 window.loadingManager.updateProgress('loadingIndicator', 70);
@@ -10310,7 +10794,29 @@ async function initializeMap(recommendationData) {
 
     for (const [index, poi] of allPOIs.entries()) {
         const isLowScore = poi.recommendationScore < 45;
-        const customIcon = createCustomIcon(poi.category, poi.recommendationScore, isLowScore);
+        
+        // Debug: Log POI category
+        if (index < 3) { // Only log first 3 POIs to avoid spam
+            console.log(`🔍 POI ${index + 1}: "${poi.name}", category: "${poi.category}"`);
+        }
+        
+        let customIcon;
+        try {
+            customIcon = createCustomIcon(poi.category, poi.recommendationScore, isLowScore);
+            if (index < 3) {
+                console.log(`✅ Created custom icon for POI ${index + 1}:`, customIcon);
+            }
+        } catch (error) {
+            console.error(`❌ Error creating custom icon for POI ${poi.name}:`, error);
+            // Fallback to a simple default icon if custom icon creation fails
+            customIcon = L.divIcon({
+                className: 'fallback-poi-marker',
+                html: `<div style="background: #666; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">📍</div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+        }
+        
         const categoryStyle = getCategoryStyle(poi.category);
 
         // Load media and elevation data (with error handling)
@@ -10354,7 +10860,7 @@ async function initializeMap(recommendationData) {
                                 ${isLowScore ? 'opacity: 0.9;' : ''}
                             ">
                                 <h6 style="margin: 0; font-size: 16px; font-weight: 600;">
-                                    ${categoryStyle.icon} ${poi.name}
+                                    <span style="margin-right: 8px; font-size: 18px;"><i class="${categoryStyle.iconClass}" style="font-size: 14px;"></i></span> ${poi.name}
                                     ${isLowScore ? ' <small style="opacity: 0.7;">(Düşük Uygunluk)</small>' : ''}
                                 </h6>
                                 <small style="opacity: 0.9; font-size: 12px;">

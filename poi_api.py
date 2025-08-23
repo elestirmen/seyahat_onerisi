@@ -50,7 +50,7 @@ def get_db_conn():
 # Setup logger
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app, origins=["*"], supports_credentials=True)
 
 # Configure session management
@@ -960,6 +960,18 @@ def admin_dashboard():
     </body>
     </html>
     '''
+
+@app.route('/poi_recommendation_system.html')
+def serve_poi_recommendation_system():
+    """Serve the POI recommendation system HTML file"""
+    try:
+        if os.path.exists('poi_recommendation_system.html'):
+            with open('poi_recommendation_system.html', 'r', encoding='utf-8') as f:
+                return f.read()
+        else:
+            return '<h1>❌ Hata</h1><p>poi_recommendation_system.html dosyası bulunamadı!</p>', 404
+    except Exception as e:
+        return f'<h1>❌ Hata</h1><p>Dosya okunurken hata oluştu: {str(e)}</p>', 500
 
 @app.route('/poi_manager_ui.html')
 @auth_middleware.require_auth

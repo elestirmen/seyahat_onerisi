@@ -174,7 +174,6 @@ class MobileOptimizations {
             });
         }
     }
-    }
 
     setupEventListeners() {
         // Resize handler
