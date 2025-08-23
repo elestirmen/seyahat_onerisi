@@ -431,6 +431,14 @@
                 border-radius: 16px;
             }
 
+            .show-all-btn {
+                width: 100%;
+                padding: 16px 20px;
+                font-size: 1rem;
+                margin: 12px 0;
+                border-radius: 16px;
+            }
+
             .routes-map-container {
                 min-height: 400px;
             }
@@ -1142,6 +1150,30 @@
                     <button class="recommend-btn" id="recommendBtn">
                         <i class="fas fa-magic btn-icon"></i>
                         <span class="btn-text">Önerilerimi Getir</span>
+                    </button>
+
+                    <!-- Show All POIs Button -->
+                    <button class="show-all-btn" id="showAllBtn" onclick="showAllPOIs()" style="
+                        width: 100%;
+                        padding: 16px 24px;
+                        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 16px;
+                        font-size: 1.1rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        margin-top: 12px;
+                        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(40, 167, 69, 0.4)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(40, 167, 69, 0.3)'">
+                        <i class="fas fa-globe btn-icon"></i>
+                        <span class="btn-text">Tüm POI'leri Göster</span>
                     </button>
 
                     <!-- Debug buttons for testing category system -->

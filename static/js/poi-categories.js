@@ -282,18 +282,19 @@ function createAliasMap() {
 }
 
 // Export all functions and data for use in other modules
-export {
-    POI_CATEGORIES,
-    RATING_CATEGORIES,
-    getCategoryByName,
-    getCentralizedCategoryStyle as getCategoryStyle,
-    getCentralizedCategoryDisplayName as getCategoryDisplayName,
-    getAllCategories,
-    getFallbackCategories,
-    createIconMap,
-    createColorMap,
-    createAliasMap
-};
+// Browser compatibility - no ES6 exports
+// export {
+//     POI_CATEGORIES,
+//     RATING_CATEGORIES,
+//     getCategoryByName,
+//     getCentralizedCategoryStyle as getCategoryStyle,
+//     getCentralizedCategoryDisplayName as getCategoryDisplayName,
+//     getAllCategories,
+//     getFallbackCategories,
+//     createIconMap,
+//     createColorMap,
+//     createAliasMap
+// };
 
 // For backwards compatibility with global usage
 if (typeof window !== 'undefined') {

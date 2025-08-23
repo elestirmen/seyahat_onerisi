@@ -9674,3 +9674,410 @@ odern Recommendations UX Styles */
 .poi-marker-number {
     z-index: 10 !important;
 }
+/* Show All POIs Button Styles */
+.show-all-btn {
+    width: 100%;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 12px;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.show-all-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+    background: linear-gradient(135deg, #218838 0%, #1e7e34 100%);
+}
+
+.show-all-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.show-all-btn.btn--loading {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
+
+.show-all-btn .btn-icon {
+    font-size: 1.1rem;
+    transition: transform 0.3s ease;
+}
+
+.show-all-btn:hover .btn-icon {
+    transform: scale(1.1);
+}
+
+/* All POIs Results Styles */
+.all-pois-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.all-pois-header .results-title {
+    color: var(--text-color);
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.all-pois-header .results-title i {
+    color: #28a745;
+    font-size: 1.8rem;
+}
+
+.all-pois-header .results-subtitle {
+    color: #6c757d;
+    font-size: 1.1rem;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Category Section Styles */
+.category-section {
+    margin-bottom: 3rem;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+}
+
+.category-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.category-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.category-info i {
+    font-size: 1.5rem;
+    width: 32px;
+    text-align: center;
+}
+
+.category-info h3 {
+    color: var(--text-color);
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+    flex: 1;
+}
+
+.category-count {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* POI Grid Enhancements for All POIs */
+.category-section .poi-grid {
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Enhanced POI Cards for All POIs View */
+.category-section .poi-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.category-section .poi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    border-color: #cbd5e0;
+}
+
+/* POI Popup Styles */
+.poi-popup {
+    min-width: 250px;
+    max-width: 300px;
+}
+
+.poi-popup-header {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.poi-popup-header h4 {
+    color: var(--text-color);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    line-height: 1.3;
+}
+
+.poi-category-badge {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.poi-description {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin: 8px 0;
+}
+
+.poi-popup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.popup-btn {
+    flex: 1;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.popup-btn:hover {
+    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.popup-btn i {
+    font-size: 0.7rem;
+}
+
+/* Mobile Responsive Styles for All POIs */
+@media (max-width: 768px) {
+    .all-pois-header {
+        padding: 1.5rem 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .all-pois-header .results-title {
+        font-size: 1.6rem;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .all-pois-header .results-subtitle {
+        font-size: 1rem;
+    }
+    
+    .category-header {
+        padding: 1rem 1.5rem;
+    }
+    
+    .category-info h3 {
+        font-size: 1.2rem;
+    }
+    
+    .category-section .poi-grid {
+        padding: 1.5rem;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .show-all-btn {
+        font-size: 1rem;
+        padding: 14px 20px;
+    }
+}
+
+/* Loading States for Show All POIs */
+.show-all-btn .fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Error and Empty States */
+.error-state, .no-results {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.error-icon, .no-results-icon {
+    font-size: 3rem;
+    color: #dc3545;
+    margin-bottom: 1rem;
+}
+
+.no-results-icon {
+    color: #6c757d;
+}
+
+.error-state h3, .no-results h3 {
+    color: var(--text-color);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.error-state p, .no-results p {
+    color: #6c757d;
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+}
+
+.retry-btn {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.retry-btn:hover {
+    background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}/*
+ POI Card Media Preview Styles */
+.poi-media-preview {
+    margin: 8px 0;
+    min-height: 20px;
+}
+
+.poi-card-media-thumb {
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.poi-card-media-thumb img {
+    transition: transform 0.3s ease;
+}
+
+.poi-card-media-thumb:hover img {
+    transform: scale(1.05);
+}
+
+.media-count {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.poi-card-media-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #6c757d;
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.poi-card-media-info i {
+    font-size: 0.9rem;
+    color: #007bff;
+}
+
+/* Enhanced POI Card Styles for All POIs View */
+.category-section .poi-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.category-section .poi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.category-section .poi-card:hover::before {
+    opacity: 1;
+}
+
+/* Loading skeleton for media previews */
+.poi-media-preview .loading__skeleton {
+    height: 60px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}

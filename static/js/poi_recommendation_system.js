@@ -12249,3 +12249,380 @@ if (document.readyState === 'loading') {
     console.log('✅ DOM already loaded, initializing immediately...');
     initializeApp();
 }
+
+// Show All POIs function - displays all POIs regardless of preferences
+async function showAllPOIs() {
+    console.log('🌍 showAllPOIs function called');
+
+    const button = document.getElementById('showAllBtn');
+    const resultsSection = document.getElementById('resultsSection');
+    const resultsContainer = document.getElementById('recommendationResults');
+
+    console.log('Elements found:', {
+        button: !!button,
+        resultsSection: !!resultsSection,
+        resultsContainer: !!resultsContainer
+    });
+
+    // Show enhanced loading state
+    button.disabled = true;
+    button.classList.add('btn--loading');
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Tüm POI\'ler Yükleniyor...';
+    resultsSection.style.display = 'block';
+
+    // Show skeleton loading
+    if (window.loadingManager && typeof window.loadingManager.showPOISkeletons === 'function') {
+        try {
+            window.loadingManager.showPOISkeletons('recommendationResults', 8);
+        } catch (error) {
+            console.warn('Loading manager error, using fallback:', error);
+            showFallbackLoading();
+        }
+    } else {
+        showFallbackLoading();
+    }
+
+    function showFallbackLoading() {
+        const skeletonHTML = Array(6).fill(0).map(() => `
+            <div class="poi-card-skeleton">
+                <div class="poi-card-skeleton__image loading__skeleton"></div>
+                <div class="poi-card-skeleton__content">
+                    <div class="poi-card-skeleton__header">
+                        <div class="poi-card-skeleton__title loading__skeleton"></div>
+                        <div class="poi-card-skeleton__score loading__skeleton"></div>
+                    </div>
+                    <div class="poi-card-skeleton__description">
+                        <div class="skeleton-card__text loading__skeleton"></div>
+                        <div class="skeleton-card__text loading__skeleton"></div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        resultsContainer.innerHTML = `
+            <div class="poi-grid">
+                ${skeletonHTML}
+            </div>
+        `;
+    }
+
+    try {
+        console.log('📡 Making API request to get all POIs...');
+        
+        // Fetch all POIs from the API
+        const response = await fetch(`${apiBase}/pois`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response ok:', response.ok);
+        
+        if (!response.ok) {
+            let errorText;
+            try {
+                errorText = await response.text();
+                console.error('❌ API Error Response:', errorText);
+            } catch (e) {
+                console.error('❌ Could not read error response:', e);
+                errorText = 'Unknown error';
+            }
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
+        
+        const poisData = await response.json();
+        console.log('📊 All POIs data received:', poisData);
+
+        // Transform the data structure - flatten all categories
+        const allPOIs = [];
+        Object.keys(poisData).forEach(category => {
+            if (Array.isArray(poisData[category])) {
+                poisData[category].forEach(poi => {
+                    allPOIs.push({
+                        ...poi,
+                        category: category,
+                        recommendationScore: 75 // Default score for all POIs
+                    });
+                });
+            }
+        });
+
+        console.log(`📋 Total POIs found: ${allPOIs.length}`);
+
+        // Debug: Log all unique categories
+        const uniqueCategories = [...new Set(allPOIs.map(poi => poi.category).filter(Boolean))];
+        console.log('🔍 Unique categories found:', uniqueCategories);
+
+        if (allPOIs.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="no-results">
+                    <div class="no-results-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <h3>Henüz POI Bulunamadı</h3>
+                    <p>Sistemde kayıtlı POI bulunmuyor. Lütfen daha sonra tekrar deneyin.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Sort POIs by name for better organization
+        allPOIs.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+
+        // Display all POIs
+        await displayAllPOIs(allPOIs);
+
+        // Update map with all POIs
+        updateMapWithPOIs(allPOIs);
+
+        // Show success notification
+        showNotification(`🌍 ${allPOIs.length} POI haritada gösteriliyor`, 'success');
+
+    } catch (error) {
+        console.error('❌ Error fetching all POIs:', error);
+        
+        resultsContainer.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3>Hata Oluştu</h3>
+                <p>POI'ler yüklenirken bir hata oluştu: ${error.message}</p>
+                <button class="retry-btn" onclick="showAllPOIs()">
+                    <i class="fas fa-redo"></i> Tekrar Dene
+                </button>
+            </div>
+        `;
+        
+        showNotification('POI\'ler yüklenirken hata oluştu', 'error');
+    } finally {
+        // Reset button state
+        button.disabled = false;
+        button.classList.remove('btn--loading');
+        button.innerHTML = '<i class="fas fa-globe btn-icon"></i><span class="btn-text">Tüm POI\'leri Göster</span>';
+        
+        console.log('✅ showAllPOIs completed');
+    }
+}
+
+// Display all POIs in the results container
+async function displayAllPOIs(allPOIs) {
+    console.log('🎨 Displaying all POIs:', allPOIs.length);
+    
+    const resultsContainer = document.getElementById('recommendationResults');
+    
+    // Group POIs by category for better organization
+    const poiByCategory = {};
+    allPOIs.forEach(poi => {
+        const category = poi.category || 'diger';
+        if (!poiByCategory[category]) {
+            poiByCategory[category] = [];
+        }
+        poiByCategory[category].push(poi);
+    });
+
+    let resultsHTML = `
+        <div class="all-pois-header">
+            <h2 class="results-title">
+                <i class="fas fa-globe"></i>
+                Tüm POI'ler (${allPOIs.length})
+            </h2>
+            <p class="results-subtitle">
+                Sistemdeki tüm ilgi noktaları kategorilere göre gruplandırılmış şekilde gösteriliyor.
+            </p>
+        </div>
+    `;
+
+    // Display POIs grouped by category
+    for (const [category, pois] of Object.entries(poiByCategory)) {
+        const categoryDisplayName = getCategoryDisplayName(category);
+        const categoryStyle = getCategoryStyle(category);
+        
+        resultsHTML += `
+            <div class="category-section">
+                <div class="category-header">
+                    <div class="category-info">
+                        <i class="${categoryStyle.iconClass}" style="color: ${categoryStyle.color}"></i>
+                        <h3>${categoryDisplayName}</h3>
+                        <span class="category-count">${pois.length} POI</span>
+                    </div>
+                </div>
+                <div class="poi-grid">
+        `;
+
+        // Display POIs in this category
+        const poiCardsHTML = createPOICards(pois);
+        resultsHTML += poiCardsHTML;
+
+        resultsHTML += `
+                </div>
+            </div>
+        `;
+    }
+
+    resultsContainer.innerHTML = resultsHTML;
+    
+    // Initialize any interactive elements (load media for POI cards)
+    initializePOICardsMedia();
+    
+    console.log('✅ All POIs displayed successfully');
+}
+
+// Update map with all POIs
+function updateMapWithPOIs(allPOIs) {
+    console.log('🗺️ Updating map with all POIs:', allPOIs.length);
+    
+    if (!map) {
+        console.error('❌ Map not initialized');
+        return;
+    }
+
+    // Clear existing markers
+    markers.forEach(marker => {
+        if (marker && marker.remove) {
+            marker.remove();
+        }
+    });
+    markers = [];
+
+    // Add markers for all POIs
+    allPOIs.forEach((poi, index) => {
+        try {
+            if (!poi.latitude || !poi.longitude) {
+                console.warn('⚠️ POI missing coordinates:', poi.name);
+                return;
+            }
+
+            const customIcon = createCustomIcon(poi.category, poi.recommendationScore || 75, false);
+            const marker = L.marker([poi.latitude, poi.longitude], { icon: customIcon })
+                .addTo(map);
+
+            // Create popup content
+            const categoryDisplayName = getCategoryDisplayName(poi.category);
+            const popupContent = `
+                <div class="poi-popup">
+                    <div class="poi-popup-header">
+                        <h4>${poi.name}</h4>
+                        <span class="poi-category-badge">${categoryDisplayName}</span>
+                    </div>
+                    ${poi.description ? `<p class="poi-description">${poi.description}</p>` : ''}
+                    <div class="poi-popup-actions">
+                        <button onclick="openInGoogleMaps('${poi.name}', [${poi.latitude}, ${poi.longitude}])" class="popup-btn">
+                            <i class="fas fa-external-link-alt"></i> Google Maps
+                        </button>
+                        <button onclick="addToRoute(${poi._id || index})" class="popup-btn">
+                            <i class="fas fa-plus"></i> Rotaya Ekle
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent);
+            markers.push(marker);
+
+        } catch (error) {
+            console.error('❌ Error creating marker for POI:', poi.name, error);
+        }
+    });
+
+    // Fit map to show all markers if there are any
+    if (markers.length > 0) {
+        try {
+            const group = new L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.1));
+        } catch (error) {
+            console.error('❌ Error fitting map bounds:', error);
+            // Fallback to Ürgüp center
+            map.setView([38.6436, 34.8128], 13);
+        }
+    } else {
+        // No markers, center on Ürgüp
+        map.setView([38.6436, 34.8128], 13);
+    }
+
+    console.log(`✅ Added ${markers.length} markers to map`);
+}
+
+// Initialize POI cards media loading
+function initializePOICardsMedia() {
+    console.log('🎨 Initializing POI cards media...');
+    
+    const poiCards = document.querySelectorAll('.poi-card[data-poi-id]');
+    console.log(`📋 Found ${poiCards.length} POI cards to initialize`);
+    
+    poiCards.forEach((card, index) => {
+        const poiId = card.dataset.poiId;
+        if (!poiId) return;
+        
+        // Load media for this POI card with a small delay to prevent overwhelming the server
+        setTimeout(() => {
+            loadPOICardMedia(poiId, card);
+        }, index * 100); // Stagger requests by 100ms
+    });
+}
+
+// Load media for a specific POI card
+async function loadPOICardMedia(poiId, cardElement) {
+    try {
+        const mediaPreview = cardElement.querySelector('.poi-media-preview');
+        if (!mediaPreview) return;
+        
+        // Check if media is already cached
+        if (mediaCache[poiId]) {
+            displayPOICardMedia(mediaCache[poiId], mediaPreview);
+            return;
+        }
+        
+        // Fetch media from API
+        const response = await fetch(`${apiBase}/poi/${poiId}/media`);
+        if (!response.ok) {
+            console.log(`ℹ️ No media found for POI ${poiId}`);
+            return;
+        }
+        
+        const mediaData = await response.json();
+        const mediaItems = Array.isArray(mediaData) ? mediaData : (mediaData.media || []);
+        
+        if (mediaItems.length > 0) {
+            // Cache the media
+            mediaCache[poiId] = mediaItems;
+            displayPOICardMedia(mediaItems, mediaPreview);
+        }
+        
+    } catch (error) {
+        console.log(`ℹ️ Could not load media for POI ${poiId}:`, error.message);
+        // Don't show error to user, just skip media loading
+    }
+}
+
+// Display media in POI card preview
+function displayPOICardMedia(mediaItems, previewElement) {
+    if (!mediaItems || mediaItems.length === 0) return;
+    
+    // Show first image if available
+    const firstImage = mediaItems.find(item => 
+        item.type === 'image' || 
+        (item.filename && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.filename))
+    );
+    
+    if (firstImage) {
+        const imagePath = firstImage.thumbnail_path || firstImage.path;
+        previewElement.innerHTML = `
+            <div class="poi-card-media-thumb">
+                <img src="/${imagePath}" alt="POI Preview" loading="lazy" 
+                     style="width: 100%; height: 60px; object-fit: cover; border-radius: 6px;">
+                ${mediaItems.length > 1 ? `<span class="media-count">+${mediaItems.length - 1}</span>` : ''}
+            </div>
+        `;
+    } else {
+        // Show media count if no images
+        previewElement.innerHTML = `
+            <div class="poi-card-media-info">
+                <i class="fas fa-photo-video"></i>
+                <span>${mediaItems.length} medya</span>
+            </div>
+        `;
+    }
+}
