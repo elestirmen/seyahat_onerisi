@@ -7237,6 +7237,18 @@ function showNoRoutesMessage(message = 'Seçilen kriterlere uygun rota bulunamad
 async function showRouteDetails(route) {
     console.log('📋 Showing route details for:', route);
     
+    // Use new RouteDetailsModal if available
+    if (typeof window.RouteDetailsModal !== 'undefined') {
+        console.log('🎯 Using new RouteDetailsModal');
+        const modal = window.RouteDetailsModal.getInstance();
+        if (modal) {
+            modal.show(route);
+            return;
+        }
+    }
+    
+    console.log('⚠️ Using legacy route detail modal');
+    
     const modal = document.getElementById('routeDetailModal');
     const modalTitle = document.getElementById('routeDetailModalTitle');
     const modalBody = document.getElementById('routeDetailModalBody');
@@ -12923,4 +12935,30 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Available elements with "modal" in id:', 
             Array.from(document.querySelectorAll('[id*="modal"]')).map(el => el.id));
     }
-});
+});// Rate limiting bilgilendirme mesajı
+// Test function to verify category mappings - REMOVED
+
+// Test function to verify category consistency - REMOVED
+
+// Test function to verify API categories - REMOVED
+
+if (window.rateLimiter) {
+    console.log('✅ Rate limiting aktif - POI recommendation system API çağrıları sınırlandırılacak');
+}
+
+// Debug: Test geometry API endpoint - REMOVED
+
+// Test function for debugging predefined routes media - REMOVED
+
+// Debug function to inspect POI recommendation data - REMOVED
+
+// Simplified test function - REMOVED
+
+// Test function for category system - REMOVED
+
+// Test markers on map - REMOVED
+
+// Visual category preview function - REMOVED
+
+// Test function for debugging - REMOVED
+

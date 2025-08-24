@@ -105,19 +105,6 @@ class RouteDetailsModal {
                                     Rota açıklaması yükleniyor...
                                 </div>
                             </div>
-                            
-                            <div class="route-overview-section" id="routeElevationSection">
-                                <h3><i class="fas fa-mountain"></i> Yükseklik Profili</h3>
-                                <div class="route-elevation-container">
-                                    <canvas id="routeElevationChart" width="400" height="200"></canvas>
-                                    <div class="elevation-stats" id="routeElevationStats">
-                                        <span>Min: <span id="minElevation">--m</span></span>
-                                        <span>Max: <span id="maxElevation">--m</span></span>
-                                        <span>↗ <span id="totalAscent">--m</span></span>
-                                        <span>↘ <span id="totalDescent">--m</span></span>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                         
                         <!-- Map Tab -->
@@ -131,6 +118,20 @@ class RouteDetailsModal {
                                     <button class="route-map-control-btn" id="fullscreenMapBtn" title="Tam Ekran">
                                         <i class="fas fa-expand"></i>
                                     </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Elevation Profile in Map Tab -->
+                            <div class="route-overview-section" id="routeElevationSection" style="margin-top: 20px;">
+                                <h3><i class="fas fa-mountain"></i> Yükseklik Profili</h3>
+                                <div class="route-elevation-container">
+                                    <canvas id="routeElevationChart" width="400" height="200"></canvas>
+                                    <div class="elevation-stats" id="routeElevationStats">
+                                        <span>Min: <span id="minElevation">--m</span></span>
+                                        <span>Max: <span id="maxElevation">--m</span></span>
+                                        <span>↗ <span id="totalAscent">--m</span></span>
+                                        <span>↘ <span id="totalDescent">--m</span></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -361,14 +362,14 @@ class RouteDetailsModal {
             descriptionEl.textContent = route.description || 'Bu rota için açıklama bulunmuyor.';
         }
         
-        // Load elevation profile
-        await this.loadElevationProfile();
+        // Elevation profile is now loaded in the map tab
     }
 
     async loadMapContent() {
         if (this.mapInstance) {
-            // Map already initialized, just fit to route
+            // Map already initialized, just fit to route and load elevation
             this.fitMapToRoute();
+            await this.loadElevationProfile();
             return;
         }
         
@@ -386,6 +387,9 @@ class RouteDetailsModal {
             
             // Display route on map
             await this.displayRouteOnMap();
+            
+            // Load elevation profile for the map tab
+            await this.loadElevationProfile();
             
         } catch (error) {
             console.error('❌ Error initializing map:', error);
@@ -539,6 +543,8 @@ class RouteDetailsModal {
         if (!this.mapInstance || !this.currentRoute) return;
         
         try {
+            console.log('🗺️ Displaying enhanced route on modal map:', this.currentRoute.name);
+            
             // Clear existing layers
             this.mapInstance.eachLayer(layer => {
                 if (layer instanceof L.Marker || layer instanceof L.Polyline) {
@@ -562,7 +568,7 @@ class RouteDetailsModal {
                 }
             }
             
-            // Add POI markers
+            // Add enhanced POI markers with detailed popups and modal integration
             const pois = this.currentRoute.pois || this.currentRoute.waypoints || [];
             pois.forEach((poi, index) => {
                 const lat = poi.latitude || poi.lat;
@@ -571,39 +577,43 @@ class RouteDetailsModal {
                 if (lat && lng) {
                     const categoryStyle = this.getCategoryStyle(poi.category);
                     
-                    L.marker([lat, lng], {
+                    const marker = L.marker([lat, lng], {
                         icon: L.divIcon({
                             className: 'custom-poi-marker',
                             html: `
-                                <div style="
-                                    background: ${categoryStyle.color};
-                                    width: 32px;
-                                    height: 32px;
-                                    border-radius: 50%;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    color: white;
-                                    font-weight: bold;
-                                    border: 3px solid white;
-                                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                                ">
-                                    ${index + 1}
+                                <div class="poi-marker-container" style="background-color: ${categoryStyle.color}; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); transition: transform 0.2s ease;">
+                                    <i class="${categoryStyle.iconClass}"></i>
                                 </div>
+                                <div class="poi-marker-score" style="position: absolute; top: -6px; right: -6px; background: #2563eb; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 10;">${index + 1}</div>
                             `,
                             iconSize: [32, 32],
-                            iconAnchor: [16, 16]
+                            iconAnchor: [16, 16],
+                            popupAnchor: [0, -16]
                         })
                     })
-                    .bindPopup(`
-                        <div>
-                            <h6>${poi.name}</h6>
-                            <p>${poi.description || ''}</p>
-                        </div>
-                    `)
                     .addTo(this.mapInstance);
+                    
+                    // Create detailed popup with POI detail modal integration
+                    const popupContent = this.createDetailedPOIPopup(poi, index + 1);
+                    marker.bindPopup(popupContent, {
+                        maxWidth: 300,
+                        minWidth: 250,
+                        className: 'custom-poi-popup'
+                    });
+                    
+                    // Add hover effects
+                    marker.on('mouseover', function() {
+                        this.getElement().querySelector('.poi-marker-container').style.transform = 'scale(1.1)';
+                    });
+                    
+                    marker.on('mouseout', function() {
+                        this.getElement().querySelector('.poi-marker-container').style.transform = 'scale(1)';
+                    });
                 }
             });
+            
+            // Load and display media markers for the route
+            await this.loadRouteMediaMarkers();
             
             // Fit map to show all markers
             this.fitMapToRoute();
@@ -611,6 +621,188 @@ class RouteDetailsModal {
         } catch (error) {
             console.error('❌ Error displaying route on map:', error);
         }
+    }
+
+    // Enhanced POI popup creation with modal integration
+    createDetailedPOIPopup(poi, stopNumber) {
+        const categoryStyle = this.getCategoryStyle(poi.category || 'diger');
+        const categoryName = this.getCategoryDisplayName(poi.category || 'diger');
+        
+        // Basic info that's always available
+        let popupHTML = `
+            <div class="poi-popup-detailed" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 280px;">
+                <div class="poi-popup-header" style="display: flex; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
+                    <div class="poi-popup-icon" style="background: ${categoryStyle.color}; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-right: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                        <i class="${categoryStyle.iconClass}" style="font-size: 14px;"></i>
+                    </div>
+                    <div class="poi-popup-title-section" style="flex: 1;">
+                        <h4 class="poi-popup-title" style="margin: 0; font-size: 16px; font-weight: 600; color: #333;">${poi.name}</h4>
+                        <p class="poi-popup-category" style="margin: 2px 0 0 0; font-size: 12px; color: #666;">${categoryName} • Durak ${stopNumber}</p>
+                    </div>
+                </div>
+                
+                <div class="poi-popup-content" style="line-height: 1.4;">
+        `;
+        
+        // Add description if available
+        if (poi.description) {
+            popupHTML += `
+                <div class="poi-popup-description" style="margin-bottom: 8px;">
+                    <p style="margin: 0; font-size: 13px; color: #555; line-height: 1.3;">${poi.description.length > 120 ? poi.description.substring(0, 120) + '...' : poi.description}</p>
+                </div>
+            `;
+        }
+        
+        // Add coordinates info
+        const lat = poi.lat || poi.latitude;
+        const lng = poi.lng || poi.lon || poi.longitude;
+        if (lat && lng) {
+            popupHTML += `
+                <div class="poi-popup-coordinates" style="display: flex; align-items: center; margin-bottom: 6px; font-size: 11px; color: #777;">
+                    <i class="fas fa-map-marker-alt" style="margin-right: 6px; width: 12px;"></i>
+                    <span>${lat.toFixed(4)}, ${lng.toFixed(4)}</span>
+                </div>
+            `;
+        }
+        
+        // Action buttons with POI detail modal integration
+        popupHTML += `
+                <div class="poi-popup-actions" style="display: flex; gap: 6px; margin-top: 12px; padding-top: 8px; border-top: 1px solid #eee;">
+                    <button class="poi-popup-btn poi-popup-btn--secondary" onclick="openInGoogleMaps(${lat}, ${lng}, '${poi.name.replace(/'/g, "\\")}'); event.stopPropagation();" style="flex: 1; padding: 6px 8px; font-size: 11px; border: 1px solid #6c757d; background: white; color: #6c757d; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                        <i class="fab fa-google" style="font-size: 10px;"></i> Maps
+                    </button>
+                    <button class="poi-popup-btn poi-popup-btn--primary" onclick="showPOIDetail('${poi.poi_id || poi.id || poi._id}'); event.stopPropagation();" style="flex: 1; padding: 6px 8px; font-size: 11px; border: 1px solid #007bff; background: #007bff; color: white; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                        <i class="fas fa-info-circle" style="font-size: 10px;"></i> Detay
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        return popupHTML;
+    }
+    
+    // Load and display media markers for the route
+    async loadRouteMediaMarkers() {
+        if (!this.mapInstance || !this.currentRoute) return;
+        
+        try {
+            console.log('🎬 Loading media markers for route:', this.currentRoute.id || this.currentRoute._id);
+            
+            const routeId = this.currentRoute.id || this.currentRoute._id;
+            const response = await fetch(`${window.apiBase}/admin/routes/${routeId}/media`, {
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                console.log('ℹ️ No media found for route or access denied');
+                return;
+            }
+            
+            const data = await response.json();
+            let mediaFiles = [];
+            
+            // Handle different response formats
+            if (Array.isArray(data)) {
+                mediaFiles = data;
+            } else if (Array.isArray(data.media)) {
+                mediaFiles = data.media;
+            } else if (Array.isArray(data.files)) {
+                mediaFiles = data.files;
+            }
+            
+            // Filter media items that have location data
+            const locatedMedia = mediaFiles.filter(media => {
+                const lat = media.latitude || media.lat;
+                const lng = media.longitude || media.lng || media.lon;
+                return lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng));
+            });
+            
+            if (locatedMedia.length === 0) {
+                console.log('ℹ️ No media with location data found for this route');
+                return;
+            }
+            
+            console.log(`📍 Found ${locatedMedia.length} media items with location data`);
+            
+            // Add media markers to map
+            locatedMedia.forEach((media, index) => {
+                const lat = parseFloat(media.latitude || media.lat);
+                const lng = parseFloat(media.longitude || media.lng || media.lon);
+                
+                // Create media marker icon
+                const mediaMarker = L.marker([lat, lng], {
+                    icon: this.createMediaMarkerIcon(media.media_type || 'image', media),
+                    title: media.caption || `Medya ${index + 1}`
+                }).addTo(this.mapInstance);
+                
+                // Create media popup content
+                const popupContent = this.createMediaPopupContent(media);
+                mediaMarker.bindPopup(popupContent, {
+                    maxWidth: 300,
+                    minWidth: 250,
+                    className: 'media-popup'
+                });
+            });
+            
+            console.log('✅ Media markers loaded successfully');
+            
+        } catch (error) {
+            console.error('❌ Error loading media markers:', error);
+        }
+    }
+    
+    // Create media marker icon
+    createMediaMarkerIcon(mediaType, media) {
+        const iconSize = [24, 24];
+        const iconAnchor = [12, 12];
+
+        // Define icons and classes for different media types
+        const iconMap = {
+            'image': { icon: 'fa-camera', cls: 'image' },
+            'video': { icon: 'fa-video', cls: 'video' },
+            'audio': { icon: 'fa-music', cls: 'audio' },
+            'model_3d': { icon: 'fa-cube', cls: 'model_3d' },
+            'unknown': { icon: 'fa-file', cls: 'image' }
+        };
+
+        const cfg = iconMap[mediaType] || iconMap.unknown;
+
+        // Create HTML for the marker using Font Awesome icons
+        const html = `<div class="media-marker ${cfg.cls}"><i class="fas ${cfg.icon}"></i></div>`;
+
+        return L.divIcon({
+            html: html,
+            className: '',
+            iconSize: iconSize,
+            iconAnchor: iconAnchor,
+            popupAnchor: [0, -12]
+        });
+    }
+    
+    // Create media popup content
+    createMediaPopupContent(media) {
+        const mediaUrl = media.url || media.path || media.filename || '';
+        const caption = media.caption || media.alt_text || 'Medya';
+        const mediaType = media.media_type || 'image';
+        
+        let mediaPreview = '';
+        if (mediaType === 'image') {
+            mediaPreview = `<img src="${mediaUrl}" alt="${caption}" style="width: 100%; max-height: 150px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;">`;
+        } else if (mediaType === 'video') {
+            mediaPreview = `<video src="${mediaUrl}" controls style="width: 100%; max-height: 150px; border-radius: 4px; margin-bottom: 8px;"></video>`;
+        } else if (mediaType === 'audio') {
+            mediaPreview = `<audio src="${mediaUrl}" controls style="width: 100%; margin-bottom: 8px;"></audio>`;
+        }
+        
+        return `
+            <div class="media-popup-content" style="font-family: 'Segoe UI', sans-serif; max-width: 250px;">
+                ${mediaPreview}
+                <div class="media-info">
+                    <h6 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600;">${caption}</h6>
+                    <p style="margin: 0; font-size: 12px; color: #666; text-transform: capitalize;">${mediaType} • Rota Medyası</p>
+                </div>
+            </div>
+        `;
     }
 
     // Helper methods
@@ -683,6 +875,25 @@ class RouteDetailsModal {
         // Implementation for route sharing
     }
 
+    // Initialize elevation chart
+    initializeElevationChart() {
+        if (!this.currentRoute) return;
+        
+        try {
+            // Initialize elevation chart if ElevationChart class is available
+            if (typeof ElevationChart !== 'undefined') {
+                this.elevationChart = new ElevationChart('routeElevationChart', this.mapInstance);
+                
+                // Load elevation data
+                this.loadElevationProfile();
+            } else {
+                console.warn('⚠️ ElevationChart class not available');
+            }
+        } catch (error) {
+            console.error('❌ Error initializing elevation chart:', error);
+        }
+    }
+
     async loadElevationProfile() {
         // Implementation for elevation profile loading
         console.log('Load elevation profile');
@@ -706,26 +917,116 @@ class RouteDetailsModal {
     }
 
     getCategoryStyle(category) {
+        // Use the global POI_CATEGORIES if available, otherwise fallback to basic styles
+        if (typeof POI_CATEGORIES !== 'undefined' && POI_CATEGORIES[category]) {
+            const cat = POI_CATEGORIES[category];
+            return {
+                color: cat.color,
+                iconClass: `fas fa-${cat.icon}`
+            };
+        }
+        
         // Use existing category style functions from the main app
         if (window.getCategoryStyle) {
             return window.getCategoryStyle(category);
         }
         
-        // Fallback styles
-        return {
-            color: '#6366f1',
-            iconClass: 'fas fa-map-marker-alt'
+        // Fallback category styles
+        const fallbackStyles = {
+            'doga': { color: '#16a085', iconClass: 'fas fa-tree' },
+            'yemek': { color: '#e74c3c', iconClass: 'fas fa-utensils' },
+            'tarihi': { color: '#8e44ad', iconClass: 'fas fa-landmark' },
+            'eglence': { color: '#f39c12', iconClass: 'fas fa-gamepad' },
+            'sanat_kultur': { color: '#9b59b6', iconClass: 'fas fa-palette' },
+            'macera': { color: '#e67e22', iconClass: 'fas fa-mountain' },
+            'rahatlatici': { color: '#1abc9c', iconClass: 'fas fa-spa' },
+            'spor': { color: '#27ae60', iconClass: 'fas fa-running' },
+            'alisveris': { color: '#3498db', iconClass: 'fas fa-shopping-bag' },
+            'gece_hayati': { color: '#2c3e50', iconClass: 'fas fa-moon' },
+            'konaklama': { color: '#34495e', iconClass: 'fas fa-bed' },
+            'ulasim': { color: '#95a5a6', iconClass: 'fas fa-car' },
+            'saglik': { color: '#e74c3c', iconClass: 'fas fa-hospital' },
+            'egitim': { color: '#f1c40f', iconClass: 'fas fa-graduation-cap' },
+            'diger': { color: '#7f8c8d', iconClass: 'fas fa-map-marker-alt' }
         };
+        
+        return fallbackStyles[category] || fallbackStyles['diger'];
     }
 
     getCategoryDisplayName(category) {
+        // Use the global POI_CATEGORIES if available
+        if (typeof POI_CATEGORIES !== 'undefined' && POI_CATEGORIES[category]) {
+            return POI_CATEGORIES[category].display_name || POI_CATEGORIES[category].name;
+        }
+        
         // Use existing category display name functions from the main app
         if (window.getCategoryDisplayName) {
             return window.getCategoryDisplayName(category);
         }
         
-        // Fallback
-        return category || 'Kategori';
+        // Fallback display names
+        const fallbackNames = {
+            'doga': 'Doğa',
+            'yemek': 'Yemek',
+            'tarihi': 'Tarih',
+            'eglence': 'Eğlence',
+            'sanat_kultur': 'Sanat & Kültür',
+            'macera': 'Macera',
+            'rahatlatici': 'Rahatlatıcı',
+            'spor': 'Spor',
+            'alisveris': 'Alışveriş',
+            'gece_hayati': 'Gece Hayatı',
+            'konaklama': 'Konaklama',
+            'ulasim': 'Ulaşım',
+            'saglik': 'Sağlık',
+            'egitim': 'Eğitim',
+            'diger': 'Diğer'
+        };
+        
+        return fallbackNames[category] || 'Diğer';
+    }
+    
+    getMediaTypeFromUrl(url) {
+        if (!url) return 'image';
+        
+        // Use global function if available
+        if (typeof window.getMediaTypeFromPath === 'function') {
+            const type = window.getMediaTypeFromPath(url);
+            return type === 'unknown' ? 'image' : type;
+        }
+        
+        // Fallback implementation
+        const lowerUrl = url.toLowerCase();
+        if (lowerUrl.includes('.mp4') || lowerUrl.includes('.mov') || lowerUrl.includes('.avi')) {
+            return 'video';
+        } else if (lowerUrl.includes('.mp3') || lowerUrl.includes('.wav') || lowerUrl.includes('.ogg')) {
+            return 'audio';
+        } else if (lowerUrl.includes('.glb') || lowerUrl.includes('.gltf')) {
+            return 'model_3d';
+        }
+        return 'image';
+    }
+    
+    getMediaMarkerStyle(mediaType) {
+        const styles = {
+            image: { color: '#f59e0b', icon: 'fas fa-camera' },
+            video: { color: '#ef4444', icon: 'fas fa-video' },
+            audio: { color: '#10b981', icon: 'fas fa-volume-up' },
+            model_3d: { color: '#6366f1', icon: 'fas fa-cube' }
+        };
+        
+        return styles[mediaType] || styles.image;
+    }
+    
+    getMediaTypeDisplayName(mediaType) {
+        const names = {
+            image: 'Resim',
+            video: 'Video',
+            audio: 'Ses',
+            model_3d: '3D Model'
+        };
+        
+        return names[mediaType] || 'Medya';
     }
 }
 
@@ -737,3 +1038,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Make it globally available
 window.RouteDetailsModal = RouteDetailsModal;
+
+// Global function to show route details
+window.showRouteDetails = function(routeData) {
+    console.log('🎯 Global showRouteDetails called with:', routeData);
+    const modal = RouteDetailsModal.getInstance();
+    if (modal) {
+        modal.show(routeData);
+    } else {
+        console.error('❌ Route details modal not available');
+    }
+};
+
+// Global function for media type detection (consistent with main system)
+window.getMediaTypeFromPath = function(path) {
+    if (!path) return 'unknown';
+    
+    const extension = path.split('.').pop().toLowerCase();
+    
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
+        return 'image';
+    } else if (['mp4', 'avi', 'mov', 'webm', 'mkv'].includes(extension)) {
+        return 'video';
+    } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(extension)) {
+        return 'audio';
+    } else if (['glb', 'gltf', 'obj', 'fbx', 'dae', 'ply', 'stl'].includes(extension)) {
+        return 'model_3d';
+    }
+    
+    return 'unknown';
+};
