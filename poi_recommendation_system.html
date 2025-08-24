@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="static/css/components.css">
     <link rel="stylesheet" href="static/css/ux-enhancements.css">
     <link rel="stylesheet" href="static/css/poi_recommendation_system.css">
+    <!-- Route Details Modal CSS -->
+    <link rel="stylesheet" href="static/css/route-details-modal.css">
 
     <!-- Centralized POI Category Configuration -->
     <script src="static/js/poi-categories.js"></script>
@@ -1976,6 +1978,8 @@
     <script src="static/js/rate-limiter.js"></script>
     <script src="static/js/elevation-chart.js"></script>
     <script src="static/js/map-layer-control.js"></script>
+    <!-- Route Details Modal -->
+    <script src="static/js/route-details-modal.js"></script>
     <script src="static/js/poi_recommendation_system.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 
@@ -2197,61 +2201,6 @@
 
         // Initialize mobile enhancements when DOM is ready
         document.addEventListener('DOMContentLoaded', initializeMobileFilterChips);
-
-
-                alert('Bootstrap yüklenmemiş!');
-                return;
-            }
-
-            // Try to show modal directly with Bootstrap
-            try {
-                const bsModal = new bootstrap.Modal(modalElement, {
-                    backdrop: true,
-                    keyboard: true,
-                    focus: true
-                });
-
-                console.log('🔄 Showing modal with Bootstrap...');
-                bsModal.show();
-
-                // Check if modal is shown after a delay
-                setTimeout(() => {
-                    console.log('🔍 Modal state after show:', {
-                        display: modalElement.style.display,
-                        classList: modalElement.classList.toString(),
-                        isVisible: modalElement.offsetHeight > 0
-                    });
-
-                    if (!modalElement.classList.contains('show')) {
-                        console.log('🔧 Modal not showing, forcing visibility...');
-                        modalElement.style.display = 'block';
-                        modalElement.style.zIndex = '10100';
-                        modalElement.classList.add('show');
-
-                        // Add backdrop manually
-                        let backdrop = document.querySelector('.modal-backdrop');
-                        if (!backdrop) {
-                            backdrop = document.createElement('div');
-                            backdrop.className = 'modal-backdrop fade show';
-                            backdrop.style.zIndex = '10099';
-                            document.body.appendChild(backdrop);
-                        }
-
-                        document.body.classList.add('modal-open');
-
-                        // Set modal content for testing
-                        const modalTitle = modalElement.querySelector('#poiDetailModalLabel');
-                        const modalBody = modalElement.querySelector('.poi-description-content');
-                        if (modalTitle) modalTitle.textContent = 'Test POI Modal';
-                        if (modalBody) modalBody.innerHTML = '<p>Modal başarıyla açıldı! Bu bir test mesajıdır.</p>';
-                    }
-                }, 500);
-
-            } catch (error) {
-                console.error('❌ Bootstrap modal error:', error);
-                alert('Bootstrap modal hatası: ' + error.message);
-            }
-        }
     </script>
 </body>
 

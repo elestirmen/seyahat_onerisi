@@ -6513,17 +6513,35 @@ function displayPredefinedRoutes(routes) {
     routesList.querySelectorAll('.route-card').forEach((card, index) => {
         const route = routes[index];
 
-        // Route card click -> select route
+        // Route card click -> show mobile-friendly modal
         card.addEventListener('click', async () => {
             // Add loading state to clicked card
             card.classList.add('loading');
 
             try {
-                await selectPredefinedRoute(route); // handles map rendering internally
-                // Show route details after selecting the route
-                showPredefinedRouteDetailsPanel(window.currentSelectedRoute || route);
+                // For mobile devices, show the new modal directly
+                if (window.innerWidth <= 768) {
+                    if (window.RouteDetailsModal) {
+                        const modal = RouteDetailsModal.getInstance();
+                        await modal.show(route);
+                    } else {
+                        // Fallback to existing panel
+                        await selectPredefinedRoute(route);
+                        showPredefinedRouteDetailsPanel(window.currentSelectedRoute || route);
+                    }
+                } else {
+                    // For desktop, keep existing behavior or use modal
+                    await selectPredefinedRoute(route);
+                    // Use new modal instead of side panel if available
+                    if (window.RouteDetailsModal) {
+                        const modal = RouteDetailsModal.getInstance();
+                        await modal.show(window.currentSelectedRoute || route);
+                    } else {
+                        showPredefinedRouteDetailsPanel(window.currentSelectedRoute || route);
+                    }
+                }
             } catch (error) {
-                console.error('Error selecting route:', error);
+                console.error('Error showing route details:', error);
             } finally {
                 card.classList.remove('loading');
             }
