@@ -1,0 +1,40 @@
+{
+  "timestamp": "2025-08-24T13:44:54.031172",
+  "duration": 0.02408766746520996,
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "name": "Database Connection",
+      "category": "database",
+      "status": "TestStatus.PASS",
+      "duration": 0.011593103408813477,
+      "message": "✅ Database connection successful",
+      "details": {},
+      "suggestions": []
+    },
+    {
+      "name": "Database CRUD",
+      "category": "database",
+      "status": "TestStatus.PASS",
+      "duration": 0.012094497680664062,
+      "message": "✅ Database CRUD operations accessible",
+      "details": {},
+      "suggestions": []
+    },
+    {
+      "name": "JSON Fallback",
+      "category": "database",
+      "status": "TestStatus.PASS",
+      "duration": 0.00015926361083984375,
+      "message": "✅ JSON fallback available with 0 POIs",
+      "details": {},
+      "suggestions": []
+    }
+  ]
+}

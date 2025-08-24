@@ -1220,28 +1220,7 @@
                         <span class="btn-text">Tüm POI'leri Göster</span>
                     </button>
 
-                    <!-- Test Modal Button -->
-                    <button onclick="testPOIModal()" style="
-                        width: 100%;
-                        padding: 12px 20px;
-                        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-                        color: white;
-                        border: none;
-                        border-radius: 16px;
-                        font-size: 1rem;
-                        font-weight: 600;
-                        cursor: pointer;
-                        transition: all 0.3s ease;
-                        margin-top: 12px;
-                        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        gap: 8px;
-                    ">
-                        <i class="fas fa-bug btn-icon"></i>
-                        <span class="btn-text">Test POI Modal</span>
-                    </button>
+
 
 
                 </div>
@@ -2219,34 +2198,7 @@
         // Initialize mobile enhancements when DOM is ready
         document.addEventListener('DOMContentLoaded', initializeMobileFilterChips);
 
-        // Test POI Modal function
-        function testPOIModal() {
-            console.log('🧪 Testing POI Modal...');
 
-            // First check if modal exists in DOM
-            const modalElement = document.getElementById('poiDetailModal');
-            console.log('🔍 Modal element found:', modalElement);
-
-            if (!modalElement) {
-                console.error('❌ Modal element not found in DOM!');
-                alert('Modal elementi DOM\'da bulunamadı!');
-                return;
-            }
-
-            // Check modal's current state
-            console.log('🔍 Modal current state:', {
-                display: modalElement.style.display,
-                visibility: modalElement.style.visibility,
-                zIndex: modalElement.style.zIndex,
-                classList: modalElement.classList.toString(),
-                offsetHeight: modalElement.offsetHeight,
-                offsetWidth: modalElement.offsetWidth,
-                parentElement: modalElement.parentElement
-            });
-
-            // Check if Bootstrap is available
-            if (typeof bootstrap === 'undefined') {
-                console.error('❌ Bootstrap not loaded!');
                 alert('Bootstrap yüklenmemiş!');
                 return;
             }
