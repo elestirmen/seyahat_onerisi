@@ -204,6 +204,47 @@ class RouteDetailsModal {
         document.addEventListener('keydown', this.handleKeydown);
     }
 
+    attachMapControlListeners() {
+        console.log('🔧 Attaching map control listeners');
+
+        // Check if modal exists
+        if (!this.modal) {
+            console.error('❌ Modal not found, cannot attach map control listeners');
+            return;
+        }
+
+        // Map controls
+        const fitBtn = document.getElementById('fitMapBtn');
+        if (fitBtn) {
+            console.log('✅ Fit map button found, adding event listener');
+            fitBtn.addEventListener('click', (e) => {
+                console.log('🔍 Fit map button clicked');
+                e.preventDefault();
+                e.stopPropagation();
+                this.fitMapToRoute();
+            });
+            console.log('✅ Fit map button event listener attached successfully');
+        } else {
+            console.error('❌ Fit map button not found');
+        }
+
+        const fullscreenBtn = document.getElementById('fullscreenMapBtn');
+        if (fullscreenBtn) {
+            console.log('✅ Fullscreen button found, adding event listener');
+            fullscreenBtn.addEventListener('click', (e) => {
+                console.log('🔍 Fullscreen button clicked');
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleFullscreenMap();
+            });
+            console.log('✅ Fullscreen button event listener attached successfully');
+        } else {
+            console.error('❌ Fullscreen button not found');
+        }
+
+        console.log('🔧 Map control listeners attachment completed');
+    }
+
     attachActionButtonListeners() {
         // Navigation button
         const navBtn = document.getElementById('startNavigationBtn');
@@ -232,21 +273,34 @@ class RouteDetailsModal {
         // Map controls
         const fitBtn = document.getElementById('fitMapBtn');
         if (fitBtn) {
-            fitBtn.addEventListener('click', () => {
+            console.log('✅ Fit map button found, adding event listener');
+            fitBtn.addEventListener('click', (e) => {
+                console.log('🔍 Fit map button clicked');
+                e.preventDefault();
+                e.stopPropagation();
                 this.fitMapToRoute();
             });
+        } else {
+            console.error('❌ Fit map button not found');
         }
 
         const fullscreenBtn = document.getElementById('fullscreenMapBtn');
         if (fullscreenBtn) {
-            fullscreenBtn.addEventListener('click', () => {
+            console.log('✅ Fullscreen button found, adding event listener');
+            fullscreenBtn.addEventListener('click', (e) => {
+                console.log('🔍 Fullscreen button clicked');
+                e.preventDefault();
+                e.stopPropagation();
                 this.toggleFullscreenMap();
             });
+        } else {
+            console.error('❌ Fullscreen button not found');
         }
     }
 
     async show(routeData) {
         console.log('🎯 Showing route details modal with data:', routeData);
+        console.log('📊 Modal element exists:', !!this.modal);
         console.log('📊 Route data structure inspection:', {
             hasId: !!routeData.id,
             hasName: !!routeData.name,
@@ -275,6 +329,12 @@ class RouteDetailsModal {
 
         // Prevent body scroll
         document.body.style.overflow = 'hidden';
+
+        // Attach map control listeners after modal HTML is created
+        setTimeout(() => {
+            console.log('🎯 Attaching map control listeners after modal show');
+            this.attachMapControlListeners();
+        }, 100);
 
         // Load content for current tab
         await this.loadTabContent(this.currentTab);
@@ -1044,24 +1104,99 @@ class RouteDetailsModal {
     }
 
     fitMapToRoute() {
-        if (!this.mapInstance) return;
-        
+        console.log('🔄 Fitting map to route');
+
+        if (!this.mapInstance) {
+            console.error('❌ No map instance available');
+            return;
+        }
+
         const markers = [];
         this.mapInstance.eachLayer(layer => {
             if (layer instanceof L.Marker) {
                 markers.push(layer);
             }
         });
-        
+
+        console.log(`📍 Found ${markers.length} markers on map`);
+
         if (markers.length > 0) {
             const group = new L.featureGroup(markers);
-            this.mapInstance.fitBounds(group.getBounds(), { padding: [20, 20] });
+            const bounds = group.getBounds();
+            console.log('🎯 Fitting to bounds:', bounds);
+            this.mapInstance.fitBounds(bounds, { padding: [20, 20] });
+            console.log('✅ Map fitted to route successfully');
+        } else {
+            console.warn('⚠️ No markers found to fit to');
         }
     }
 
     toggleFullscreenMap() {
-        // Implementation for fullscreen map
-        console.log('Toggle fullscreen map');
+        console.log('🔄 Toggling fullscreen map');
+
+        const modalContent = document.querySelector('.route-details-modal-content');
+        const modal = document.getElementById('routeDetailsModal');
+
+        if (!modalContent || !modal) {
+            console.error('❌ Modal elements not found for fullscreen');
+            return;
+        }
+
+        // Check if already in fullscreen
+        if (document.fullscreenElement) {
+            // Exit fullscreen
+            document.exitFullscreen().then(() => {
+                console.log('✅ Exited fullscreen mode');
+                modalContent.style.position = '';
+                modalContent.style.width = '';
+                modalContent.style.height = '';
+                modalContent.style.zIndex = '';
+            }).catch(err => {
+                console.error('❌ Error exiting fullscreen:', err);
+            });
+        } else {
+            // Enter fullscreen
+            modalContent.requestFullscreen().then(() => {
+                console.log('✅ Entered fullscreen mode');
+                modalContent.style.position = 'fixed';
+                modalContent.style.width = '100vw';
+                modalContent.style.height = '100vh';
+                modalContent.style.zIndex = '9999';
+                modalContent.style.top = '0';
+                modalContent.style.left = '0';
+            }).catch(err => {
+                console.error('❌ Error entering fullscreen:', err);
+                // Fallback: try to make it fullscreen-like
+                this.fallbackFullscreen(modalContent);
+            });
+        }
+    }
+
+    fallbackFullscreen(modalContent) {
+        console.log('🔄 Using fallback fullscreen mode');
+
+        // Fallback for browsers that don't support fullscreen API
+        modalContent.style.position = 'fixed';
+        modalContent.style.width = '100vw';
+        modalContent.style.height = '100vh';
+        modalContent.style.zIndex = '9999';
+        modalContent.style.top = '0';
+        modalContent.style.left = '0';
+        modalContent.style.background = 'white';
+
+        // Add escape key listener for fallback
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                modalContent.style.position = '';
+                modalContent.style.width = '';
+                modalContent.style.height = '';
+                modalContent.style.zIndex = '';
+                modalContent.style.background = '';
+                document.removeEventListener('keydown', escapeHandler);
+                console.log('✅ Exited fallback fullscreen mode');
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
     }
 
     startNavigation() {

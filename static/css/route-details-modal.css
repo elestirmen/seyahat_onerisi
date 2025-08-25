@@ -282,7 +282,8 @@
     left: 12px;
     display: flex;
     gap: 8px;
-    z-index: 1000;
+    z-index: 10000;
+    pointer-events: auto;
 }
 
 .route-map-control-btn {
@@ -969,7 +970,8 @@
     left: 12px;
     display: flex;
     gap: 8px;
-    z-index: 1000;
+    z-index: 10000;
+    pointer-events: auto;
 }
 
 .route-map-control-btn {
@@ -1975,7 +1977,8 @@
     left: 12px;
     display: flex;
     gap: 8px;
-    z-index: 1000;
+    z-index: 10000;
+    pointer-events: auto;
 }
 
 .route-map-control-btn {
