@@ -6519,20 +6519,20 @@ function displayPredefinedRoutes(routes) {
             card.classList.add('loading');
 
             try {
-                // For mobile devices, show the new modal directly
+                // Ensure full route details are loaded before showing modal
+                await selectPredefinedRoute(route);
+
+                // Determine display method based on screen size
                 if (window.innerWidth <= 768) {
                     if (window.RouteDetailsModal) {
                         const modal = RouteDetailsModal.getInstance();
-                        await modal.show(route);
+                        await modal.show(window.currentSelectedRoute || route);
                     } else {
                         // Fallback to existing panel
-                        await selectPredefinedRoute(route);
                         showPredefinedRouteDetailsPanel(window.currentSelectedRoute || route);
                     }
                 } else {
                     // For desktop, keep existing behavior or use modal
-                    await selectPredefinedRoute(route);
-                    // Use new modal instead of side panel if available
                     if (window.RouteDetailsModal) {
                         const modal = RouteDetailsModal.getInstance();
                         await modal.show(window.currentSelectedRoute || route);
