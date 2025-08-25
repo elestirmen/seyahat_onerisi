@@ -6513,32 +6513,22 @@ function displayPredefinedRoutes(routes) {
     routesList.querySelectorAll('.route-card').forEach((card, index) => {
         const route = routes[index];
 
-        // Route card click -> show mobile-friendly modal
+        // Route card click -> show route details in modal
         card.addEventListener('click', async () => {
             // Add loading state to clicked card
             card.classList.add('loading');
 
             try {
-                // For mobile devices, show the new modal directly
-                if (window.innerWidth <= 768) {
-                    if (window.RouteDetailsModal) {
-                        const modal = RouteDetailsModal.getInstance();
-                        await modal.show(route);
-                    } else {
-                        // Fallback to existing panel
-                        await selectPredefinedRoute(route);
-                        showPredefinedRouteDetailsPanel(window.currentSelectedRoute || route);
-                    }
+                // Always ensure we have full route details before showing modal
+                await selectPredefinedRoute(route);
+
+                if (window.RouteDetailsModal) {
+                    // Show updated route data in the mobile-friendly modal
+                    const modal = RouteDetailsModal.getInstance();
+                    await modal.show(window.currentSelectedRoute || route);
                 } else {
-                    // For desktop, keep existing behavior or use modal
-                    await selectPredefinedRoute(route);
-                    // Use new modal instead of side panel if available
-                    if (window.RouteDetailsModal) {
-                        const modal = RouteDetailsModal.getInstance();
-                        await modal.show(window.currentSelectedRoute || route);
-                    } else {
-                        showPredefinedRouteDetailsPanel(window.currentSelectedRoute || route);
-                    }
+                    // Fallback to existing side panel implementation
+                    showPredefinedRouteDetailsPanel(window.currentSelectedRoute || route);
                 }
             } catch (error) {
                 console.error('Error showing route details:', error);
@@ -7236,13 +7226,20 @@ function showNoRoutesMessage(message = 'Seçilen kriterlere uygun rota bulunamad
 
 async function showRouteDetails(route) {
     console.log('📋 Showing route details for:', route);
-    
+
+    // Ensure route has complete data before displaying
+    try {
+        await selectPredefinedRoute(route);
+    } catch (err) {
+        console.error('Error loading detailed route data:', err);
+    }
+
     // Use new RouteDetailsModal if available
     if (typeof window.RouteDetailsModal !== 'undefined') {
         console.log('🎯 Using new RouteDetailsModal');
         const modal = window.RouteDetailsModal.getInstance();
         if (modal) {
-            modal.show(route);
+            await modal.show(window.currentSelectedRoute || route);
             return;
         }
     }
