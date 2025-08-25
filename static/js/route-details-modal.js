@@ -544,18 +544,51 @@ class RouteDetailsModal {
             const mediaHTML = mediaFiles.map(media => {
                 const isVideo = media.media_type === 'video' || media.path?.includes('.mp4');
                 const isAudio = media.media_type === 'audio' || media.path?.includes('.mp3');
-                const mediaUrl = media.url || media.path || media.filename;
-                
+
+                // Debug media URL construction
+                const rawMediaUrl = media.url || media.path || media.filename;
+                console.log('🎬 Media item URL construction:', {
+                    mediaId: media.id || media._id,
+                    url: media.url,
+                    path: media.path,
+                    thumbnail_path: media.thumbnail_path,
+                    file_path: media.file_path,
+                    filename: media.filename,
+                    rawMediaUrl,
+                    mediaKeys: Object.keys(media)
+                });
+
+                // Construct proper media URL
+                let mediaUrl = rawMediaUrl;
+                if (mediaUrl && !mediaUrl.startsWith('http')) {
+                    // Try different URL patterns based on common media serving approaches
+                    if (media.thumbnail_path) {
+                        mediaUrl = `/${media.thumbnail_path}`;
+                    } else if (media.file_path) {
+                        mediaUrl = `/${media.file_path}`;
+                    } else if (media.path) {
+                        mediaUrl = media.path.startsWith('/') ? media.path : `/${media.path}`;
+                    } else if (media.filename) {
+                        // For files served from root domain (like the error shows)
+                        mediaUrl = `/${media.filename}`;
+                    } else {
+                        // Last resort - serve from uploads directory
+                        mediaUrl = `/uploads/${mediaUrl}`;
+                    }
+                }
+
+                console.log('🎬 Final media URL:', mediaUrl);
+
                 let typeIcon = 'fas fa-file';
                 if (isVideo) typeIcon = 'fas fa-play';
                 else if (isAudio) typeIcon = 'fas fa-volume-up';
                 else typeIcon = 'fas fa-image';
-                
+
                 return `
                     <div class="route-media-item" onclick="window.routeDetailsModalInstance.showMediaViewer('${mediaUrl}', '${media.media_type || 'image'}')">
-                        ${isVideo ? 
-                            `<video src="${mediaUrl}" muted></video>` : 
-                            `<img src="${mediaUrl}" alt="${media.alt_text || 'Rota medyası'}" loading="lazy">`
+                        ${isVideo ?
+                            `<video src="${mediaUrl}" muted></video>` :
+                            `<img src="${mediaUrl}" alt="${media.alt_text || 'Rota medyası'}" loading="lazy" onerror="console.error('Failed to load media:', '${mediaUrl}')">`
                         }
                         <div class="route-media-type-icon">
                             <i class="${typeIcon}"></i>
@@ -902,18 +935,24 @@ class RouteDetailsModal {
     createMediaPopupContent(media) {
         console.log('🎬 Creating media popup content for:', media);
 
-        const mediaUrl = media.url || media.path || media.filename || '';
+        // Get raw media URL
+        const rawMediaUrl = media.url || media.path || media.filename || '';
         const caption = media.caption || media.alt_text || 'Medya';
         const mediaType = media.media_type || 'image';
 
         console.log('🎬 Media popup details:', {
-            mediaUrl,
+            rawMediaUrl,
+            url: media.url,
+            path: media.path,
+            thumbnail_path: media.thumbnail_path,
+            file_path: media.file_path,
+            filename: media.filename,
             caption,
             mediaType,
             mediaKeys: Object.keys(media)
         });
 
-        if (!mediaUrl) {
+        if (!rawMediaUrl) {
             console.log('❌ No media URL found for media item');
             return `
                 <div class="media-popup-content" style="font-family: 'Segoe UI', sans-serif; max-width: 250px;">
@@ -924,6 +963,27 @@ class RouteDetailsModal {
                 </div>
             `;
         }
+
+        // Construct proper media URL
+        let mediaUrl = rawMediaUrl;
+        if (mediaUrl && !mediaUrl.startsWith('http')) {
+            // Try different URL patterns based on common media serving approaches
+            if (media.thumbnail_path) {
+                mediaUrl = `/${media.thumbnail_path}`;
+            } else if (media.file_path) {
+                mediaUrl = `/${media.file_path}`;
+            } else if (media.path) {
+                mediaUrl = media.path.startsWith('/') ? media.path : `/${media.path}`;
+            } else if (media.filename) {
+                // For files served from root domain (like the error shows)
+                mediaUrl = `/${media.filename}`;
+            } else {
+                // Last resort - serve from uploads directory
+                mediaUrl = `/uploads/${mediaUrl}`;
+            }
+        }
+
+        console.log('🎬 Final media popup URL:', mediaUrl);
 
         let mediaPreview = '';
         if (mediaType === 'image') {
@@ -1051,8 +1111,98 @@ class RouteDetailsModal {
     }
 
     showMediaViewer(mediaUrl, mediaType) {
-        // Implementation for media viewer
-        console.log('Show media viewer:', mediaUrl, mediaType);
+        console.log('🎬 Show media viewer:', mediaUrl, mediaType);
+
+        if (!mediaUrl) {
+            console.error('❌ No media URL provided to showMediaViewer');
+            return;
+        }
+
+        // Test the media URL to see if it's accessible
+        this.testMediaUrl(mediaUrl).then(isAccessible => {
+            if (!isAccessible) {
+                console.warn('⚠️ Media URL not accessible, trying alternative patterns...');
+                return this.findWorkingMediaUrl(mediaUrl);
+            }
+            return mediaUrl;
+        }).then(workingUrl => {
+            if (workingUrl) {
+                this.createMediaViewerModal(workingUrl, mediaType);
+            } else {
+                console.error('❌ Could not find working media URL');
+                alert('Medya dosyası yüklenemiyor. Lütfen daha sonra tekrar deneyin.');
+            }
+        }).catch(error => {
+            console.error('❌ Error testing media URL:', error);
+            alert('Medya görüntülenirken hata oluştu.');
+        });
+    }
+
+    async testMediaUrl(url) {
+        try {
+            const response = await fetch(url, { method: 'HEAD' });
+            return response.ok;
+        } catch (error) {
+            console.log('❌ Media URL test failed:', url, error);
+            return false;
+        }
+    }
+
+    async findWorkingMediaUrl(originalUrl) {
+        console.log('🔍 Finding working media URL for:', originalUrl);
+
+        // Extract filename from original URL
+        const filename = originalUrl.split('/').pop();
+        if (!filename) {
+            console.error('❌ Could not extract filename from URL:', originalUrl);
+            return null;
+        }
+
+        // Try different URL patterns
+        const urlPatterns = [
+            `/${filename}`,                    // Root domain
+            `/uploads/${filename}`,           // Uploads directory
+            `/media/${filename}`,             // Media directory
+            `/static/media/${filename}`,      // Static media
+            `${window.location.origin}/${filename}`, // Full URL with origin
+            `${window.apiBase}/media/${filename}`    // API media endpoint
+        ];
+
+        for (const pattern of urlPatterns) {
+            console.log('🔍 Testing URL pattern:', pattern);
+            if (await this.testMediaUrl(pattern)) {
+                console.log('✅ Found working URL:', pattern);
+                return pattern;
+            }
+        }
+
+        console.log('❌ No working URL pattern found');
+        return null;
+    }
+
+    createMediaViewerModal(mediaUrl, mediaType) {
+        // Create a media viewer modal
+        const viewerModal = document.createElement('div');
+        viewerModal.className = 'media-viewer-modal';
+        viewerModal.innerHTML = `
+            <div class="media-viewer-overlay" onclick="this.parentElement.remove()"></div>
+            <div class="media-viewer-content">
+                <button class="media-viewer-close" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="media-viewer-body">
+                    ${mediaType === 'video' ?
+                        `<video src="${mediaUrl}" controls autoplay style="max-width: 100%; max-height: 80vh;"></video>` :
+                        mediaType === 'audio' ?
+                        `<audio src="${mediaUrl}" controls autoplay style="width: 100%;"></audio>` :
+                        `<img src="${mediaUrl}" alt="Media" style="max-width: 100%; max-height: 80vh; object-fit: contain;" onerror="console.error('Failed to load media in viewer:', '${mediaUrl}')">`
+                    }
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(viewerModal);
+        console.log('✅ Media viewer modal created with URL:', mediaUrl);
     }
 
     createDifficultyStars(level) {
