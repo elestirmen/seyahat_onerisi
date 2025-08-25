@@ -771,6 +771,41 @@ class ElevationChart {
         this.updateChart();
     }
 
+    /**
+     * Add media or POI locations without replacing existing overlay points
+     */
+    addMediaLocations(mediaItems) {
+        if (!Array.isArray(mediaItems) || mediaItems.length === 0) {
+            return;
+        }
+
+        if (!this.elevationData || this.elevationData.length === 0) {
+            this.pendingMediaMarkers = (this.pendingMediaMarkers || []).concat(mediaItems);
+            return;
+        }
+
+        const overlay = [];
+        mediaItems.forEach(item => {
+            const lat = parseFloat(item.lat ?? item.latitude ?? item.coords?.[1] ?? item.location?.lat ?? item.position?.lat);
+            const lng = parseFloat(item.lng ?? item.longitude ?? item.lon ?? item.coords?.[0] ?? item.location?.lng ?? item.position?.lng);
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            const closest = this.findClosestElevationPoint(lat, lng);
+            if (closest) {
+                overlay.push({
+                    lat: lat,
+                    lng: lng,
+                    elevation: closest.elevation,
+                    distance: closest.distance,
+                    media: item
+                });
+            }
+        });
+
+        this.mediaOverlayPoints = this.mediaOverlayPoints.concat(overlay);
+        this.updateChart();
+    }
+
     findClosestElevationPoint(lat, lng) {
         if (!this.elevationData || this.elevationData.length === 0) return null;
         let min = Infinity;

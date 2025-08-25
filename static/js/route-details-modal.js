@@ -124,13 +124,7 @@ class RouteDetailsModal {
                             <div class="route-overview-section" id="routeElevationSection" style="margin-top: 20px;">
                                 <h3><i class="fas fa-mountain"></i> Yükseklik Profili</h3>
                                 <div class="route-elevation-container">
-                                    <canvas id="routeElevationChart" width="400" height="200"></canvas>
-                                    <div class="elevation-stats" id="routeElevationStats">
-                                        <span>Min: <span id="minElevation">--m</span></span>
-                                        <span>Max: <span id="maxElevation">--m</span></span>
-                                        <span>↗ <span id="totalAscent">--m</span></span>
-                                        <span>↘ <span id="totalDescent">--m</span></span>
-                                    </div>
+                                    <div id="routeElevationChartContainer"></div>
                                 </div>
                             </div>
                         </div>
@@ -409,6 +403,21 @@ class RouteDetailsModal {
                 break;
             case 'map':
                 await this.loadMapContent();
+                this.initializeElevationChart();
+
+                const pois = this.currentRoute.pois || this.currentRoute.waypoints || [];
+                const locatedPois = pois.map(p => ({
+                    lat: parseFloat(p.latitude || p.lat || p.coords?.[1] || p.location?.lat || p.position?.lat),
+                    lng: parseFloat(p.longitude || p.lng || p.lon || p.coords?.[0] || p.location?.lng || p.position?.lng),
+                    media_type: 'poi',
+                    name: p.name
+                })).filter(p => !isNaN(p.lat) && !isNaN(p.lng));
+                if (this.elevationChart && locatedPois.length > 0) {
+                    this.elevationChart.addMediaLocations(locatedPois);
+                }
+
+                await this.loadRouteMediaMarkers();
+                this.fitMapToRoute();
                 break;
             case 'pois':
                 await this.loadPoisContent();
@@ -443,38 +452,26 @@ class RouteDetailsModal {
     }
 
     async loadMapContent() {
-        if (this.mapInstance) {
-            // Map already initialized, just fit to route and load elevation
-            this.fitMapToRoute();
-            await this.loadElevationProfile();
-            return;
-        }
-        
         const mapContainer = document.getElementById('routeModalMap');
         if (!mapContainer) return;
-        
-        try {
-            // Initialize Leaflet map
-            this.mapInstance = L.map('routeModalMap').setView([38.6431, 34.8286], 10);
 
-            // Initialize base layers
-            this.initializeBaseLayers();
-
-            // Display route on map
-            await this.displayRouteOnMap();
-
-            // Load elevation profile for the map tab
-            await this.loadElevationProfile();
-
-        } catch (error) {
-            console.error('❌ Error initializing map:', error);
-            mapContainer.innerHTML = `
-                <div class="route-details-loading">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Harita yüklenirken hata oluştu</p>
-                </div>
-            `;
+        if (!this.mapInstance) {
+            try {
+                this.mapInstance = L.map('routeModalMap').setView([38.6431, 34.8286], 10);
+                this.initializeBaseLayers();
+            } catch (error) {
+                console.error('❌ Error initializing map:', error);
+                mapContainer.innerHTML = `
+                    <div class="route-details-loading">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Harita yüklenirken hata oluştu</p>
+                    </div>
+                `;
+                return;
+            }
         }
+
+        await this.displayRouteOnMap();
     }
 
     async loadPoisContent() {
@@ -787,12 +784,6 @@ class RouteDetailsModal {
                 }
             });
             
-            // Load and display media markers for the route
-            await this.loadRouteMediaMarkers();
-            
-            // Fit map to show all markers
-            this.fitMapToRoute();
-            
         } catch (error) {
             console.error('❌ Error displaying route on map:', error);
         }
@@ -935,6 +926,11 @@ class RouteDetailsModal {
             }
 
             console.log(`📍 Found ${locatedMedia.length} media items with location data`);
+
+            // Overlay media locations on elevation chart
+            if (this.elevationChart) {
+                this.elevationChart.addMediaLocations(locatedMedia);
+            }
 
             // Add media markers to map
             locatedMedia.forEach((media, index) => {
@@ -1228,14 +1224,11 @@ class RouteDetailsModal {
 
     // Initialize elevation chart
     initializeElevationChart() {
-        if (!this.currentRoute) return;
-        
+        if (!this.currentRoute || !this.mapInstance) return;
+
         try {
-            // Initialize elevation chart if ElevationChart class is available
             if (typeof ElevationChart !== 'undefined') {
-                this.elevationChart = new ElevationChart('routeElevationChart', this.mapInstance);
-                
-                // Load elevation data
+                this.elevationChart = new ElevationChart('routeElevationChartContainer', this.mapInstance);
                 this.loadElevationProfile();
             } else {
                 console.warn('⚠️ ElevationChart class not available');
@@ -1246,8 +1239,17 @@ class RouteDetailsModal {
     }
 
     async loadElevationProfile() {
-        // Implementation for elevation profile loading
-        console.log('Load elevation profile');
+        if (!this.elevationChart || !this.currentRoute) return;
+
+        try {
+            if (this.currentRoute.elevation_profile && this.currentRoute.elevation_profile.points) {
+                await this.elevationChart.loadElevationProfile(this.currentRoute.elevation_profile);
+            } else {
+                await this.elevationChart.loadRouteElevation(this.currentRoute);
+            }
+        } catch (error) {
+            console.error('❌ Error loading elevation profile:', error);
+        }
     }
 
     showMediaViewer(mediaUrl, mediaType) {
