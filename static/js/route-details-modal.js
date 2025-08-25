@@ -372,25 +372,44 @@ class RouteDetailsModal {
             await this.loadElevationProfile();
             return;
         }
-        
+
         const mapContainer = document.getElementById('routeModalMap');
         if (!mapContainer) return;
-        
+
         try {
+            // Fetch full route details if geometry or POIs are missing
+            if (!this.currentRoute.geometry || !this.currentRoute.pois || this.currentRoute.pois.length === 0) {
+                try {
+                    const resp = await fetch(`${window.apiBase}/routes/${this.currentRoute.id}`);
+                    if (resp.ok) {
+                        const details = await resp.json();
+                        if (details.geometry && !this.currentRoute.geometry) {
+                            this.currentRoute.geometry = details.geometry;
+                        }
+                        const pois = details.pois || details.waypoints;
+                        if (pois && (!this.currentRoute.pois || this.currentRoute.pois.length === 0)) {
+                            this.currentRoute.pois = pois;
+                        }
+                    }
+                } catch (err) {
+                    console.error('❌ Error fetching route details for map:', err);
+                }
+            }
+
             // Initialize Leaflet map
             this.mapInstance = L.map('routeModalMap').setView([38.6431, 34.8286], 10);
-            
+
             // Add tile layer
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(this.mapInstance);
-            
+
             // Display route on map
             await this.displayRouteOnMap();
-            
+
             // Load elevation profile for the map tab
             await this.loadElevationProfile();
-            
+
         } catch (error) {
             console.error('❌ Error initializing map:', error);
             mapContainer.innerHTML = `
@@ -571,10 +590,10 @@ class RouteDetailsModal {
             // Add enhanced POI markers with detailed popups and modal integration
             const pois = this.currentRoute.pois || this.currentRoute.waypoints || [];
             pois.forEach((poi, index) => {
-                const lat = poi.latitude || poi.lat;
-                const lng = poi.longitude || poi.lng;
-                
-                if (lat && lng) {
+                const lat = parseFloat(poi.latitude ?? poi.lat);
+                const lng = parseFloat(poi.longitude ?? poi.lng);
+
+                if (!isNaN(lat) && !isNaN(lng)) {
                     const categoryStyle = this.getCategoryStyle(poi.category);
                     
                     const marker = L.marker([lat, lng], {
