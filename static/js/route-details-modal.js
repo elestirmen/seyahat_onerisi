@@ -469,7 +469,7 @@ class RouteDetailsModal {
         if (!mediaContainer) return;
         
         try {
-            const response = await fetch(`${window.apiBase}/admin/routes/${this.currentRoute.id}/media`, {
+            const response = await fetch(`${window.apiBase}/routes/${this.currentRoute.id}/media`, {
                 credentials: 'include'
             });
             
@@ -689,7 +689,7 @@ class RouteDetailsModal {
             console.log('🎬 Loading media markers for route:', this.currentRoute.id || this.currentRoute._id);
             
             const routeId = this.currentRoute.id || this.currentRoute._id;
-            const response = await fetch(`${window.apiBase}/admin/routes/${routeId}/media`, {
+            const response = await fetch(`${window.apiBase}/routes/${routeId}/media`, {
                 credentials: 'include'
             });
             

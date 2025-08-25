@@ -7236,13 +7236,20 @@ function showNoRoutesMessage(message = 'Seçilen kriterlere uygun rota bulunamad
 
 async function showRouteDetails(route) {
     console.log('📋 Showing route details for:', route);
-    
+
     // Use new RouteDetailsModal if available
     if (typeof window.RouteDetailsModal !== 'undefined') {
         console.log('🎯 Using new RouteDetailsModal');
         const modal = window.RouteDetailsModal.getInstance();
         if (modal) {
-            modal.show(route);
+            let routeData = route;
+            if (!route.pois && route.id) {
+                const detailed = await loadRouteDetails(route);
+                if (detailed) {
+                    routeData = detailed.success ? detailed.route : detailed;
+                }
+            }
+            modal.show(routeData);
             return;
         }
     }
