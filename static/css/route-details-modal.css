@@ -433,8 +433,9 @@
 /* Media Tab */
 .route-media-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 10px;
 }
 
 .route-media-item {
@@ -443,11 +444,14 @@
     border-radius: 12px;
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 2px solid transparent;
 }
 
 .route-media-item:hover {
-    transform: scale(1.05);
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: rgba(59, 130, 246, 0.5);
 }
 
 .route-media-item img,
@@ -455,6 +459,43 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.route-media-item:hover img,
+.route-media-item:hover video {
+    transform: scale(1.05);
+}
+
+/* Loading state for media items */
+.route-media-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    z-index: 1;
+    border-radius: 12px;
+}
+
+.route-media-item img.loaded,
+.route-media-item video.loaded {
+    position: relative;
+    z-index: 2;
+}
+
+.route-media-item img:not(.loaded),
+.route-media-item video:not(.loaded) {
+    opacity: 0;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 .route-media-overlay {
@@ -1135,6 +1176,53 @@
     align-items: center;
     justify-content: center;
     min-height: 300px;
+    max-height: 80vh;
+    overflow: auto;
+}
+
+.media-viewer-loading {
+    text-align: center;
+    color: #666;
+}
+
+.media-viewer-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: media-viewer-spin 1s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes media-viewer-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.media-viewer-content-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.media-viewer-body img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    transition: opacity 0.3s ease;
+}
+
+.media-viewer-body video {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    transition: opacity 0.3s ease;
 }
 
 /* POI Popup Enhanced */
@@ -1350,8 +1438,9 @@
 /* Media Tab */
 .route-media-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 10px;
 }
 
 .route-media-item {
@@ -1360,11 +1449,14 @@
     border-radius: 12px;
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 2px solid transparent;
 }
 
 .route-media-item:hover {
-    transform: scale(1.05);
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: rgba(59, 130, 246, 0.5);
 }
 
 .route-media-item img,
@@ -1372,6 +1464,43 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.route-media-item:hover img,
+.route-media-item:hover video {
+    transform: scale(1.05);
+}
+
+/* Loading state for media items */
+.route-media-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    z-index: 1;
+    border-radius: 12px;
+}
+
+.route-media-item img.loaded,
+.route-media-item video.loaded {
+    position: relative;
+    z-index: 2;
+}
+
+.route-media-item img:not(.loaded),
+.route-media-item video:not(.loaded) {
+    opacity: 0;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 .route-media-overlay {
@@ -1947,8 +2076,9 @@
 /* Media Tab */
 .route-media-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 10px;
 }
 
 .route-media-item {
@@ -1957,11 +2087,14 @@
     border-radius: 12px;
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 2px solid transparent;
 }
 
 .route-media-item:hover {
-    transform: scale(1.05);
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: rgba(59, 130, 246, 0.5);
 }
 
 .route-media-item img,
@@ -1969,6 +2102,43 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.route-media-item:hover img,
+.route-media-item:hover video {
+    transform: scale(1.05);
+}
+
+/* Loading state for media items */
+.route-media-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    z-index: 1;
+    border-radius: 12px;
+}
+
+.route-media-item img.loaded,
+.route-media-item video.loaded {
+    position: relative;
+    z-index: 2;
+}
+
+.route-media-item img:not(.loaded),
+.route-media-item video:not(.loaded) {
+    opacity: 0;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 .route-media-overlay {

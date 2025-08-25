@@ -546,38 +546,46 @@ class RouteDetailsModal {
                 const isAudio = media.media_type === 'audio' || media.path?.includes('.mp3');
 
                 // Debug media URL construction
-                const rawMediaUrl = media.url || media.path || media.filename;
                 console.log('🎬 Media item URL construction:', {
                     mediaId: media.id || media._id,
                     url: media.url,
                     path: media.path,
                     thumbnail_path: media.thumbnail_path,
                     file_path: media.file_path,
+                    original_path: media.original_path,
+                    full_path: media.full_path,
                     filename: media.filename,
-                    rawMediaUrl,
                     mediaKeys: Object.keys(media)
                 });
 
-                // Construct proper media URL
-                let mediaUrl = rawMediaUrl;
+                // Construct proper media URL - prioritize full resolution over thumbnails
+                let mediaUrl = media.url || media.path || media.filename;
                 if (mediaUrl && !mediaUrl.startsWith('http')) {
-                    // Try different URL patterns based on common media serving approaches
-                    if (media.thumbnail_path) {
-                        mediaUrl = `/${media.thumbnail_path}`;
+                    // Prioritize full-resolution paths over thumbnails
+                    if (media.original_path) {
+                        mediaUrl = `/${media.original_path}`;
+                        console.log('🎯 Using original_path for full resolution');
+                    } else if (media.full_path) {
+                        mediaUrl = `/${media.full_path}`;
+                        console.log('🎯 Using full_path for full resolution');
                     } else if (media.file_path) {
                         mediaUrl = `/${media.file_path}`;
+                        console.log('🎯 Using file_path for full resolution');
                     } else if (media.path) {
                         mediaUrl = media.path.startsWith('/') ? media.path : `/${media.path}`;
+                        console.log('🎯 Using path for full resolution');
                     } else if (media.filename) {
                         // For files served from root domain (like the error shows)
                         mediaUrl = `/${media.filename}`;
+                        console.log('🎯 Using filename for full resolution');
                     } else {
                         // Last resort - serve from uploads directory
                         mediaUrl = `/uploads/${mediaUrl}`;
+                        console.log('🎯 Using uploads directory as fallback');
                     }
                 }
 
-                console.log('🎬 Final media URL:', mediaUrl);
+                console.log('🎬 Final media URL for display:', mediaUrl);
 
                 let typeIcon = 'fas fa-file';
                 if (isVideo) typeIcon = 'fas fa-play';
@@ -587,8 +595,8 @@ class RouteDetailsModal {
                 return `
                     <div class="route-media-item" onclick="window.routeDetailsModalInstance.showMediaViewer('${mediaUrl}', '${media.media_type || 'image'}')">
                         ${isVideo ?
-                            `<video src="${mediaUrl}" muted></video>` :
-                            `<img src="${mediaUrl}" alt="${media.alt_text || 'Rota medyası'}" loading="lazy" onerror="console.error('Failed to load media:', '${mediaUrl}')">`
+                            `<video src="${mediaUrl}" muted onload="this.classList.add('loaded')" onerror="console.error('Failed to load video:', '${mediaUrl}'); this.parentElement.style.display='none';"></video>` :
+                            `<img src="${mediaUrl}" alt="${media.alt_text || 'Rota medyası'}" loading="lazy" onload="this.classList.add('loaded')" onerror="console.error('Failed to load image:', '${mediaUrl}'); this.parentElement.style.display='none';">`
                         }
                         <div class="route-media-type-icon">
                             <i class="${typeIcon}"></i>
@@ -1181,7 +1189,7 @@ class RouteDetailsModal {
     }
 
     createMediaViewerModal(mediaUrl, mediaType) {
-        // Create a media viewer modal
+        // Create a media viewer modal with loading state
         const viewerModal = document.createElement('div');
         viewerModal.className = 'media-viewer-modal';
         viewerModal.innerHTML = `
@@ -1191,12 +1199,18 @@ class RouteDetailsModal {
                     <i class="fas fa-times"></i>
                 </button>
                 <div class="media-viewer-body">
-                    ${mediaType === 'video' ?
-                        `<video src="${mediaUrl}" controls autoplay style="max-width: 100%; max-height: 80vh;"></video>` :
-                        mediaType === 'audio' ?
-                        `<audio src="${mediaUrl}" controls autoplay style="width: 100%;"></audio>` :
-                        `<img src="${mediaUrl}" alt="Media" style="max-width: 100%; max-height: 80vh; object-fit: contain;" onerror="console.error('Failed to load media in viewer:', '${mediaUrl}')">`
-                    }
+                    <div class="media-viewer-loading">
+                        <div class="media-viewer-spinner"></div>
+                        <p>Medya yükleniyor...</p>
+                    </div>
+                    <div class="media-viewer-content-wrapper" style="display: none;">
+                        ${mediaType === 'video' ?
+                            `<video src="${mediaUrl}" controls autoplay style="max-width: 100%; max-height: 80vh;" onload="this.parentElement.style.display='block'; this.parentElement.previousElementSibling.style.display='none';" onerror="console.error('Failed to load video in viewer:', '${mediaUrl}'); this.parentElement.innerHTML='<p>Video yüklenemedi</p>'"></video>` :
+                            mediaType === 'audio' ?
+                            `<audio src="${mediaUrl}" controls autoplay style="width: 100%;" onload="this.parentElement.style.display='block'; this.parentElement.previousElementSibling.style.display='none';" onerror="console.error('Failed to load audio in viewer:', '${mediaUrl}'); this.parentElement.innerHTML='<p>Ses dosyası yüklenemedi</p>'"></audio>` :
+                            `<img src="${mediaUrl}" alt="Media" style="max-width: 100%; max-height: 80vh; object-fit: contain;" onload="this.parentElement.style.display='block'; this.parentElement.previousElementSibling.style.display='none';" onerror="console.error('Failed to load image in viewer:', '${mediaUrl}'); this.parentElement.innerHTML='<p>Resim yüklenemedi</p>'">`
+                        }
+                    </div>
                 </div>
             </div>
         `;
