@@ -248,17 +248,35 @@ class RouteDetailsModal {
 
     async show(routeData) {
         console.log('🎯 Showing route details modal with data:', routeData);
-        
+        console.log('📊 Route data structure inspection:', {
+            hasId: !!routeData.id,
+            hasName: !!routeData.name,
+            hasPois: !!(routeData.pois && routeData.pois.length > 0),
+            poisCount: routeData.pois ? routeData.pois.length : 0,
+            hasWaypoints: !!(routeData.waypoints && routeData.waypoints.length > 0),
+            waypointsCount: routeData.waypoints ? routeData.waypoints.length : 0,
+            hasGeometry: !!routeData.geometry,
+            allKeys: Object.keys(routeData)
+        });
+
+        // Log POI structure if available
+        if (routeData.pois && routeData.pois.length > 0) {
+            console.log('📍 First POI structure:', routeData.pois[0]);
+        }
+        if (routeData.waypoints && routeData.waypoints.length > 0) {
+            console.log('📍 First waypoint structure:', routeData.waypoints[0]);
+        }
+
         this.currentRoute = routeData;
         this.updateHeader(routeData);
-        
+
         // Show modal with animation
         this.modal.classList.add('show');
         this.isVisible = true;
-        
+
         // Prevent body scroll
         document.body.style.overflow = 'hidden';
-        
+
         // Load content for current tab
         await this.loadTabContent(this.currentTab);
     }
@@ -405,21 +423,39 @@ class RouteDetailsModal {
     async loadPoisContent() {
         const poisContainer = document.getElementById('routePoisList');
         if (!poisContainer) return;
-        
+
         try {
+            console.log('🏛️ Loading POIs content for route:', this.currentRoute.name);
+            console.log('📊 POI data in currentRoute:', {
+                hasPois: !!(this.currentRoute.pois && this.currentRoute.pois.length > 0),
+                poisCount: this.currentRoute.pois ? this.currentRoute.pois.length : 0,
+                hasWaypoints: !!(this.currentRoute.waypoints && this.currentRoute.waypoints.length > 0),
+                waypointsCount: this.currentRoute.waypoints ? this.currentRoute.waypoints.length : 0
+            });
+
             let pois = [];
-            
+
             // Get POIs from route data
             if (this.currentRoute.pois) {
                 pois = this.currentRoute.pois;
+                console.log('✅ Using POIs from currentRoute.pois:', pois.length);
             } else if (this.currentRoute.waypoints) {
                 pois = this.currentRoute.waypoints;
+                console.log('✅ Using waypoints from currentRoute.waypoints:', pois.length);
             } else {
                 // Fetch POIs from API
-                const response = await fetch(`${window.apiBase}/routes/${this.currentRoute.id}`);
+                const apiBase = window.apiBase || '/api';
+                console.log('📡 Fetching POIs from API:', `${apiBase}/routes/${this.currentRoute.id}`);
+
+                const response = await fetch(`${apiBase}/routes/${this.currentRoute.id}`);
+                console.log('📡 POIs API response status:', response.status, response.statusText);
+
                 if (response.ok) {
                     const routeDetails = await response.json();
                     pois = routeDetails.pois || [];
+                    console.log('✅ Fetched POIs from API:', pois.length);
+                } else {
+                    console.log('❌ Failed to fetch POIs from API:', response.status);
                 }
             }
             
@@ -467,9 +503,14 @@ class RouteDetailsModal {
     async loadMediaContent() {
         const mediaContainer = document.getElementById('routeMediaGrid');
         if (!mediaContainer) return;
-        
+
         try {
-            const response = await fetch(`${window.apiBase}/admin/routes/${this.currentRoute.id}/media`, {
+            console.log('🎬 Loading media content for route:', this.currentRoute.name);
+
+            const apiBase = window.apiBase || '/api';
+            console.log('📡 Fetching media content from:', `${apiBase}/admin/routes/${this.currentRoute.id}/media`);
+
+            const response = await fetch(`${apiBase}/admin/routes/${this.currentRoute.id}/media`, {
                 credentials: 'include'
             });
             
@@ -540,24 +581,34 @@ class RouteDetailsModal {
     }
 
     async displayRouteOnMap() {
-        if (!this.mapInstance || !this.currentRoute) return;
-        
+        if (!this.mapInstance || !this.currentRoute) {
+            console.log('❌ Cannot display route on map - missing map instance or route data');
+            return;
+        }
+
         try {
             console.log('🗺️ Displaying enhanced route on modal map:', this.currentRoute.name);
-            
+            console.log('📊 Route data structure:', {
+                hasPois: !!(this.currentRoute.pois && this.currentRoute.pois.length > 0),
+                poisCount: this.currentRoute.pois ? this.currentRoute.pois.length : 0,
+                hasWaypoints: !!(this.currentRoute.waypoints && this.currentRoute.waypoints.length > 0),
+                waypointsCount: this.currentRoute.waypoints ? this.currentRoute.waypoints.length : 0,
+                routeKeys: Object.keys(this.currentRoute)
+            });
+
             // Clear existing layers
             this.mapInstance.eachLayer(layer => {
                 if (layer instanceof L.Marker || layer instanceof L.Polyline) {
                     this.mapInstance.removeLayer(layer);
                 }
             });
-            
+
             // Add route geometry if available
             if (this.currentRoute.geometry) {
-                const geometry = typeof this.currentRoute.geometry === 'string' 
-                    ? JSON.parse(this.currentRoute.geometry) 
+                const geometry = typeof this.currentRoute.geometry === 'string'
+                    ? JSON.parse(this.currentRoute.geometry)
                     : this.currentRoute.geometry;
-                
+
                 if (geometry.coordinates) {
                     const coordinates = geometry.coordinates.map(coord => [coord[1], coord[0]]);
                     L.polyline(coordinates, {
@@ -567,14 +618,40 @@ class RouteDetailsModal {
                     }).addTo(this.mapInstance);
                 }
             }
-            
+
             // Add enhanced POI markers with detailed popups and modal integration
             const pois = this.currentRoute.pois || this.currentRoute.waypoints || [];
+            console.log('📍 Processing POIs for markers:', pois);
+
+            if (pois.length === 0) {
+                console.log('⚠️ No POIs found to display as markers');
+            }
+
             pois.forEach((poi, index) => {
-                const lat = poi.latitude || poi.lat;
-                const lng = poi.longitude || poi.lng;
-                
+                console.log(`📍 Processing POI ${index + 1}:`, poi);
+
+                // More flexible coordinate detection
+                const lat = poi.latitude || poi.lat || poi.coords?.[1] || poi.location?.lat || poi.position?.lat;
+                const lng = poi.longitude || poi.lng || poi.lon || poi.coords?.[0] || poi.location?.lng || poi.position?.lng;
+
+                console.log(`📍 POI ${index + 1} coordinates:`, {
+                    lat, lng,
+                    hasLat: !!lat,
+                    hasLng: !!lng,
+                    coordinateFields: {
+                        latitude: poi.latitude,
+                        lat: poi.lat,
+                        longitude: poi.longitude,
+                        lng: poi.lng,
+                        lon: poi.lon,
+                        coords: poi.coords,
+                        location: poi.location,
+                        position: poi.position
+                    }
+                });
+
                 if (lat && lng) {
+                    console.log(`✅ Creating marker for POI ${index + 1}: ${poi.name} at [${lat}, ${lng}]`);
                     const categoryStyle = this.getCategoryStyle(poi.category);
                     
                     const marker = L.marker([lat, lng], {
@@ -683,24 +760,39 @@ class RouteDetailsModal {
     
     // Load and display media markers for the route
     async loadRouteMediaMarkers() {
-        if (!this.mapInstance || !this.currentRoute) return;
-        
+        if (!this.mapInstance || !this.currentRoute) {
+            console.log('❌ Cannot load media markers - missing map instance or route data');
+            return;
+        }
+
         try {
             console.log('🎬 Loading media markers for route:', this.currentRoute.id || this.currentRoute._id);
-            
+
             const routeId = this.currentRoute.id || this.currentRoute._id;
-            const response = await fetch(`${window.apiBase}/admin/routes/${routeId}/media`, {
-                credentials: 'include'
-            });
-            
-            if (!response.ok) {
-                console.log('ℹ️ No media found for route or access denied');
+            if (!routeId) {
+                console.log('❌ No route ID available for media markers');
                 return;
             }
-            
+
+            const apiBase = window.apiBase || '/api';
+            console.log('📡 Fetching media from:', `${apiBase}/admin/routes/${routeId}/media`);
+
+            const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
+                credentials: 'include'
+            });
+
+            console.log('📡 Media API response status:', response.status, response.statusText);
+
+            if (!response.ok) {
+                console.log('ℹ️ No media found for route or access denied:', response.status);
+                return;
+            }
+
             const data = await response.json();
+            console.log('📊 Raw media API response:', data);
+
             let mediaFiles = [];
-            
+
             // Handle different response formats
             if (Array.isArray(data)) {
                 mediaFiles = data;
@@ -709,32 +801,57 @@ class RouteDetailsModal {
             } else if (Array.isArray(data.files)) {
                 mediaFiles = data.files;
             }
-            
+
+            console.log(`📊 Found ${mediaFiles.length} media files total`);
+
             // Filter media items that have location data
             const locatedMedia = mediaFiles.filter(media => {
-                const lat = media.latitude || media.lat;
-                const lng = media.longitude || media.lng || media.lon;
-                return lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng));
+                // More flexible coordinate detection
+                const lat = media.latitude || media.lat || media.coords?.[1] || media.location?.lat || media.position?.lat;
+                const lng = media.longitude || media.lng || media.lon || media.coords?.[0] || media.location?.lng || media.position?.lng;
+                const hasLocation = lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng));
+
+                console.log(`📍 Media item location check:`, {
+                    mediaId: media.id || media._id,
+                    caption: media.caption || media.filename,
+                    lat, lng, hasLocation,
+                    coordinateFields: {
+                        latitude: media.latitude,
+                        lat: media.lat,
+                        longitude: media.longitude,
+                        lng: media.lng,
+                        lon: media.lon,
+                        coords: media.coords,
+                        location: media.location,
+                        position: media.position
+                    }
+                });
+                return hasLocation;
             });
-            
+
+            console.log(`📍 Found ${locatedMedia.length} media items with location data out of ${mediaFiles.length} total`);
+
             if (locatedMedia.length === 0) {
                 console.log('ℹ️ No media with location data found for this route');
                 return;
             }
-            
+
             console.log(`📍 Found ${locatedMedia.length} media items with location data`);
-            
+
             // Add media markers to map
             locatedMedia.forEach((media, index) => {
-                const lat = parseFloat(media.latitude || media.lat);
-                const lng = parseFloat(media.longitude || media.lng || media.lon);
-                
+                // Use the same flexible coordinate detection
+                const lat = parseFloat(media.latitude || media.lat || media.coords?.[1] || media.location?.lat || media.position?.lat);
+                const lng = parseFloat(media.longitude || media.lng || media.lon || media.coords?.[0] || media.location?.lng || media.position?.lng);
+
+                console.log(`🎯 Creating media marker ${index + 1} at [${lat}, ${lng}]:`, media.caption || media.filename);
+
                 // Create media marker icon
                 const mediaMarker = L.marker([lat, lng], {
                     icon: this.createMediaMarkerIcon(media.media_type || 'image', media),
                     title: media.caption || `Medya ${index + 1}`
                 }).addTo(this.mapInstance);
-                
+
                 // Create media popup content
                 const popupContent = this.createMediaPopupContent(media);
                 mediaMarker.bindPopup(popupContent, {
@@ -742,10 +859,12 @@ class RouteDetailsModal {
                     minWidth: 250,
                     className: 'media-popup'
                 });
+
+                console.log(`✅ Media marker ${index + 1} created successfully`);
             });
-            
+
             console.log('✅ Media markers loaded successfully');
-            
+
         } catch (error) {
             console.error('❌ Error loading media markers:', error);
         }
@@ -781,19 +900,42 @@ class RouteDetailsModal {
     
     // Create media popup content
     createMediaPopupContent(media) {
+        console.log('🎬 Creating media popup content for:', media);
+
         const mediaUrl = media.url || media.path || media.filename || '';
         const caption = media.caption || media.alt_text || 'Medya';
         const mediaType = media.media_type || 'image';
-        
+
+        console.log('🎬 Media popup details:', {
+            mediaUrl,
+            caption,
+            mediaType,
+            mediaKeys: Object.keys(media)
+        });
+
+        if (!mediaUrl) {
+            console.log('❌ No media URL found for media item');
+            return `
+                <div class="media-popup-content" style="font-family: 'Segoe UI', sans-serif; max-width: 250px;">
+                    <div class="media-info">
+                        <h6 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600;">${caption}</h6>
+                        <p style="margin: 0; font-size: 12px; color: #666;">Medya dosyası bulunamadı</p>
+                    </div>
+                </div>
+            `;
+        }
+
         let mediaPreview = '';
         if (mediaType === 'image') {
-            mediaPreview = `<img src="${mediaUrl}" alt="${caption}" style="width: 100%; max-height: 150px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;">`;
+            mediaPreview = `<img src="${mediaUrl}" alt="${caption}" style="width: 100%; max-height: 150px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;" onerror="console.error('Failed to load image:', '${mediaUrl}')">`;
         } else if (mediaType === 'video') {
-            mediaPreview = `<video src="${mediaUrl}" controls style="width: 100%; max-height: 150px; border-radius: 4px; margin-bottom: 8px;"></video>`;
+            mediaPreview = `<video src="${mediaUrl}" controls style="width: 100%; max-height: 150px; border-radius: 4px; margin-bottom: 8px;" onerror="console.error('Failed to load video:', '${mediaUrl}')"></video>`;
         } else if (mediaType === 'audio') {
-            mediaPreview = `<audio src="${mediaUrl}" controls style="width: 100%; margin-bottom: 8px;"></audio>`;
+            mediaPreview = `<audio src="${mediaUrl}" controls style="width: 100%; margin-bottom: 8px;" onerror="console.error('Failed to load audio:', '${mediaUrl}')"></audio>`;
+        } else {
+            mediaPreview = `<div style="width: 100%; height: 100px; background: #f3f4f6; border-radius: 4px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-file" style="font-size: 24px; color: #9ca3af;"></i></div>`;
         }
-        
+
         return `
             <div class="media-popup-content" style="font-family: 'Segoe UI', sans-serif; max-width: 250px;">
                 ${mediaPreview}
@@ -819,11 +961,20 @@ class RouteDetailsModal {
     }
 
     focusOnPoi(lat, lng) {
+        console.log('🎯 Focusing on POI at:', lat, lng);
+
         if (this.mapInstance) {
             this.switchTab('map');
             setTimeout(() => {
-                this.mapInstance.setView([lat, lng], 16);
+                if (lat && lng) {
+                    console.log('✅ Setting map view to:', [lat, lng]);
+                    this.mapInstance.setView([lat, lng], 16);
+                } else {
+                    console.log('❌ Invalid coordinates for focusOnPoi:', lat, lng);
+                }
             }, 300);
+        } else {
+            console.log('❌ Map instance not available for focusOnPoi');
         }
     }
 

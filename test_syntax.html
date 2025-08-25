@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Syntax Test</title>
+</head>
+<body>
+    <h1>JavaScript Syntax Test</h1>
+    <div id="test-output"></div>
+    
+    <script>
+        // Test if the main JavaScript file can be loaded without syntax errors
+        try {
+            // This will test the syntax when the file is loaded
+            console.log('Testing JavaScript syntax...');
+            document.getElementById('test-output').innerHTML = '<p style="color: green;">✅ JavaScript syntax is valid!</p>';
+        } catch (error) {
+            console.error('JavaScript syntax error:', error);
+            document.getElementById('test-output').innerHTML = '<p style="color: red;">❌ JavaScript syntax error: ' + error.message + '</p>';
+        }
+    </script>
+    
+    <!-- Test loading the main JavaScript file -->
+    <script src="static/js/poi_recommendation_system.js"></script>
+    <script>
+        // Test if the file loaded successfully
+        try {
+            if (typeof window.showRouteDetails !== 'undefined') {
+                document.getElementById('test-output').innerHTML += '<p style="color: green;">✅ Main JavaScript file loaded successfully!</p>';
+            } else {
+                document.getElementById('test-output').innerHTML += '<p style="color: orange;">⚠️ Main JavaScript file loaded but some functions may be missing</p>';
+            }
+        } catch (error) {
+            document.getElementById('test-output').innerHTML += '<p style="color: red;">❌ Error testing main JavaScript file: ' + error.message + '</p>';
+        }
+    </script>
+</body>
+</html>

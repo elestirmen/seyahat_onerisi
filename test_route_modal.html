@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Modal Test</title>
+    
+    <!-- Required CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="static/css/route-details-modal.css">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .test-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s ease;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .debug-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 14px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .debug-title {
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Route Details Modal Test</h1>
+        <p>Bu sayfa RouteDetailsModal'ın doğru çalışıp çalışmadığını test etmek için oluşturulmuştur.</p>
+        
+        <div class="debug-info">
+            <div class="debug-title">Debug Bilgileri:</div>
+            <div id="debugInfo">Yükleniyor...</div>
+        </div>
+        
+        <button class="test-button" onclick="testBasicModal()">
+            <i class="fas fa-play"></i> Temel Modal Testi
+        </button>
+        
+        <button class="test-button" onclick="testWithSampleData()">
+            <i class="fas fa-route"></i> Örnek Rota Verisi ile Test
+        </button>
+        
+        <button class="test-button" onclick="checkModalAvailability()">
+            <i class="fas fa-search"></i> Modal Durumu Kontrol Et
+        </button>
+    </div>
+
+    <!-- Required JavaScript Libraries -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="static/js/poi-categories.js"></script>
+    <script src="static/js/elevation-chart.js"></script>
+    <script src="static/js/route-details-modal.js"></script>
+    
+    <script>
+        // Global variables for testing
+        window.apiBase = '';
+        
+        // Sample route data for testing
+        const sampleRoute = {
+            id: "test-route-1",
+            name: "Test Kapadokya Rotası",
+            description: "Bu test amaçlı bir rota açıklamasıdır. Modal'ın tüm özelliklerini test etmek için kullanılır.",
+            route_type: "walking",
+            difficulty_level: 3,
+            estimated_duration: 240, // 4 hours in minutes
+            total_distance: 8.5,
+            elevation_gain: 300,
+            poi_count: 5,
+            pois: [
+                {
+                    id: "poi-1",
+                    name: "Göreme Açık Hava Müzesi",
+                    description: "UNESCO Dünya Mirası listesinde yer alan açık hava müzesi",
+                    category: "tarihi",
+                    latitude: 38.6431,
+                    longitude: 34.8286,
+                    lat: 38.6431,
+                    lng: 34.8286
+                },
+                {
+                    id: "poi-2", 
+                    name: "Uçhisar Kalesi",
+                    description: "Kapadokya'nın en yüksek noktası",
+                    category: "doga",
+                    latitude: 38.6275,
+                    longitude: 34.8054,
+                    lat: 38.6275,
+                    lng: 34.8054
+                }
+            ],
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [34.8286, 38.6431],
+                    [34.8200, 38.6380],
+                    [34.8150, 38.6320],
+                    [34.8100, 38.6280],
+                    [34.8054, 38.6275]
+                ]
+            },
+            elevation_profile: {
+                points: [
+                    {distance: 0, elevation: 1100, lat: 38.6431, lng: 34.8286},
+                    {distance: 2000, elevation: 1150, lat: 38.6380, lng: 34.8200},
+                    {distance: 4000, elevation: 1200, lat: 38.6320, lng: 34.8150},
+                    {distance: 6000, elevation: 1300, lat: 38.6280, lng: 34.8100},
+                    {distance: 8500, elevation: 1400, lat: 38.6275, lng: 34.8054}
+                ],
+                stats: {
+                    min_elevation: 1100,
+                    max_elevation: 1400,
+                    total_ascent: 300,
+                    total_descent: 0
+                }
+            }
+        };
+        
+        // Debug function to show current status
+        function updateDebugInfo() {
+            const debugDiv = document.getElementById('debugInfo');
+            const info = [];
+            
+            info.push(`RouteDetailsModal available: ${!!window.RouteDetailsModal}`);
+            
+            if (window.RouteDetailsModal) {
+                info.push(`RouteDetailsModal.getInstance available: ${typeof window.RouteDetailsModal.getInstance === 'function'}`);
+                
+                try {
+                    const instance = window.RouteDetailsModal.getInstance();
+                    info.push(`Modal instance created: ${!!instance}`);
+                    info.push(`Modal show method: ${typeof instance?.show === 'function'}`);
+                } catch (error) {
+                    info.push(`Error creating instance: ${error.message}`);
+                }
+            }
+            
+            info.push(`Leaflet available: ${typeof L !== 'undefined'}`);
+            info.push(`POI_CATEGORIES available: ${typeof POI_CATEGORIES !== 'undefined'}`);
+            info.push(`ElevationChart available: ${typeof ElevationChart !== 'undefined'}`);
+            
+            debugDiv.innerHTML = info.join('<br>');
+        }
+        
+        // Test functions
+        function checkModalAvailability() {
+            updateDebugInfo();
+            console.log('🔍 Modal availability check completed');
+        }
+        
+        function testBasicModal() {
+            console.log('🧪 Testing basic modal functionality...');
+            
+            if (!window.RouteDetailsModal) {
+                alert('❌ RouteDetailsModal sınıfı bulunamadı!');
+                return;
+            }
+            
+            try {
+                const modal = window.RouteDetailsModal.getInstance();
+                if (!modal) {
+                    alert('❌ Modal instance oluşturulamadı!');
+                    return;
+                }
+                
+                alert('✅ Modal instance başarıyla oluşturuldu!');
+                console.log('✅ Modal instance:', modal);
+                
+            } catch (error) {
+                alert('❌ Modal test hatası: ' + error.message);
+                console.error('❌ Modal test error:', error);
+            }
+        }
+        
+        function testWithSampleData() {
+            console.log('🧪 Testing modal with sample route data...');
+            
+            if (!window.RouteDetailsModal) {
+                alert('❌ RouteDetailsModal sınıfı bulunamadı!');
+                return;
+            }
+            
+            try {
+                const modal = window.RouteDetailsModal.getInstance();
+                if (!modal || typeof modal.show !== 'function') {
+                    alert('❌ Modal show metodu bulunamadı!');
+                    return;
+                }
+                
+                // Show the modal with sample data
+                modal.show(sampleRoute);
+                console.log('✅ Modal shown with sample data:', sampleRoute);
+                
+            } catch (error) {
+                alert('❌ Sample data test hatası: ' + error.message);
+                console.error('❌ Sample data test error:', error);
+            }
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📋 Test page loaded');
+            
+            // Wait a bit for all scripts to load
+            setTimeout(() => {
+                updateDebugInfo();
+                console.log('🔄 Debug info updated');
+            }, 500);
+        });
+    </script>
+</body>
+</html>

@@ -1001,6 +1001,49 @@
     gap: 4px;
 }
 
+/* POI Markers */
+.custom-poi-marker {
+    position: relative;
+    display: inline-block;
+}
+
+.custom-poi-marker .poi-marker-container {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+    color: white;
+}
+
+.custom-poi-marker .poi-marker-container:hover {
+    transform: scale(1.1);
+}
+
+.custom-poi-marker .poi-marker-score {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #2563eb;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: bold;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    z-index: 10;
+}
+
 /* Media Markers */
 .media-marker {
     width: 24px;

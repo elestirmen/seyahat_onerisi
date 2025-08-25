@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connectivity Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-result {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+        .code {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 API Connectivity Test</h1>
+    <p>Bu sayfa frontend'in Flask API'sine erişebilip erişemediğini test eder.</p>
+    
+    <button onclick="testRoutes()">Test Routes API</button>
+    <button onclick="testCategories()">Test Categories API</button>
+    <button onclick="testCORS()">Test CORS</button>
+    <button onclick="clearResults()">Clear Results</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const apiBase = 'http://localhost:5000/api';
+        window.apiBase = apiBase;
+        
+        function addResult(title, content, isSuccess = true) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = `
+                <h3>${title}</h3>
+                <div class="code">${content}</div>
+            `;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testRoutes() {
+            try {
+                addResult('🔄 Routes API Test', 'Testing connection to ' + apiBase + '/routes');
+                
+                const response = await fetch(`${apiBase}/routes`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('✅ Routes API Success', 
+                        `Status: ${response.status}\n` +
+                        `Routes count: ${data.routes?.length || 0}\n` +
+                        `Success: ${data.success}\n` +
+                        `Sample route: ${data.routes?.[0]?.name || 'N/A'}`,
+                        true
+                    );
+                } else {
+                    const errorText = await response.text();
+                    addResult('❌ Routes API Failed', 
+                        `Status: ${response.status}\n` +
+                        `Error: ${errorText}`,
+                        false
+                    );
+                }
+            } catch (error) {
+                addResult('❌ Routes API Error', 
+                    `Network Error: ${error.message}\n` +
+                    `This usually indicates CORS or connectivity issues.`,
+                    false
+                );
+            }
+        }
+        
+        async function testCategories() {
+            try {
+                addResult('🔄 Categories API Test', 'Testing connection to ' + apiBase + '/categories');
+                
+                const response = await fetch(`${apiBase}/categories`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('✅ Categories API Success', 
+                        `Status: ${response.status}\n` +
+                        `Categories count: ${Array.isArray(data) ? data.length : 'Unknown'}\n` +
+                        `Sample category: ${Array.isArray(data) ? data[0]?.name : 'N/A'}`,
+                        true
+                    );
+                } else {
+                    const errorText = await response.text();
+                    addResult('❌ Categories API Failed', 
+                        `Status: ${response.status}\n` +
+                        `Error: ${errorText}`,
+                        false
+                    );
+                }
+            } catch (error) {
+                addResult('❌ Categories API Error', 
+                    `Network Error: ${error.message}`,
+                    false
+                );
+            }
+        }
+        
+        async function testCORS() {
+            try {
+                addResult('🔄 CORS Test', 'Testing cross-origin request capabilities');
+                
+                const response = await fetch(`${apiBase}/routes`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers')
+                };
+                
+                addResult('✅ CORS Test Result', 
+                    `CORS Headers:\n${JSON.stringify(corsHeaders, null, 2)}\n` +
+                    `Response status: ${response.status}`,
+                    true
+                );
+                
+            } catch (error) {
+                addResult('❌ CORS Test Failed', 
+                    `Error: ${error.message}\n` +
+                    `This indicates a CORS policy violation.`,
+                    false
+                );
+            }
+        }
+        
+        // Auto-run basic test on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                addResult('🚀 Auto Test Started', 'Testing basic connectivity...');
+                testRoutes();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

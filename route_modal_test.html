@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Details Modal Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: #f8f9fa;
+            padding: 2rem;
+        }
+        .demo-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .demo-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .route-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .route-header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 1rem;
+        }
+        .route-content {
+            padding: 1rem;
+        }
+        .badge-custom {
+            font-size: 0.75rem;
+            padding: 0.4rem 0.6rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">
+            <i class="fas fa-route me-2"></i>
+            Route Details Modal Test
+        </h1>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="demo-card route-card" onclick="showRouteDetails('1')">
+                    <div class="route-header">
+                        <h5 class="mb-1">Kapadokya Yürüyüş Rotası</h5>
+                        <p class="mb-0 opacity-75">Göreme vadisinden Uçhisar'a</p>
+                    </div>
+                    <div class="route-content">
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span class="badge bg-primary badge-custom">Yürüyüş</span>
+                            <span class="badge bg-success badge-custom">⭐⭐ Orta</span>
+                            <span class="badge bg-info badge-custom">3.5 saat</span>
+                            <span class="badge bg-warning badge-custom">8.2 km</span>
+                        </div>
+                        <p class="text-muted mb-0">Kapadokya'nın en güzel vadilerinden birinde unutulmaz bir yürüyüş deneyimi.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="demo-card route-card" onclick="showRouteDetails('2')">
+                    <div class="route-header">
+                        <h5 class="mb-1">Bisiklet Turu Rotası</h5>
+                        <p class="mb-0 opacity-75">Avanos'tan Zelve'ye</p>
+                    </div>
+                    <div class="route-content">
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span class="badge bg-info badge-custom">Bisiklet</span>
+                            <span class="badge bg-success badge-custom">⭐⭐⭐ Zor</span>
+                            <span class="badge bg-info badge-custom">2 saat</span>
+                            <span class="badge bg-warning badge-custom">15.5 km</span>
+                        </div>
+                        <p class="text-muted mb-0">Kapadokya'nın eşsiz peyzajında bisiklet ile keşif turu.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="alert alert-info mt-4">
+            <h6><i class="fas fa-info-circle me-2"></i>Test Instructions</h6>
+            <p class="mb-0">Click on any route card above to open the detailed route modal. The modal includes:</p>
+            <ul class="mt-2 mb-0">
+                <li>Route overview with statistics</li>
+                <li>Interactive map view</li>
+                <li>POI list along the route</li>
+                <li>Media gallery</li>
+                <li>Mobile-optimized design</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Include the route modal from poi_manager_enhanced.html -->
+    <!-- Route Details Modal -->
+    <div class="modal fade" id="routeDetailsModal" tabindex="-1" aria-labelledby="routeDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen-lg-down modal-xl">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title d-flex align-items-center" id="routeDetailsModalLabel">
+                        <i class="fas fa-route me-2 text-primary"></i>
+                        <span id="routeModalTitle">Rota Detayları</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <!-- Route Modal Content -->
+                    <div class="route-modal-content">
+                        <!-- Route Header -->
+                        <div class="route-modal-header" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-bottom: 1px solid #dee2e6;">
+                            <div class="container-fluid p-3">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <div class="route-header-info">
+                                            <h3 class="route-title mb-2" id="routeModalName">Rota Adı</h3>
+                                            <div class="route-meta d-flex flex-wrap gap-2 mb-3">
+                                                <span class="badge bg-primary" id="routeModalType">Tip</span>
+                                                <span class="badge bg-success" id="routeModalDifficulty">Zorluk</span>
+                                                <span class="badge bg-info" id="routeModalDuration">Süre</span>
+                                                <span class="badge bg-warning" id="routeModalDistance">Mesafe</span>
+                                            </div>
+                                            <p class="route-description text-muted mb-0" id="routeModalDescription">Rota açıklaması...</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <div class="route-actions">
+                                            <button class="btn btn-outline-danger btn-sm me-2" id="routeModalFavoriteBtn">
+                                                <i class="far fa-heart"></i>
+                                                <span class="d-none d-sm-inline ms-1">Favorile</span>
+                                            </button>
+                                            <button class="btn btn-primary btn-sm" id="routeModalNavigateBtn">
+                                                <i class="fas fa-directions"></i>
+                                                <span class="d-none d-sm-inline ms-1">Navigasyon</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Route Modal Tabs -->
+                        <div class="route-modal-tabs" style="background: #fff; border-bottom: 1px solid #dee2e6;">
+                            <div class="container-fluid px-3">
+                                <ul class="nav nav-tabs border-0" id="routeModalTabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="route-overview-tab" data-bs-toggle="tab" data-bs-target="#route-overview" type="button" role="tab">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            <span class="d-none d-sm-inline">Genel Bakış</span>
+                                            <span class="d-sm-none">Genel</span>
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="route-map-tab" data-bs-toggle="tab" data-bs-target="#route-map" type="button" role="tab">
+                                            <i class="fas fa-map me-1"></i>
+                                            <span class="d-none d-sm-inline">Harita</span>
+                                            <span class="d-sm-none">Harita</span>
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="route-pois-tab" data-bs-toggle="tab" data-bs-target="#route-pois" type="button" role="tab">
+                                            <i class="fas fa-map-marker-alt me-1"></i>
+                                            <span class="d-none d-sm-inline">POI'ler</span>
+                                            <span class="d-sm-none">POI</span>
+                                            <span class="badge bg-secondary ms-1" id="routeModalPOICount">0</span>
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="route-media-tab" data-bs-toggle="tab" data-bs-target="#route-media" type="button" role="tab">
+                                            <i class="fas fa-images me-1"></i>
+                                            <span class="d-none d-sm-inline">Medya</span>
+                                            <span class="d-sm-none">Medya</span>
+                                            <span class="badge bg-secondary ms-1" id="routeModalMediaCount">0</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Route Modal Tab Content -->
+                        <div class="route-modal-tab-content">
+                            <div class="tab-content" id="routeModalTabContent">
+                                <!-- Overview Tab -->
+                                <div class="tab-pane fade show active" id="route-overview" role="tabpanel">
+                                    <div class="container-fluid p-3">
+                                        <div class="row">
+                                            <div class="col-lg-6">
+                                                <div class="card mb-3">
+                                                    <div class="card-body">
+                                                        <h5 class="card-title mb-3"><i class="fas fa-chart-line me-2"></i>Rota İstatistikleri</h5>
+                                                        <div class="row g-3">
+                                                            <div class="col-6">
+                                                                <div class="text-center p-3 bg-light rounded">
+                                                                    <i class="fas fa-route fa-2x text-primary mb-2"></i>
+                                                                    <div class="h4 mb-1" id="routeModalDistanceValue">8.2 km</div>
+                                                                    <div class="text-muted small">Mesafe</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <div class="text-center p-3 bg-light rounded">
+                                                                    <i class="fas fa-clock fa-2x text-success mb-2"></i>
+                                                                    <div class="h4 mb-1" id="routeModalDurationValue">3.5 saat</div>
+                                                                    <div class="text-muted small">Süre</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <div class="text-center p-3 bg-light rounded">
+                                                                    <i class="fas fa-mountain fa-2x text-warning mb-2"></i>
+                                                                    <div class="h4 mb-1" id="routeModalElevationValue">245m</div>
+                                                                    <div class="text-muted small">Yükseklik</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <div class="text-center p-3 bg-light rounded">
+                                                                    <i class="fas fa-star fa-2x text-info mb-2"></i>
+                                                                    <div class="h4 mb-1" id="routeModalDifficultyValue">⭐⭐ Orta</div>
+                                                                    <div class="text-muted small">Zorluk</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-6">
+                                                <div class="card mb-3">
+                                                    <div class="card-body">
+                                                        <h5 class="card-title mb-3"><i class="fas fa-chart-area me-2"></i>Yükseklik Profili</h5>
+                                                        <div class="text-center py-4">
+                                                            <canvas id="routeModalElevationChart" width="400" height="200" style="display: none;"></canvas>
+                                                            <div class="text-muted" id="routeModalElevationEmpty">
+                                                                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                                                <p>Yükseklik profili gösterimi için Chart.js kütüphanesi gereklidir</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h5 class="card-title mb-3"><i class="fas fa-file-text me-2"></i>Açıklama</h5>
+                                                <div id="routeModalFullDescription">
+                                                    <p>Bu güzel rota Kapadokya'nın en etkileyici vadilerinden birinde sizleri bekliyor. Göreme vadisinden başlayarak Uçhisar'a kadar uzanan bu yürüyüş rotası, bölgenin eşsiz jeolojik yapıları ve tarihi kalıntıları arasında unutulmaz bir deneyim sunuyor.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Map Tab -->
+                                <div class="tab-pane fade" id="route-map" role="tabpanel">
+                                    <div class="route-map-container position-relative">
+                                        <div id="routeModalMap" style="height: 500px; width: 100%; background: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                                            <div class="text-center text-muted">
+                                                <i class="fas fa-map fa-3x mb-3"></i>
+                                                <h5>Harita Yükleniyor</h5>
+                                                <p>Leaflet harita kütüphanesi bağlandığında interaktif harita burada görünecek</p>
+                                            </div>
+                                        </div>
+                                        <div class="route-map-controls position-absolute" style="top: 10px; right: 10px; z-index: 1000;">
+                                            <button class="btn btn-sm btn-outline-primary mb-1" id="routeModalMapFullscreen">
+                                                <i class="fas fa-expand"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" id="routeModalMapReset">
+                                                <i class="fas fa-home"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- POIs Tab -->
+                                <div class="tab-pane fade" id="route-pois" role="tabpanel">
+                                    <div class="container-fluid p-3">
+                                        <div class="route-pois-header mb-3">
+                                            <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Rota Üzerindeki POI'ler</h5>
+                                        </div>
+                                        <div class="route-pois-list" id="routeModalPOIsList">
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Bu demo sürümünde POI'ler API'den yüklenecek
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Media Tab -->
+                                <div class="tab-pane fade" id="route-media" role="tabpanel">
+                                    <div class="container-fluid p-3">
+                                        <div class="route-media-header mb-3">
+                                            <h5 class="mb-0"><i class="fas fa-images me-2"></i>Rota Medyaları</h5>
+                                        </div>
+                                        <div class="route-media-gallery" id="routeModalMediaGallery">
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Bu demo sürümünde medya dosyaları API'den yüklenecek
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>
+                        Kapat
+                    </button>
+                    <button type="button" class="btn btn-primary" id="routeModalStartNavigation">
+                        <i class="fas fa-play me-1"></i>
+                        Navigasyonu Başlat
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mock route data for demo
+        const mockRoutes = {
+            '1': {
+                id: '1',
+                name: 'Kapadokya Yürüyüş Rotası',
+                description: 'Göreme vadisinden Uçhisar\'a doğru uzanan bu güzel yürüyüş rotası, Kapadokya\'nın eşsiz peyzajında unutulmaz bir deneyim sunuyor.',
+                route_type: 'walking',
+                difficulty_level: 2,
+                estimated_duration: 3.5,
+                total_distance: 8.2,
+                elevation_gain: 245
+            },
+            '2': {
+                id: '2',
+                name: 'Bisiklet Turu Rotası',
+                description: 'Avanos\'tan Zelve\'ye uzanan bu bisiklet rotası, Kapadokya\'nın muhteşem manzaralarını keşfetmek için mükemmel.',
+                route_type: 'cycling',
+                difficulty_level: 3,
+                estimated_duration: 2,
+                total_distance: 15.5,
+                elevation_gain: 180
+            }
+        };
+
+        // Simple mock implementation
+        function showRouteDetails(routeId) {
+            const route = mockRoutes[routeId];
+            if (!route) return;
+
+            // Populate modal with demo data
+            document.getElementById('routeModalName').textContent = route.name;
+            document.getElementById('routeModalDescription').textContent = route.description;
+            
+            // Route type
+            const routeTypes = {
+                walking: { name: 'Yürüyüş', color: 'primary' },
+                cycling: { name: 'Bisiklet', color: 'info' }
+            };
+            const routeType = routeTypes[route.route_type];
+            document.getElementById('routeModalType').textContent = routeType.name;
+            document.getElementById('routeModalType').className = `badge bg-${routeType.color}`;
+            
+            // Difficulty
+            const difficulties = {
+                1: '⭐ Kolay',
+                2: '⭐⭐ Orta',
+                3: '⭐⭐⭐ Zor'
+            };
+            document.getElementById('routeModalDifficulty').textContent = difficulties[route.difficulty_level];
+            
+            // Duration and distance
+            document.getElementById('routeModalDuration').textContent = `${route.estimated_duration} saat`;
+            document.getElementById('routeModalDistance').textContent = `${route.total_distance} km`;
+            
+            // Statistics
+            document.getElementById('routeModalDistanceValue').textContent = `${route.total_distance} km`;
+            document.getElementById('routeModalDurationValue').textContent = `${route.estimated_duration} saat`;
+            document.getElementById('routeModalElevationValue').textContent = `${route.elevation_gain}m`;
+            document.getElementById('routeModalDifficultyValue').textContent = difficulties[route.difficulty_level];
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('routeDetailsModal'));
+            modal.show();
+        }
+
+        // Add some demo event handlers
+        document.getElementById('routeModalFavoriteBtn').addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            const text = this.querySelector('span');
+            
+            if (icon.classList.contains('far')) {
+                icon.className = 'fas fa-heart';
+                this.className = 'btn btn-danger btn-sm me-2';
+                if (text) text.textContent = 'Favoride';
+            } else {
+                icon.className = 'far fa-heart';
+                this.className = 'btn btn-outline-danger btn-sm me-2';
+                if (text) text.textContent = 'Favorile';
+            }
+        });
+
+        document.getElementById('routeModalNavigateBtn').addEventListener('click', function() {
+            alert('Navigasyon özelliği demo sürümünde aktif değil');
+        });
+
+        document.getElementById('routeModalStartNavigation').addEventListener('click', function() {
+            alert('Navigasyon başlatılıyor...');
+            bootstrap.Modal.getInstance(document.getElementById('routeDetailsModal')).hide();
+        });
+    </script>
+</body>
+</html>
