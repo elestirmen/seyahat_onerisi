@@ -359,6 +359,22 @@ class RouteDetailsModal {
             this.elevationChartInstance.destroy();
             this.elevationChartInstance = null;
         }
+
+        // Clean up chart event listeners
+        if (this.chartEventListeners) {
+            const { canvas, handleMouseMove, handleMouseLeave, handleClick } = this.chartEventListeners;
+            canvas.removeEventListener('mousemove', handleMouseMove);
+            canvas.removeEventListener('mouseleave', handleMouseLeave);
+            canvas.removeEventListener('click', handleClick);
+            this.chartEventListeners = null;
+        }
+
+        // Clean up map marker
+        this.removeMapMarker();
+
+        // Clear elevation data
+        this.elevationDataForInteraction = null;
+        this.currentElevationPosition = null;
         
         this.currentRoute = null;
     }
@@ -1548,10 +1564,156 @@ class RouteDetailsModal {
             }
         });
 
+        // Store elevation data for mouse interaction
+        this.elevationDataForInteraction = elevationData;
+
+        // Add mouse event handlers for map synchronization
+        this.addChartMouseHandlers(canvas, elevationData);
+
         // Update statistics
         this.updateElevationStats(elevationData);
 
         console.log('✅ Chart.js elevation chart created successfully');
+    }
+
+    addChartMouseHandlers(canvas, elevationData) {
+        const tooltip = document.getElementById('modalElevationTooltip');
+        let isHovering = false;
+
+        const handleMouseMove = (event) => {
+            if (!this.mapInstance || !elevationData.length) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            // Check if mouse is within chart area
+            const padding = 40; // Chart.js default padding
+            if (x < padding || x > rect.width - padding || y < padding || y > rect.height - padding) {
+                this.hideElevationTooltip();
+                this.removeMapMarker();
+                return;
+            }
+
+            // Calculate position along the route based on mouse X position
+            const chartWidth = rect.width - (padding * 2);
+            const relativeX = (x - padding) / chartWidth;
+            const maxDistance = Math.max(...elevationData.map(d => d.distance));
+            const targetDistance = relativeX * maxDistance;
+
+            // Find closest data point
+            let closestPoint = null;
+            let minDiff = Infinity;
+
+            elevationData.forEach(point => {
+                const diff = Math.abs(point.distance - targetDistance);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestPoint = point;
+                }
+            });
+
+            if (closestPoint) {
+                // Show tooltip
+                this.showElevationTooltip(event.clientX, event.clientY, closestPoint);
+
+                // Update map marker
+                this.updateMapMarkerForElevation(closestPoint);
+
+                // Store current position for cleanup
+                this.currentElevationPosition = closestPoint;
+            }
+        };
+
+        const handleMouseLeave = () => {
+            this.hideElevationTooltip();
+            this.removeMapMarker();
+            this.currentElevationPosition = null;
+        };
+
+        const handleClick = (event) => {
+            if (!this.currentElevationPosition || !this.mapInstance) return;
+
+            // Center map on clicked position
+            this.mapInstance.setView(
+                [this.currentElevationPosition.lat, this.currentElevationPosition.lng],
+                this.mapInstance.getZoom()
+            );
+        };
+
+        // Add event listeners
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseleave', handleMouseLeave);
+        canvas.addEventListener('click', handleClick);
+
+        // Store references for cleanup
+        this.chartEventListeners = {
+            canvas,
+            handleMouseMove,
+            handleMouseLeave,
+            handleClick
+        };
+    }
+
+    showElevationTooltip(x, y, point) {
+        const tooltip = document.getElementById('modalElevationTooltip');
+        if (!tooltip) return;
+
+        const name = point.name || `Konum ${this.elevationDataForInteraction.indexOf(point) + 1}`;
+        tooltip.innerHTML = `
+            <strong>${name}</strong><br>
+            Yükseklik: ${point.elevation}m<br>
+            Mesafe: ${point.distance.toFixed(1)}km
+        `;
+
+        tooltip.style.left = `${x + 10}px`;
+        tooltip.style.top = `${y - 10}px`;
+        tooltip.classList.add('show');
+    }
+
+    hideElevationTooltip() {
+        const tooltip = document.getElementById('modalElevationTooltip');
+        if (tooltip) {
+            tooltip.classList.remove('show');
+        }
+    }
+
+    updateMapMarkerForElevation(point) {
+        if (!this.mapInstance) return;
+
+        // Remove existing marker
+        this.removeMapMarker();
+
+        // Create new marker
+        this.elevationMapMarker = L.circleMarker(
+            [point.lat, point.lng],
+            {
+                radius: 8,
+                fillColor: '#3b82f6',
+                color: 'white',
+                weight: 3,
+                opacity: 1,
+                fillOpacity: 0.8,
+                className: 'elevation-position-marker'
+            }
+        ).addTo(this.mapInstance);
+
+        // Add popup
+        const popupContent = `
+            <div class="elevation-map-popup">
+                <strong>${point.name || 'Konum'}</strong><br>
+                Yükseklik: ${point.elevation}m<br>
+                Mesafe: ${point.distance.toFixed(1)}km
+            </div>
+        `;
+        this.elevationMapMarker.bindPopup(popupContent);
+    }
+
+    removeMapMarker() {
+        if (this.elevationMapMarker && this.mapInstance) {
+            this.mapInstance.removeLayer(this.elevationMapMarker);
+            this.elevationMapMarker = null;
+        }
     }
 
     updateElevationStats(elevationData) {
@@ -1904,6 +2066,14 @@ window.testElevationChart = function() {
         });
     }
 
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.error('❌ Chart.js is not loaded! Elevation chart will not work.');
+        return;
+    } else {
+        console.log('✅ Chart.js is loaded and available');
+    }
+
     // Sample route data with geometry for testing
     const testRouteData = {
         id: 'test-route-1',
@@ -1961,6 +2131,8 @@ window.testElevationChart = function() {
     console.log('✅ Test route loaded, switch to Map tab to see elevation chart');
     console.log('💡 Tip: The elevation chart will show simulated elevation data for the Cappadocia region');
     console.log('🔍 Check browser console for canvas count and debug info');
+    console.log('🎯 To test synchronization: Move your mouse over the elevation chart and watch the blue dot move on the map!');
+    console.log('🖱️ Click on the elevation chart to center the map on that position');
 };
 
 // Global function for media type detection (consistent with main system)

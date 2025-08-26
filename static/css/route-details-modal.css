@@ -1093,6 +1093,22 @@
     opacity: 0.5;
 }
 
+/* Elevation Map Marker */
+.elevation-position-marker {
+    background: #3b82f6 !important;
+    border: 3px solid white !important;
+    border-radius: 50% !important;
+    width: 16px !important;
+    height: 16px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+}
+
+.elevation-map-popup {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
 /* POI Markers */
 .custom-poi-marker {
     position: relative;
