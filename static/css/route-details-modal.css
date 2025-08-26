@@ -1001,47 +1001,96 @@
 }
 
 /* Elevation Profile in Map Tab */
-.route-details-tab-content[data-tab="map"] .route-overview-section {
+#routeModalElevationContainer {
+    margin-top: 20px;
+}
+
+/* Elevation Chart Styles */
+.elevation-chart-section {
     background: #f8fafc;
-    padding: 20px;
     border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    margin-top: 16px;
-}
-
-.route-details-tab-content[data-tab="map"] .route-overview-section h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #1e293b;
-    margin: 0 0 16px 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.route-details-tab-content[data-tab="map"] .route-overview-section h3 i {
-    color: #4338ca;
-}
-
-.route-elevation-container {
-    background: white;
-    border-radius: 8px;
     padding: 16px;
     border: 1px solid #e2e8f0;
+}
+
+.elevation-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 16px;
 }
 
 .elevation-stats {
     display: flex;
     gap: 16px;
-    margin-top: 12px;
-    font-size: 0.875rem;
-    color: #64748b;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
-.elevation-stats span {
+.elevation-stat {
     display: flex;
     align-items: center;
     gap: 4px;
+    color: #64748b;
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.elevation-chart-container {
+    position: relative;
+    background: white;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+#modalElevationChart {
+    width: 100%;
+    height: 120px;
+    cursor: crosshair;
+    border-radius: 6px;
+}
+
+.elevation-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 1000;
+    white-space: nowrap;
+}
+
+.elevation-tooltip.show {
+    opacity: 1;
+}
+
+.elevation-distance-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.elevation-error {
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.elevation-error i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
 }
 
 /* POI Markers */

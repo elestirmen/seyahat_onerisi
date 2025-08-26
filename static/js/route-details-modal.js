@@ -121,17 +121,8 @@ class RouteDetailsModal {
                             </div>
                             
                             <!-- Elevation Profile in Map Tab -->
-                            <div class="route-overview-section" id="routeElevationSection" style="margin-top: 20px;">
-                                <h3><i class="fas fa-mountain"></i> Yükseklik Profili</h3>
-                                <div class="route-elevation-container">
-                                    <canvas id="routeElevationChart" width="400" height="200"></canvas>
-                                    <div class="elevation-stats" id="routeElevationStats">
-                                        <span>Min: <span id="minElevation">--m</span></span>
-                                        <span>Max: <span id="maxElevation">--m</span></span>
-                                        <span>↗ <span id="totalAscent">--m</span></span>
-                                        <span>↘ <span id="totalDescent">--m</span></span>
-                                    </div>
-                                </div>
+                            <div id="routeModalElevationContainer" class="route-elevation-container">
+                                <!-- Elevation chart will be created here by Chart.js -->
                             </div>
                         </div>
                         
@@ -309,6 +300,7 @@ class RouteDetailsModal {
             hasWaypoints: !!(routeData.waypoints && routeData.waypoints.length > 0),
             waypointsCount: routeData.waypoints ? routeData.waypoints.length : 0,
             hasGeometry: !!routeData.geometry,
+            hasElevationProfile: !!routeData.elevation_profile,
             allKeys: Object.keys(routeData)
         });
 
@@ -338,6 +330,13 @@ class RouteDetailsModal {
 
         // Load content for current tab
         await this.loadTabContent(this.currentTab);
+
+        // Initialize elevation chart if we're on the map tab
+        if (this.currentTab === 'map') {
+            setTimeout(() => {
+                this.initializeElevationChart();
+            }, 200);
+        }
     }
 
     hide() {
@@ -356,9 +355,9 @@ class RouteDetailsModal {
         }
         
         // Clean up elevation chart
-        if (this.elevationChart) {
-            this.elevationChart.destroy();
-            this.elevationChart = null;
+        if (this.elevationChartInstance && typeof this.elevationChartInstance.destroy === 'function') {
+            this.elevationChartInstance.destroy();
+            this.elevationChartInstance = null;
         }
         
         this.currentRoute = null;
@@ -395,9 +394,16 @@ class RouteDetailsModal {
         });
         
         this.currentTab = tabName;
-        
+
         // Load content for new tab
         await this.loadTabContent(tabName);
+
+        // Initialize elevation chart if switching to map tab
+        if (tabName === 'map' && !this.elevationChart) {
+            setTimeout(() => {
+                this.initializeElevationChart();
+            }, 200);
+        }
     }
 
     async loadTabContent(tabName) {
@@ -449,10 +455,10 @@ class RouteDetailsModal {
             await this.loadElevationProfile();
             return;
         }
-        
+
         const mapContainer = document.getElementById('routeModalMap');
         if (!mapContainer) return;
-        
+
         try {
             // Initialize Leaflet map
             this.mapInstance = L.map('routeModalMap').setView([38.6431, 34.8286], 10);
@@ -462,6 +468,9 @@ class RouteDetailsModal {
 
             // Display route on map
             await this.displayRouteOnMap();
+
+            // Initialize elevation chart
+            await this.initializeElevationChart();
 
             // Load elevation profile for the map tab
             await this.loadElevationProfile();
@@ -1226,28 +1235,376 @@ class RouteDetailsModal {
         // Implementation for route sharing
     }
 
-    // Initialize elevation chart
-    initializeElevationChart() {
+    // Initialize elevation chart using Chart.js
+    async initializeElevationChart() {
         if (!this.currentRoute) return;
-        
+
+        const container = document.getElementById('routeModalElevationContainer');
+        if (!container) {
+            console.error('❌ Elevation chart container not found');
+            return;
+        }
+
         try {
-            // Initialize elevation chart if ElevationChart class is available
-            if (typeof ElevationChart !== 'undefined') {
-                this.elevationChart = new ElevationChart('routeElevationChart', this.mapInstance);
-                
-                // Load elevation data
-                this.loadElevationProfile();
-            } else {
-                console.warn('⚠️ ElevationChart class not available');
-            }
+            console.log('🗺️ Initializing elevation chart for route details modal');
+
+            // Clear any existing content
+            container.innerHTML = '';
+
+            // Create the elevation chart structure with proper styling
+            container.innerHTML = `
+                <div class="route-overview-section">
+                    <h3><i class="fas fa-mountain"></i> Yükseklik Profili</h3>
+                    <div class="elevation-chart-section">
+                        <div class="elevation-header">
+                            <div class="elevation-stats">
+                                <span class="elevation-stat">
+                                    <i class="fas fa-arrow-up"></i>
+                                    <span id="modalMinElevation">--m</span>
+                                </span>
+                                <span class="elevation-stat">
+                                    <i class="fas fa-arrow-down"></i>
+                                    <span id="modalMaxElevation">--m</span>
+                                </span>
+                                <span class="elevation-stat">
+                                    <i class="fas fa-trending-up"></i>
+                                    <span id="modalTotalAscent">+--m</span>
+                                </span>
+                                <span class="elevation-stat">
+                                    <i class="fas fa-trending-down"></i>
+                                    <span id="modalTotalDescent">---m</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="elevation-chart-container">
+                            <canvas id="modalElevationChart" width="400" height="120"></canvas>
+                            <div class="elevation-tooltip" id="modalElevationTooltip"></div>
+                        </div>
+                        <div class="elevation-distance-labels">
+                            <span class="distance-start">0 km</span>
+                            <span class="distance-end">-- km</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            console.log('✅ Elevation chart HTML structure created successfully');
+
+            // Load elevation data
+            await this.loadElevationProfile();
+
         } catch (error) {
             console.error('❌ Error initializing elevation chart:', error);
+            container.innerHTML = `
+                <div class="route-overview-section">
+                    <h3><i class="fas fa-mountain"></i> Yükseklik Profili</h3>
+                    <div class="elevation-error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Yükseklik profili yüklenirken hata oluştu</span>
+                    </div>
+                </div>
+            `;
         }
     }
 
     async loadElevationProfile() {
-        // Implementation for elevation profile loading
-        console.log('Load elevation profile');
+        if (!this.currentRoute) {
+            console.log('❌ Cannot load elevation profile - missing route data');
+            return;
+        }
+
+        try {
+            console.log('🗺️ Loading elevation profile for route:', this.currentRoute.name);
+
+            const canvas = document.getElementById('modalElevationChart');
+            if (!canvas) {
+                console.error('❌ Elevation chart canvas not found');
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+
+            // Generate elevation data
+            let elevationData = [];
+
+            if (this.currentRoute.elevation_profile) {
+                console.log('✅ Using pre-calculated elevation profile');
+                elevationData = this.currentRoute.elevation_profile.points || [];
+            } else {
+                console.log('🔄 Generating elevation data from route');
+                elevationData = await this.generateElevationData();
+            }
+
+            if (!elevationData || elevationData.length === 0) {
+                console.warn('⚠️ No elevation data available');
+                this.showElevationError('Yükseklik verisi bulunamadı');
+                return;
+            }
+
+            // Create Chart.js elevation chart
+            await this.createElevationChart(ctx, elevationData);
+
+            console.log('✅ Elevation profile loaded successfully');
+
+        } catch (error) {
+            console.error('❌ Error loading elevation profile:', error);
+            this.showElevationError('Yükseklik profili yüklenirken hata oluştu');
+        }
+    }
+
+    async generateElevationData() {
+        const route = this.currentRoute;
+        const elevationData = [];
+
+        try {
+            // Use geometry coordinates if available
+            if (route.geometry && route.geometry.coordinates) {
+                const coordinates = route.geometry.coordinates;
+                let totalDistance = 0;
+
+                for (let i = 0; i < coordinates.length; i++) {
+                    const [lng, lat] = coordinates[i];
+
+                    // Calculate cumulative distance
+                    if (i > 0) {
+                        const prevCoord = coordinates[i - 1];
+                        const distance = this.calculateDistance(prevCoord[1], prevCoord[0], lat, lng);
+                        totalDistance += distance;
+                    }
+
+                    // Generate simulated elevation for Cappadocia region
+                    const elevation = this.generateSimulatedElevation(lat, lng);
+
+                    elevationData.push({
+                        distance: totalDistance,
+                        elevation: elevation,
+                        name: i === 0 ? 'Başlangıç' : i === coordinates.length - 1 ? 'Bitiş' : null
+                    });
+                }
+            }
+            // Use POIs if no geometry
+            else if (route.pois && route.pois.length > 0) {
+                let totalDistance = 0;
+
+                for (let i = 0; i < route.pois.length; i++) {
+                    const poi = route.pois[i];
+                    const lat = poi.latitude || poi.lat;
+                    const lng = poi.longitude || poi.lng;
+
+                    if (lat && lng) {
+                        // Calculate cumulative distance
+                        if (i > 0) {
+                            const prevPoi = route.pois[i - 1];
+                            const distance = this.calculateDistance(
+                                prevPoi.latitude || prevPoi.lat,
+                                prevPoi.longitude || prevPoi.lng,
+                                lat, lng
+                            );
+                            totalDistance += distance;
+                        }
+
+                        const elevation = this.generateSimulatedElevation(lat, lng);
+
+                        elevationData.push({
+                            distance: totalDistance,
+                            elevation: elevation,
+                            name: poi.name
+                        });
+                    }
+                }
+            }
+
+            return elevationData;
+
+        } catch (error) {
+            console.error('❌ Error generating elevation data:', error);
+            return [];
+        }
+    }
+
+    generateSimulatedElevation(lat, lng) {
+        // Simulate realistic elevation for Cappadocia region
+        const baseElevation = 1000; // Base elevation for Cappadocia
+        const variation = Math.sin(lat * 100) * Math.cos(lng * 100) * 200;
+        const noise = (Math.random() - 0.5) * 50;
+
+        return Math.round(baseElevation + variation + noise);
+    }
+
+    calculateDistance(lat1, lng1, lat2, lng2) {
+        const R = 6371; // Earth's radius in km
+        const dLat = this.toRad(lat2 - lat1);
+        const dLng = this.toRad(lng2 - lng1);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) *
+                  Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    toRad(deg) {
+        return deg * (Math.PI / 180);
+    }
+
+    async createElevationChart(ctx, elevationData) {
+        // Destroy existing chart if it exists
+        if (this.elevationChartInstance) {
+            this.elevationChartInstance.destroy();
+        }
+
+        // Prepare chart data
+        const labels = elevationData.map(d => {
+            if (d.distance === 0) return 'Başlangıç';
+            return `${(d.distance).toFixed(1)}km`;
+        });
+
+        const elevations = elevationData.map(d => d.elevation);
+        const names = elevationData.map(d => d.name || `Nokta ${elevationData.indexOf(d) + 1}`);
+
+        // Set canvas dimensions
+        const canvas = document.getElementById('modalElevationChart');
+        canvas.width = 400;
+        canvas.height = 120;
+        canvas.style.width = '100%';
+        canvas.style.height = '120px';
+
+        // Create Chart.js chart
+        this.elevationChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Yükseklik (m)',
+                    data: elevations,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#3b82f6',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        top: 10,
+                        bottom: 10,
+                        left: 10,
+                        right: 10
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function (context) {
+                                const index = context[0].dataIndex;
+                                return names[index];
+                            },
+                            label: function (context) {
+                                const elevation = context.parsed.y;
+                                const distance = elevationData[context.dataIndex].distance;
+                                return [
+                                    `Yükseklik: ${elevation}m`,
+                                    `Mesafe: ${distance.toFixed(1)}km`
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: false
+                        },
+                        ticks: {
+                            maxTicksLimit: 6
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: false
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + 'm';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Update statistics
+        this.updateElevationStats(elevationData);
+
+        console.log('✅ Chart.js elevation chart created successfully');
+    }
+
+    updateElevationStats(elevationData) {
+        if (!elevationData || elevationData.length === 0) return;
+
+        const elevations = elevationData.map(d => d.elevation);
+        const minElevation = Math.min(...elevations);
+        const maxElevation = Math.max(...elevations);
+
+        let totalAscent = 0;
+        let totalDescent = 0;
+
+        for (let i = 1; i < elevationData.length; i++) {
+            const diff = elevationData[i].elevation - elevationData[i - 1].elevation;
+            if (diff > 0) {
+                totalAscent += diff;
+            } else {
+                totalDescent += Math.abs(diff);
+            }
+        }
+
+        // Update display elements
+        const minEl = document.getElementById('modalMinElevation');
+        const maxEl = document.getElementById('modalMaxElevation');
+        const ascentEl = document.getElementById('modalTotalAscent');
+        const descentEl = document.getElementById('modalTotalDescent');
+
+        if (minEl) minEl.textContent = `${minElevation}m`;
+        if (maxEl) maxEl.textContent = `${maxElevation}m`;
+        if (ascentEl) ascentEl.textContent = `+${Math.round(totalAscent)}m`;
+        if (descentEl) descentEl.textContent = `-${Math.round(totalDescent)}m`;
+
+        // Update distance labels
+        const startLabel = document.querySelector('.distance-start');
+        const endLabel = document.querySelector('.distance-end');
+
+        if (startLabel) startLabel.textContent = '0 km';
+        if (endLabel && elevationData.length > 0) {
+            const maxDistance = Math.max(...elevationData.map(d => d.distance));
+            endLabel.textContent = `${maxDistance.toFixed(1)} km`;
+        }
+    }
+
+    showElevationError(message) {
+        const container = document.getElementById('routeModalElevationContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="elevation-error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+        }
     }
 
     showMediaViewer(mediaUrl, mediaType) {
@@ -1530,6 +1887,80 @@ window.showRouteDetails = function(routeData) {
     } else {
         console.error('❌ Route details modal not available');
     }
+};
+
+// Global function to test elevation chart
+window.testElevationChart = function() {
+    console.log('🧪 Testing elevation chart functionality');
+
+    // Check for any duplicate elevation canvases
+    const canvases = document.querySelectorAll('canvas[id*="levation"]');
+    console.log(`📊 Found ${canvases.length} elevation-related canvases:`, canvases);
+
+    if (canvases.length > 1) {
+        console.warn('⚠️ Multiple elevation canvases detected! This might cause issues.');
+        canvases.forEach((canvas, index) => {
+            console.log(`Canvas ${index + 1}:`, canvas.id, canvas);
+        });
+    }
+
+    // Sample route data with geometry for testing
+    const testRouteData = {
+        id: 'test-route-1',
+        name: 'Test Route with Elevation',
+        description: 'This is a test route to verify elevation chart functionality',
+        total_distance: 15.2,
+        estimated_duration: 240, // 4 hours in minutes
+        poi_count: 5,
+        difficulty_level: 2,
+        geometry: {
+            type: 'LineString',
+            coordinates: [
+                [34.8, 38.6],
+                [34.82, 38.62],
+                [34.84, 38.64],
+                [34.86, 38.66],
+                [34.88, 38.68],
+                [34.90, 38.70],
+                [34.92, 38.72],
+                [34.94, 38.74],
+                [34.96, 38.76],
+                [34.98, 38.78]
+            ]
+        },
+        pois: [
+            {
+                id: 1,
+                name: 'Starting Point',
+                latitude: 38.6,
+                longitude: 34.8,
+                category: 'diger',
+                description: 'Route starting point'
+            },
+            {
+                id: 2,
+                name: 'Mid Point',
+                latitude: 38.66,
+                longitude: 34.86,
+                category: 'doga',
+                description: 'Beautiful viewpoint'
+            },
+            {
+                id: 3,
+                name: 'End Point',
+                latitude: 38.78,
+                longitude: 34.98,
+                category: 'tarihi',
+                description: 'Historical site'
+            }
+        ]
+    };
+
+    // Show the test route
+    window.showRouteDetails(testRouteData);
+    console.log('✅ Test route loaded, switch to Map tab to see elevation chart');
+    console.log('💡 Tip: The elevation chart will show simulated elevation data for the Cappadocia region');
+    console.log('🔍 Check browser console for canvas count and debug info');
 };
 
 // Global function for media type detection (consistent with main system)
