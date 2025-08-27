@@ -379,6 +379,21 @@ class MobileOptimizations {
         } else {
             // Switch to map view
             if (mapView) mapView.style.display = 'block';
+            setTimeout(() => {
+                if (window.predefinedRoutesMap) {
+                    window.predefinedRoutesMap.invalidateSize();
+                    if (window.predefinedMapLayers?.length) {
+                        const bounds = L.featureGroup(window.predefinedMapLayers).getBounds();
+                        if (bounds.isValid()) {
+                            window.predefinedRoutesMap.fitBounds(bounds);
+                        }
+                    }
+                }
+            }, 100);
+            const currentRoute = RouteDetailsPanel.getInstance().currentRoute;
+            if (currentRoute) {
+                displayRouteOnMap(currentRoute);
+            }
             if (listView) listView.style.display = 'none';
             this.currentView = 'map';
             
