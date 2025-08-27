@@ -557,7 +557,13 @@ class MobileOptimizations {
     handleResize() {
         // Recalculate layout on resize
         this.optimizeForMobile();
-        
+        if (window.predefinedRoutesMap) {
+            window.predefinedRoutesMap.invalidateSize();
+        }
+        if (window.map) {
+            window.map.invalidateSize();
+        }
+
         // Close filter panel on desktop
         if (!this.isMobile && this.filterPanelExpanded) {
             this.closeFilterPanel();
