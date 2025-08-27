@@ -348,6 +348,9 @@ class TouchOptimizer {
         if (typeof map !== 'undefined' && map) {
             setTimeout(() => {
                 map.invalidateSize();
+                if (typeof window.predefinedRoutesMap !== 'undefined' && window.predefinedRoutesMap) {
+                    window.predefinedRoutesMap.invalidateSize();
+                }
             }, 100);
         }
 
