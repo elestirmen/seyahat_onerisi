@@ -5318,9 +5318,10 @@ function initializePredefinedRoutes() {
 }
 
 // Predefined routes map management
-let predefinedMap = null;
-let predefinedMapLayers = [];
-let predefinedMapInitialized = false;
+// Make predefined map accessible globally for other scripts
+window.predefinedMap = null;
+window.predefinedMapLayers = [];
+window.predefinedMapInitialized = false;
 
 // Map initialization state management
 let mapInitializationPromise = null;
