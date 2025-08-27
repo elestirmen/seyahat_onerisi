@@ -227,6 +227,13 @@ class MobileOptimizations {
         if (icon) {
             icon.className = 'fas fa-compress';
         }
+
+        if (window.predefinedRoutesMap) {
+            setTimeout(() => window.predefinedRoutesMap.invalidateSize(), 100);
+        }
+        if (window.map) {
+            setTimeout(() => window.map.invalidateSize(), 100);
+        }
     }
 
     exitFullscreenMap(mapContainer) {
@@ -241,6 +248,13 @@ class MobileOptimizations {
         const icon = document.querySelector('#fullscreenMapBtn i');
         if (icon) {
             icon.className = 'fas fa-expand';
+        }
+
+        if (window.predefinedRoutesMap) {
+            setTimeout(() => window.predefinedRoutesMap.invalidateSize(), 100);
+        }
+        if (window.map) {
+            setTimeout(() => window.map.invalidateSize(), 100);
         }
     }
 
