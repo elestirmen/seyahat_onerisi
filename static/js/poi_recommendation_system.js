@@ -5393,6 +5393,11 @@ async function initializePredefinedMap() {
 }
 
 async function displayRouteOnMap(route) {
+    const mapContainer = document.getElementById('predefinedRoutesMap');
+    if (!mapContainer || mapContainer.offsetWidth === 0 || mapContainer.offsetHeight === 0) {
+        setTimeout(() => displayRouteOnMap(route), 200);
+        return;
+    }
     console.log('🗺️ === DISPLAYING ROUTE ON MAP ===');
     console.log('🗺️ Displaying route on predefined map:', route);
     console.log('🔍 Route geometry:', route.geometry);
@@ -5416,7 +5421,6 @@ async function displayRouteOnMap(route) {
     });
     
     // Ensure map container is visible and invalidate size for proper rendering
-    const mapContainer = document.getElementById('predefinedRoutesMap');
     if (mapContainer) {
         mapContainer.style.display = 'block';
         mapContainer.style.visibility = 'visible';
@@ -5588,7 +5592,9 @@ async function displayRouteOnMap(route) {
                     
                     // Fit map to combined bounds (route + POIs)
                     predefinedMap.fitBounds(bounds, { padding: [20, 20] });
-                    
+                    predefinedMap.invalidateSize();
+                    predefinedMap.fitBounds(bounds, { padding: [20, 20] });
+
                     console.log('✅ Route with POIs displayed on predefined map');
                     
                     // Create elevation chart for predefined route with geometry
@@ -5726,6 +5732,8 @@ async function displayRouteOnMap(route) {
                 // Fit map to POI bounds
                 if (bounds.isValid()) {
                     predefinedMap.fitBounds(bounds, { padding: [30, 30] });
+                    predefinedMap.invalidateSize();
+                    predefinedMap.fitBounds(bounds, { padding: [20, 20] });
                 }
                 
                 console.log('✅ Route POIs displayed on predefined map');
