@@ -228,8 +228,8 @@ class MobileOptimizations {
             icon.className = 'fas fa-compress';
         }
 
-        if (window.predefinedRoutesMap) {
-            setTimeout(() => window.predefinedRoutesMap.invalidateSize(), 100);
+        if (window.predefinedMap) {
+            setTimeout(() => window.predefinedMap.invalidateSize(), 100);
         }
         if (window.map) {
             setTimeout(() => window.map.invalidateSize(), 100);
@@ -250,8 +250,8 @@ class MobileOptimizations {
             icon.className = 'fas fa-expand';
         }
 
-        if (window.predefinedRoutesMap) {
-            setTimeout(() => window.predefinedRoutesMap.invalidateSize(), 100);
+        if (window.predefinedMap) {
+            setTimeout(() => window.predefinedMap.invalidateSize(), 100);
         }
         if (window.map) {
             setTimeout(() => window.map.invalidateSize(), 100);
@@ -394,12 +394,12 @@ class MobileOptimizations {
             // Switch to map view
             if (mapView) mapView.style.display = 'block';
             setTimeout(() => {
-                if (window.predefinedRoutesMap) {
-                    window.predefinedRoutesMap.invalidateSize();
+                if (window.predefinedMap) {
+                    window.predefinedMap.invalidateSize();
                     if (window.predefinedMapLayers?.length) {
                         const bounds = L.featureGroup(window.predefinedMapLayers).getBounds();
                         if (bounds.isValid()) {
-                            window.predefinedRoutesMap.fitBounds(bounds);
+                            window.predefinedMap.fitBounds(bounds);
                         }
                     }
                 }
@@ -586,8 +586,8 @@ class MobileOptimizations {
     handleResize() {
         // Recalculate layout on resize
         this.optimizeForMobile();
-        if (window.predefinedRoutesMap) {
-            window.predefinedRoutesMap.invalidateSize();
+        if (window.predefinedMap) {
+            window.predefinedMap.invalidateSize();
         }
         if (window.map) {
             window.map.invalidateSize();
@@ -604,9 +604,9 @@ class MobileOptimizations {
         if (this.mapFullscreen) {
             // Refresh map after orientation change
             const mapContainer = document.querySelector('.predefined-routes-map');
-            if (mapContainer && window.predefinedRoutesMap) {
+            if (mapContainer && window.predefinedMap) {
                 setTimeout(() => {
-                    window.predefinedRoutesMap.invalidateSize();
+                    window.predefinedMap.invalidateSize();
                 }, 200);
             }
         }
