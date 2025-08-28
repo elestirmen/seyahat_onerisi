@@ -42,24 +42,21 @@ class MobileOptimizations {
         if ('IntersectionObserver' in window) {
             const imageObserver = new IntersectionObserver((entries, observer) => {
                 entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const img = entry.target;
-                        const src = img.dataset.src || img.getAttribute('data-placeholder');
-                        
-                        if (src && src !== img.src) {
-                            img.src = src;
-                            img.classList.add('loaded');
-                            observer.unobserve(img);
-                        }
+                    if (!entry.isIntersecting) return;
+                    const img = entry.target;
+                    // Only act on images explicitly marked for lazy loading
+                    const src = img.dataset.src;
+                    if (src && img.src !== src) {
+                        img.src = src;
+                        img.classList.add('loaded');
                     }
+                    observer.unobserve(img);
                 });
-            }, {
-                rootMargin: '50px'
-            });
+            }, { rootMargin: '50px' });
 
-            // Observe all images with data-src or in route cards
+            // Observe only images that opt-in to lazy loading
             const observeImages = () => {
-                const images = document.querySelectorAll('.route-card img, [data-src]');
+                const images = document.querySelectorAll('img[data-src], .lazy-image');
                 images.forEach(img => imageObserver.observe(img));
             };
 

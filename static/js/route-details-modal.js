@@ -11,6 +11,10 @@ class RouteDetailsModal {
         this.mapInstance = null;
         this.isVisible = false;
         this.elevationChart = null;
+        this.elevationChartInstance = null;
+        this.elevationDataForInteraction = null;
+        this.elevationMediaOverlayPoints = [];
+        this.pendingElevationMediaMarkers = null;
         // Bind methods
         this.hide = this.hide.bind(this);
         this.handleKeydown = this.handleKeydown.bind(this);
@@ -484,6 +488,10 @@ class RouteDetailsModal {
         // Clean up resize listener
         this.removeResizeListener();
 
+        // Close media viewer if open
+        const openViewer = this.modal.querySelector('.media-viewer-modal');
+        if (openViewer) openViewer.remove();
+
         // Clean up map instance
         if (this.mapInstance) {
             this.mapInstance.remove();
@@ -543,6 +551,12 @@ class RouteDetailsModal {
             tab.classList.toggle('active', isActive);
             tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
         });
+
+        // Close media viewer if leaving media tab
+        if (this.currentTab === 'media' && tabName !== 'media') {
+            const openViewer = this.modal.querySelector('.media-viewer-modal');
+            if (openViewer) openViewer.remove();
+        }
 
         // Update tab content
         document.querySelectorAll('.route-details-tab-content').forEach(content => {
@@ -1390,6 +1404,31 @@ class RouteDetailsModal {
 
             console.log(`📍 Found ${locatedMedia.length} media items with location data`);
 
+            // Also add image media markers to elevation chart overlay
+            try {
+                const imageOnly = locatedMedia.filter(m => {
+                    const t = (m.media_type || '').toLowerCase();
+                    const url = m.url || m.path || m.file_path || '';
+                    return t === 'image' || /\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+                }).map(m => ({
+                    lat: m.latitude || m.lat || m.coords?.[1] || m.location?.lat || m.position?.lat,
+                    lng: m.longitude || m.lng || m.lon || m.coords?.[0] || m.location?.lng || m.position?.lng,
+                    media_type: (m.media_type || 'image'),
+                    url: m.url || m.path || m.file_path || m.full_path || m.original_path || ''
+                }));
+
+                if (imageOnly.length) {
+                    if (this.elevationChartInstance && this.elevationDataForInteraction && this.elevationDataForInteraction.length) {
+                        this.updateElevationMediaMarkers(imageOnly, { onlyImages: true });
+                    } else {
+                        // Defer until chart is ready
+                        this.pendingElevationMediaMarkers = imageOnly;
+                    }
+                }
+            } catch (e) {
+                console.warn('⚠️ Could not set elevation media markers:', e);
+            }
+
             // Add media markers to map
             locatedMedia.forEach((media, index) => {
                 // Use the same flexible coordinate detection
@@ -1943,6 +1982,12 @@ class RouteDetailsModal {
             // Create Chart.js elevation chart
             await this.createElevationChart(ctx, elevationData);
 
+            // If media markers were fetched earlier, apply them now
+            if (this.pendingElevationMediaMarkers && this.pendingElevationMediaMarkers.length) {
+                this.updateElevationMediaMarkers(this.pendingElevationMediaMarkers, { onlyImages: true });
+                this.pendingElevationMediaMarkers = null;
+            }
+
             console.log('✅ Elevation profile loaded successfully');
 
         } catch (error) {
@@ -2108,6 +2153,46 @@ class RouteDetailsModal {
         canvas.style.height = '120px';
 
         // Create Chart.js chart
+        const self = this;
+
+        // Chart-level plugin to draw media markers on top of the elevation line
+        const mediaMarkersPlugin = {
+            id: 'modalMediaMarkers',
+            afterDatasetsDraw(chart, args, pluginOptions) {
+                try {
+                    if (!self.elevationMediaOverlayPoints || self.elevationMediaOverlayPoints.length === 0) return;
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta || !meta.data) return;
+                    const distances = (self.elevationDataForInteraction || []).map(d => d.distance);
+                    const ctx2 = chart.ctx;
+                    self.elevationMediaOverlayPoints.forEach((mp, idx) => {
+                        // Find nearest index by distance
+                        let nearestIndex = 0;
+                        let minDiff = Infinity;
+                        for (let i = 0; i < distances.length; i++) {
+                            const diff = Math.abs(distances[i] - mp.distance);
+                            if (diff < minDiff) { minDiff = diff; nearestIndex = i; }
+                        }
+                        const pt = meta.data[nearestIndex];
+                        if (!pt) return;
+                        const x = pt.x;
+                        const y = pt.y - 10; // slight offset above line
+                        const type = (mp.media && (mp.media.media_type || (mp.media.url||mp.media.path))) ? self.getMediaTypeFromUrl(mp.media.url || mp.media.path || '') : 'image';
+                        const iconMap = { image: '📷', video: '🎥', audio: '🎵', model_3d: '🧊', unknown: '📍' };
+                        const iconChar = iconMap[type] || iconMap.unknown;
+                        ctx2.save();
+                        ctx2.font = '16px sans-serif';
+                        ctx2.textAlign = 'center';
+                        ctx2.textBaseline = 'middle';
+                        ctx2.fillText(iconChar, x, y);
+                        ctx2.restore();
+                    });
+                } catch (e) {
+                    console.warn('mediaMarkersPlugin draw error:', e);
+                }
+            }
+        };
+
         this.elevationChartInstance = new Chart(ctx, {
             type: 'line',
             data: {
@@ -2184,7 +2269,8 @@ class RouteDetailsModal {
                         }
                     }
                 }
-            }
+            },
+            plugins: [mediaMarkersPlugin]
         });
 
         // Store elevation data for mouse interaction
@@ -2339,6 +2425,56 @@ class RouteDetailsModal {
         }
     }
 
+    // Map media items onto elevation chart distances and trigger redraw
+    updateElevationMediaMarkers(mediaItems, options = {}) {
+        try {
+            const onlyImages = options.onlyImages === true;
+            const items = Array.isArray(mediaItems) ? mediaItems : [];
+            if (!items.length) {
+                this.elevationMediaOverlayPoints = [];
+                if (this.elevationChartInstance) this.elevationChartInstance.update();
+                return;
+            }
+
+            // Prepare items with lat/lng
+            const prepared = items
+                .filter(m => {
+                    if (!onlyImages) return true;
+                    const t = (m.media_type || '').toLowerCase();
+                    const url = m.url || m.path || '';
+                    return t === 'image' || /\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+                })
+                .map(m => {
+                    const lat = parseFloat(m.lat ?? m.latitude);
+                    const lng = parseFloat(m.lng ?? m.longitude ?? m.lon);
+                    return isNaN(lat) || isNaN(lng) ? null : { lat, lng, media: m };
+                })
+                .filter(Boolean);
+
+            if (!this.elevationDataForInteraction || !this.elevationDataForInteraction.length) {
+                // Chart not ready yet, defer
+                this.pendingElevationMediaMarkers = prepared;
+                return;
+            }
+
+            // Map to closest elevation sample
+            const overlay = prepared.map(p => {
+                let closest = null;
+                let min = Infinity;
+                for (const d of this.elevationDataForInteraction) {
+                    const dx = this.calculateDistance(p.lat, p.lng, d.lat, d.lng);
+                    if (dx < min) { min = dx; closest = d; }
+                }
+                return closest ? { distance: closest.distance, elevation: closest.elevation, media: p.media } : null;
+            }).filter(Boolean);
+
+            this.elevationMediaOverlayPoints = overlay;
+            if (this.elevationChartInstance) this.elevationChartInstance.update();
+        } catch (e) {
+            console.warn('updateElevationMediaMarkers failed:', e);
+        }
+    }
+
     updateElevationStats(elevationData) {
         if (!elevationData || elevationData.length === 0) return;
 
@@ -2489,7 +2625,13 @@ class RouteDetailsModal {
             </div>
         `;
 
-        document.body.appendChild(viewerModal);
+        // Prefer to contain the viewer within the media tab content so tabs remain clickable
+        const mediaTab = this.modal.querySelector('.route-details-tab-content[data-tab="media"]');
+        if (mediaTab) {
+            mediaTab.appendChild(viewerModal);
+        } else {
+            document.body.appendChild(viewerModal);
+        }
         console.log('✅ Media viewer modal created with URL:', mediaUrl);
     }
 

@@ -6596,7 +6596,7 @@ function createRouteCard(route) {
     return `
         <div class="route-card" data-route-id="${route.id}">
             <div class="route-card-image">
-                <img src="${imageUrl}" alt="${route.name || 'Rota görseli'}" data-placeholder="${placeholderImage}" onerror="handleImageError(event)" class="route-card-main-image">
+                <img src="${imageUrl}" alt="${route.name || 'Rota görseli'}" data-placeholder="${placeholderImage}" onerror="handleImageError(event)" class="route-card-main-image" loading="lazy">
                 <div class="route-card-media-overlay" id="route-media-overlay-${route.id}">
                     <div class="route-card-media-loading">
                         <i class="fas fa-spinner fa-spin"></i>
