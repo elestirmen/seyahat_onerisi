@@ -8458,6 +8458,9 @@ async function performMainMapInitialization() {
         
         // Add base layers
         addBaseLayers(map);
+
+        // Ensure POI search bar exists on dynamic map
+        try { ensurePOISearchBar(); } catch (_) {}
         
         // Clear markers array
         markers = [];
@@ -10425,8 +10428,11 @@ async function initializeEmptyMap() {
         maxBoundsViscosity: 0.0
     }).setView([38.632, 34.912], 13);
 
-    // Add base layers
-    addBaseLayers(map);
+        // Add base layers
+        addBaseLayers(map);
+
+        // Ensure POI search bar exists on dynamic map
+        try { ensurePOISearchBar(); } catch (_) {}
 
     // Add map controls
     if (L.Control.Fullscreen) {
@@ -11917,8 +11923,13 @@ async function showAllPOIs() {
         // Display all POIs
         await displayAllPOIs(allPOIs);
 
-        // Update map with all POIs
+        // Ensure map is initialized and visible, then update with POIs
+        await initializeMainMap();
         updateMapWithPOIs(allPOIs);
+
+        // Switch UI to map view and focus it
+        switchToDynamicMapView();
+        ensurePOISearchBar(allPOIs);
 
         // Show success notification
         showNotification(`🌍 ${allPOIs.length} POI haritada gösteriliyor`, 'success');
@@ -11956,14 +11967,25 @@ async function displayAllPOIs(allPOIs) {
     
     const resultsContainer = document.getElementById('recommendationResults');
     
-    // Group POIs by category for better organization
+    // Group POIs by category (canonicalized) to avoid duplicate headers for aliases
     const poiByCategory = {};
     allPOIs.forEach(poi => {
-        const category = poi.category || 'diger';
-        if (!poiByCategory[category]) {
-            poiByCategory[category] = [];
+        const raw = (poi.category || 'diger').toLowerCase().trim();
+        let canonical = raw;
+        try {
+            if (typeof window !== 'undefined' && window.getCategoryByName) {
+                const cat = window.getCategoryByName(raw);
+                if (cat && cat.name) canonical = cat.name; // canonical category key
+            } else if (typeof categoryIconAliases !== 'undefined' && categoryIconAliases[raw]) {
+                canonical = categoryIconAliases[raw];
+            }
+        } catch (_) {}
+
+        if (!poiByCategory[canonical]) {
+            poiByCategory[canonical] = [];
         }
-        poiByCategory[category].push(poi);
+        // Keep original POI but normalize category for display consistency
+        poiByCategory[canonical].push({ ...poi, category: canonical });
     });
 
     let resultsHTML = `
@@ -12066,6 +12088,11 @@ function updateMapWithPOIs(allPOIs) {
             `;
 
             marker.bindPopup(popupContent);
+            // Attach searchable metadata
+            marker.poiName = poi.name || '';
+            marker.poiNameLower = (poi.name || '').toLowerCase();
+            marker.poiCategory = poi.category || '';
+            marker.poiData = poi;
             markers.push(marker);
 
         } catch (error) {
@@ -12089,6 +12116,109 @@ function updateMapWithPOIs(allPOIs) {
     }
 
     // Log removed for cleaner console
+}
+
+// Ensure the dynamic map section is visible and focused
+function switchToDynamicMapView() {
+    try {
+        const mapSection = document.getElementById('mapSection');
+        if (mapSection) {
+            mapSection.style.display = 'block';
+            // Scroll into view smoothly
+            setTimeout(() => {
+                mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (map && map.invalidateSize) {
+                    setTimeout(() => map.invalidateSize(), 300);
+                }
+            }, 50);
+        }
+    } catch (e) {
+        console.warn('switchToDynamicMapView failed:', e);
+    }
+}
+
+// Create a simple search UI to filter POI markers on the map
+function ensurePOISearchBar(allPOIs = []) {
+    const container = document.getElementById('mapContainer');
+    if (!container) return;
+
+    // Ensure container is positioned for overlay
+    if (getComputedStyle(container).position === 'static') {
+        container.style.position = 'relative';
+    }
+
+    // If exists, just show
+    let bar = document.getElementById('poiSearchBar');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'poiSearchBar';
+        bar.style.cssText = `
+            position: absolute; top: 10px; left: 10px; right: auto; z-index: 1000;
+            background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0; border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;
+            padding: 6px 10px; backdrop-filter: blur(6px);
+        `;
+        bar.innerHTML = `
+            <i class="fas fa-search" style="color:#64748b"></i>
+            <input id="poiSearchInput" type="text" placeholder="POI ara..." style="
+                border:none; outline:none; background:transparent; width: 200px; color:#111827; font-size: 14px;" />
+            <button id="poiSearchClear" title="Temizle" style="
+                border:none; background:#f1f5f9; color:#334155; border-radius:8px; padding:4px 8px; cursor:pointer;">Temizle</button>
+        `;
+        container.appendChild(bar);
+
+        const input = bar.querySelector('#poiSearchInput');
+        const clearBtn = bar.querySelector('#poiSearchClear');
+        const handler = () => filterPOIMarkers(input.value || '');
+        input.addEventListener('input', handler);
+        clearBtn.addEventListener('click', () => { input.value = ''; handler(); });
+    } else {
+        bar.style.display = 'flex';
+    }
+
+    // Register hotkey: '/' focuses the POI search when map section is visible
+    if (!window.__poiSearchHotkeyAdded) {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const mapSection = document.getElementById('mapSection');
+                const input = document.getElementById('poiSearchInput');
+                if (mapSection && input && mapSection.offsetParent !== null) {
+                    e.preventDefault();
+                    input.focus();
+                }
+            }
+        });
+        window.__poiSearchHotkeyAdded = true;
+    }
+}
+
+// Filter current markers by query (name/category)
+function filterPOIMarkers(query) {
+    const q = (query || '').trim().toLowerCase();
+    if (!markers || !Array.isArray(markers)) return;
+
+    markers.forEach(marker => {
+        try {
+            const name = marker.poiNameLower || '';
+            const cat = (marker.poiCategory || '').toLowerCase();
+            const match = !q || name.includes(q) || cat.includes(q);
+            const onMap = map.hasLayer(marker);
+            if (match && !onMap) {
+                marker.addTo(map);
+            } else if (!match && onMap) {
+                map.removeLayer(marker);
+            }
+        } catch (e) { /* ignore per-marker errors */ }
+    });
+
+    // Optionally refit bounds if query narrowed results
+    const visible = markers.filter(m => map.hasLayer(m));
+    if (visible.length > 0) {
+        try {
+            const group = new L.featureGroup(visible);
+            map.fitBounds(group.getBounds().pad(0.1));
+        } catch (_) {}
+    }
 }
 
 // Initialize POI cards media loading
