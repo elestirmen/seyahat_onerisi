@@ -687,8 +687,17 @@ class POIMediaManager:
                 if exif_lat is not None and exif_lng is not None:
                     lat, lng = exif_lat, exif_lng
             
-            # Rota klasörlerini oluştur
-            route_folder = f"route_{route_id}_{route_name.replace(' ', '_')}"
+            # Rota klasörlerini oluştur (güvenli klasör adı)
+            safe_name = (
+                route_name
+                .replace(' ', '_')
+                .replace(':', '_')
+                .replace('/', '_')
+                .replace('\\', '_')
+            )
+            # Normalize non-ascii chars conservatively by stripping problematic ones
+            safe_name = ''.join(ch if ch.isalnum() or ch in ['_', '-'] else '_' for ch in safe_name)
+            route_folder = f"route_{route_id}_{safe_name}"
             base_route_dir = self.base_path / "by_route_id" / route_folder
             base_thumb_dir = self.thumbnails_path / "by_route_id" / route_folder
             base_preview_dir = self.previews_path / "by_route_id" / route_folder

@@ -1744,20 +1744,56 @@ class RouteDetailsModal {
     }
 
     startNavigation() {
-        if (this.currentRoute) {
-            // Open in Google Maps or other navigation app
-            const route = this.currentRoute;
-            const pois = route.pois || route.waypoints || [];
+        if (!this.currentRoute) return;
 
-            if (pois.length > 0) {
-                const firstPoi = pois[0];
-                const lat = firstPoi.latitude || firstPoi.lat;
-                const lng = firstPoi.longitude || firstPoi.lng;
+        const route = this.currentRoute;
 
-                const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-                window.open(googleMapsUrl, '_blank');
+        // 1) Prefer geometry start [lng, lat]
+        let startLat = undefined, startLng = undefined;
+        if (route.geometry && Array.isArray(route.geometry.coordinates) && route.geometry.coordinates.length) {
+            const first = route.geometry.coordinates[0];
+            if (Array.isArray(first) && first.length >= 2) {
+                startLng = parseFloat(first[0]);
+                startLat = parseFloat(first[1]);
             }
         }
+
+        // 2) Fallback to elevation profile first point
+        if ((!Number.isFinite(startLat) || !Number.isFinite(startLng)) && route.elevation_profile && Array.isArray(route.elevation_profile.points) && route.elevation_profile.points.length) {
+            const p = route.elevation_profile.points[0];
+            startLat = parseFloat(p.lat ?? p.latitude);
+            startLng = parseFloat(p.lng ?? p.longitude ?? p.lon);
+        }
+
+        // 3) Fallback to POIs or waypoints
+        if ((!Number.isFinite(startLat) || !Number.isFinite(startLng))) {
+            const pois = route.pois || route.waypoints || [];
+            if (pois.length) {
+                const f = pois[0];
+                startLat = parseFloat(f.latitude ?? f.lat);
+                startLng = parseFloat(f.longitude ?? f.lng ?? f.lon);
+            }
+        }
+
+        if (!Number.isFinite(startLat) || !Number.isFinite(startLng)) {
+            alert('Rota başlangıç konumu bulunamadı.');
+            return;
+        }
+
+        // Choose travel mode based on route type
+        const type = (route.route_type || route.type || '').toLowerCase();
+        let travelMode = 'walking';
+        if (type.includes('drive') || type.includes('car') || type.includes('araba')) travelMode = 'driving';
+        else if (type.includes('bike') || type.includes('cycle') || type.includes('bisik')) travelMode = 'bicycling';
+        else if (type.includes('transit') || type.includes('otob')) travelMode = 'transit';
+
+        // Build Google Maps Directions link.
+        // Omitting origin lets Google use current location on mobile/desktop.
+        const lat = startLat.toFixed(6);
+        const lng = startLng.toFixed(6);
+        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=${encodeURIComponent(travelMode)}&dir_action=navigate`;
+
+        window.open(googleMapsUrl, '_blank');
     }
 
     exportRoute() {

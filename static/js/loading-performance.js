@@ -979,13 +979,42 @@ class PerformanceMonitor {
     reduceImageQuality() {
         const images = document.querySelectorAll('img');
         images.forEach(img => {
-            if (img.src && !img.dataset.originalSrc) {
-                img.dataset.originalSrc = img.src;
-                // Replace with lower quality version if available
-                if (img.src.includes('/poi_media/')) {
-                    img.src = img.src.replace('/poi_media/', '/poi_media/previews/');
-                }
+            if (!img.src) return;
+            const url = new URL(img.src, window.location.href);
+            const path = url.pathname || '';
+
+            // Already a preview – skip
+            if (path.includes('/poi_media/previews/')) return;
+
+            // Save original once
+            if (!img.dataset.originalSrc) img.dataset.originalSrc = img.src;
+
+            // Only remap POI media assets
+            if (!path.includes('/poi_media/')) return;
+
+            // Try to remap to generated preview naming schema
+            // Expected original: /poi_media/by_route_id/<route_folder>/<type>/<filename>
+            const m = path.match(/\/poi_media\/by_route_id\/([^/]+)\/(images|videos|audio|3d_models)\/([^/]+)$/);
+            if (!m) {
+                // Fallback: simple directory switch (may 404, but better than doing nothing)
+                img.src = img.src.replace('/poi_media/', '/poi_media/previews/');
+                return;
             }
+
+            const routeFolder = m[1];
+            const mediaType = m[2];
+            const fileName = m[3];
+            const dot = fileName.lastIndexOf('.');
+            const stem = dot > 0 ? fileName.slice(0, dot) : fileName;
+
+            // Build preview filename
+            let previewExt = 'webp';
+            if (mediaType !== 'images') previewExt = 'png';
+            const previewFile = `preview_${stem}.${previewExt}`;
+            const previewPath = `/poi_media/previews/by_route_id/${routeFolder}/${mediaType}/${previewFile}`;
+
+            url.pathname = previewPath;
+            img.src = url.toString();
         });
     }
 
