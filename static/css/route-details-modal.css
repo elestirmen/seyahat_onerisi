@@ -574,8 +574,9 @@
     color: white;
 }
 
+/* Disable CSS hover scale to prevent marker jitter on some browsers */
 .custom-poi-marker .poi-marker-container:hover {
-    transform: scale(1.1);
+    transform: none;
 }
 
 .custom-poi-marker .poi-marker-score {

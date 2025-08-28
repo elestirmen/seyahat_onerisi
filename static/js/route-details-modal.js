@@ -1213,7 +1213,7 @@ class RouteDetailsModal {
                             icon: L.divIcon({
                                 className: 'custom-poi-marker',
                                 html: `
-                                    <div class="poi-marker-container" style="background-color: ${categoryStyle.color}; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); transition: transform 0.2s ease;">
+                                    <div class="poi-marker-container" style="background-color: ${categoryStyle.color}; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
                                         <i class="${categoryStyle.iconClass}"></i>
                                     </div>
                                     <div class="poi-marker-score" style="position: absolute; top: -6px; right: -6px; background: #2563eb; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 10;">${index + 1}</div>
@@ -1233,20 +1233,7 @@ class RouteDetailsModal {
                             className: 'custom-poi-popup'
                         });
 
-                        // Add hover effects
-                        marker.on('mouseover', function () {
-                            const container = this.getElement()?.querySelector('.poi-marker-container');
-                            if (container) {
-                                container.style.transform = 'scale(1.1)';
-                            }
-                        });
-
-                        marker.on('mouseout', function () {
-                            const container = this.getElement()?.querySelector('.poi-marker-container');
-                            if (container) {
-                                container.style.transform = 'scale(1)';
-                            }
-                        });
+                        // Hover effects removed to prevent jitter on some browsers
 
                         markersAdded++;
                         console.log(`✅ POI marker ${index + 1} added successfully`);
