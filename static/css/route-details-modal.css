@@ -204,6 +204,7 @@
         visibility: hidden !important;
         opacity: 0 !important;
         z-index: -1 !important;
+        pointer-events: none !important;
     }
 
     .route-details-tab-content[data-tab="map"].active {
@@ -212,6 +213,7 @@
         visibility: visible !important;
         opacity: 1 !important;
         z-index: 1 !important;
+        pointer-events: auto !important;
     }
 
     /* ULTRA AGGRESSIVE map container sizing for mobile */

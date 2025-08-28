@@ -50,20 +50,20 @@ class RouteDetailsModal {
                         </button>
                     </div>
                     
-                    <div class="route-details-tabs" id="routeModalTabs">
-                        <button class="route-details-tab active" data-tab="overview">
+                    <div class="route-details-tabs" id="routeModalTabs" role="tablist" aria-label="Rota detay sekmeleri">
+                        <button class="route-details-tab active" data-tab="overview" role="tab" aria-selected="true">
                             <i class="fas fa-info-circle"></i>
                             <span>Genel Bilgi</span>
                         </button>
-                        <button class="route-details-tab" data-tab="map">
+                        <button class="route-details-tab" data-tab="map" role="tab" aria-selected="false">
                             <i class="fas fa-map"></i>
                             <span>Harita</span>
                         </button>
-                        <button class="route-details-tab" data-tab="pois">
+                        <button class="route-details-tab" data-tab="pois" role="tab" aria-selected="false">
                             <i class="fas fa-map-marker-alt"></i>
                             <span>Duraklar</span>
                         </button>
-                        <button class="route-details-tab" data-tab="media">
+                        <button class="route-details-tab" data-tab="media" role="tab" aria-selected="false">
                             <i class="fas fa-camera"></i>
                             <span>Medya</span>
                         </button>
@@ -71,7 +71,7 @@ class RouteDetailsModal {
                     
                     <div class="route-details-modal-body" id="routeModalBody">
                         <!-- Overview Tab -->
-                        <div class="route-details-tab-content active" data-tab="overview">
+                        <div class="route-details-tab-content active" data-tab="overview" role="tabpanel" aria-hidden="false">
                             <div class="route-overview-section">
                                 <h3><i class="fas fa-chart-bar"></i> Rota İstatistikleri</h3>
                                 <div class="route-stats-grid" id="routeStatsGrid">
@@ -107,7 +107,7 @@ class RouteDetailsModal {
                         </div>
                         
                         <!-- Map Tab -->
-                        <div class="route-details-tab-content" data-tab="map">
+                        <div class="route-details-tab-content" data-tab="map" role="tabpanel" aria-hidden="true">
                             <div class="route-map-container">
                                 <div id="routeModalMap" class="route-map"></div>
                                 <div class="route-map-controls">
@@ -127,7 +127,7 @@ class RouteDetailsModal {
                         </div>
                         
                         <!-- POIs Tab -->
-                        <div class="route-details-tab-content" data-tab="pois">
+                        <div class="route-details-tab-content" data-tab="pois" role="tabpanel" aria-hidden="true">
                             <div class="route-pois-list" id="routePoisList">
                                 <div class="route-details-loading">
                                     <i class="fas fa-spinner"></i>
@@ -137,7 +137,7 @@ class RouteDetailsModal {
                         </div>
                         
                         <!-- Media Tab -->
-                        <div class="route-details-tab-content" data-tab="media">
+                        <div class="route-details-tab-content" data-tab="media" role="tabpanel" aria-hidden="true">
                             <div class="route-media-grid" id="routeMediaGrid">
                                 <div class="route-details-loading">
                                     <i class="fas fa-spinner"></i>
@@ -193,6 +193,96 @@ class RouteDetailsModal {
 
         // Keyboard events
         document.addEventListener('keydown', this.handleKeydown);
+
+        // Swipe navigation for tabs on mobile
+        this.attachSwipeNavigation();
+
+        // Swipe down to close on mobile (from header)
+        this.attachSwipeToClose();
+    }
+
+    attachSwipeNavigation() {
+        const isMobile = window.innerWidth <= 768;
+        if (!isMobile) return;
+
+        const contentEl = this.modal.querySelector('.route-details-modal-content');
+        if (!contentEl) return;
+
+        let startX = 0, startY = 0, tracking = false, startedInMap = false;
+
+        const onTouchStart = (e) => {
+            if (!e.touches || e.touches.length !== 1) return;
+            const t = e.touches[0];
+            startX = t.clientX;
+            startY = t.clientY;
+            tracking = true;
+            // Don't interfere with map panning
+            startedInMap = !!(e.target.closest && (e.target.closest('#routeModalMap') || e.target.closest('.leaflet-container')));
+        };
+
+        const onTouchEnd = (e) => {
+            if (!tracking) return;
+            tracking = false;
+            if (!e.changedTouches || e.changedTouches.length !== 1) return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - startX;
+            const dy = t.clientY - startY;
+
+            // Ignore mostly vertical or short gestures
+            if (Math.abs(dy) > 40 || Math.abs(dx) < 60) return;
+            if (startedInMap) return; // let the map handle it
+
+            const tabs = ['overview', 'map', 'pois', 'media'];
+            let idx = tabs.indexOf(this.currentTab);
+            if (idx === -1) idx = 0;
+
+            if (dx < 0 && idx < tabs.length - 1) {
+                // Swipe left -> next tab
+                this.switchTab(tabs[idx + 1]);
+            } else if (dx > 0 && idx > 0) {
+                // Swipe right -> previous tab
+                this.switchTab(tabs[idx - 1]);
+            }
+        };
+
+        contentEl.addEventListener('touchstart', onTouchStart, { passive: true });
+        contentEl.addEventListener('touchend', onTouchEnd, { passive: true });
+    }
+
+    attachSwipeToClose() {
+        const isMobile = window.innerWidth <= 768;
+        if (!isMobile) return;
+
+        const headerEl = this.modal.querySelector('.route-details-modal-header');
+        const bodyEl = document.getElementById('routeModalBody');
+        if (!headerEl || !bodyEl) return;
+
+        let startX = 0, startY = 0, tracking = false;
+
+        const onTouchStart = (e) => {
+            if (!e.touches || e.touches.length !== 1) return;
+            const t = e.touches[0];
+            startX = t.clientX;
+            startY = t.clientY;
+            tracking = true;
+        };
+
+        const onTouchEnd = (e) => {
+            if (!tracking) return;
+            tracking = false;
+            if (!e.changedTouches || e.changedTouches.length !== 1) return;
+            if (bodyEl.scrollTop > 0) return; // only when scrolled to top
+            const t = e.changedTouches[0];
+            const dx = t.clientX - startX;
+            const dy = t.clientY - startY;
+            if (Math.abs(dy) > 80 && Math.abs(dx) < 60 && dy > 0) {
+                // swipe down to close
+                this.hide();
+            }
+        };
+
+        headerEl.addEventListener('touchstart', onTouchStart, { passive: true });
+        headerEl.addEventListener('touchend', onTouchEnd, { passive: true });
     }
 
     attachMapControlListeners() {
@@ -322,11 +412,22 @@ class RouteDetailsModal {
         // Prevent body scroll
         document.body.style.overflow = 'hidden';
 
+        // Reset modal scroll to top for better UX
+        const bodyEl = document.getElementById('routeModalBody');
+        if (bodyEl) bodyEl.scrollTop = 0;
+
         // Attach map control listeners after modal HTML is created
         setTimeout(() => {
             console.log('🎯 Attaching map control listeners after modal show');
             this.attachMapControlListeners();
         }, 100);
+
+        // Determine preferred initial tab (remember last or default to overview)
+        const savedTab = localStorage.getItem('rdm:lastTab');
+        if (savedTab && ['overview','map','pois','media'].includes(savedTab) && savedTab !== this.currentTab) {
+            // Initialize UI to saved tab
+            await this.switchTab(savedTab);
+        }
 
         // Load content for current tab with mobile-specific delays
         const isMobile = window.innerWidth <= 768;
@@ -438,15 +539,29 @@ class RouteDetailsModal {
 
         // Update tab buttons
         document.querySelectorAll('.route-details-tab').forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.tab === tabName);
+            const isActive = tab.dataset.tab === tabName;
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
         });
 
         // Update tab content
         document.querySelectorAll('.route-details-tab-content').forEach(content => {
-            content.classList.toggle('active', content.dataset.tab === tabName);
+            const isActive = content.dataset.tab === tabName;
+            content.classList.toggle('active', isActive);
+            content.setAttribute('aria-hidden', isActive ? 'false' : 'true');
         });
 
         this.currentTab = tabName;
+
+        // Scroll content to top when switching tabs for better UX
+        const bodyEl = document.getElementById('routeModalBody');
+        if (bodyEl) {
+            try {
+                bodyEl.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (_) {
+                bodyEl.scrollTop = 0;
+            }
+        }
 
         // Force layout reflow on mobile before loading content
         const isMobile = window.innerWidth <= 768;
@@ -517,6 +632,9 @@ class RouteDetailsModal {
                 }
             }, delay);
         }
+
+        // Persist last selected tab for next open
+        try { localStorage.setItem('rdm:lastTab', this.currentTab); } catch (_) {}
     }
 
     async loadTabContent(tabName) {
@@ -1410,8 +1528,20 @@ class RouteDetailsModal {
 
     // Helper methods
     handleKeydown(event) {
-        if (event.key === 'Escape' && this.isVisible) {
+        if (!this.isVisible) return;
+        if (event.key === 'Escape') {
             this.hide();
+            return;
+        }
+        const tabs = ['overview', 'map', 'pois', 'media'];
+        const idx = tabs.indexOf(this.currentTab);
+        if (event.key === 'ArrowRight' && idx < tabs.length - 1) {
+            this.switchTab(tabs[idx + 1]);
+        } else if (event.key === 'ArrowLeft' && idx > 0) {
+            this.switchTab(tabs[idx - 1]);
+        } else if (/^[1-4]$/.test(event.key)) {
+            const target = tabs[parseInt(event.key, 10) - 1];
+            if (target) this.switchTab(target);
         }
     }
 
