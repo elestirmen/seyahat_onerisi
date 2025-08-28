@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hızlı Test</title>
+</head>
+<body>
+    <h1>JavaScript Test</h1>
+    <div id="results"></div>
+    
+    <script src="static/js/poi-categories.js"></script>
+    <script src="static/js/route-details-modal.js"></script>
+    <script src="static/js/poi_recommendation_system.js"></script>
+    <script>
+        const results = document.getElementById('results');
+        
+        function log(msg) {
+            results.innerHTML += '<div>' + msg + '</div>';
+        }
+        
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                try {
+                    log('✅ JavaScript dosyaları yüklendi');
+                    
+                    if (typeof window.getCategoryStyle === 'function') {
+                        log('✅ getCategoryStyle fonksiyonu mevcut');
+                        
+                        const style = window.getCategoryStyle('doga');
+                        log('✅ Kategori stili alındı: ' + JSON.stringify(style));
+                    } else {
+                        log('❌ getCategoryStyle fonksiyonu bulunamadı');
+                    }
+                    
+                    if (typeof window.showRouteDetails === 'function') {
+                        log('✅ showRouteDetails fonksiyonu mevcut');
+                    } else {
+                        log('❌ showRouteDetails fonksiyonu bulunamadı');
+                    }
+                    
+                    if (typeof window.RouteDetailsModal !== 'undefined') {
+                        log('✅ RouteDetailsModal class mevcut');
+                        
+                        // Test modal instance
+                        try {
+                            const modal = window.RouteDetailsModal.getInstance();
+                            log('✅ Modal instance oluşturuldu');
+                        } catch (e) {
+                            log('❌ Modal instance hatası: ' + e.message);
+                        }
+                    } else {
+                        log('❌ RouteDetailsModal class bulunamadı');
+                    }
+                    
+                    // Test RouteDetailsPanel
+                    if (typeof window.RouteDetailsPanel !== 'undefined') {
+                        log('✅ RouteDetailsPanel class mevcut');
+                    } else {
+                        log('❌ RouteDetailsPanel class bulunamadı');
+                    }
+                    
+                } catch (error) {
+                    log('❌ JavaScript hatası: ' + error.message);
+                    log('❌ Stack trace: ' + error.stack);
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Syntax Check</title>
+</head>
+<body>
+    <h1>JavaScript Syntax Kontrolü</h1>
+    <div id="status">Kontrol ediliyor...</div>
+    
+    <script>
+        const statusEl = document.getElementById('status');
+        let errors = [];
+        
+        // Error handler
+        window.addEventListener('error', function(e) {
+            errors.push(`❌ ${e.filename}:${e.lineno} - ${e.message}`);
+            updateStatus();
+        });
+        
+        function updateStatus() {
+            if (errors.length === 0) {
+                statusEl.innerHTML = '<div style="color: green;">✅ Tüm JavaScript dosyaları syntax hatası olmadan yüklendi!</div>';
+            } else {
+                statusEl.innerHTML = '<div style="color: red;">❌ JavaScript hataları bulundu:</div>' + 
+                    errors.map(err => `<div>${err}</div>`).join('');
+            }
+        }
+        
+        // Load scripts
+        const scripts = [
+            'static/js/poi-categories.js',
+            'static/js/route-details-modal.js',
+            'static/js/poi_recommendation_system.js'
+        ];
+        
+        let loadedCount = 0;
+        
+        scripts.forEach(src => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = () => {
+                loadedCount++;
+                console.log(`✅ Loaded: ${src}`);
+                if (loadedCount === scripts.length) {
+                    setTimeout(() => {
+                        if (errors.length === 0) {
+                            updateStatus();
+                        }
+                    }, 1000);
+                }
+            };
+            script.onerror = () => {
+                errors.push(`❌ Failed to load: ${src}`);
+                updateStatus();
+            };
+            document.head.appendChild(script);
+        });
+    </script>
+</body>
+</html>

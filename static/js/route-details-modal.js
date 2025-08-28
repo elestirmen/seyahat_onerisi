@@ -337,6 +337,9 @@ class RouteDetailsModal {
                 this.initializeElevationChart();
             }, 200);
         }
+
+        // Add resize listener for responsive behavior
+        this.addResizeListener();
     }
 
     hide() {
@@ -347,6 +350,9 @@ class RouteDetailsModal {
         
         // Restore body scroll
         document.body.style.overflow = '';
+        
+        // Clean up resize listener
+        this.removeResizeListener();
         
         // Clean up map instance
         if (this.mapInstance) {
@@ -399,6 +405,8 @@ class RouteDetailsModal {
     async switchTab(tabName) {
         if (this.currentTab === tabName) return;
         
+        console.log('🔄 Switching to tab:', tabName);
+        
         // Update tab buttons
         document.querySelectorAll('.route-details-tab').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.tab === tabName);
@@ -414,11 +422,24 @@ class RouteDetailsModal {
         // Load content for new tab
         await this.loadTabContent(tabName);
 
-        // Initialize elevation chart if switching to map tab
-        if (tabName === 'map' && !this.elevationChart) {
+        // Special handling for map tab to ensure proper rendering
+        if (tabName === 'map') {
             setTimeout(() => {
-                this.initializeElevationChart();
-            }, 200);
+                if (this.mapInstance) {
+                    console.log('🗺️ Invalidating map size after tab switch');
+                    this.mapInstance.invalidateSize();
+                    this.fitMapToRoute();
+                }
+                
+                // Initialize elevation chart if elevation container exists but chart doesn't
+                const elevationContainer = document.getElementById('routeModalElevationContainer');
+                const elevationCanvas = document.getElementById('modalElevationChart');
+                
+                if (elevationContainer && !elevationCanvas) {
+                    console.log('🏔️ Initializing elevation chart after tab switch');
+                    this.initializeElevationChart();
+                }
+            }, 300);
         }
     }
 
@@ -465,31 +486,54 @@ class RouteDetailsModal {
     }
 
     async loadMapContent() {
-        if (this.mapInstance) {
-            // Map already initialized, just fit to route and load elevation
-            this.fitMapToRoute();
-            await this.loadElevationProfile();
-            return;
-        }
-
         const mapContainer = document.getElementById('routeModalMap');
         if (!mapContainer) return;
 
+        if (this.mapInstance) {
+            // Map already initialized, invalidate size for responsive behavior
+            console.log('🗺️ Map already exists, invalidating size and refreshing');
+            setTimeout(() => {
+                this.mapInstance.invalidateSize();
+                this.fitMapToRoute();
+            }, 100);
+            
+            // Check if elevation chart needs to be initialized
+            const elevationContainer = document.getElementById('routeModalElevationContainer');
+            const elevationCanvas = document.getElementById('modalElevationChart');
+            
+            if (!elevationContainer || !elevationCanvas) {
+                console.log('🏔️ Elevation chart missing, initializing...');
+                await this.initializeElevationChart();
+            } else {
+                await this.loadElevationProfile();
+            }
+            return;
+        }
+
         try {
-            // Initialize Leaflet map
-            this.mapInstance = L.map('routeModalMap').setView([38.6431, 34.8286], 10);
+            console.log('🗺️ Initializing new map instance for modal');
+            
+            // Initialize Leaflet map with proper sizing
+            this.mapInstance = L.map('routeModalMap', {
+                preferCanvas: true,
+                zoomControl: true,
+                attributionControl: true
+            }).setView([38.6431, 34.8286], 10);
 
             // Initialize base layers
             this.initializeBaseLayers();
 
-            // Display route on map
-            await this.displayRouteOnMap();
-
-            // Initialize elevation chart
-            await this.initializeElevationChart();
-
-            // Load elevation profile for the map tab
-            await this.loadElevationProfile();
+            // Wait for map to be ready, then display route
+            setTimeout(async () => {
+                console.log('🗺️ Map ready, invalidating size and displaying route');
+                this.mapInstance.invalidateSize();
+                
+                // Display route on map
+                await this.displayRouteOnMap();
+                
+                // Initialize elevation chart (this will also load the profile)
+                await this.initializeElevationChart();
+            }, 200);
 
         } catch (error) {
             console.error('❌ Error initializing map:', error);
@@ -719,6 +763,10 @@ class RouteDetailsModal {
                 routeKeys: Object.keys(this.currentRoute)
             });
 
+            // Ensure map is properly sized before adding content
+            console.log('🗺️ Invalidating map size before displaying route');
+            this.mapInstance.invalidateSize();
+
             // Clear existing layers
             this.mapInstance.eachLayer(layer => {
                 if (layer instanceof L.Marker || layer instanceof L.Polyline) {
@@ -728,30 +776,36 @@ class RouteDetailsModal {
 
             // Add route geometry if available
             if (this.currentRoute.geometry) {
+                console.log('🛣️ Adding route geometry to map');
                 const geometry = typeof this.currentRoute.geometry === 'string'
                     ? JSON.parse(this.currentRoute.geometry)
                     : this.currentRoute.geometry;
 
                 if (geometry.coordinates) {
                     const coordinates = geometry.coordinates.map(coord => [coord[1], coord[0]]);
-                    L.polyline(coordinates, {
+                    const routeLine = L.polyline(coordinates, {
                         color: '#4338ca',
                         weight: 4,
                         opacity: 0.8
                     }).addTo(this.mapInstance);
+                    
+                    console.log('✅ Route geometry added successfully');
                 }
             }
 
             // Add enhanced POI markers with detailed popups and modal integration
             const pois = this.currentRoute.pois || this.currentRoute.waypoints || [];
-            console.log('📍 Processing POIs for markers:', pois);
+            console.log('📍 Processing POIs for markers:', pois.length, 'POIs found');
 
             if (pois.length === 0) {
                 console.log('⚠️ No POIs found to display as markers');
+            } else {
+                console.log('📍 Adding POI markers to map...');
             }
 
+            let markersAdded = 0;
             pois.forEach((poi, index) => {
-                console.log(`📍 Processing POI ${index + 1}:`, poi);
+                console.log(`📍 Processing POI ${index + 1}:`, poi.name || `POI ${index + 1}`);
 
                 // More flexible coordinate detection
                 const lat = poi.latitude || poi.lat || poi.coords?.[1] || poi.location?.lat || poi.position?.lat;
@@ -761,62 +815,74 @@ class RouteDetailsModal {
                     lat, lng,
                     hasLat: !!lat,
                     hasLng: !!lng,
-                    coordinateFields: {
-                        latitude: poi.latitude,
-                        lat: poi.lat,
-                        longitude: poi.longitude,
-                        lng: poi.lng,
-                        lon: poi.lon,
-                        coords: poi.coords,
-                        location: poi.location,
-                        position: poi.position
-                    }
+                    isValidLat: !isNaN(parseFloat(lat)),
+                    isValidLng: !isNaN(parseFloat(lng))
                 });
 
-                if (lat && lng) {
+                if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
                     console.log(`✅ Creating marker for POI ${index + 1}: ${poi.name} at [${lat}, ${lng}]`);
                     const categoryStyle = this.getCategoryStyle(poi.category);
                     
-                    const marker = L.marker([lat, lng], {
-                        icon: L.divIcon({
-                            className: 'custom-poi-marker',
-                            html: `
-                                <div class="poi-marker-container" style="background-color: ${categoryStyle.color}; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); transition: transform 0.2s ease;">
-                                    <i class="${categoryStyle.iconClass}"></i>
-                                </div>
-                                <div class="poi-marker-score" style="position: absolute; top: -6px; right: -6px; background: #2563eb; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 10;">${index + 1}</div>
-                            `,
-                            iconSize: [32, 32],
-                            iconAnchor: [16, 16],
-                            popupAnchor: [0, -16]
+                    try {
+                        const marker = L.marker([parseFloat(lat), parseFloat(lng)], {
+                            icon: L.divIcon({
+                                className: 'custom-poi-marker',
+                                html: `
+                                    <div class="poi-marker-container" style="background-color: ${categoryStyle.color}; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); transition: transform 0.2s ease;">
+                                        <i class="${categoryStyle.iconClass}"></i>
+                                    </div>
+                                    <div class="poi-marker-score" style="position: absolute; top: -6px; right: -6px; background: #2563eb; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 10;">${index + 1}</div>
+                                `,
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 16],
+                                popupAnchor: [0, -16]
+                            })
                         })
-                    })
-                    .addTo(this.mapInstance);
-                    
-                    // Create detailed popup with POI detail modal integration
-                    const popupContent = this.createDetailedPOIPopup(poi, index + 1);
-                    marker.bindPopup(popupContent, {
-                        maxWidth: 300,
-                        minWidth: 250,
-                        className: 'custom-poi-popup'
-                    });
-                    
-                    // Add hover effects
-                    marker.on('mouseover', function() {
-                        this.getElement().querySelector('.poi-marker-container').style.transform = 'scale(1.1)';
-                    });
-                    
-                    marker.on('mouseout', function() {
-                        this.getElement().querySelector('.poi-marker-container').style.transform = 'scale(1)';
-                    });
+                        .addTo(this.mapInstance);
+                        
+                        // Create detailed popup with POI detail modal integration
+                        const popupContent = this.createDetailedPOIPopup(poi, index + 1);
+                        marker.bindPopup(popupContent, {
+                            maxWidth: 300,
+                            minWidth: 250,
+                            className: 'custom-poi-popup'
+                        });
+                        
+                        // Add hover effects
+                        marker.on('mouseover', function() {
+                            const container = this.getElement()?.querySelector('.poi-marker-container');
+                            if (container) {
+                                container.style.transform = 'scale(1.1)';
+                            }
+                        });
+                        
+                        marker.on('mouseout', function() {
+                            const container = this.getElement()?.querySelector('.poi-marker-container');
+                            if (container) {
+                                container.style.transform = 'scale(1)';
+                            }
+                        });
+
+                        markersAdded++;
+                        console.log(`✅ POI marker ${index + 1} added successfully`);
+                    } catch (markerError) {
+                        console.error(`❌ Error creating marker for POI ${index + 1}:`, markerError);
+                    }
+                } else {
+                    console.warn(`⚠️ Skipping POI ${index + 1} - invalid coordinates:`, { lat, lng });
                 }
             });
+            
+            console.log(`📍 Total markers added: ${markersAdded} out of ${pois.length} POIs`);
             
             // Load and display media markers for the route
             await this.loadRouteMediaMarkers();
             
-            // Fit map to show all markers
-            this.fitMapToRoute();
+            // Fit map to show all markers with a delay to ensure everything is rendered
+            setTimeout(() => {
+                console.log('🎯 Fitting map to route after marker creation');
+                this.fitMapToRoute();
+            }, 100);
             
         } catch (error) {
             console.error('❌ Error displaying route on map:', error);
@@ -1136,23 +1202,54 @@ class RouteDetailsModal {
             return;
         }
 
+        // Invalidate size first to ensure proper rendering
+        this.mapInstance.invalidateSize();
+
         const markers = [];
+        const polylines = [];
+        
         this.mapInstance.eachLayer(layer => {
             if (layer instanceof L.Marker) {
                 markers.push(layer);
+            } else if (layer instanceof L.Polyline) {
+                polylines.push(layer);
             }
         });
 
-        console.log(`📍 Found ${markers.length} markers on map`);
+        console.log(`📍 Found ${markers.length} markers and ${polylines.length} polylines on map`);
 
-        if (markers.length > 0) {
-            const group = new L.featureGroup(markers);
-            const bounds = group.getBounds();
-            console.log('🎯 Fitting to bounds:', bounds);
-            this.mapInstance.fitBounds(bounds, { padding: [20, 20] });
-            console.log('✅ Map fitted to route successfully');
+        // Collect all layers for bounds calculation
+        const allLayers = [...markers, ...polylines];
+
+        if (allLayers.length > 0) {
+            try {
+                const group = new L.featureGroup(allLayers);
+                const bounds = group.getBounds();
+                
+                // Check if bounds are valid
+                if (bounds.isValid()) {
+                    console.log('🎯 Fitting to bounds:', bounds);
+                    
+                    // Use different padding for mobile vs desktop
+                    const isMobile = window.innerWidth <= 768;
+                    const padding = isMobile ? [10, 10] : [20, 20];
+                    
+                    this.mapInstance.fitBounds(bounds, { 
+                        padding: padding,
+                        maxZoom: 16 // Prevent zooming too close
+                    });
+                    console.log('✅ Map fitted to route successfully');
+                } else {
+                    console.warn('⚠️ Invalid bounds, using default view');
+                    this.mapInstance.setView([38.6431, 34.8286], 12);
+                }
+            } catch (error) {
+                console.error('❌ Error fitting bounds:', error);
+                this.mapInstance.setView([38.6431, 34.8286], 12);
+            }
         } else {
-            console.warn('⚠️ No markers found to fit to');
+            console.warn('⚠️ No markers or polylines found to fit to, using default view');
+            this.mapInstance.setView([38.6431, 34.8286], 12);
         }
     }
 
@@ -1253,13 +1350,22 @@ class RouteDetailsModal {
 
     // Initialize elevation chart using Chart.js
     async initializeElevationChart() {
-        if (!this.currentRoute) return;
+        if (!this.currentRoute) {
+            console.log('❌ Cannot initialize elevation chart - no route data');
+            return;
+        }
 
+        console.log('🏔️ Attempting to initialize elevation chart...');
+        
         const container = document.getElementById('routeModalElevationContainer');
         if (!container) {
             console.error('❌ Elevation chart container not found');
+            console.log('🔍 Available elements with "elevation" in ID:', 
+                Array.from(document.querySelectorAll('[id*="elevation"]')).map(el => el.id));
             return;
         }
+        
+        console.log('✅ Elevation chart container found:', container);
 
         try {
             console.log('🗺️ Initializing elevation chart for route details modal');
@@ -1306,8 +1412,22 @@ class RouteDetailsModal {
 
             console.log('✅ Elevation chart HTML structure created successfully');
 
-            // Load elevation data
-            await this.loadElevationProfile();
+            // Wait for DOM to update before loading elevation data
+            setTimeout(async () => {
+                console.log('🏔️ DOM updated, checking for canvas...');
+                const canvas = document.getElementById('modalElevationChart');
+                console.log('🏔️ Canvas found:', !!canvas);
+                if (canvas) {
+                    console.log('🏔️ Canvas details:', {
+                        id: canvas.id,
+                        width: canvas.width,
+                        height: canvas.height,
+                        offsetWidth: canvas.offsetWidth,
+                        offsetHeight: canvas.offsetHeight
+                    });
+                }
+                await this.loadElevationProfile();
+            }, 100);
 
         } catch (error) {
             console.error('❌ Error initializing elevation chart:', error);
@@ -1332,11 +1452,24 @@ class RouteDetailsModal {
         try {
             console.log('🗺️ Loading elevation profile for route:', this.currentRoute.name);
 
-            const canvas = document.getElementById('modalElevationChart');
+            // Wait for canvas to be available with retry mechanism
+            let canvas = document.getElementById('modalElevationChart');
+            let retries = 0;
+            const maxRetries = 10;
+            
+            while (!canvas && retries < maxRetries) {
+                console.log(`🔄 Waiting for elevation canvas... attempt ${retries + 1}/${maxRetries}`);
+                await new Promise(resolve => setTimeout(resolve, 100));
+                canvas = document.getElementById('modalElevationChart');
+                retries++;
+            }
+            
             if (!canvas) {
-                console.error('❌ Elevation chart canvas not found');
+                console.error('❌ Elevation chart canvas not found after retries');
                 return;
             }
+            
+            console.log('✅ Elevation canvas found, proceeding with chart creation');
 
             const ctx = canvas.getContext('2d');
 
@@ -1394,6 +1527,8 @@ class RouteDetailsModal {
                     elevationData.push({
                         distance: totalDistance,
                         elevation: elevation,
+                        lat: lat,
+                        lng: lng,
                         name: i === 0 ? 'Başlangıç' : i === coordinates.length - 1 ? 'Bitiş' : null
                     });
                 }
@@ -1407,16 +1542,17 @@ class RouteDetailsModal {
                     const lat = poi.latitude || poi.lat;
                     const lng = poi.longitude || poi.lng;
 
-                    if (lat && lng) {
+                    if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
                         // Calculate cumulative distance
                         if (i > 0) {
                             const prevPoi = route.pois[i - 1];
-                            const distance = this.calculateDistance(
-                                prevPoi.latitude || prevPoi.lat,
-                                prevPoi.longitude || prevPoi.lng,
-                                lat, lng
-                            );
-                            totalDistance += distance;
+                            const prevLat = prevPoi.latitude || prevPoi.lat;
+                            const prevLng = prevPoi.longitude || prevPoi.lng;
+                            
+                            if (prevLat && prevLng) {
+                                const distance = this.calculateDistance(prevLat, prevLng, lat, lng);
+                                totalDistance += distance;
+                            }
                         }
 
                         const elevation = this.generateSimulatedElevation(lat, lng);
@@ -1424,12 +1560,49 @@ class RouteDetailsModal {
                         elevationData.push({
                             distance: totalDistance,
                             elevation: elevation,
+                            lat: parseFloat(lat),
+                            lng: parseFloat(lng),
                             name: poi.name
                         });
                     }
                 }
             }
+            // Use waypoints if available
+            else if (route.waypoints && route.waypoints.length > 0) {
+                let totalDistance = 0;
 
+                for (let i = 0; i < route.waypoints.length; i++) {
+                    const waypoint = route.waypoints[i];
+                    const lat = waypoint.latitude || waypoint.lat;
+                    const lng = waypoint.longitude || waypoint.lng;
+
+                    if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
+                        // Calculate cumulative distance
+                        if (i > 0) {
+                            const prevWaypoint = route.waypoints[i - 1];
+                            const prevLat = prevWaypoint.latitude || prevWaypoint.lat;
+                            const prevLng = prevWaypoint.longitude || prevWaypoint.lng;
+                            
+                            if (prevLat && prevLng) {
+                                const distance = this.calculateDistance(prevLat, prevLng, lat, lng);
+                                totalDistance += distance;
+                            }
+                        }
+
+                        const elevation = this.generateSimulatedElevation(lat, lng);
+
+                        elevationData.push({
+                            distance: totalDistance,
+                            elevation: elevation,
+                            lat: parseFloat(lat),
+                            lng: parseFloat(lng),
+                            name: waypoint.name || `Durak ${i + 1}`
+                        });
+                    }
+                }
+            }
+
+            console.log('📊 Generated elevation data points:', elevationData.length);
             return elevationData;
 
         } catch (error) {
@@ -2028,6 +2201,33 @@ class RouteDetailsModal {
         L.control.layers(baseLayers).addTo(this.mapInstance);
 
         console.log('✅ Base layers initialized successfully');
+    }
+
+    // Add resize listener for responsive behavior
+    addResizeListener() {
+        if (this.resizeListener) {
+            window.removeEventListener('resize', this.resizeListener);
+        }
+
+        this.resizeListener = () => {
+            if (this.mapInstance && this.isVisible && this.currentTab === 'map') {
+                console.log('🔄 Window resized, invalidating map size');
+                setTimeout(() => {
+                    this.mapInstance.invalidateSize();
+                    this.fitMapToRoute();
+                }, 100);
+            }
+        };
+
+        window.addEventListener('resize', this.resizeListener);
+    }
+
+    // Remove resize listener on cleanup
+    removeResizeListener() {
+        if (this.resizeListener) {
+            window.removeEventListener('resize', this.resizeListener);
+            this.resizeListener = null;
+        }
     }
 }
 

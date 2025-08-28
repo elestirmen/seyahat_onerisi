@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Durumu Testi</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-item { background: white; margin: 10px 0; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .status { padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 POI Sistem Durumu Testi</h1>
+        
+        <div class="test-item">
+            <h3>API Bağlantı Testi</h3>
+            <div id="apiStatus" class="status info">Test edilmedi</div>
+            <button class="btn-primary" onclick="testAPI()">API Test Et</button>
+        </div>
+        
+        <div class="test-item">
+            <h3>JavaScript Dosyaları</h3>
+            <div id="jsStatus" class="status info">Test edilmedi</div>
+            <button class="btn-primary" onclick="testJavaScript()">JS Test Et</button>
+        </div>
+        
+        <div class="test-item">
+            <h3>Modal Sistemi</h3>
+            <div id="modalStatus" class="status info">Test edilmedi</div>
+            <button class="btn-primary" onclick="testModal()">Modal Test Et</button>
+        </div>
+        
+        <div class="test-item">
+            <h3>Kategori Sistemi</h3>
+            <div id="categoryStatus" class="status info">Test edilmedi</div>
+            <button class="btn-primary" onclick="testCategories()">Kategori Test Et</button>
+        </div>
+        
+        <div class="test-item">
+            <h3>Hızlı Testler</h3>
+            <button class="btn-success" onclick="runAllTests()">Tüm Testleri Çalıştır</button>
+            <button class="btn-primary" onclick="testConsoleErrors()">Konsol Hatalarını Test Et</button>
+            <button class="btn-warning" onclick="openMainApp()">Ana Uygulamayı Aç</button>
+        </div>
+        
+        <div class="test-item">
+            <h3>Test Sonuçları</h3>
+            <div id="testResults" style="font-family: monospace; background: #f8f9fa; padding: 10px; border-radius: 4px; min-height: 100px;">
+                Test sonuçları burada görünecek...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = {
+                'success': '#28a745',
+                'error': '#dc3545',
+                'warning': '#ffc107',
+                'info': '#17a2b8'
+            }[type] || '#17a2b8';
+            
+            results.innerHTML += `<div style="color: ${color}; margin: 2px 0;">[${timestamp}] ${message}</div>`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        async function testAPI() {
+            const statusEl = document.getElementById('apiStatus');
+            statusEl.textContent = 'Test ediliyor...';
+            statusEl.className = 'status warning';
+            
+            try {
+                log('🔌 API bağlantısı test ediliyor...');
+                
+                // Test routes endpoint
+                const response = await fetch('/api/routes?limit=1');
+                if (response.ok) {
+                    const data = await response.json();
+                    statusEl.textContent = `✅ API Çalışıyor (${data.routes?.length || 0} rota)`;
+                    statusEl.className = 'status success';
+                    log('✅ API bağlantısı başarılı', 'success');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                statusEl.textContent = `❌ API Hatası: ${error.message}`;
+                statusEl.className = 'status error';
+                log(`❌ API hatası: ${error.message}`, 'error');
+            }
+        }
+        
+        function testJavaScript() {
+            const statusEl = document.getElementById('jsStatus');
+            log('📜 JavaScript dosyaları test ediliyor...');
+            
+            const tests = [
+                { name: 'POI Categories', check: () => typeof window.POI_CATEGORIES !== 'undefined' },
+                { name: 'getCategoryStyle', check: () => typeof window.getCategoryStyle === 'function' },
+                { name: 'showRouteDetails', check: () => typeof window.showRouteDetails === 'function' },
+                { name: 'RouteDetailsModal', check: () => typeof window.RouteDetailsModal !== 'undefined' }
+            ];
+            
+            let passed = 0;
+            let total = tests.length;
+            
+            tests.forEach(test => {
+                if (test.check()) {
+                    log(`✅ ${test.name} mevcut`, 'success');
+                    passed++;
+                } else {
+                    log(`❌ ${test.name} eksik`, 'error');
+                }
+            });
+            
+            if (passed === total) {
+                statusEl.textContent = `✅ Tüm JS Dosyaları Yüklü (${passed}/${total})`;
+                statusEl.className = 'status success';
+            } else {
+                statusEl.textContent = `⚠️ Eksik JS Dosyaları (${passed}/${total})`;
+                statusEl.className = 'status warning';
+            }
+        }
+        
+        function testModal() {
+            const statusEl = document.getElementById('modalStatus');
+            log('🪟 Modal sistemi test ediliyor...');
+            
+            try {
+                if (typeof window.RouteDetailsModal === 'undefined') {
+                    throw new Error('RouteDetailsModal class bulunamadı');
+                }
+                
+                const modal = window.RouteDetailsModal.getInstance();
+                if (!modal) {
+                    throw new Error('Modal instance oluşturulamadı');
+                }
+                
+                statusEl.textContent = '✅ Modal Sistemi Hazır';
+                statusEl.className = 'status success';
+                log('✅ Modal sistemi çalışıyor', 'success');
+                
+                // Test modal with sample data
+                setTimeout(() => {
+                    const sampleRoute = {
+                        id: 999,
+                        name: 'Test Rotası',
+                        description: 'Modal test rotası',
+                        total_distance: 10.5,
+                        estimated_duration: 120,
+                        poi_count: 3
+                    };
+                    
+                    modal.show(sampleRoute);
+                    log('🧪 Test modal açıldı', 'info');
+                }, 1000);
+                
+            } catch (error) {
+                statusEl.textContent = `❌ Modal Hatası: ${error.message}`;
+                statusEl.className = 'status error';
+                log(`❌ Modal hatası: ${error.message}`, 'error');
+            }
+        }
+        
+        function testCategories() {
+            const statusEl = document.getElementById('categoryStatus');
+            log('🏷️ Kategori sistemi test ediliyor...');
+            
+            try {
+                if (typeof window.getCategoryStyle !== 'function') {
+                    throw new Error('getCategoryStyle fonksiyonu bulunamadı');
+                }
+                
+                // Test some categories
+                const testCategories = ['doga', 'yemek', 'tarihi', 'eglence'];
+                let working = 0;
+                
+                testCategories.forEach(cat => {
+                    try {
+                        const style = window.getCategoryStyle(cat);
+                        if (style && style.color && style.iconClass) {
+                            log(`✅ ${cat}: ${style.color} ${style.iconClass}`, 'success');
+                            working++;
+                        } else {
+                            log(`⚠️ ${cat}: Eksik stil bilgisi`, 'warning');
+                        }
+                    } catch (e) {
+                        log(`❌ ${cat}: ${e.message}`, 'error');
+                    }
+                });
+                
+                if (working === testCategories.length) {
+                    statusEl.textContent = `✅ Kategori Sistemi Çalışıyor (${working}/${testCategories.length})`;
+                    statusEl.className = 'status success';
+                } else {
+                    statusEl.textContent = `⚠️ Kısmi Kategori Desteği (${working}/${testCategories.length})`;
+                    statusEl.className = 'status warning';
+                }
+                
+            } catch (error) {
+                statusEl.textContent = `❌ Kategori Hatası: ${error.message}`;
+                statusEl.className = 'status error';
+                log(`❌ Kategori hatası: ${error.message}`, 'error');
+            }
+        }
+        
+        async function runAllTests() {
+            log('🚀 Tüm testler başlatılıyor...', 'info');
+            
+            await testAPI();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            testJavaScript();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            testModal();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            testCategories();
+            
+            log('🎉 Tüm testler tamamlandı!', 'success');
+        }
+        
+        function openMainApp() {
+            log('🚀 Ana uygulama açılıyor...', 'info');
+            window.open('/poi_recommendation_system.html', '_blank');
+        }
+        
+        function testConsoleErrors() {
+            log('🔍 Konsol hatalarını kontrol ediliyor...', 'info');
+            
+            // Override console.error to catch errors
+            const originalError = console.error;
+            const errors = [];
+            
+            console.error = function(...args) {
+                errors.push(args.join(' '));
+                originalError.apply(console, args);
+            };
+            
+            // Test loading main scripts
+            const script1 = document.createElement('script');
+            script1.src = '/static/js/poi-categories.js';
+            script1.onload = () => {
+                log('✅ poi-categories.js yüklendi', 'success');
+                
+                const script2 = document.createElement('script');
+                script2.src = '/static/js/route-details-modal.js';
+                script2.onload = () => {
+                    log('✅ route-details-modal.js yüklendi', 'success');
+                    
+                    const script3 = document.createElement('script');
+                    script3.src = '/static/js/poi_recommendation_system.js';
+                    script3.onload = () => {
+                        log('✅ poi_recommendation_system.js yüklendi', 'success');
+                        
+                        setTimeout(() => {
+                            if (errors.length > 0) {
+                                log(`❌ ${errors.length} konsol hatası bulundu:`, 'error');
+                                errors.forEach(error => log(`  - ${error}`, 'error'));
+                            } else {
+                                log('✅ Konsol hatası bulunamadı', 'success');
+                            }
+                            
+                            // Restore original console.error
+                            console.error = originalError;
+                        }, 2000);
+                    };
+                    script3.onerror = () => log('❌ poi_recommendation_system.js yüklenemedi', 'error');
+                    document.head.appendChild(script3);
+                };
+                script2.onerror = () => log('❌ route-details-modal.js yüklenemedi', 'error');
+                document.head.appendChild(script2);
+            };
+            script1.onerror = () => log('❌ poi-categories.js yüklenemedi', 'error');
+            document.head.appendChild(script1);
+        }
+        
+        // Sayfa yüklendiğinde otomatik test
+        window.addEventListener('DOMContentLoaded', function() {
+            log('🔍 Sistem durumu test sayfası yüklendi', 'info');
+            log('💡 Testleri başlatmak için yukarıdaki butonları kullanın', 'info');
+        });
+    </script>
+</body>
+</html>
