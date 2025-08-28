@@ -483,7 +483,7 @@ class PerformanceMonitor {
             if (window.uxManager) {
                 this.uxManager = window.uxManager;
                 this.uxManager.addEventListener('uxManagerReady', () => {
-                    console.log('📊 Performance Monitor integrated with UX Manager');
+                    // Log removed for cleaner console
                 });
             } else {
                 setTimeout(checkUXManager, 100);
@@ -499,12 +499,12 @@ class PerformanceMonitor {
         this.monitorNetworkPerformance();
         this.setupPerformanceObserver();
         
-        console.log('📊 Enhanced Performance Monitor started');
+        // Log removed for cleaner console
     }
 
     stop() {
         this.isMonitoring = false;
-        console.log('📊 Performance Monitor stopped');
+        // Log removed for cleaner console
     }
 
     /**
@@ -858,7 +858,7 @@ class PerformanceMonitor {
         // Disable non-essential features
         this.disableNonEssentialFeatures();
         
-        console.log('🚀 High performance mode activated');
+        // Log removed for cleaner console
     }
 
     /**
@@ -882,7 +882,7 @@ class PerformanceMonitor {
             card.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
         });
         
-        console.log('⚡ Optimized performance mode activated');
+        // Log removed for cleaner console
     }
 
     /**
@@ -898,7 +898,7 @@ class PerformanceMonitor {
             img.classList.add('manual-load');
         });
         
-        console.log('📶 Network optimizations applied');
+        // Log removed for cleaner console
     }
 
     /**
@@ -952,7 +952,7 @@ class PerformanceMonitor {
             this.restoreNormalPerformance();
         }
         
-        console.log(`📈 Performance optimization reduced to level ${this.optimizationLevel}`);
+        // Log removed for cleaner console
     }
 
     /**
@@ -1054,7 +1054,7 @@ class PerformanceMonitor {
             window.gc();
         }
         
-        console.log('🧹 Memory cleanup performed');
+        // Log removed for cleaner console
     }
 
     /**
@@ -1146,7 +1146,7 @@ class PerformanceMonitor {
                 break;
             case 'info':
                 if (this.options.enableDetailedMetrics) {
-                    console.log(`🔵 ${message}`);
+                    // Log removed for cleaner console
                 }
                 break;
         }
@@ -1302,7 +1302,7 @@ class LazyLoader {
 
             // Simulate progressive loading
             const apiBase = window.apiBase || '/api';
-            console.log('🔍 LazyLoader using API base:', apiBase);
+            // Log removed for cleaner console
             const response = await fetch(`${apiBase}/pois`);
             if (!response.ok) throw new Error('Failed to fetch POI data');
 
@@ -1359,12 +1359,12 @@ class LazyLoader {
 }
 
 // Initialize loading manager
-console.log('🚀 Loading performance script started');
+// Log removed for cleaner console
 
 try {
     window.loadingManager = new LoadingManager();
     window.lazyLoader = new LazyLoader();
-    console.log('✅ Loading manager and lazy loader initialized successfully');
+    // Log removed for cleaner console
     
     // Dispatch a custom event to notify that loading manager is ready
     window.dispatchEvent(new CustomEvent('loadingManagerReady'));

@@ -122,4 +122,4 @@ window.rateLimitedFetch = async function(url, options = {}) {
     }
 };
 
-console.log('Rate limiter yüklendi - API çağrıları sınırlandırılacak');
+// Log removed for cleaner console

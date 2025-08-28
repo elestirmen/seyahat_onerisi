@@ -433,12 +433,12 @@ class MobileOptimizations {
 
     handleSwipeRight() {
         // Navigate to previous route or action
-        console.log('Swipe right detected');
+        // Log removed for cleaner console
     }
 
     handleSwipeLeft() {
         // Navigate to next route or action
-        console.log('Swipe left detected');
+        // Log removed for cleaner console
     }
 
     setupQuickActions() {

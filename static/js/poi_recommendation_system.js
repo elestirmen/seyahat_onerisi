@@ -6,7 +6,7 @@
 // Test function to verify API categories - REMOVED
 
 if (window.rateLimiter) {
-    console.log('✅ Rate limiting aktif - POI recommendation system API çağrıları sınırlandırılacak');
+    // Log removed for cleaner console
 }
 
 // Debug: Test geometry API endpoint - REMOVED
@@ -88,15 +88,15 @@ const categoryIconAliases = {};
 
 // Initialize from centralized config
 if (typeof window !== 'undefined' && window.createIconMap) {
-    console.log('✅ Centralized POI category configuration detected!');
+    // Log removed for cleaner console
     
     const iconMapData = window.createIconMap();
     const colorMapData = window.createColorMap();
     const aliasMapData = window.createAliasMap();
     
-    console.log('🗺️ Icon map data:', iconMapData);
-    console.log('🎨 Color map data:', colorMapData);
-    console.log('🔗 Alias map data:', aliasMapData);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
     
     Object.assign(iconMap, iconMapData);
     Object.assign(fallbackCategoryStyles, colorMapData);
@@ -104,7 +104,7 @@ if (typeof window !== 'undefined' && window.createIconMap) {
     
     // Create display names map
     const allCategories = window.getAllCategories();
-    console.log('📊 All categories from centralized config:', allCategories);
+    // Log removed for cleaner console
     
     allCategories.forEach(category => {
         fallbackCategoryNames[category.name] = category.display_name;
@@ -115,18 +115,18 @@ if (typeof window !== 'undefined' && window.createIconMap) {
         }
     });
     
-    console.log('✅ Centralized POI category configuration loaded successfully');
-    console.log('📋 Available icon categories:', Object.keys(iconMap).length);
-    console.log('🎨 Available color categories:', Object.keys(fallbackCategoryStyles).length);
-    console.log('🗺️ Available alias categories:', Object.keys(categoryIconAliases).length);
-    console.log('📝 Available display names:', Object.keys(fallbackCategoryNames).length);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
     
     // Test a few categories
-    console.log('🧪 Testing centralized config:');
+    // Log removed for cleaner console
     ['gastronomik', 'kulturel', 'doga_macera', 'macera_spor', 'gastronomi'].forEach(testCat => {
         if (window.getCategoryStyle) {
             const testResult = window.getCategoryStyle(testCat);
-            console.log(`  ${testCat}:`, testResult);
+            // Log removed for cleaner console
         }
     });
     
@@ -246,13 +246,13 @@ if (typeof window !== 'undefined' && window.createIconMap) {
  * @returns {object} Style object with color and icon
  */
 function getCategoryStyle(category) {
-    console.log('🔍 getCategoryStyle called with category:', category);
+    // Log removed for cleaner console
     
     // Use centralized category configuration if available and not the same function
     if (typeof window !== 'undefined' && window.getCategoryStyle && window.getCategoryStyle !== getCategoryStyle) {
-        console.log('✅ Using centralized category configuration');
+        // Log removed for cleaner console
         const result = window.getCategoryStyle(category);
-        console.log('🎨 Centralized result:', result);
+        // Log removed for cleaner console
         return {
             color: result.color,
             iconClass: result.iconClass,
@@ -260,24 +260,24 @@ function getCategoryStyle(category) {
         };
     }
     
-    console.log('⚠️ Using fallback category configuration');
+    // Log removed for cleaner console
     
     // Fallback to local configuration
     // Normalize category key
     const normalizedCategory = category ? category.toLowerCase().trim() : 'diger';
-    console.log('🔄 Normalized category:', normalizedCategory);
+    // Log removed for cleaner console
     
     // Check if it's a rating category that needs alias mapping
     const mappedCategory = categoryIconAliases[normalizedCategory] || normalizedCategory;
-    console.log('🗺️ Mapped category:', mappedCategory);
+    // Log removed for cleaner console
     
     // Get style from fallback styles
     const style = fallbackCategoryStyles[mappedCategory] || fallbackCategoryStyles['diger'] || { color: '#708090' };
-    console.log('🎨 Fallback style:', style);
+    // Log removed for cleaner console
     
     // Get Font Awesome icon class
     const iconClass = iconMap[mappedCategory] || iconMap['diger'] || 'fas fa-map-marker-alt';
-    console.log('🏷️ Icon class:', iconClass);
+    // Log removed for cleaner console
     
     const result = {
         color: style.color,
@@ -285,7 +285,7 @@ function getCategoryStyle(category) {
         category: mappedCategory
     };
     
-    console.log('🎯 Final getCategoryStyle result:', result);
+    // Log removed for cleaner console
     return result;
 }
 
@@ -322,10 +322,10 @@ function getCategoryDisplayName(category) {
  * @returns {L.Marker} Leaflet marker
  */
 function createCategoryMarker(lat, lng, poi, index = 0) {
-    console.log('🏷️ Creating marker for POI:', poi.name, 'Category:', poi.category);
+    // Log removed for cleaner console
     
     const categoryStyle = getCategoryStyle(poi.category || 'diger');
-    console.log('🎨 Category style for', poi.category, ':', categoryStyle);
+    // Log removed for cleaner console
     
     // Create custom marker with poi_manager_enhanced styling: EXACT same approach
     const categoryColor = categoryStyle.color;
@@ -376,14 +376,14 @@ function createCategoryMarker(lat, lng, poi, index = 0) {
 // Load categories from API
 async function loadCategories() {
     try {
-        console.log('📋 Kategoriler API\'den yükleniyor...');
+        // Log removed for cleaner console
         const response = await fetch(`${apiBase}/categories`);
         
         if (response.ok) {
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
                 const categories = await response.json();
-                console.log('✅ Kategoriler yüklendi:', categories);
+                // Log removed for cleaner console
                 
                 // Global kategori verilerini güncelle
                 categoryData = {};
@@ -399,7 +399,7 @@ async function loadCategories() {
                     };
                 });
                 
-                console.log('✅ Kategori verileri güncellendi:', categoryData);
+                // Log removed for cleaner console
                 return true;
             } else {
                 console.warn('⚠️ API yanıtı JSON değil, fallback kullanılacak');
@@ -456,7 +456,7 @@ class RouteDetailsPanel {
     }
 
     show(routeData) {
-        console.log('🎯 Showing route details panel with data:', routeData);
+        // Log removed for cleaner console
 
         this.currentRoute = routeData;
         this.updateSummary(routeData);
@@ -479,7 +479,7 @@ class RouteDetailsPanel {
     }
 
     hide() {
-        console.log('🎯 Hiding route details panel');
+        // Log removed for cleaner console
 
         this.panel.classList.remove('show');
         this.isVisible = false;
@@ -650,7 +650,7 @@ class RouteDetailsPanel {
     }
 
     static highlightStop(lat, lng) {
-        console.log('🎯 Highlighting stop at:', lat, lng);
+        // Log removed for cleaner console
 
         // Find and highlight the marker
         markers.forEach(marker => {
@@ -811,7 +811,7 @@ class RouteDetailsPanel {
                 const now = Date.now();
                 // Cache for 1 hour to reduce API calls
                 if (now - cacheData.timestamp < 60 * 60 * 1000) {
-                    console.log(`📦 Using cached elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${cacheData.elevation}m`);
+                    // Log removed for cleaner console
                     return cacheData.elevation;
                 }
             }
@@ -1021,7 +1021,7 @@ class RouteDetailsPanel {
                     if (activeElements.length > 0) {
                         const index = activeElements[0].index;
                         const point = elevationData[index];
-                        console.log(`Clicked on elevation point: ${point.name} at ${point.elevation}m`);
+                        // Log removed for cleaner console
 
                         // Highlight corresponding stop in the stops list
                         const stopItems = document.querySelectorAll('.stop-item');
@@ -1044,7 +1044,7 @@ class RouteDetailsPanel {
     }
 
     static showInFullscreenMap() {
-        console.log('🗺️ === SHOWING ROUTE IN FULLSCREEN MAP ===');
+        // Log removed for cleaner console
         const instance = RouteDetailsPanel.getInstance();
         
         if (!instance.currentRoute) {
@@ -1054,7 +1054,7 @@ class RouteDetailsPanel {
         }
 
         const route = instance.currentRoute;
-        console.log('🗺️ Route data for fullscreen map:', route);
+        // Log removed for cleaner console
 
         // Hide the route details panel
         instance.hide();
@@ -1326,7 +1326,7 @@ class RouteDetailsPanel {
 
     static async initializeFullscreenMap(route) {
         try {
-            console.log('🗺️ Initializing fullscreen map for route:', route);
+            // Log removed for cleaner console
 
             // Create new map instance for fullscreen
             const fullscreenMap = L.map('fullscreenMap', {
@@ -1363,7 +1363,7 @@ class RouteDetailsPanel {
 
     static async displayRouteOnFullscreenMap(map, route) {
         try {
-            console.log('🗺️ Displaying route on fullscreen map:', route);
+            // Log removed for cleaner console
 
             // Create layer group for route
             const routeLayerGroup = L.layerGroup().addTo(map);
@@ -1490,15 +1490,15 @@ class RouteDetailsPanel {
     }
 
     static exportToGoogleMaps() {
-        console.log('🔍 === ROUTE DETAILS PANEL EXPORT DEBUG ===');
+        // Log removed for cleaner console
         const instance = RouteDetailsPanel.getInstance();
-        console.log('🔍 Panel instance:', instance);
-        console.log('🔍 Current route:', instance.currentRoute);
-        console.log('🔍 Global currentSelectedRoute:', window.currentSelectedRoute);
-        console.log('🔍 PredefinedRoutes array:', predefinedRoutes);
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
 
         if (!instance.currentRoute) {
-            console.log('❌ No current route in panel instance');
+            // Log removed for cleaner console
             showNotification('❌ Aktif rota bulunamadı', 'error');
             return;
         }
@@ -1510,12 +1510,12 @@ class RouteDetailsPanel {
             // Try to use route data from panel if available
             if (instance.currentRoute && instance.currentRoute.waypoints && instance.currentRoute.waypoints.length > 0) {
                 // Use route panel data instead of selectedPOIs
-                console.log('🗺️ Using route panel waypoints instead of selectedPOIs');
+                // Log removed for cleaner console
                 waypoints = instance.currentRoute.waypoints.map(wp => `${wp.latitude},${wp.longitude}`);
                 waypointNames = instance.currentRoute.waypoints.map(wp => wp.name || 'POI');
             } else if (instance.currentRoute && instance.currentRoute.is_predefined) {
                 // For predefined routes, use the current selected route data
-                console.log('🗺️ Predefined route detected in panel');
+                // Log removed for cleaner console
 
                 // Try to find the route in predefinedRoutes global array
                 let routeToExport = null;
@@ -1529,12 +1529,12 @@ class RouteDetailsPanel {
                 }
 
                 if (routeToExport) {
-                    console.log('🗺️ Found route to export:', routeToExport.name);
+                    // Log removed for cleaner console
                     const routeId = routeToExport.id || routeToExport._id;
                     exportPredefinedRouteToGoogleMaps(routeId);
                     return;
                 } else {
-                    console.log('🗺️ Could not find predefined route, using fallback');
+                    // Log removed for cleaner console
                     const defaultOrigin = '38.6427,34.8283'; // Göreme
                     const defaultDestination = '38.6436,34.8128'; // Ürgüp
                     const url = `https://www.google.com/maps/dir/?api=1&origin=${defaultOrigin}&destination=${defaultDestination}&travelmode=walking`;
@@ -1549,7 +1549,7 @@ class RouteDetailsPanel {
 
                 const url = `https://www.google.com/maps/dir/?api=1&origin=${defaultOrigin}&destination=${defaultDestination}&travelmode=walking&dir_action=navigate`;
 
-                console.log('🗺️ No POIs or route data, opening default Cappadocia route');
+                // Log removed for cleaner console
                 window.open(url, '_blank');
                 showNotification('🗺️ Varsayılan Kapadokya rotası Google Maps\'te açıldı!', 'info');
                 return;
@@ -1588,11 +1588,11 @@ class RouteDetailsPanel {
         // Create URL with coordinates (most reliable)
         const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypointParam}&travelmode=walking`;
 
-        console.log('🗺️ Exporting route to Google Maps:');
-        console.log('Origin:', origin, startLocation ? `(${startLocation.name})` : '');
-        console.log('Destination:', destination, selectedPOIs.length > 0 ? `(${selectedPOIs[selectedPOIs.length - 1].name})` : '');
-        console.log('Waypoints:', waypoints.slice(1, -1));
-        console.log('URL:', url);
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
 
         window.open(url, '_blank');
 
@@ -1714,7 +1714,7 @@ class RouteDetailsPanel {
             });
         }
 
-        console.log(`🎯 Focused on segment ${segmentIndex + 1}: ${segment.from} → ${segment.to}`);
+        // Log removed for cleaner console
     }
 }
 // Create custom marker icons - EXACTLY matching poi_manager_enhanced style
@@ -1780,7 +1780,7 @@ async function loadPOIMedia(poiId) {
             };
 
             if (apiData.media && Array.isArray(apiData.media)) {
-                console.log('Processing media for POI:', poiId, apiData.media);
+                // Log removed for cleaner console
                 apiData.media.forEach(item => {
                     switch (item.media_type) {
                         case 'image':
@@ -1828,9 +1828,9 @@ async function loadPOIMedia(poiId) {
 
 // Create media gallery HTML
 function createMediaGallery(media, poi = {}) {
-    console.log('Creating media gallery with:', media);
+    // Log removed for cleaner console
     if (!media || (!media.images?.length && !media.videos?.length && !media.audio?.length && !media.models?.length)) {
-        console.log('No media found or empty arrays');
+        // Log removed for cleaner console
         return '';
     }
 
@@ -2485,7 +2485,7 @@ function announceToScreenReader(message) {
 //                 { type: 'audio', path: '/test-audio.mp3', title: 'Test Ses' }
 //             ];
 // 
-//             console.log('Testing media modal with sample data...');
+//             // Log removed for cleaner console
 //             showMediaModal(testMedia, 0, 'Test POI');
 //         }
 // 
@@ -2510,7 +2510,7 @@ function showMediaError(message, canRetry = true) {
 }
 
 function retryLoadMedia() {
-    console.log('Retrying media load...');
+    // Log removed for cleaner console
     loadCurrentMedia();
 }
 
@@ -2682,7 +2682,7 @@ function setupImageDrag(img) {
 // Video load handler
 function onVideoLoad(video) {
     video.style.opacity = '1';
-    console.log('Video loaded:', video.duration, 'seconds');
+    // Log removed for cleaner console
     // Preload adjacent media after current media loads
     setTimeout(preloadAdjacentMedia, 500);
 }
@@ -2791,7 +2791,7 @@ function getEstimatedElevation(lat, lng) {
     // Ensure reasonable bounds for the region (900-1300m)
     const clampedElevation = Math.max(900, Math.min(1300, estimatedElevation));
 
-    console.log(`📏 Estimated elevation for ${lat.toFixed(4)}, ${lng.toFixed(4)}: ${clampedElevation}m`);
+    // Log removed for cleaner console
     return clampedElevation;
 }
 
@@ -2801,18 +2801,18 @@ function openInGoogleMaps(lat, lng, name) {
     const coords = `${lat},${lng}`;
     const url = `https://www.google.com/maps/search/?api=1&query=${coords}`;
 
-    console.log('🗺️ Opening POI in Google Maps:', name, 'at', coords);
+    // Log removed for cleaner console
     window.open(url, '_blank');
 }
 
 // Add to route with throttling
 function addToRoute(poi) {
-    console.log('➕ Adding POI to route:', poi.name);
+    // Log removed for cleaner console
     const poiId = poi.id || poi._id;
     if (!selectedPOIs.find(p => (p.id || p._id) === poiId)) {
         poi.id = poiId; // Normalize ID
         selectedPOIs.push(poi);
-        console.log('📝 Updated selectedPOIs:', selectedPOIs.length);
+        // Log removed for cleaner console
         updateRouteDisplay();
 
         // Throttle route creation to prevent rapid requests
@@ -2825,7 +2825,7 @@ function addToRoute(poi) {
         }, 1000); // 1 second delay
 
     } else {
-        console.log('⚠️ POI already in route');
+        // Log removed for cleaner console
         showNotification('Bu POI zaten rotada mevcut', 'info');
     }
 }
@@ -2933,15 +2933,15 @@ function updateRouteDisplay() {
 
 // Create route using walking paths
 async function createRoute() {
-    console.log('🚶 Creating walking route with selectedPOIs:', selectedPOIs.length, 'startLocation:', startLocation);
+    // Log removed for cleaner console
 
     if (selectedPOIs.length < 1) {
-        console.log('❌ Not enough POIs for route');
+        // Log removed for cleaner console
         return;
     }
 
     if (routingControl) {
-        console.log('🗑️ Removing existing route control');
+        // Log removed for cleaner console
         map.removeControl(routingControl);
         routingControl = null;
     }
@@ -2965,7 +2965,7 @@ async function createRoute() {
             lng: startLocation.longitude,
             name: startLocation.name
         });
-        console.log('📍 Added start location to waypoints');
+        // Log removed for cleaner console
     }
 
     selectedPOIs.forEach((poi, index) => {
@@ -2974,13 +2974,13 @@ async function createRoute() {
             lng: poi.longitude,
             name: poi.name
         });
-        console.log(`📍 Added POI ${index + 1}: ${poi.name}`);
+        // Log removed for cleaner console
     });
 
-    console.log('🗺️ Total waypoints:', waypoints.length);
+    // Log removed for cleaner console
 
     if (waypoints.length < 2) {
-        console.log('❌ Need at least 2 waypoints for routing');
+        // Log removed for cleaner console
         return;
     }
 
@@ -2988,7 +2988,7 @@ async function createRoute() {
     addStartEndMarkers(waypoints);
 
     try {
-        console.log('🚶 Requesting walking route from API...');
+        // Log removed for cleaner console
 
         // Call smart route API (automatically chooses walking or driving)
         const response = await fetch(`${apiBase}/route/smart`, {
@@ -3006,7 +3006,7 @@ async function createRoute() {
         }
 
         const routeData = await response.json();
-        console.log('🗺️ Walking route received:', routeData);
+        // Log removed for cleaner console
 
         if (routeData.success && routeData.route) {
             // Draw walking route on map
@@ -3020,7 +3020,7 @@ async function createRoute() {
 
     } catch (error) {
         console.error('Walking route error:', error);
-        console.log('🔄 Fallback: Using simple line connections...');
+        // Log removed for cleaner console
 
         // Fallback to simple line connections
         await createSimpleRoute(waypoints);
@@ -3029,7 +3029,7 @@ async function createRoute() {
 
 // Create simple route with straight lines (fallback)
 async function createSimpleRoute(waypoints) {
-    console.log('📏 Creating simple route with straight lines');
+    // Log removed for cleaner console
 
     if (waypoints.length < 2) return;
 
@@ -3128,7 +3128,7 @@ async function createSimpleRoute(waypoints) {
         totalDistance += getDistance(latlngs[i][0], latlngs[i][1], latlngs[i + 1][0], latlngs[i + 1][1]);
     }
 
-    console.log(`📏 Basit rota oluşturuldu: ${totalDistance.toFixed(2)} km (düz çizgi mesafesi)`);
+    // Log removed for cleaner console
 
     // Create elevation chart for dynamic route
     if (window.ElevationChart && waypoints.length > 1) {
@@ -3281,7 +3281,7 @@ function clearRoute() {
     // Remove start/end markers
     removeStartEndMarkers();
 
-    console.log('🗑️ Route cleared');
+    // Log removed for cleaner console
 }
 
 // Function to remove start and end markers
@@ -3434,7 +3434,7 @@ function addStartEndMarkers(waypoints) {
             `
         );
 
-    console.log('✅ Start and end markers added to map');
+    // Log removed for cleaner console
 }
 
 // Function to show route options popup when clicking on route
@@ -3690,7 +3690,7 @@ function exportPredefinedRouteToGoogleMaps(routeId) {
                     }
                 }
                 
-                console.log('🗺️ Using geometry coordinates (matches map display):', waypoints.length);
+                // Log removed for cleaner console
             }
         } catch (error) {
             console.warn('⚠️ Error parsing geometry:', error);
@@ -3709,7 +3709,7 @@ function exportPredefinedRouteToGoogleMaps(routeId) {
             origin = waypoints[0];
             destination = waypoints[waypoints.length - 1];
             
-            console.log('🗺️ Using POI waypoints (fallback):', waypoints.length);
+            // Log removed for cleaner console
         }
     }
     
@@ -3739,20 +3739,20 @@ function exportPredefinedRouteToGoogleMaps(routeId) {
             origin = foundLocations[0];
             destination = foundLocations[foundLocations.length - 1];
             waypoints = foundLocations;
-            console.log('🗺️ Using name-based coordinates:', foundLocations.length);
+            // Log removed for cleaner console
         } else if (foundLocations.length === 1) {
             // Single location found, create a small route around it
             origin = foundLocations[0];
             const [lat, lng] = foundLocations[0].split(',').map(parseFloat);
             destination = `${lat + 0.01},${lng + 0.01}`; // Small offset
             waypoints = [origin, destination];
-            console.log('🗺️ Using single location with offset');
+            // Log removed for cleaner console
         } else {
             // Default: Central Cappadocia area
             origin = '38.6427,34.8283'; // Göreme
             destination = '38.6436,34.8128'; // Ürgüp
             waypoints = [origin, destination];
-            console.log('🗺️ Using default Cappadocia coordinates');
+            // Log removed for cleaner console
         }
     }
 
@@ -3782,12 +3782,12 @@ function exportPredefinedRouteToGoogleMaps(routeId) {
                          routeName.includes('castle');
     
     // DEBUG: Log export information
-    console.log('🔍 GOOGLE MAPS EXPORT DEBUG:');
-    console.log('📍 Exporting route:', route.name);
-    console.log('🏷️ Route type:', route.route_type); 
-    console.log('🥾 Is hiking route?', isHikingRoute);
-    console.log('📊 Waypoints count:', waypoints.length);
-    console.log('📍 Waypoints:', waypoints);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console 
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
     
     // SIMPLE AND WORKING: Just use basic Google Maps directions
     let travelMode = 'walking';
@@ -3797,24 +3797,24 @@ function exportPredefinedRouteToGoogleMaps(routeId) {
 
     const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypointParam}&travelmode=${travelMode}`;
     
-    console.log('🗺️ Using simple directions format');
-    console.log('🗺️ Origin:', origin);
-    console.log('🗺️ Destination:', destination);
-    console.log('🗺️ Travel mode:', travelMode);
-    console.log('🗺️ Waypoints:', waypoints.length);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
     
     showNotification(`🗺️ "${route.name}" Google Maps'te açıldı!`, 'success');
 
-    console.log('🗺️ === FINAL EXPORT SUMMARY ===');
-    console.log('🗺️ Route name:', route.name);
-    console.log('🗺️ Generated URL:', url);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
 
     window.open(url, '_blank');
 }
 
 // Add navigation route from current location to route start
 async function addNavigationToRoute(route) {
-    console.log('🧭 Adding navigation route from current location');
+    // Log removed for cleaner console
     
     // Check if route has valid geometry or POIs for start point
     let routeStartCoord = null;
@@ -3822,17 +3822,17 @@ async function addNavigationToRoute(route) {
     if (route.geometry && route.geometry.coordinates && route.geometry.coordinates.length > 0) {
         const startCoord = route.geometry.coordinates[0];
         routeStartCoord = [startCoord[1], startCoord[0]]; // lat, lng
-        console.log('📍 Route start from geometry:', routeStartCoord);
+        // Log removed for cleaner console
     } else if (route.pois && route.pois.length > 0) {
         const firstPoi = route.pois[0];
         if (firstPoi.lat && (firstPoi.lng || firstPoi.lon)) {
             routeStartCoord = [firstPoi.lat, firstPoi.lng || firstPoi.lon];
-            console.log('📍 Route start from POI:', routeStartCoord);
+            // Log removed for cleaner console
         }
     }
     
     if (!routeStartCoord) {
-        console.log('⚠️ Could not determine route start point');
+        // Log removed for cleaner console
         return;
     }
     
@@ -3849,7 +3849,7 @@ async function addNavigationToRoute(route) {
         navigator.geolocation.getCurrentPosition(
             async (position) => {
                 const userLocation = [position.coords.latitude, position.coords.longitude];
-                console.log('📱 User location:', userLocation);
+                // Log removed for cleaner console
                 
                 // Calculate distance to route start
                 const distance = getDistance(userLocation[0], userLocation[1], routeStartCoord[0], routeStartCoord[1]);
@@ -3901,9 +3901,9 @@ async function createNavigationRoute(fromCoord, toCoord, routeName, distanceKm) 
     }
     
     try {
-        console.log('🗺️ Creating navigation route');
-        console.log('📍 From:', fromCoord);
-        console.log('📍 To:', toCoord);
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
         
         // Add user location marker
         const userMarker = L.marker(fromCoord, {
@@ -3927,7 +3927,7 @@ async function createNavigationRoute(fromCoord, toCoord, routeName, distanceKm) 
                 const data = await response.json();
                 if (data.routes && data.routes.length > 0) {
                     routeGeometry = data.routes[0].geometry.coordinates;
-                    console.log('🛣️ Got routing geometry with', routeGeometry.length, 'points');
+                    // Log removed for cleaner console
                 }
             }
         } catch (error) {
@@ -3976,7 +3976,7 @@ async function createNavigationRoute(fromCoord, toCoord, routeName, distanceKm) 
 // Refresh media markers for a given route
 async function refreshMediaMarkers(routeId = window.currentRouteId) {
     const targetId = routeId ?? window.currentRouteId;
-    console.log('🔄 Refreshing media markers for route:', targetId);
+    // Log removed for cleaner console
 
     if (!predefinedMap || !predefinedMapInitialized) {
         console.warn('⚠️ Predefined map not initialized');
@@ -4010,7 +4010,7 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
         const mediaItems = Array.isArray(mediaJson) ? mediaJson : (mediaJson.media || []);
         const locatedMedia = mediaItems.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
 
-        console.log('📸 Found', locatedMedia.length, 'located media items');
+        // Log removed for cleaner console
 
 
         const existingMediaMarkers = predefinedMapLayers.filter(layer =>
@@ -4025,7 +4025,7 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
         });
 
         if (locatedMedia.length > 0) {
-            console.log('📸 Adding', locatedMedia.length, 'media markers to predefined map');
+            // Log removed for cleaner console
             locatedMedia.forEach((media, index) => {
                 const lat = parseFloat(media.lat ?? media.latitude);
                 const lng = parseFloat(media.lng ?? media.longitude ?? media.lon);
@@ -4058,7 +4058,7 @@ async function refreshMediaMarkers(routeId = window.currentRouteId) {
             showNotification('Medya işaretleri başarıyla yenilendi', 'success');
             return true;
         } else {
-            console.log('ℹ️ No located media found for this route');
+            // Log removed for cleaner console
             showNotification('Bu rota için konumlu medya bulunamadı', 'info');
 
             return false;
@@ -4094,7 +4094,7 @@ function exportPredefinedRouteToGoogleEarth(routeId) {
                 for (let i = 0; i < coords.length; i += step) {
                     waypoints.push(`${coords[i][1]},${coords[i][0]}`); // lat,lng
                 }
-                console.log('🌍 Using geometry coordinates for Google Earth:', waypoints.length);
+                // Log removed for cleaner console
             }
         } catch (error) {
             console.warn('⚠️ Error parsing geometry for Google Earth:', error);
@@ -4109,14 +4109,14 @@ function exportPredefinedRouteToGoogleEarth(routeId) {
                 const lng = poi.lng !== undefined ? poi.lng : poi.lon;
                 waypoints.push(`${poi.lat},${lng}`);
             });
-            console.log('🌍 Using POI waypoints for Google Earth:', waypoints.length);
+            // Log removed for cleaner console
         }
     }
     
     // Default fallback
     if (waypoints.length < 2) {
         waypoints = ['38.6427,34.8283', '38.6436,34.8128']; // Göreme to Ürgüp
-        console.log('🌍 Using default coordinates for Google Earth');
+        // Log removed for cleaner console
     }
 
     // Google Earth Web link with multiple waypoints
@@ -4124,9 +4124,9 @@ function exportPredefinedRouteToGoogleEarth(routeId) {
     const firstPoint = waypoints[0];
     const earthUrl = `https://earth.google.com/web/search/${firstPoint}/@${firstPoint},1000d/data=CgIgAQ%3D%3D`;
     
-    console.log('🌍 Exporting to Google Earth Web:', route.name);
-    console.log('🌍 Waypoints:', waypoints.length);
-    console.log('🌍 URL:', earthUrl);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
     
     window.open(earthUrl, '_blank');
     showNotification(`🌍 "${route.name}" Google Earth'te açıldı!`, 'success');
@@ -4228,7 +4228,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 }
 // Draw walking route on map
 function drawWalkingRoute(routeInfo) {
-    console.log('🎨 Drawing walking route:', routeInfo);
+    // Log removed for cleaner console
 
     // Remove existing route layers and any simple fallback line
     map.eachLayer(function (layer) {
@@ -4307,7 +4307,7 @@ function drawWalkingRoute(routeInfo) {
         }
     });
 
-    console.log('✅ Walking route drawn successfully');
+    // Log removed for cleaner console
 }
 
 // Removed createRoutePopupContent - now using unified route details panel
@@ -4349,12 +4349,12 @@ function openRouteInGoogleMaps(segment) {
         originParam = encodeURIComponent(`${segment.from}, Ürgüp`) + '+' + originCoords;
         destinationParam = encodeURIComponent(`${segment.to}, Ürgüp`) + '+' + destCoords;
 
-        console.log('�️ Openming segment with place names:', segment.from, '→', segment.to);
+        // Log removed for cleaner console
     } else {
         // Fallback to coordinates only
         originParam = `${startCoord.lat},${startCoord.lng}`;
         destinationParam = `${endCoord.lat},${endCoord.lng}`;
-        console.log('🗺️ Opening segment with coordinates only');
+        // Log removed for cleaner console
     }
 
     // Use coordinates for reliable routing
@@ -4363,8 +4363,8 @@ function openRouteInGoogleMaps(segment) {
 
     const url = `https://www.google.com/maps/dir/?api=1&origin=${originCoords}&destination=${destCoords}${waypoints}&travelmode=walking`;
 
-    console.log('🗺️ Opening segment:', segment.from || 'Start', '→', segment.to || 'End');
-    console.log('🗺️ Segment URL:', url);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
     window.open(url, '_blank');
     showNotification('🗺️ Segment Google Maps\'te açıldı!', 'success');
 }
@@ -4415,7 +4415,7 @@ function exportToGoogleMaps() {
         
         const url = `https://www.google.com/maps/dir/?api=1&origin=${defaultOrigin}&destination=${defaultDestination}&travelmode=walking&dir_action=navigate`;
         
-        console.log('🗺️ No POIs selected, opening default Cappadocia route');
+        // Log removed for cleaner console
         window.open(url, '_blank');
         showNotification('🗺️ Varsayılan Kapadokya rotası Google Maps\'te açıldı!', 'info');
         return;
@@ -4456,11 +4456,11 @@ function exportToGoogleMaps() {
     // Enhanced URL with proper travel mode and optimization
     const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypointParam}&travelmode=walking&dir_action=navigate`;
 
-    console.log('🗺️ Exporting route to Google Maps:');
-    console.log('Origin:', origin, startLocation ? `(${startLocation.name})` : '');
-    console.log('Destination:', destination, selectedPOIs.length > 0 ? `(${selectedPOIs[selectedPOIs.length - 1].name})` : '');
-    console.log('Waypoints:', waypoints.slice(1, -1));
-    console.log('URL:', url);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
 
     window.open(url, '_blank');
     showNotification('🗺️ Google Maps\'te navigasyon başlatıldı!', 'success');
@@ -4474,7 +4474,7 @@ function exportFullRoute() {
 
 // Show route information
 function showRouteInfo(routeInfo) {
-    console.log('📊 Showing route info:', routeInfo);
+    // Log removed for cleaner console
 
     let routeInfoDiv = document.getElementById('routeInfo');
     if (!routeInfoDiv) {
@@ -4636,7 +4636,7 @@ function getBrowserName() {
 
 // Handle location permission choice
 async function handleLocationPermission(choice) {
-    console.log('🎯 User chose:', choice);
+    // Log removed for cleaner console
     const overlay = document.getElementById('locationPermissionOverlay');
     overlay.classList.remove('show');
 
@@ -4655,7 +4655,7 @@ async function handleLocationPermission(choice) {
     // Check browser permission state before requesting
     try {
         const permission = await navigator.permissions.query({ name: 'geolocation' });
-        console.log('🔍 Browser permission state:', permission.state);
+        // Log removed for cleaner console
 
         if (permission.state === 'denied') {
             // Browser has denied permission, show detailed instructions
@@ -4672,7 +4672,7 @@ async function handleLocationPermission(choice) {
 
 // Request actual location from browser
 function requestActualLocation() {
-    console.log('📱 Requesting actual location from browser...');
+    // Log removed for cleaner console
     const options = {
         enableHighAccuracy: false,
         timeout: 15000,
@@ -4681,14 +4681,14 @@ function requestActualLocation() {
 
     navigator.geolocation.getCurrentPosition(
         (position) => {
-            console.log('✅ Position received:', position);
+            // Log removed for cleaner console
             const location = {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
                 accuracy: position.coords.accuracy
             };
             userLocation = location;
-            console.log('📍 User location set:', location);
+            // Log removed for cleaner console
 
             if (window.locationPermissionResolve) {
                 window.locationPermissionResolve(location);
@@ -4730,11 +4730,11 @@ function requestActualLocation() {
 // Get user's current location with native browser dialog
 async function getCurrentLocation() {
     return new Promise(async (resolve, reject) => {
-        console.log('🔍 Checking geolocation support...');
+        // Log removed for cleaner console
 
         // First check if we're on HTTPS or localhost
         const isSecureContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
-        console.log('🔒 Secure context:', isSecureContext);
+        // Log removed for cleaner console
 
         if (!navigator.geolocation) {
             console.error('❌ Geolocation not supported');
@@ -4755,14 +4755,14 @@ async function getCurrentLocation() {
         // Check permission state for debugging
         try {
             const permission = await navigator.permissions.query({ name: 'geolocation' });
-            console.log('🔍 Permission state:', permission.state);
+            // Log removed for cleaner console
         } catch (e) {
             console.warn('Permission API not supported');
         }
 
         // Always try getCurrentPosition - even if permission state is 'denied'
         // This allows the native dialog to show if user has changed browser settings
-        console.log('📱 Requesting geolocation permission...');
+        // Log removed for cleaner console
 
         const options = {
             enableHighAccuracy: false,
@@ -4772,14 +4772,14 @@ async function getCurrentLocation() {
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                console.log('✅ Position received:', position);
+                // Log removed for cleaner console
                 const location = {
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
                     accuracy: position.coords.accuracy
                 };
                 userLocation = location;
-                console.log('📍 User location set:', location);
+                // Log removed for cleaner console
                 resolve(location);
             },
             (error) => {
@@ -4821,17 +4821,17 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
 
 // Set start location for route
 async function setStartLocation() {
-    console.log('📍 Requesting user location...');
+    // Log removed for cleaner console
 
     try {
-        console.log('🔍 Checking geolocation support...');
+        // Log removed for cleaner console
         if (!navigator.geolocation) {
             throw new Error('Bu tarayıcı konum hizmetlerini desteklemiyor');
         }
 
-        console.log('📱 Getting current position...');
+        // Log removed for cleaner console
         const location = await getCurrentLocation();
-        console.log('✅ Location received:', location);
+        // Log removed for cleaner console
 
         startLocation = {
             name: 'Mevcut Konumum',
@@ -4842,7 +4842,7 @@ async function setStartLocation() {
 
         // Add start location marker to map
         if (map) {
-            console.log('📍 Adding start location marker to map');
+            // Log removed for cleaner console
 
             // Remove existing start location markers
             map.eachLayer(function (layer) {
@@ -4894,7 +4894,7 @@ async function setStartLocation() {
 
             // Center map on user location
             map.setView([location.latitude, location.longitude], 15);
-            console.log('🗺️ Map centered on user location');
+            // Log removed for cleaner console
         }
 
         updateRouteDisplay();
@@ -5057,7 +5057,7 @@ function optimizeRouteAdvanced() {
         return;
     }
 
-    console.log('🔄 Rota optimize ediliyor...');
+    // Log removed for cleaner console
 
     // Include start location if available
     let allPoints = [...selectedPOIs];
@@ -5091,7 +5091,7 @@ function optimizeRouteAdvanced() {
                     bestRoute = newRoute;
                     bestDistance = newDistance;
                     improved = true;
-                    console.log(`📈 İyileştirme bulundu! Yeni mesafe: ${bestDistance.toFixed(2)} km`);
+                    // Log removed for cleaner console
                 }
             }
         }
@@ -5152,7 +5152,7 @@ function getRouteStatistics() {
 
 // Route Tab Management Functions
 function initializeRouteTabs() {
-    console.log('🔄 Initializing route tabs...');
+    // Log removed for cleaner console
     
     const dynamicTab = document.getElementById('dynamicRoutesTab');
     const predefinedTab = document.getElementById('predefinedRoutesTab');
@@ -5171,10 +5171,10 @@ function initializeRouteTabs() {
     // Initialize predefined routes functionality
     initializePredefinedRoutes();
     
-    console.log('✅ Route tabs initialized');
+    // Log removed for cleaner console
 }
 async function switchTab(tabName) {
-    console.log(`🔄 Switching to tab: ${tabName}`);
+    // Log removed for cleaner console
     
     const previousTab = currentTab;
     currentTab = tabName;
@@ -5227,7 +5227,7 @@ async function switchTab(tabName) {
         // Initialize predefined routes map if not already initialized (lazy loading)
         addTimeout(async () => {
             if (!predefinedMapInitialized) {
-                console.log('🗺️ Lazy loading predefined routes map...');
+                // Log removed for cleaner console
                 await initializePredefinedMap();
             } else if (predefinedMap) {
                 // Refresh map size in case it was hidden
@@ -5245,7 +5245,7 @@ async function switchTab(tabName) {
 function cleanupTabState(tabName) {
     if (!tabName) return;
     
-    console.log(`🧹 Cleaning up tab state for: ${tabName}`);
+    // Log removed for cleaner console
     
     if (tabName === 'dynamic-routes') {
         // Clean up dynamic routes state if needed
@@ -5277,7 +5277,7 @@ function cleanupTabState(tabName) {
 }
 
 function initializePredefinedRoutes() {
-    console.log('🔄 Initializing predefined routes functionality...');
+    // Log removed for cleaner console
     
     // Initialize filter event listeners
     const routeTypeFilter = document.getElementById('routeTypeFilter');
@@ -5314,7 +5314,7 @@ function initializePredefinedRoutes() {
         fitMapBtn.addEventListener('click', fitMapToRoutes);
     }
     
-    console.log('✅ Predefined routes functionality initialized');
+    // Log removed for cleaner console
 }
 
 // Predefined routes map management
@@ -5327,7 +5327,7 @@ let mapInitializationPromise = null;
 let mapInitialized = false;
 
 async function initializePredefinedMap() {
-    console.log('🗺️ Initializing predefined routes map...');
+    // Log removed for cleaner console
     
     const mapContainer = document.getElementById('predefinedRoutesMap');
     const loadingElement = document.getElementById('predefinedMapLoading');
@@ -5356,7 +5356,7 @@ async function initializePredefinedMap() {
             // Add base layers
             addBaseLayers(predefinedMap);
             
-            console.log('✅ Predefined map created successfully');
+            // Log removed for cleaner console
         }
         
         // Initialize map layers array
@@ -5393,10 +5393,10 @@ async function initializePredefinedMap() {
 }
 
 async function displayRouteOnMap(route) {
-    console.log('🗺️ === DISPLAYING ROUTE ON MAP ===');
-    console.log('🗺️ Displaying route on predefined map:', route);
-    console.log('🔍 Route geometry:', route.geometry);
-    console.log('🔍 Route POIs:', route.pois);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
     
     if (!predefinedMap || !predefinedMapInitialized) {
         console.warn('⚠️ Predefined map not initialized, initializing now...');
@@ -5408,7 +5408,7 @@ async function displayRouteOnMap(route) {
         return;
     }
     
-    console.log('🗺️ Predefined map is ready, proceeding with route display...');
+    // Log removed for cleaner console
     console.log('🔍 Map state:', {
         mapExists: !!predefinedMap,
         mapInitialized: predefinedMapInitialized,
@@ -5422,7 +5422,7 @@ async function displayRouteOnMap(route) {
         mapContainer.style.visibility = 'visible';
         mapContainer.style.opacity = '1';
         predefinedMap.invalidateSize();
-        console.log('🔄 Map container visibility and size refreshed');
+        // Log removed for cleaner console
         console.log('🔍 Map container dimensions:', {
             width: mapContainer.offsetWidth,
             height: mapContainer.offsetHeight,
@@ -5447,23 +5447,23 @@ async function displayRouteOnMap(route) {
         
         // Display route geometry if available
         if (route.geometry) {
-            console.log('🔍 Route has geometry, processing...');
+            // Log removed for cleaner console
             let geometryData = route.geometry;
             if (typeof geometryData === 'string') {
                 try {
                     geometryData = JSON.parse(geometryData);
-                    console.log('✅ Parsed geometry from string:', geometryData);
+                    // Log removed for cleaner console
                 } catch (e) {
                     console.warn('⚠️ Could not parse route geometry:', e);
                     return;
                 }
             }
             
-            console.log('🔍 Processing geometry data:', geometryData);
+            // Log removed for cleaner console
             
             if (geometryData.coordinates || geometryData.geometry) {
                 const coords = geometryData.coordinates || geometryData.geometry.coordinates;
-                console.log('🔍 Found coordinates:', coords ? coords.length : 'none', 'points');
+                // Log removed for cleaner console
                 if (coords && coords.length > 0) {
                     // Create route polyline
                     const routeLine = L.polyline(coords.map(coord => [coord[1], coord[0]]), {
@@ -5516,7 +5516,7 @@ async function displayRouteOnMap(route) {
                     
                     // CRITICAL: Also add POI markers even when we have geometry
                     if (route.pois && route.pois.length > 0) {
-                        console.log('🔍 Adding POI markers along with geometry...');
+                        // Log removed for cleaner console
                         const validPois = route.pois.filter(poi => poi.lat && (poi.lng || poi.lon));
                         
                         validPois.forEach((poi, index) => {
@@ -5583,13 +5583,13 @@ async function displayRouteOnMap(route) {
                             bounds.extend(latLng);
                         });
                         
-                        console.log('✅ Added', validPois.length, 'POI markers along with route geometry');
+                        // Log removed for cleaner console
                     }
                     
                     // Fit map to combined bounds (route + POIs)
                     predefinedMap.fitBounds(bounds, { padding: [20, 20] });
                     
-                    console.log('✅ Route with POIs displayed on predefined map');
+                    // Log removed for cleaner console
                     
                     // Create elevation chart for predefined route with geometry
                     if (window.ElevationChart && coords && coords.length > 1) {
@@ -5600,10 +5600,10 @@ async function displayRouteOnMap(route) {
 
                         // Use elevation_profile from database if available
                         if (route.elevation_profile && route.elevation_profile.points) {
-                            console.log('📊 Using pre-calculated elevation profile from database');
+                            // Log removed for cleaner console
                             await predefinedElevationChart.loadElevationProfile(route.elevation_profile);
                         } else {
-                            console.log('📊 Calculating elevation profile from geometry');
+                            // Log removed for cleaner console
                             await predefinedElevationChart.loadRouteElevation({
                                 geometry: {
                                     coordinates: coords
@@ -5619,11 +5619,11 @@ async function displayRouteOnMap(route) {
             }
         }
         // If no geometry, try to display POI markers
-        console.log('🔍 No valid geometry found, trying POI markers...');
+        // Log removed for cleaner console
         if (route.pois && route.pois.length > 0) {
-            console.log('🔍 Route has', route.pois.length, 'POIs');
+            // Log removed for cleaner console
             const validPois = route.pois.filter(poi => poi.lat && (poi.lng || poi.lon));
-            console.log('🔍 Valid POIs with coordinates:', validPois.length);
+            // Log removed for cleaner console
 
             if (validPois.length > 0) {
                 const bounds = L.latLngBounds();
@@ -5698,7 +5698,7 @@ async function displayRouteOnMap(route) {
                 
                 // Draw route line connecting POIs if we have more than one point
                 if (routeCoordinates.length > 1) {
-                    console.log('🛣️ Drawing route line connecting', routeCoordinates.length, 'POIs');
+                    // Log removed for cleaner console
 
                     const routeLine = L.polyline(routeCoordinates, {
                         color: routeColor,
@@ -5718,9 +5718,9 @@ async function displayRouteOnMap(route) {
 
                     predefinedMapLayers.push(routeLine);
 
-                    console.log('✅ Route line added successfully');
+                    // Log removed for cleaner console
                 } else {
-                    console.log('ℹ️ Only one POI, no connecting line needed');
+                    // Log removed for cleaner console
                 }
                 
                 // Fit map to POI bounds
@@ -5728,7 +5728,7 @@ async function displayRouteOnMap(route) {
                     predefinedMap.fitBounds(bounds, { padding: [30, 30] });
                 }
                 
-                console.log('✅ Route POIs displayed on predefined map');
+                // Log removed for cleaner console
                 
                 // Create elevation chart for predefined route
                 if (window.ElevationChart && validPois.length > 1) {
@@ -5739,10 +5739,10 @@ async function displayRouteOnMap(route) {
 
                     // Use elevation_profile from database if available
                     if (route.elevation_profile && route.elevation_profile.points) {
-                        console.log('📊 Using pre-calculated elevation profile from database');
+                        // Log removed for cleaner console
                         await predefinedElevationChart.loadElevationProfile(route.elevation_profile);
                     } else {
-                        console.log('📊 Calculating elevation profile from POIs');
+                        // Log removed for cleaner console
                         await predefinedElevationChart.loadRouteElevation({
                             pois: validPois.map(poi => ({
                                 name: poi.name,
@@ -5783,7 +5783,7 @@ async function displayRouteOnMap(route) {
 }
 
 function clearPredefinedMapContent() {
-    console.log('🧹 Clearing predefined map content...');
+    // Log removed for cleaner console
     
     if (predefinedMap && predefinedMapLayers.length > 0) {
         predefinedMapLayers.forEach(layer => {
@@ -5794,7 +5794,7 @@ function clearPredefinedMapContent() {
             }
         });
         predefinedMapLayers = [];
-        console.log('✅ Predefined map content cleared');
+        // Log removed for cleaner console
     }
     
 }
@@ -6058,7 +6058,7 @@ function showPOIDetails(poiId) {
 // Load detailed POI information (similar to recommendation system)
 async function loadDetailedPOIInfo(poiId, poiName) {
     try {
-        console.log('🔍 Loading detailed POI info for:', poiId, poiName);
+        // Log removed for cleaner console
 
         // Show loading notification
         showNotification('POI detayları yükleniyor...', 'info');
@@ -6067,7 +6067,7 @@ async function loadDetailedPOIInfo(poiId, poiName) {
         const response = await fetch(`${apiBase}/poi/${poiId}`);
         if (response.ok) {
             const poiData = await response.json();
-            console.log('✅ POI details loaded:', poiData);
+            // Log removed for cleaner console
 
             // Load media for POI
             const media = await loadPOIMedia(poiId);
@@ -6159,7 +6159,7 @@ function showDetailedPOIModal(poi, media = { images: [], videos: [], audio: [], 
     // Check if Bootstrap modal exists, if not create a fallback
     const existingModal = document.getElementById('poiDetailModal');
     if (existingModal) {
-        console.log('✅ Using existing Bootstrap modal');
+        // Log removed for cleaner console
         return;
     }
     
@@ -6221,8 +6221,8 @@ function closeDetailedPOIModal() {
 }
 // Fallback function for route display when standard method fails
 function displayRouteOnMapFallback(route) {
-    console.log('🚨 === FALLBACK ROUTE DISPLAY ===');
-    console.log('🔄 Attempting fallback route display for:', route.name);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
     
     try {
         // Force map refresh
@@ -6236,7 +6236,7 @@ function displayRouteOnMapFallback(route) {
         
         // Try to display POIs if no geometry
         if (route.pois && route.pois.length > 0) {
-            console.log('📍 Fallback: Displaying POI markers...');
+            // Log removed for cleaner console
             const validPois = route.pois.filter(poi => poi.lat && (poi.lng || poi.lon));
             
             if (validPois.length > 0) {
@@ -6309,7 +6309,7 @@ function displayRouteOnMapFallback(route) {
                 
                 // Draw connecting line for fallback POIs too
                 if (routeCoordinates.length > 1) {
-                    console.log('🛣️ Fallback: Drawing connecting line between', routeCoordinates.length, 'POIs');
+                    // Log removed for cleaner console
                     
                     const routeLine = L.polyline(routeCoordinates, {
                         color: '#2563eb',
@@ -6325,21 +6325,21 @@ function displayRouteOnMapFallback(route) {
                     attachPredefinedRouteEvents(routeLine, route);
 
                     predefinedMapLayers.push(routeLine);
-                    console.log('✅ Fallback connecting line added');
+                    // Log removed for cleaner console
                 }
                 
                 if (bounds.isValid()) {
                     predefinedMap.fitBounds(bounds, { padding: [30, 30] });
                 }
                 
-                console.log('✅ Fallback: POI markers displayed successfully');
+                // Log removed for cleaner console
                 showNotification(`Rota POI'leri ve bağlantı çizgisi görüntülendi (${validPois.length} nokta)`, 'success');
                 return;
             }
         }
         
         // If still no success, show a center marker
-        console.log('📍 Fallback: Showing center marker...');
+        // Log removed for cleaner console
         const centerMarker = L.marker([38.6436, 34.8128]).addTo(predefinedMap);
         centerMarker.routeId = route.id || route._id;
         centerMarker.bindPopup(`
@@ -6353,7 +6353,7 @@ function displayRouteOnMapFallback(route) {
         predefinedMap.setView([38.6436, 34.8128], 13);
         
         showNotification('Rota merkez noktada gösteriliyor', 'info');
-        console.log('✅ Fallback: Center marker displayed');
+        // Log removed for cleaner console
         
     } catch (error) {
         console.error('❌ Fallback display also failed:', error);
@@ -6362,7 +6362,7 @@ function displayRouteOnMapFallback(route) {
 }
 
 function fitMapToRoutes() {
-    console.log('🗺️ Fitting map to routes...');
+    // Log removed for cleaner console
 
     if (!predefinedMap || !predefinedMapInitialized) {
         console.warn('⚠️ Predefined map not initialized');
@@ -6437,7 +6437,7 @@ function ensureRouteDistance(route) {
 }
 
 async function loadPredefinedRoutes() {
-    console.log('📋 Loading predefined routes...');
+    // Log removed for cleaner console
     
     const loadingIndicator = document.getElementById('routesLoadingIndicator');
     const routesList = document.getElementById('predefinedRoutesList');
@@ -6452,7 +6452,7 @@ async function loadPredefinedRoutes() {
         
         if (response.ok) {
             const data = await response.json();
-            console.log('✅ Predefined routes loaded:', data);
+            // Log removed for cleaner console
             
             // API returns {success: true, routes: [...], count: ...}
             const routes = data.routes || [];
@@ -6465,7 +6465,7 @@ async function loadPredefinedRoutes() {
             updateRouteStats();
             
             // Load media for all routes in the background
-            console.log('📸 Loading media for all predefined routes...');
+            // Log removed for cleaner console
             routes.forEach(route => {
                 // Load media asynchronously without blocking the UI
                 loadRouteMediaForCard(route).catch(error => {
@@ -6521,13 +6521,15 @@ function displayPredefinedRoutes(routes) {
             try {
                 // For mobile devices, show the new modal directly
                 if (window.innerWidth <= 768) {
+                    // Always load detailed route data first (geometry + POIs)
+                    await selectPredefinedRoute(route);
+                    const fullRoute = window.currentSelectedRoute || route;
                     if (window.RouteDetailsModal) {
                         const modal = RouteDetailsModal.getInstance();
-                        await modal.show(route);
+                        await modal.show(fullRoute);
                     } else {
                         // Fallback to existing panel
-                        await selectPredefinedRoute(route);
-                        showPredefinedRouteDetailsPanel(window.currentSelectedRoute || route);
+                        showPredefinedRouteDetailsPanel(fullRoute);
                     }
                 } else {
                     // For desktop, keep existing behavior or use modal
@@ -6643,7 +6645,7 @@ async function loadRouteMediaForCard(route) {
         return;
     }
 
-    console.log('📸 Loading media for route card:', route.id);
+    // Log removed for cleaner console
     
     // Set a timeout to prevent indefinite loading
     const timeoutId = setTimeout(() => {
@@ -6674,7 +6676,7 @@ async function loadRouteMediaForCard(route) {
         }
 
         const data = await response.json();
-        console.log(`Media data for route ${route.id}:`, data);
+        // Log removed for cleaner console
         
         // Handle different possible response formats
         let mediaFiles = [];
@@ -6713,7 +6715,7 @@ async function loadRouteMediaForCard(route) {
             }
         } else {
             // No media files at all, show fallback
-            console.log(`No media found for route ${route.id}, showing fallback`);
+            // Log removed for cleaner console
             if (MEDIA_CONFIG.useFallbackContent) {
                 showRouteCardFallback(route.id);
             } else if (MEDIA_CONFIG.showPlaceholderImages) {
@@ -6772,7 +6774,7 @@ function updateRouteCardImage(routeId, mediaFile) {
         fallbackElement.style.display = 'none';
     }
     
-    console.log(`✅ Updated route card image for route ${routeId}:`, imagePath);
+    // Log removed for cleaner console
 }
 
 // Show fallback content when no media is available
@@ -6812,7 +6814,7 @@ function showRouteCardFallback(routeId) {
         fallbackElement.style.display = 'flex';
     }
     
-    console.log(`✅ Fallback content shown for route ${routeId}`);
+    // Log removed for cleaner console
 }
 
 // Create fallback content based on route type
@@ -6868,7 +6870,7 @@ window.toggleMediaDisplayMode = function() {
     MEDIA_CONFIG.useFallbackContent = !MEDIA_CONFIG.useFallbackContent;
     MEDIA_CONFIG.showPlaceholderImages = !MEDIA_CONFIG.useFallbackContent;
     
-    console.log(`Media display mode changed: ${MEDIA_CONFIG.useFallbackContent ? 'Fallback Content' : 'Placeholder Images'}`);
+    // Log removed for cleaner console
     
     // Update the toggle button text
     const toggleBtn = document.querySelector('.btn-outline-info[onclick="toggleMediaDisplayMode()"]');
@@ -6968,7 +6970,7 @@ window.refreshRouteMedia = async function(routeId) {
         return;
     }
     
-    console.log('🔄 Manually refreshing media for route:', routeId);
+    // Log removed for cleaner console
     
     const route = predefinedRoutes.find(r => r.id === routeId);
     if (!route) {
@@ -6984,7 +6986,7 @@ window.refreshRouteMedia = async function(routeId) {
         }
         
         await loadRouteMediaForCard(route);
-        console.log(`✅ Media refreshed for route ${routeId}`);
+        // Log removed for cleaner console
     } catch (error) {
         console.error(`❌ Failed to refresh media for route ${routeId}:`, error);
         // If refresh fails, show fallback
@@ -6994,7 +6996,7 @@ window.refreshRouteMedia = async function(routeId) {
 
 // Global refresh function for all route media
 window.refreshAllRouteMedia = async function() {
-    console.log('🔄 Refreshing media for all routes...');
+    // Log removed for cleaner console
     
     if (!predefinedRoutes || predefinedRoutes.length === 0) {
         console.warn('No routes available to refresh');
@@ -7010,7 +7012,7 @@ window.refreshAllRouteMedia = async function() {
     
     try {
         await Promise.allSettled(refreshPromises);
-        console.log('✅ All route media refresh completed');
+        // Log removed for cleaner console
     } catch (error) {
         console.error('❌ Error during global media refresh:', error);
     }
@@ -7131,7 +7133,7 @@ function getRouteTypeDisplayName(routeType) {
 }
 
 function applyRouteFilters() {
-    console.log('🔍 Applying route filters...');
+    // Log removed for cleaner console
     
     // Get filter values from chips (new system) or fallback to old selects
     let filters;
@@ -7180,13 +7182,13 @@ function applyRouteFilters() {
         return true;
     });
     
-    console.log(`✅ Filtered routes: ${filteredRoutes.length}/${predefinedRoutes.length}`);
+    // Log removed for cleaner console
     displayPredefinedRoutes(filteredRoutes);
     updateRouteStats();
 }
 
 function clearRouteFilters() {
-    console.log('🧹 Clearing route filters...');
+    // Log removed for cleaner console
     
     const routeTypeFilter = document.getElementById('routeTypeFilter');
     const difficultyFilter = document.getElementById('difficultyFilter');
@@ -7235,11 +7237,11 @@ function showNoRoutesMessage(message = 'Seçilen kriterlere uygun rota bulunamad
 }
 
 async function showRouteDetails(route) {
-    console.log('📋 Showing route details for:', route);
+    // Log removed for cleaner console
     
     // Use new RouteDetailsModal if available
     if (typeof window.RouteDetailsModal !== 'undefined') {
-        console.log('🎯 Using new RouteDetailsModal');
+        // Log removed for cleaner console
         const modal = window.RouteDetailsModal.getInstance();
         if (modal) {
             modal.show(route);
@@ -7247,7 +7249,7 @@ async function showRouteDetails(route) {
         }
     }
     
-    console.log('⚠️ Using legacy route detail modal');
+    // Log removed for cleaner console
     
     const modal = document.getElementById('routeDetailModal');
     const modalTitle = document.getElementById('routeDetailModalTitle');
@@ -7329,19 +7331,19 @@ function showRouteDetail(routeId) {
 }
 
 async function loadRouteDetails(route, container) {
-    console.log('🔄 Loading route details for:', route.id, route.name);
+    // Log removed for cleaner console
     
     try {
         // Fetch detailed route information including POIs
         const url = `${apiBase}/routes/${route.id}`;
-        console.log('📡 Fetching route details from:', url);
+        // Log removed for cleaner console
         
         const response = await fetch(url);
-        console.log('📡 Response status:', response.status, response.statusText);
+        // Log removed for cleaner console
 
         if (response.ok) {
             const detailedRoute = await response.json();
-            console.log('✅ Route details loaded successfully:', detailedRoute);
+            // Log removed for cleaner console
             console.log('🔍 Route details inspection:', {
                 hasGeometry: !!detailedRoute.geometry,
                 geometryType: typeof detailedRoute.geometry,
@@ -7507,7 +7509,7 @@ function displayRouteDetails(routeData, container) {
         // Container'ın varlığını kontrol et
         const mapContainer = document.getElementById(previewMapId);
         if (mapContainer) {
-            console.log('✅ Preview map container found, initializing map');
+            // Log removed for cleaner console
             initializeRoutePreviewMap(previewMapId, route.id, pois);
         } else {
             console.error('❌ Preview map container still not found after timeout:', previewMapId);
@@ -7515,7 +7517,7 @@ function displayRouteDetails(routeData, container) {
             setTimeout(() => {
                 const retryContainer = document.getElementById(previewMapId);
                 if (retryContainer) {
-                    console.log('✅ Preview map container found on retry, initializing map');
+                    // Log removed for cleaner console
                     initializeRoutePreviewMap(previewMapId, route.id, pois);
                 } else {
                     console.error('❌ Preview map container not found even after retry:', previewMapId);
@@ -7531,7 +7533,7 @@ function displayRouteDetails(routeData, container) {
 // Load elevation profile for route preview
 async function loadRouteElevationProfile(route) {
     if (!route || !route.pois || route.pois.length === 0) {
-        console.log('⚠️ No POIs available for elevation profile');
+        // Log removed for cleaner console
         return;
     }
     
@@ -7542,12 +7544,12 @@ async function loadRouteElevationProfile(route) {
     const statsContainer = document.getElementById(statsContainerId);
     
     if (!chartContainer || !statsContainer) {
-        console.log('⚠️ Elevation containers not found');
+        // Log removed for cleaner console
         return;
     }
     
     try {
-        console.log('🏔️ Loading elevation profile for route:', route.name);
+        // Log removed for cleaner console
         
         // Create waypoints for elevation data
         const waypoints = route.pois.map(poi => ({
@@ -7733,11 +7735,11 @@ function createPOIList(pois) {
 }
 
 async function selectPredefinedRoute(route) {
-    console.log('🚀 === STARTING ROUTE SELECTION PROCESS ===');
+    // Log removed for cleaner console
     
     // Store the route globally for panel access
     window.currentSelectedRoute = route;
-    console.log('✅ Selecting predefined route:', route);
+    // Log removed for cleaner console
     console.log('🔍 Initial route data check:', {
         hasId: !!route.id,
         hasName: !!route.name,
@@ -7749,8 +7751,8 @@ async function selectPredefinedRoute(route) {
     // Ensure detailed data is present before displaying
     if (!route.geometry || !route.pois || route.pois.length === 0) {
         try {
-            console.log('⏳ Route missing details, loading before selection...');
-            console.log('🔍 Attempting to load route details via API...');
+            // Log removed for cleaner console
+            // Log removed for cleaner console
             
             // Try multiple methods to get route data
             let detailedRoute = null;
@@ -7761,15 +7763,15 @@ async function selectPredefinedRoute(route) {
                 detailedRoute = detailed && (detailed.success ? detailed.route : detailed);
                 
                 if (detailedRoute) {
-                    console.log('✅ API route data loaded successfully');
+                    // Log removed for cleaner console
                     
                     // CRITICAL: Load actual route geometry (same as preview map)
                     try {
-                        console.log('🗺️ Loading actual route geometry for main map...');
+                        // Log removed for cleaner console
                         const geometryResponse = await fetch(`${apiBase}/routes/${route.id}/geometry`);
                         if (geometryResponse.ok) {
                             const geometryData = await geometryResponse.json();
-                            console.log('📍 Main map geometry data:', geometryData);
+                            // Log removed for cleaner console
                             
                             let geometry = geometryData.geometry || geometryData;
                             
@@ -7785,13 +7787,13 @@ async function selectPredefinedRoute(route) {
                             // Geometry'yi detailedRoute'a ekle
                             if (geometry && geometry.type === 'LineString' && geometry.coordinates) {
                                 detailedRoute.geometry = geometry;
-                                console.log('✅ Added LineString geometry to route');
+                                // Log removed for cleaner console
                             } else if (geometry && geometry.geometry && geometry.geometry.type === 'LineString') {
                                 detailedRoute.geometry = geometry.geometry;
-                                console.log('✅ Added nested geometry to route');
+                                // Log removed for cleaner console
                             } else if (geometryData.success && geometryData.geometry) {
                                 detailedRoute.geometry = geometryData.geometry;
-                                console.log('✅ Added API geometry to route');
+                                // Log removed for cleaner console
                             }
                         }
                     } catch (geometryError) {
@@ -7807,11 +7809,11 @@ async function selectPredefinedRoute(route) {
             
             // Method 2: If standard API fails, try to use existing route data or create mock data
             if (!detailedRoute || (!detailedRoute.geometry && (!detailedRoute.pois || detailedRoute.pois.length === 0))) {
-                console.log('🔄 Creating intelligent fallback route data...');
+                // Log removed for cleaner console
                 
                 // Try to extract geographical information from route name
                 const routeName = route.name || 'Bilinmeyen Rota';
-                console.log('🔍 Analyzing route name for locations:', routeName);
+                // Log removed for cleaner console
                 
                 // Cappadocia area coordinates for common locations
                 const knownLocations = {
@@ -7868,16 +7870,16 @@ async function selectPredefinedRoute(route) {
                     estimated_duration: route.estimated_duration || Math.floor(Math.random() * 240 + 60) // Random 60-300 minutes
                 };
                 
-                console.log('✅ Intelligent fallback route data created with', mockPois.length, 'POIs:', detailedRoute);
+                // Log removed for cleaner console
             }
             
             if (detailedRoute) {
-                console.log('✅ Route details obtained:', detailedRoute);
+                // Log removed for cleaner console
                 
                 // If still no geometry but we have POIs, try smart routing API (same as preview)
                 if (!detailedRoute.geometry && detailedRoute.pois && detailedRoute.pois.length > 1) {
                     try {
-                        console.log('🛣️ No geometry found, trying smart routing API...');
+                        // Log removed for cleaner console
                         const waypointPayload = detailedRoute.pois
                             .filter(poi => poi.lat && (poi.lng || poi.lon))
                             .map(p => ({
@@ -7904,7 +7906,7 @@ async function selectPredefinedRoute(route) {
                                         type: 'LineString',
                                         coordinates: coordinates
                                     };
-                                    console.log('✅ Smart route geometry added with', coordinates.length, 'points');
+                                    // Log removed for cleaner console
                                 }
                             }
                         }
@@ -7921,7 +7923,7 @@ async function selectPredefinedRoute(route) {
             console.error('❌ Error loading route details for selection:', error);
             
             // Create emergency fallback data
-            console.log('🚨 Creating emergency fallback data...');
+            // Log removed for cleaner console
             route.pois = [{
                 id: `${route.id}_emergency`,
                 name: route.name || 'Bilinmeyen Rota',
@@ -7965,21 +7967,21 @@ async function selectPredefinedRoute(route) {
                               routeName.includes('castle');
          
          // DEBUG: Log route information for debugging
-         console.log('🔍 ROUTE DEBUG INFO:');
-         console.log('📍 Route name:', route.name);
-         console.log('🏷️ Route type:', route.route_type);
-         console.log('🥾 Is hiking route?', isHikingRoute);
-         console.log('📝 Route name (lowercase):', route.name?.toLowerCase());
-         console.log('🔎 Contains "yürüyüş"?', route.name?.toLowerCase().includes('yürüyüş'));
-         console.log('🔎 Contains "patika"?', route.name?.toLowerCase().includes('patika'));
-         console.log('🗺️ Full route object:', route);
+         // Log removed for cleaner console
+         // Log removed for cleaner console
+         // Log removed for cleaner console
+         // Log removed for cleaner console
+         // Log removed for cleaner console
+         // Log removed for cleaner console
+         // Log removed for cleaner console
+         // Log removed for cleaner console
          
         // Add navigation route from current location to route start
         addNavigationToRoute(route);
         
         // Refresh route media for the selected route
         try {
-            console.log('📸 Refreshing route media for selected route:', route.id);
+            // Log removed for cleaner console
             await loadRouteMediaForCard(route);
         } catch (mediaError) {
             console.warn('⚠️ Could not refresh route media:', mediaError);
@@ -7991,12 +7993,12 @@ async function selectPredefinedRoute(route) {
     
     while (!predefinedMapInitialized && mapInitAttempts < maxAttempts) {
         mapInitAttempts++;
-        console.log(`🗺️ Map initialization attempt ${mapInitAttempts}/${maxAttempts}...`);
+        // Log removed for cleaner console
         
         try {
             const success = await initializePredefinedMap();
             if (success) {
-                console.log('✅ Map initialized successfully');
+                // Log removed for cleaner console
                 break;
             } else {
                 console.warn(`⚠️ Map initialization attempt ${mapInitAttempts} failed`);
@@ -8018,12 +8020,12 @@ async function selectPredefinedRoute(route) {
     
     // Multiple approach for displaying route with fallbacks
     const displayRoute = async () => {
-        console.log('🎯 Starting route display process...');
+        // Log removed for cleaner console
         
         // Approach 1: Standard display with delays
         setTimeout(async () => {
             try {
-                console.log('📍 Attempt 1: Standard route display with timing fix...');
+                // Log removed for cleaner console
                 
                 // Force map container visibility
                 const mapContainer = document.getElementById('predefinedRoutesMap');
@@ -8031,7 +8033,7 @@ async function selectPredefinedRoute(route) {
                     mapContainer.style.display = 'block';
                     mapContainer.style.visibility = 'visible';
                     mapContainer.style.opacity = '1';
-                    console.log('✅ Map container visibility forced');
+                    // Log removed for cleaner console
                 }
                 
                 // Force map size refresh
@@ -8039,7 +8041,7 @@ async function selectPredefinedRoute(route) {
                     predefinedMap.invalidateSize();
                     setTimeout(() => predefinedMap.invalidateSize(), 100);
                     setTimeout(() => predefinedMap.invalidateSize(), 500);
-                    console.log('🔄 Map size invalidated multiple times');
+                    // Log removed for cleaner console
                 }
                 
                 // Display route
@@ -8047,8 +8049,8 @@ async function selectPredefinedRoute(route) {
                 
                 // Verify display after a moment
                 setTimeout(() => {
-                    console.log('🔍 Verifying route display...');
-                    console.log('Map layers count:', predefinedMapLayers.length);
+                    // Log removed for cleaner console
+                    // Log removed for cleaner console
                     if (predefinedMapLayers.length === 0) {
                         console.warn('⚠️ No layers found, attempting fallback display...');
                         displayRouteOnMapFallback(route);
@@ -8074,7 +8076,7 @@ async function selectPredefinedRoute(route) {
     window.currentRouteId = route.id || route._id;
     await refreshMediaMarkers(window.currentRouteId);
 
-    console.log('🏁 === ROUTE SELECTION PROCESS COMPLETED ===');
+    // Log removed for cleaner console
 }
 
 function displaySelectedRoute(route, pois) {
@@ -8146,11 +8148,11 @@ function displayRouteWithoutPOIs(route) {
 }
 
 async function displayRoutePOIsOnMap(pois) {
-    console.log('🗺️ Displaying route POIs on map:', pois);
+    // Log removed for cleaner console
     
     // Ensure map is initialized
     if (!map) {
-        console.log('🗺️ Map not initialized, initializing now...');
+        // Log removed for cleaner console
         await initializeEmptyMap();
         if (!map) {
             console.error('❌ Failed to initialize map');
@@ -8256,7 +8258,7 @@ async function displayRoutePOIsOnMap(pois) {
                 markers.push(marker);
                 markersAdded++;
                 
-                console.log(`✅ Added marker ${markersAdded} for POI: ${poi.name} at [${lat}, ${lon}]`);
+                // Log removed for cleaner console
             } catch (error) {
                 console.error(`❌ Error adding marker for POI ${poi.name}:`, error);
             }
@@ -8265,7 +8267,7 @@ async function displayRoutePOIsOnMap(pois) {
         }
     }
     
-    console.log(`📍 Added ${markersAdded} markers to map out of ${pois.length} POIs`);
+    // Log removed for cleaner console
     
     // Draw simple fallback line only if there is no saved/smart route on the map
     if (routeCoordinates.length > 1) {
@@ -8323,7 +8325,7 @@ async function displayRoutePOIsOnMap(pois) {
         }
     }
     
-    console.log('✅ Route POIs displayed on map');
+    // Log removed for cleaner console
 }
 
 function fitMapToRoutePOIs(pois) {
@@ -8349,13 +8351,13 @@ function fitMapToRoutePOIs(pois) {
             const poi = validPOIs[0];
             const lat = parseFloat(poi.lat);
             const lon = parseFloat(poi.lon);
-            console.log(`🎯 Centering map on single POI: ${poi.name} at [${lat}, ${lon}]`);
+            // Log removed for cleaner console
             map.setView([lat, lon], 15);
         } else {
             // Multiple POIs - fit bounds
             const coordinates = validPOIs.map(poi => [parseFloat(poi.lat), parseFloat(poi.lon)]);
             const bounds = L.latLngBounds(coordinates);
-            console.log(`🎯 Fitting map to ${validPOIs.length} POIs`);
+            // Log removed for cleaner console
             map.fitBounds(bounds, { 
                 padding: [20, 20],
                 maxZoom: 16
@@ -8377,13 +8379,13 @@ function fitMapToRoutePOIs(pois) {
 async function initializeMainMap() {
     // Return existing promise if initialization is already in progress
     if (mapInitializationPromise) {
-        console.log('🔄 Map initialization already in progress, waiting...');
+        // Log removed for cleaner console
         return await mapInitializationPromise;
     }
     
     // Check if map is already initialized and valid
     if (map && map._container && mapInitialized) {
-        console.log('✅ Main map already initialized');
+        // Log removed for cleaner console
         map.invalidateSize(); // Ensure proper sizing
         return true;
     }
@@ -8402,7 +8404,7 @@ async function initializeMainMap() {
 }
 
 async function performMainMapInitialization() {
-    console.log('🗺️ Initializing main map...');
+    // Log removed for cleaner console
     
     const mapContainer = document.getElementById('mapContainer');
     if (!mapContainer) {
@@ -8467,7 +8469,7 @@ async function performMainMapInitialization() {
             }
         }, 200);
         
-        console.log('✅ Main map initialized successfully');
+        // Log removed for cleaner console
         return true;
     } catch (error) {
         console.error('❌ Error initializing main map:', error);
@@ -8506,25 +8508,25 @@ function getRouteTypeDisplayName(type) {
 
 // Debug function for testing route selection
 window.testRouteSelection = async function(routeId) {
-    console.log('🧪 Testing route selection for route ID:', routeId);
+    // Log removed for cleaner console
     
     try {
         const response = await fetch(`${apiBase}/routes/${routeId}`);
-        console.log('📡 API Response status:', response.status);
+        // Log removed for cleaner console
         
         if (response.ok) {
             const data = await response.json();
-            console.log('📊 API Response data:', data);
+            // Log removed for cleaner console
             
             if (data.success && data.route) {
-                console.log('✅ Route found:', data.route.name);
-                console.log('📍 Route POIs:', data.route.pois?.length || 0);
-                console.log('📊 Route POI count field:', data.route.poi_count);
+                // Log removed for cleaner console
+                // Log removed for cleaner console
+                // Log removed for cleaner console
                 
                 // Log POI details
                 if (data.route.pois && data.route.pois.length > 0) {
                     data.route.pois.forEach((poi, index) => {
-                        console.log(`  POI ${index + 1}: ${poi.name} at [${poi.lat}, ${poi.lon}]`);
+                        // Log removed for cleaner console
                     });
                 }
                 
@@ -8543,21 +8545,21 @@ window.testRouteSelection = async function(routeId) {
 
 // Debug function for testing route list
 window.testRouteList = async function() {
-    console.log('🧪 Testing route list loading...');
+    // Log removed for cleaner console
     
     try {
         const response = await fetch(`${apiBase}/routes`);
-        console.log('📡 Routes API Response status:', response.status);
+        // Log removed for cleaner console
         
         if (response.ok) {
             const data = await response.json();
-            console.log('📊 Routes API Response data:', data);
+            // Log removed for cleaner console
             
             if (data.success && data.routes) {
-                console.log('✅ Routes found:', data.routes.length);
+                // Log removed for cleaner console
                 
                 data.routes.forEach((route, index) => {
-                    console.log(`  Route ${index + 1}: ${route.name} - POI count: ${route.poi_count}`);
+                    // Log removed for cleaner console
                 });
             } else {
                 console.error('❌ Routes not found or API error');
@@ -8572,17 +8574,17 @@ window.testRouteList = async function() {
 
 // Debug function for testing map initialization
 window.testMapInit = async function() {
-    console.log('🧪 Testing map initialization...');
+    // Log removed for cleaner console
     
     const success = await initializeMainMap();
     if (success) {
-        console.log('✅ Map initialization successful');
+        // Log removed for cleaner console
         
         // Test adding a sample marker
         if (map) {
             const testMarker = L.marker([38.632, 34.912]).addTo(map);
             testMarker.bindPopup('Test marker').openPopup();
-            console.log('✅ Test marker added');
+            // Log removed for cleaner console
         }
     } else {
         console.error('❌ Map initialization failed');
@@ -8592,7 +8594,7 @@ window.testMapInit = async function() {
 let previewMaps = new Map(); // Store multiple preview maps
 
 async function initializeRoutePreviewMap(mapId, routeId, pois) {
-    console.log('🗺️ Initializing route preview map:', mapId, 'routeId:', routeId, 'with', pois.length, 'POIs');
+    // Log removed for cleaner console
     
     const mapContainer = document.getElementById(mapId);
     if (!mapContainer) {
@@ -8640,7 +8642,7 @@ async function initializeRoutePreviewMap(mapId, routeId, pois) {
         });
         
         if (validPOIs.length === 0) {
-            console.log('ℹ️ No valid POIs for preview map, will try to load route geometry');
+            // Log removed for cleaner console
         }
         
         const routeCoordinates = [];
@@ -8686,11 +8688,11 @@ async function initializeRoutePreviewMap(mapId, routeId, pois) {
         let geometryLatLngs = null;
         if (routeId) {
             try {
-                console.log('🗺️ Loading preview route geometry for route:', routeId);
+                // Log removed for cleaner console
                 const response = await (window.rateLimitedFetch || fetch)(`${apiBase}/routes/${routeId}/geometry`);
                 if (response.ok) {
                     const geometryData = await response.json();
-                    console.log('📍 Preview geometry data:', geometryData);
+                    // Log removed for cleaner console
                     
                     let geometry = geometryData.geometry || geometryData;
                     
@@ -8707,17 +8709,17 @@ async function initializeRoutePreviewMap(mapId, routeId, pois) {
                     if (geometry && geometry.type === 'LineString' && geometry.coordinates) {
                         // Statik LineString
                         geometryLatLngs = geometry.coordinates.map(coord => [coord[1], coord[0]]);
-                        console.log('✅ Preview using static LineString geometry');
+                        // Log removed for cleaner console
                     } else if (geometry && geometry.geometry && geometry.geometry.type === 'LineString') {
                         // Nested geometry
                         geometryLatLngs = geometry.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-                        console.log('✅ Preview using nested geometry');
+                        // Log removed for cleaner console
                     } else if (geometryData.success && geometryData.geometry) {
                         // Standard API response
                         const geo = geometryData.geometry;
                         if (geo.type === 'LineString' && geo.coordinates) {
                             geometryLatLngs = geo.coordinates.map(coord => [coord[1], coord[0]]);
-                            console.log('✅ Preview using standard API geometry');
+                            // Log removed for cleaner console
                         }
                     }
                     
@@ -8728,12 +8730,12 @@ async function initializeRoutePreviewMap(mapId, routeId, pois) {
                             opacity: 0.8,
                             className: 'saved-route'
                         }).addTo(previewMap);
-                        console.log('✅ Preview route geometry added to map');
+                        // Log removed for cleaner console
                     } else {
-                        console.log('⚠️ No valid geometry found for preview');
+                        // Log removed for cleaner console
                     }
                 } else {
-                    console.log('ℹ️ No geometry response for preview:', response.status);
+                    // Log removed for cleaner console
                 }
             } catch (error) {
                 console.error('❌ Error loading preview route geometry:', error);
@@ -8795,19 +8797,19 @@ async function initializeRoutePreviewMap(mapId, routeId, pois) {
         if (geometryLatLngs && geometryLatLngs.length > 0) {
             const bounds = L.latLngBounds(geometryLatLngs);
             previewMap.fitBounds(bounds, { padding: [10, 10] });
-            console.log('✅ Preview map fitted to geometry bounds');
+            // Log removed for cleaner console
         } else if (validPOIs.length === 1) {
             const poi = validPOIs[0];
             previewMap.setView([parseFloat(poi.lat), parseFloat(poi.lon)], 14);
-            console.log('✅ Preview map centered on single POI');
+            // Log removed for cleaner console
         } else if (routeCoordinates.length > 0) {
             const bounds = L.latLngBounds(routeCoordinates);
             previewMap.fitBounds(bounds, { padding: [10, 10] });
-            console.log('✅ Preview map fitted to POI bounds');
+            // Log removed for cleaner console
         } else {
             // POI'ler de geometri de yoksa varsayılan konum (Ürgüp)
             previewMap.setView([38.6322, 34.9115], 12);
-            console.log('ℹ️ Preview map set to default location (no POIs or geometry)');
+            // Log removed for cleaner console
         }
         
         // Force map to resize
@@ -8821,7 +8823,7 @@ async function initializeRoutePreviewMap(mapId, routeId, pois) {
             }
         }, 100);
         
-        console.log('✅ Route preview map initialized successfully');
+        // Log removed for cleaner console
         
     } catch (error) {
         console.error('❌ Error initializing route preview map:', error);
@@ -8843,47 +8845,47 @@ function cleanupPreviewMaps() {
 // Load and display saved route geometry
 async function loadAndDisplayRouteGeometry(routeId) {
     try {
-        console.log('🗺️ Loading saved route geometry for route:', routeId);
+        // Log removed for cleaner console
         
         const response = await (window.rateLimitedFetch || fetch)(`${apiBase}/routes/${routeId}/geometry`);
         
         if (response.ok) {
             const geometryData = await response.json();
-            console.log('✅ Route geometry API response (RAW):', JSON.stringify(geometryData, null, 2));
-            console.log('✅ Response keys:', Object.keys(geometryData));
-            console.log('✅ Success field:', geometryData.success);
-            console.log('✅ Geometry field:', geometryData.geometry);
+            // Log removed for cleaner console
+            // Log removed for cleaner console
+            // Log removed for cleaner console
+            // Log removed for cleaner console
 
             // Hibrit yaklaşım - farklı response formatlarını destekle
             let processed = false;
             
             if (geometryData.success && geometryData.geometry) {
-                console.log('📍 Using standard API response format');
+                // Log removed for cleaner console
                 displaySavedRouteGeometry(geometryData);
                 processed = true;
             } else if (geometryData.geometry) {
-                console.log('📍 Using direct geometry response');
+                // Log removed for cleaner console
                 displaySavedRouteGeometry(geometryData);
                 processed = true;
             } else if (geometryData.type === 'LineString') {
-                console.log('📍 Using direct GeoJSON response');
+                // Log removed for cleaner console
                 displaySavedRouteGeometry({ geometry: geometryData });
                 processed = true;
             } else {
-                console.log('ℹ️ Geometri formatı tanınmadı, tüm alanları kontrol ediliyor...');
+                // Log removed for cleaner console
                 
                 // Tüm olası alanları kontrol et
                 for (const [key, value] of Object.entries(geometryData)) {
-                    console.log(`🔍 Checking field "${key}":`, value);
+                    // Log removed for cleaner console
                     
                     if (value && typeof value === 'object') {
                         if (value.type === 'LineString' && value.coordinates) {
-                            console.log(`📍 Found LineString in field "${key}"`);
+                            // Log removed for cleaner console
                             displaySavedRouteGeometry({ geometry: value });
                             processed = true;
                             break;
                         } else if (value.geometry && value.geometry.type === 'LineString') {
-                            console.log(`📍 Found nested geometry in field "${key}"`);
+                            // Log removed for cleaner console
                             displaySavedRouteGeometry(value);
                             processed = true;
                             break;
@@ -8892,16 +8894,16 @@ async function loadAndDisplayRouteGeometry(routeId) {
                 }
                 
                 if (!processed) {
-                    console.log('❌ Hiçbir geometri formatı bulunamadı');
+                    // Log removed for cleaner console
                     showNotification('⚠️ Rota geometrisi bulunamadı. POI\'ler arası düz çizgiler gösteriliyor.', 'warning');
                 }
             }
             
             return processed;
         } else {
-            console.log('ℹ️ No saved geometry found for route:', routeId, 'Status:', response.status);
+            // Log removed for cleaner console
             const errorText = await response.text();
-            console.log('❌ Error response:', errorText);
+            // Log removed for cleaner console
             showNotification('⚠️ Rota geometrisi bulunamadı. POI\'ler arası düz çizgiler gösteriliyor.', 'warning');
         }
     } catch (error) {
@@ -8919,10 +8921,10 @@ function displaySavedRouteGeometry(geometryData) {
         return;
     }
     
-    console.log('🎨 Displaying saved route geometry - Hibrit yaklaşım');
-    console.log('📍 Ham geometri verisi (FULL):', JSON.stringify(geometryData, null, 2));
-    console.log('📍 geometryData keys:', Object.keys(geometryData));
-    console.log('📍 geometryData.geometry:', geometryData.geometry);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
     
     // Remove existing route layers and any simple fallback line
     map.eachLayer(function(layer) {
@@ -8943,15 +8945,15 @@ function displaySavedRouteGeometry(geometryData) {
     
     try {
         let geometry = geometryData.geometry || geometryData;
-        console.log('🔍 Extracted geometry:', geometry);
-        console.log('🔍 Geometry type:', typeof geometry);
+        // Log removed for cleaner console
+        // Log removed for cleaner console
         
         // String ise parse et
         if (typeof geometry === 'string') {
-            console.log('🔍 Parsing string geometry:', geometry);
+            // Log removed for cleaner console
             try {
                 geometry = JSON.parse(geometry);
-                console.log('✅ Parsed geometry:', geometry);
+                // Log removed for cleaner console
             } catch (e) {
                 console.warn('❌ Geometry JSON parse hatası:', e);
                 return;
@@ -8961,48 +8963,48 @@ function displaySavedRouteGeometry(geometryData) {
         let latlngs = null;
         let routeType = 'unknown';
         
-        console.log('🔍 Final geometry for processing:', geometry);
-        console.log('🔍 Geometry keys:', geometry ? Object.keys(geometry) : 'null');
-        console.log('🔍 Geometry.type:', geometry?.type);
-        console.log('🔍 Geometry.coordinates:', geometry?.coordinates);
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
         
         // YAKLAŞIM 1: Statik LineString geometrisi (klasik)
         if (geometry && geometry.type === 'LineString' && geometry.coordinates && geometry.coordinates.length > 0) {
-            console.log('✅ Statik LineString geometrisi kullanılıyor');
-            console.log('📍 Coordinates count:', geometry.coordinates.length);
-            console.log('📍 First coordinate:', geometry.coordinates[0]);
+            // Log removed for cleaner console
+            // Log removed for cleaner console
+            // Log removed for cleaner console
             latlngs = geometry.coordinates.map(coord => [coord[1], coord[0]]);
             routeType = 'static';
-            console.log('📍 Converted latlngs:', latlngs.slice(0, 3), '...');
+            // Log removed for cleaner console
         }
         // YAKLAŞIM 2: API response formatı (nested geometry)
         else if (geometry && geometry.geometry && geometry.geometry.type === 'LineString') {
-            console.log('✅ Nested LineString geometrisi kullanılıyor');
+            // Log removed for cleaner console
             const coords = geometry.geometry.coordinates;
             if (coords && coords.length > 0) {
-                console.log('📍 Nested coordinates count:', coords.length);
+                // Log removed for cleaner console
                 latlngs = coords.map(coord => [coord[1], coord[0]]);
                 routeType = 'nested';
             }
         }
         // YAKLAŞIM 3: POI-based dinamik rota (waypoints)
         else if (geometry && geometry.waypoints && Array.isArray(geometry.waypoints) && geometry.waypoints.length > 0) {
-            console.log('✅ POI-based waypoints kullanılıyor');
+            // Log removed for cleaner console
             latlngs = geometry.waypoints.map(wp => [wp.lat || wp.latitude, wp.lng || wp.longitude]);
             routeType = 'waypoints';
         }
         // YAKLAŞIM 4: Koordinat dizisi (basit format)
         else if (Array.isArray(geometry) && geometry.length > 0 && geometry[0] && geometry[0].length === 2) {
-            console.log('📍 Basit koordinat dizisi kullanılıyor');
+            // Log removed for cleaner console
             latlngs = geometry;
             routeType = 'simple';
         }
         
         // Rota çizgisini oluştur
         if (latlngs && latlngs.length > 1) {
-            console.log('✅ Creating route line with', latlngs.length, 'points');
-            console.log('📍 Route type:', routeType);
-            console.log('📍 Sample coordinates:', latlngs.slice(0, 3));
+            // Log removed for cleaner console
+            // Log removed for cleaner console
+            // Log removed for cleaner console
             
             // Rota tipine göre stil belirle
             const routeStyles = {
@@ -9013,7 +9015,7 @@ function displaySavedRouteGeometry(geometryData) {
             };
             
             const style = routeStyles[routeType] || routeStyles['simple'];
-            console.log('🎨 Using style:', style);
+            // Log removed for cleaner console
             
             // Create route line
             let routeLine = null;
@@ -9023,7 +9025,7 @@ function displaySavedRouteGeometry(geometryData) {
                     className: 'saved-route'
                 }).addTo(map);
                 
-                console.log('✅ Route line added to map successfully');
+                // Log removed for cleaner console
                 
                 // Add popup with route info
                 const distance = geometryData.total_distance ? `${geometryData.total_distance.toFixed(2)} km` : 'Bilinmiyor';
@@ -9046,7 +9048,7 @@ function displaySavedRouteGeometry(geometryData) {
                     </div>
                 `);
                 
-                console.log(`✅ ${routeType} rota geometrisi başarıyla gösterildi`);
+                // Log removed for cleaner console
                 
                 // Show success notification
                 showNotification(`✅ ${routeTypeMessages[routeType]} gösteriliyor`, 'success');
@@ -9140,7 +9142,7 @@ async function tryLoadSmartRouteForPOIs(pois) {
 
 // Expand route preview to full screen
 async function expandRoutePreview(routeId, routeName) {
-    console.log('🔍 Expanding route preview for:', routeName);
+    // Log removed for cleaner console
     
     try {
         // Fetch route details
@@ -9166,7 +9168,7 @@ async function expandRoutePreview(routeId, routeName) {
         
         // Ensure predefined map is initialized
         if (!predefinedMapInitialized) {
-            console.log('🗺️ Predefined map not initialized, initializing for route preview...');
+            // Log removed for cleaner console
             await initializePredefinedMap();
         }
         
@@ -9207,7 +9209,7 @@ function clearAllIntervals() {
 
 // Global cleanup function
 function cleanupApplication() {
-    console.log('🧹 Performing application cleanup...');
+    // Log removed for cleaner console
     
     try {
         // Clear all timeouts and intervals
@@ -9255,7 +9257,7 @@ function cleanupApplication() {
         predefinedMapLayers = [];
         predefinedMapInitialized = false;
         
-        console.log('✅ Application cleanup completed');
+        // Log removed for cleaner console
     } catch (error) {
         console.error('❌ Error during cleanup:', error);
     }
@@ -9280,7 +9282,7 @@ window.addEventListener('unload', cleanupApplication);
 
 // Testing functions for the implementation
 window.testSeparateTabMaps = function() {
-    console.log('🧪 Testing separate tab maps implementation...');
+    // Log removed for cleaner console
     
     const tests = [
         {
@@ -9318,32 +9320,32 @@ window.testSeparateTabMaps = function() {
     tests.forEach(test => {
         try {
             if (test.test()) {
-                console.log(`✅ ${test.name}: PASSED`);
+                // Log removed for cleaner console
                 passed++;
             } else {
-                console.log(`❌ ${test.name}: FAILED`);
+                // Log removed for cleaner console
                 failed++;
             }
         } catch (error) {
-            console.log(`❌ ${test.name}: ERROR - ${error.message}`);
+            // Log removed for cleaner console
             failed++;
         }
     });
     
-    console.log(`🧪 Test Results: ${passed} passed, ${failed} failed`);
+    // Log removed for cleaner console
     
     if (failed === 0) {
-        console.log('🎉 All tests passed! Separate tab maps implementation is working correctly.');
+        // Log removed for cleaner console
         return true;
     } else {
-        console.log('⚠️ Some tests failed. Please check the implementation.');
+        // Log removed for cleaner console
         return false;
     }
 };
 
 // Test tab switching functionality
 window.testTabSwitching = async function() {
-    console.log('🧪 Testing tab switching functionality...');
+    // Log removed for cleaner console
     
     try {
         // Test switch to predefined routes
@@ -9354,7 +9356,7 @@ window.testTabSwitching = async function() {
         await switchTab('dynamic-routes');
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        console.log('✅ Tab switching test completed successfully');
+        // Log removed for cleaner console
         return true;
     } catch (error) {
         console.error('❌ Tab switching test failed:', error);
@@ -9364,7 +9366,7 @@ window.testTabSwitching = async function() {
 
 // Debug function for route display issues
 window.debugRouteDisplay = function(routeId) {
-    console.log('🧪 Debugging route display for route ID:', routeId);
+    // Log removed for cleaner console
     
     // Find route in predefined routes
     const route = predefinedRoutes.find(r => r.id == routeId || r._id == routeId);
@@ -9373,18 +9375,18 @@ window.debugRouteDisplay = function(routeId) {
         return;
     }
     
-    console.log('🔍 Found route:', route);
-    console.log('🔍 Route name:', route.name);
-    console.log('🔍 Route geometry:', route.geometry);
-    console.log('🔍 Route POIs:', route.pois);
-    console.log('🔍 Map initialized:', predefinedMapInitialized);
-    console.log('🔍 Map object:', predefinedMap);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
+    // Log removed for cleaner console
     
     // Try to display
     if (predefinedMapInitialized) {
         displayRouteOnMap(route);
     } else {
-        console.log('🔄 Initializing map first...');
+        // Log removed for cleaner console
         initializePredefinedMap().then(async () => {
             await displayRouteOnMap(route);
         });
@@ -9393,14 +9395,14 @@ window.debugRouteDisplay = function(routeId) {
 
 // Test function to check route data
 window.checkRouteData = async function() {
-    console.log('🧪 Checking route data...');
+    // Log removed for cleaner console
     
     try {
         const response = await fetch(`${apiBase}/routes`);
         if (response.ok) {
             const data = await response.json();
             const routes = data.routes || [];
-            console.log('📊 Total routes:', routes.length);
+            // Log removed for cleaner console
             
             routes.forEach((route, index) => {
                 console.log(`Route ${index + 1}:`, {
@@ -9413,7 +9415,7 @@ window.checkRouteData = async function() {
             });
             
             if (routes.length > 0) {
-                console.log('🧪 Use window.debugRouteDisplay(' + (routes[0].id || routes[0]._id) + ') to test first route');
+                // Log removed for cleaner console
             }
         }
     } catch (error) {
@@ -9423,29 +9425,29 @@ window.checkRouteData = async function() {
 
 // Run comprehensive tests
 window.runAllSeparateTabMapTests = async function() {
-    console.log('🚀 Running comprehensive separate tab maps tests...');
+    // Log removed for cleaner console
     
     const basicTests = window.testSeparateTabMaps();
     const tabTests = await window.testTabSwitching();
     
     if (basicTests && tabTests) {
-        console.log('🎉 All separate tab maps tests passed successfully!');
-        console.log('📋 Implementation Summary:');
-        console.log('  ✅ Hazır Rotalar sekmesine harita eklendi');
-        console.log('  ✅ SavedRoutesModule harita yönetimi kodları eklendi');
-        console.log('  ✅ selectRoute metodu harita gösterimi için güncellendi');
-        console.log('  ✅ CSS stilleri eklendi');
-        console.log('  ✅ RouteCreatorModule optimize edildi');
-        console.log('  ✅ Sekme geçişlerinde harita state koruma eklendi');
-        console.log('  ✅ Memory management ve cleanup eklendi');
-        console.log('  ✅ Loading ve hata durumları iyileştirildi');
-        console.log('  ✅ Tab geçiş sistemi güncellendi (lazy loading, state koruma)');
-        console.log('  ✅ Her sekme bağımsız harita instance\'ı çalıştırıyor');
-        console.log('  ✅ Sekme geçişlerinde performans optimizasyonu');
-        console.log('  ✅ Hazır rotalar kendi haritasında gösteriliyor (sekme değişmiyor)');
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
         return true;
     } else {
-        console.log('❌ Some tests failed. Please review the implementation.');
+        // Log removed for cleaner console
         return false;
     }
 };
@@ -9460,7 +9462,7 @@ window.runAllSeparateTabMapTests = async function() {
 //                 showPOISkeletons: !!(window.loadingManager && window.loadingManager.showPOISkeletons),
 //                 lazyLoader: !!window.lazyLoader
 //             });
-//             console.log('� DEBUGE: Checking elements...');
+//             // Log removed for cleaner console
 // 
 //             // Check sliders
 //             Object.keys(ratingCategories).forEach(category => {
@@ -9484,7 +9486,7 @@ window.runAllSeparateTabMapTests = async function() {
 //         }
 
 function initializeSliders() {
-    console.log('🎚️ Initializing preference sliders...');
+    // Log removed for cleaner console
 
     Object.keys(ratingCategories).forEach(category => {
         const slider = document.getElementById(category);
@@ -9506,12 +9508,12 @@ function initializeSliders() {
             return;
         }
 
-        console.log(`✅ Setting up preference slider: ${category}`);
+        // Log removed for cleaner console
 
         // Add both input and change events for better compatibility
         const handleSliderChange = function () {
             const value = parseInt(this.value);
-            console.log(`🎚️ Preference slider ${category} changed to: ${value}`);
+            // Log removed for cleaner console
             updatePreferenceValue(category, value, valueDisplay, preferenceItem);
         };
 
@@ -9520,14 +9522,14 @@ function initializeSliders() {
 
         // Initialize state
         const initialValue = parseInt(slider.value);
-        console.log(`ℹ️ Initial value for ${category}: ${initialValue}`);
+        // Log removed for cleaner console
         updatePreferenceValue(category, initialValue, valueDisplay, preferenceItem);
     });
 
     // Initialize quick selection buttons
     initializeQuickSelection();
 
-    console.log('✅ All preference sliders initialized');
+    // Log removed for cleaner console
 }
 
 function updateSliderBackground(slider) {
@@ -9690,18 +9692,18 @@ function updatePreferenceValue(category, value, valueDisplay, preferenceItem) {
             preferenceItem.classList.add('active');
         }
         
-        console.log(`✅ Updated ${category} preference to: ${preferenceValue.text} (${value})`);
+        // Log removed for cleaner console
     }
 }
 
 function initializeQuickSelection() {
-    console.log('🚀 Initializing quick selection buttons...');
+    // Log removed for cleaner console
     
     const quickButtons = document.querySelectorAll('.quick-btn');
     quickButtons.forEach(button => {
         button.addEventListener('click', function() {
             const preset = this.getAttribute('data-preset');
-            console.log(`🎯 Quick selection clicked: ${preset}`);
+            // Log removed for cleaner console
             
             if (preset === 'reset') {
                 resetAllPreferences();
@@ -9717,11 +9719,11 @@ function initializeQuickSelection() {
         });
     });
     
-    console.log('✅ Quick selection buttons initialized');
+    // Log removed for cleaner console
 }
 
 function applyPreset(preset) {
-    console.log('🎨 Applying preset:', preset);
+    // Log removed for cleaner console
     
     Object.keys(preset).forEach(category => {
         const slider = document.getElementById(category);
@@ -9738,11 +9740,11 @@ function applyPreset(preset) {
         }
     });
     
-    console.log('✅ Preset applied successfully');
+    // Log removed for cleaner console
 }
 
 function resetAllPreferences() {
-    console.log('🔄 Resetting all preferences...');
+    // Log removed for cleaner console
     
     Object.keys(ratingCategories).forEach(category => {
         const slider = document.getElementById(category);
@@ -9758,17 +9760,17 @@ function resetAllPreferences() {
         }
     });
     
-    console.log('✅ All preferences reset');
+    // Log removed for cleaner console
 }
 
 function setupEventListeners() {
-    console.log('🔗 Setting up event listeners...');
+    // Log removed for cleaner console
 
     const recommendBtn = document.getElementById('recommendBtn');
     if (recommendBtn) {
-        console.log('✅ Recommend button found, adding event listener');
+        // Log removed for cleaner console
         recommendBtn.addEventListener('click', function (e) {
-            console.log('🔥 Recommend button clicked!');
+            // Log removed for cleaner console
             e.preventDefault();
             getRecommendations();
         });
@@ -9776,17 +9778,17 @@ function setupEventListeners() {
         console.error('❌ Recommend button not found!');
         // Try to find it with a different approach
         const allButtons = document.querySelectorAll('button');
-        console.log('🔍 All buttons found:', allButtons.length);
+        // Log removed for cleaner console
         allButtons.forEach((btn, index) => {
-            console.log(`Button ${index}:`, btn.id, btn.className, btn.textContent.substring(0, 20));
+            // Log removed for cleaner console
         });
     }
 
-    console.log('✅ Event listeners setup complete');
+    // Log removed for cleaner console
 }
 
 async function getRecommendations() {
-    console.log('🚀 getRecommendations function called');
+    // Log removed for cleaner console
 
     const button = document.getElementById('recommendBtn');
     const resultsSection = document.getElementById('resultsSection');
@@ -9883,28 +9885,28 @@ async function getRecommendations() {
             }
             
             const sliderValue = parseInt(slider.value);
-            console.log(`🎚️ ${category}: slider value = ${sliderValue}, classes = ${slider.className}`);
+            // Log removed for cleaner console
 
             // Check for both old and new slider types
             if (slider.classList.contains('discrete-slider')) {
                 // Convert discrete slider value to actual preference value (old interface)
                 preferences[category] = discreteValues[sliderValue].value;
-                console.log(`   → Using discrete value: ${discreteValues[sliderValue].value}`);
+                // Log removed for cleaner console
             } else if (slider.classList.contains('preference-slider')) {
                 // Convert preference slider value to actual preference value (new interface)
                 preferences[category] = preferenceValues[sliderValue].value;
-                console.log(`   → Using preference value: ${preferenceValues[sliderValue].value}`);
+                // Log removed for cleaner console
             } else {
                 // Fallback for direct values
                 preferences[category] = sliderValue;
-                console.log(`   → Using direct value: ${sliderValue}`);
+                // Log removed for cleaner console
             }
         });
 
-        console.log('User preferences:', preferences);
-        console.log('Preferences object keys:', Object.keys(preferences));
-        console.log('Preferences object values:', Object.values(preferences));
-        console.log('Sending to API:', JSON.stringify({ preferences }, null, 2));
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
+        // Log removed for cleaner console
         
         // Debug: Check if preferences is empty
         if (Object.keys(preferences).length === 0) {
@@ -9922,8 +9924,8 @@ async function getRecommendations() {
         }
 
         // Make API request to get recommendations
-        console.log('🚀 Making API request to:', `${apiBase}/recommendations`);
-        console.log('🚀 Request body:', JSON.stringify({ preferences }));
+        // Log removed for cleaner console
+        // Log removed for cleaner console
         
         const response = await fetch(`${apiBase}/recommendations`, {
             method: 'POST',
@@ -9931,8 +9933,8 @@ async function getRecommendations() {
             body: JSON.stringify({ preferences })
         });
         
-        console.log('📡 Response status:', response.status);
-        console.log('📡 Response ok:', response.ok);
+        // Log removed for cleaner console
+        // Log removed for cleaner console
         
         if (!response.ok) {
             let errorText;
@@ -9947,12 +9949,12 @@ async function getRecommendations() {
         }
         
         const apiData = await response.json();
-        console.log('API Response:', apiData);
+        // Log removed for cleaner console
 
         // Debug: Log all unique categories from API response
         const allPOIs = [...(apiData.highScore || []), ...(apiData.lowScore || [])];
         const uniqueCategories = [...new Set(allPOIs.map(poi => poi.category).filter(Boolean))];
-        console.log('🔍 Unique categories from API:', uniqueCategories);
+        // Log removed for cleaner console
         
         // Debug: Check which categories are falling back to 'diger'
         uniqueCategories.forEach(category => {
@@ -9989,7 +9991,7 @@ async function getRecommendations() {
             }))
         };
 
-        console.log('Processed recommendation data:', recommendationData);
+        // Log removed for cleaner console
         
         if (window.loadingManager && typeof window.loadingManager.updateProgress === 'function') {
             try {
@@ -10016,10 +10018,10 @@ async function getRecommendations() {
 
         // Initialize map with all recommendations
         if (recommendationData.highScore.length > 0 || recommendationData.lowScore.length > 0) {
-            console.log('Initializing map with all recommendations...');
+            // Log removed for cleaner console
             await initializeMap(recommendationData);
         } else {
-            console.log('Skipping map initialization - no recommendations');
+            // Log removed for cleaner console
         }
 
     } catch (error) {
@@ -10041,7 +10043,7 @@ async function getRecommendations() {
         button.innerHTML = '<i class="fas fa-magic"></i> Önerilerimi Getir';
 
         // Reset button state only - loading indicator will be handled by displayRecommendations
-        console.log('✅ Finally block executed - button reset');
+        // Log removed for cleaner console
     }
 }
 
@@ -10060,7 +10062,7 @@ function calculateRecommendations(poisData, preferences) {
         }
     });
 
-    console.log('All POIs:', allPois.length);
+    // Log removed for cleaner console
 
     // Calculate scores for each POI
     const scoredPois = allPois.map(poi => {
@@ -10111,8 +10113,8 @@ function calculateRecommendations(poisData, preferences) {
     const highScorePois = allSortedPois.filter(poi => poi.recommendationScore >= 45);
     const lowScorePois = allSortedPois.filter(poi => poi.recommendationScore < 45);
 
-    console.log('High score POIs (≥45):', highScorePois.length);
-    console.log('Low score POIs (<45):', lowScorePois.length);
+    // Log removed for cleaner console
+    // Log removed for cleaner console
 
     return {
         highScore: highScorePois.slice(0, 15), // Top 15 high-scoring
@@ -10281,7 +10283,7 @@ async function displayRecommendations(recommendationData) {
                     }
                 }
 
-                console.log('✅ Loading indicator hidden with smooth transition');
+                // Log removed for cleaner console
             }, 500); // Wait for fade out to complete
         }
     }, 2000); // Show loading for at least 2 seconds
@@ -10387,7 +10389,7 @@ async function initializeEmptyMap() {
     const mapContainer = document.getElementById('mapContainer');
     const mapSection = document.getElementById('mapSection');
 
-    console.log('🗺️ Initializing empty map...');
+    // Log removed for cleaner console
 
     // Show map section with animation
     if (mapSection) {
@@ -10442,7 +10444,7 @@ async function initializeEmptyMap() {
         if (map) {
             map.invalidateSize();
         }
-        console.log('🗺️ Empty map initialized and ready');
+        // Log removed for cleaner console
     }, 1000);
 }
 
@@ -10510,14 +10512,14 @@ async function initializeMap(recommendationData) {
         
         // Debug: Log POI category
         if (index < 3) { // Only log first 3 POIs to avoid spam
-            console.log(`🔍 POI ${index + 1}: "${poi.name}", category: "${poi.category}"`);
+            // Log removed for cleaner console
         }
         
         let customIcon;
         try {
             customIcon = createCustomIcon(poi.category, poi.recommendationScore, isLowScore);
             if (index < 3) {
-                console.log(`✅ Created custom icon for POI ${index + 1}:`, customIcon);
+                // Log removed for cleaner console
             }
         } catch (error) {
             console.error(`❌ Error creating custom icon for POI ${poi.name}:`, error);
@@ -10684,7 +10686,7 @@ async function initializeMap(recommendationData) {
         if (map) {
             map.invalidateSize();
         }
-        console.log('🗺️ Map fully loaded and displayed');
+        // Log removed for cleaner console
     }, 1000);
 }
 function focusOnMap(lat, lng) {
@@ -10915,7 +10917,7 @@ function toggleLowScorePOIs() {
             }
         }, 1200);
 
-        console.log('🗺️ Low score POIs shown on map');
+        // Log removed for cleaner console
 
     } else {
         // Hide low score POIs
@@ -10946,7 +10948,7 @@ function toggleLowScorePOIs() {
         toggleBtn.classList.remove('btn--warning');
         toggleBtn.classList.add('btn--secondary');
 
-        console.log('🗺️ Low score POIs hidden on map');
+        // Log removed for cleaner console
     }
 }
 // Enhanced Recommend Button Functionality - REMOVED DUPLICATE
@@ -11145,7 +11147,7 @@ class RouteContextMenu {
         event.preventDefault();
         event.stopPropagation();
         
-        console.log('🎯 Showing context menu for POI:', poiId, 'at index:', index);
+        // Log removed for cleaner console
         
         // Find the POI in selectedPOIs
         const poi = selectedPOIs.find(p => (p.id || p._id) === poiId);
@@ -11296,7 +11298,7 @@ class RouteContextMenu {
         instance.hide();
         
         if (instance.currentPOI) {
-            console.log('🔍 Showing detailed route information');
+            // Log removed for cleaner console
             
             // Use existing route details panel
             const routeData = {
@@ -11314,7 +11316,7 @@ class RouteContextMenu {
         const instance = RouteContextMenu.getInstance();
         instance.hide();
         
-        console.log('⚡ Optimizing route');
+        // Log removed for cleaner console
         optimizeRoute();
         showNotification('Rota optimize ediliyor...', 'info');
     }
@@ -11323,7 +11325,7 @@ class RouteContextMenu {
         const instance = RouteContextMenu.getInstance();
         instance.hide();
         
-        console.log('🗺️ Focusing route on map');
+        // Log removed for cleaner console
         
         if (selectedPOIs.length > 0) {
             // Create bounds for all POIs
@@ -11348,7 +11350,7 @@ class RouteContextMenu {
         const instance = RouteContextMenu.getInstance();
         instance.hide();
         
-        console.log('📤 Sharing route');
+        // Log removed for cleaner console
         
         // Create route share data
         const routeData = {
@@ -11384,7 +11386,7 @@ class RouteContextMenu {
         const instance = RouteContextMenu.getInstance();
         instance.hide();
         
-        console.log('🌐 Opening route in Google Maps');
+        // Log removed for cleaner console
         
         let waypoints = [];
         
@@ -11417,7 +11419,7 @@ class RouteContextMenu {
         const instance = RouteContextMenu.getInstance();
         instance.hide();
         
-        console.log('💾 Downloading route');
+        // Log removed for cleaner console
         
         const routeData = {
             name: `Ürgüp Rotası - ${new Date().toLocaleDateString('tr-TR')}`,
@@ -11449,7 +11451,7 @@ class RouteContextMenu {
         const instance = RouteContextMenu.getInstance();
         instance.hide();
         
-        console.log('✏️ Editing route');
+        // Log removed for cleaner console
         showNotification('Rota düzenleme modu aktif - POI\'leri sürükleyip bırakabilirsiniz', 'info');
         
         // Enable drag and drop for route items (this would need additional implementation)
@@ -11460,7 +11462,7 @@ class RouteContextMenu {
         const instance = RouteContextMenu.getInstance();
         instance.hide();
         
-        console.log('🔄 Reversing route');
+        // Log removed for cleaner console
         
         if (selectedPOIs.length >= 2) {
             selectedPOIs.reverse();
@@ -11481,7 +11483,7 @@ class RouteContextMenu {
         const instance = RouteContextMenu.getInstance();
         instance.hide();
         
-        console.log('🗑️ Clearing route');
+        // Log removed for cleaner console
         
         // Show confirmation dialog
         if (confirm('Rotayı tamamen temizlemek istediğinizden emin misiniz?')) {
@@ -11503,7 +11505,7 @@ window.RouteContextMenu = RouteContextMenu;
 */
 
 async function initializeApp() {
-    console.log('🔧 Initializing application components...');
+    // Log removed for cleaner console
 
     if (typeof loadCategories === 'function') {
         try {
@@ -11595,12 +11597,12 @@ async function initializeApp() {
         }
     }
 
-    console.log('✅ Application components initialized');
+    // Log removed for cleaner console
 }
 
 // Enhanced Filter System
 function initializeEnhancedFilters() {
-    console.log('🎛️ Initializing enhanced filter system...');
+    // Log removed for cleaner console
     
     // Filter toggle functionality
     const openFiltersBtn = document.getElementById('openFiltersBtn');
@@ -11700,7 +11702,7 @@ function initializeFilterChips() {
 }
 
 function clearAllFilters() {
-    console.log('🧹 Clearing all filters...');
+    // Log removed for cleaner console
     
     // Reset all filter chips to default (first chip active)
     const chipGroups = ['#routeTypeChips', '#difficultyChips', '#durationChips', '#favoriteChips'];
@@ -11749,7 +11751,7 @@ function updateRouteStats() {
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM loaded, initializing POI recommendation system...');
+    // Log removed for cleaner console
     initializeApp();
 
     // Toggle map visibility on mobile
@@ -11784,16 +11786,16 @@ document.addEventListener('DOMContentLoaded', function() {
 // Also initialize if DOM is already loaded
 if (document.readyState === 'loading') {
     // DOM is still loading, wait for DOMContentLoaded
-    console.log('⏳ DOM is still loading, waiting...');
+    // Log removed for cleaner console
 } else {
     // DOM is already loaded
-    console.log('✅ DOM already loaded, initializing immediately...');
+    // Log removed for cleaner console
     initializeApp();
 }
 
 // Show All POIs function - displays all POIs regardless of preferences
 async function showAllPOIs() {
-    console.log('🌍 showAllPOIs function called');
+    // Log removed for cleaner console
 
     const button = document.getElementById('showAllBtn');
     const resultsSection = document.getElementById('resultsSection');
@@ -11848,7 +11850,7 @@ async function showAllPOIs() {
     }
 
     try {
-        console.log('📡 Making API request to get all POIs...');
+        // Log removed for cleaner console
         
         // Fetch all POIs from the API
         const response = await fetch(`${apiBase}/pois`, {
@@ -11858,8 +11860,8 @@ async function showAllPOIs() {
             }
         });
 
-        console.log('📡 Response status:', response.status);
-        console.log('📡 Response ok:', response.ok);
+        // Log removed for cleaner console
+        // Log removed for cleaner console
         
         if (!response.ok) {
             let errorText;
@@ -11874,7 +11876,7 @@ async function showAllPOIs() {
         }
         
         const poisData = await response.json();
-        console.log('📊 All POIs data received:', poisData);
+        // Log removed for cleaner console
 
         // Transform the data structure - flatten all categories
         const allPOIs = [];
@@ -11890,11 +11892,11 @@ async function showAllPOIs() {
             }
         });
 
-        console.log(`📋 Total POIs found: ${allPOIs.length}`);
+        // Log removed for cleaner console
 
         // Debug: Log all unique categories
         const uniqueCategories = [...new Set(allPOIs.map(poi => poi.category).filter(Boolean))];
-        console.log('🔍 Unique categories found:', uniqueCategories);
+        // Log removed for cleaner console
 
         if (allPOIs.length === 0) {
             resultsContainer.innerHTML = `
@@ -11944,13 +11946,13 @@ async function showAllPOIs() {
         button.classList.remove('btn--loading');
         button.innerHTML = '<i class="fas fa-globe btn-icon"></i><span class="btn-text">Tüm POI\'leri Göster</span>';
         
-        console.log('✅ showAllPOIs completed');
+        // Log removed for cleaner console
     }
 }
 
 // Display all POIs in the results container
 async function displayAllPOIs(allPOIs) {
-    console.log('🎨 Displaying all POIs:', allPOIs.length);
+    // Log removed for cleaner console
     
     const resultsContainer = document.getElementById('recommendationResults');
     
@@ -12008,12 +12010,12 @@ async function displayAllPOIs(allPOIs) {
     // Initialize any interactive elements (load media for POI cards)
     initializePOICardsMedia();
     
-    console.log('✅ All POIs displayed successfully');
+    // Log removed for cleaner console
 }
 
 // Update map with all POIs
 function updateMapWithPOIs(allPOIs) {
-    console.log('🗺️ Updating map with all POIs:', allPOIs.length);
+    // Log removed for cleaner console
     
     if (!map) {
         console.error('❌ Map not initialized');
@@ -12086,15 +12088,15 @@ function updateMapWithPOIs(allPOIs) {
         map.setView([38.6436, 34.8128], 13);
     }
 
-    console.log(`✅ Added ${markers.length} markers to map`);
+    // Log removed for cleaner console
 }
 
 // Initialize POI cards media loading
 function initializePOICardsMedia() {
-    console.log('🎨 Initializing POI cards media...');
+    // Log removed for cleaner console
     
     const poiCards = document.querySelectorAll('.poi-card[data-poi-id]');
-    console.log(`📋 Found ${poiCards.length} POI cards to initialize`);
+    // Log removed for cleaner console
     
     poiCards.forEach((card, index) => {
         const poiId = card.dataset.poiId;
@@ -12131,7 +12133,7 @@ async function loadPOICardMedia(poiId, cardElement) {
         // Fetch media from API
         const response = await fetch(`${apiBase}/poi/${poiId}/media`);
         if (!response.ok) {
-            console.log(`ℹ️ No media found for POI ${poiId}`);
+            // Log removed for cleaner console
             return;
         }
         
@@ -12145,7 +12147,7 @@ async function loadPOICardMedia(poiId, cardElement) {
         }
         
     } catch (error) {
-        console.log(`ℹ️ Could not load media for POI ${poiId}:`, error.message);
+        // Log removed for cleaner console
         // Don't show error to user, just skip media loading
     }
 }
@@ -12218,13 +12220,13 @@ function ensurePOIModalExists() {
         return null;
     }
     
-    console.log('✅ POI modal found in DOM');
+    // Log removed for cleaner console
     return modalElement;
 }
 
 // Show POI detail modal
 async function showPOIDetail(poiId, poiData = null) {
-    console.log('🔍 Opening POI detail modal for ID:', poiId);
+    // Log removed for cleaner console
     
     // Wait for Bootstrap to be loaded
     await waitForBootstrap();
@@ -12244,19 +12246,19 @@ async function showPOIDetail(poiId, poiData = null) {
             throw new Error('POI detail modal element could not be created');
         }
         
-        console.log('✅ Modal element ready:', modalElement);
+        // Log removed for cleaner console
         
         // Try Bootstrap 5 first, then fallback to manual show
         let modal;
         try {
-            console.log('🔄 Attempting to show Bootstrap modal...');
+            // Log removed for cleaner console
             modal = new bootstrap.Modal(modalElement, {
                 backdrop: true,
                 keyboard: true,
                 focus: true
             });
             modal.show();
-            console.log('✅ Bootstrap modal shown successfully');
+            // Log removed for cleaner console
         } catch (bootstrapError) {
             console.warn('Bootstrap Modal failed, using fallback:', bootstrapError);
             // Fallback: manually show modal
@@ -12279,13 +12281,13 @@ async function showPOIDetail(poiId, poiData = null) {
             
             // Prevent body scroll
             document.body.classList.add('modal-open');
-            console.log('✅ Manual modal fallback applied');
+            // Log removed for cleaner console
         }
         
         // Hide mobile filter panel if open
         const mobileFilterPanel = document.getElementById('mobileFilterPanel');
         if (mobileFilterPanel && mobileFilterPanel.classList.contains('active')) {
-            console.log('🔧 Hiding mobile filter panel to show modal');
+            // Log removed for cleaner console
             mobileFilterPanel.classList.remove('active');
             document.body.style.overflow = '';
         }
@@ -12294,7 +12296,7 @@ async function showPOIDetail(poiId, poiData = null) {
         const highZIndexElements = document.querySelectorAll('[style*="z-index: 10000"], [style*="z-index:10000"]');
         highZIndexElements.forEach(element => {
             if (element.id !== 'poiDetailModal' && element.id !== 'poiModalBackdrop') {
-                console.log('🔧 Temporarily hiding high z-index element:', element.id || element.className);
+                // Log removed for cleaner console
                 element.style.zIndex = '999';
             }
         });
@@ -12314,7 +12316,7 @@ async function showPOIDetail(poiId, poiData = null) {
                 
                 // Force show if hidden
                 if (modalCheck.style.display === 'none' || !modalCheck.classList.contains('show')) {
-                    console.log('🔧 Forcing modal visibility...');
+                    // Log removed for cleaner console
                     modalCheck.style.display = 'block';
                     modalCheck.style.zIndex = '10100';
                     modalCheck.classList.add('show');
@@ -12335,14 +12337,14 @@ async function showPOIDetail(poiId, poiData = null) {
         // Fetch POI data if not provided
         let poi = poiData;
         if (!poi) {
-            console.log('🔍 Fetching POI data for ID:', poiId);
+            // Log removed for cleaner console
             const response = await fetch(`${apiBase}/poi/${poiId}`);
             if (!response.ok) {
                 console.error('❌ POI API response not OK:', response.status, response.statusText);
                 throw new Error('POI bulunamadı');
             }
             poi = await response.json();
-            console.log('✅ POI data fetched successfully:', poi);
+            // Log removed for cleaner console
         }
         
         currentPOIData = poi;
@@ -12356,7 +12358,7 @@ async function showPOIDetail(poiId, poiData = null) {
         // Setup event listeners
         setupPOIModalEventListeners();
         
-        console.log('✅ POI detail modal loaded successfully');
+        // Log removed for cleaner console
         
     } catch (error) {
         console.error('❌ Error loading POI detail:', error);
@@ -12452,11 +12454,11 @@ function updatePOIModalContent(poi) {
 // Load POI modal media
 async function loadPOIModalMedia(poiId) {
     try {
-        console.log('📸 Loading media for POI:', poiId);
+        // Log removed for cleaner console
         
         const response = await fetch(`${apiBase}/poi/${poiId}/media`);
         if (!response.ok) {
-            console.log('ℹ️ No media found for POI');
+            // Log removed for cleaner console
             showNoMediaPlaceholder();
             return;
         }
@@ -12475,7 +12477,7 @@ async function loadPOIModalMedia(poiId) {
         // Display media gallery
         displayMediaGallery();
         
-        console.log(`✅ Loaded ${mediaItems.length} media items`);
+        // Log removed for cleaner console
         
     } catch (error) {
         console.error('❌ Error loading media:', error);
@@ -12907,10 +12909,10 @@ function closePOIDetailModal() {
 document.addEventListener('DOMContentLoaded', function() {
     // Debug: Check if modal exists on page load
     const modalElement = document.getElementById('poiDetailModal');
-    console.log('🔍 POI Modal check on DOM ready:', modalElement ? 'Found' : 'Not found');
+    // Log removed for cleaner console
     
     if (modalElement) {
-        console.log('✅ POI Modal element found on page load');
+        // Log removed for cleaner console
         
         const closeBtn = modalElement.querySelector('.btn-close');
         if (closeBtn) {
@@ -12943,7 +12945,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Test function to verify API categories - REMOVED
 
 if (window.rateLimiter) {
-    console.log('✅ Rate limiting aktif - POI recommendation system API çağrıları sınırlandırılacak');
+    // Log removed for cleaner console
 }
 
 // Debug: Test geometry API endpoint - REMOVED
@@ -12961,4 +12963,3 @@ if (window.rateLimiter) {
 // Visual category preview function - REMOVED
 
 // Test function for debugging - REMOVED
-

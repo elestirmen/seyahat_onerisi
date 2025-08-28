@@ -30,7 +30,7 @@ class UXEnhancementManager {
      */
     async init() {
         try {
-            console.log('🚀 Initializing UX Enhancement Manager...');
+            // Log removed for cleaner console
             
             // Setup feature flags
             this.setupFeatureFlags();
@@ -59,7 +59,7 @@ class UXEnhancementManager {
             }
             
             this.isInitialized = true;
-            console.log('✅ UX Enhancement Manager initialized successfully');
+            // Log removed for cleaner console
             
             // Dispatch initialization event
             this.dispatchEvent('uxManagerReady', { manager: this });
@@ -107,7 +107,7 @@ class UXEnhancementManager {
         // Detect user preferences
         this.detectUserPreferences();
         
-        console.log('🏁 Feature flags initialized:', Object.fromEntries(this.featureFlags));
+        // Log removed for cleaner console
     }
 
     /**
@@ -184,7 +184,7 @@ class UXEnhancementManager {
             }
 
             // Enhanced preferences will be implemented in later tasks
-            console.log('📊 Enhanced Preferences component ready for implementation');
+            // Log removed for cleaner console
             this.components.set('enhancedPreferences', { status: 'ready' });
             
         } catch (error) {
@@ -198,7 +198,7 @@ class UXEnhancementManager {
     async initializeSmartNotifications() {
         try {
             // Smart notifications will be implemented in later tasks
-            console.log('🔔 Smart Notifications component ready for implementation');
+            // Log removed for cleaner console
             this.components.set('smartNotifications', { status: 'ready' });
             
         } catch (error) {
@@ -219,7 +219,7 @@ class UXEnhancementManager {
             }
 
             // Enhanced media viewer will be implemented in later tasks
-            console.log('🖼️ Enhanced Media Viewer component ready for implementation');
+            // Log removed for cleaner console
             this.components.set('enhancedMediaViewer', { status: 'ready' });
             
         } catch (error) {
@@ -240,7 +240,7 @@ class UXEnhancementManager {
             }
 
             // Interactive map controller will be implemented in later tasks
-            console.log('🗺️ Interactive Map Controller component ready for implementation');
+            // Log removed for cleaner console
             this.components.set('interactiveMapController', { status: 'ready' });
             
         } catch (error) {
@@ -256,12 +256,12 @@ class UXEnhancementManager {
             // Check if we're on a mobile device
             const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window;
             if (!isMobile) {
-                console.log('Desktop device detected, skipping mobile optimizations');
+                // Log removed for cleaner console
                 return;
             }
 
             // Mobile optimizations will be implemented in later tasks
-            console.log('📱 Mobile Optimizations component ready for implementation');
+            // Log removed for cleaner console
             this.components.set('mobileOptimizations', { status: 'ready' });
             
         } catch (error) {
@@ -313,7 +313,7 @@ class UXEnhancementManager {
         // Integration with existing LoadingManager performance monitor
         if (window.loadingManager && window.loadingManager.performanceMonitor) {
             this.performanceMonitor = window.loadingManager.performanceMonitor;
-            console.log('📊 Performance monitoring integrated with existing LoadingManager');
+            // Log removed for cleaner console
         } else {
             console.warn('LoadingManager not available, performance monitoring limited');
         }
@@ -332,7 +332,7 @@ class UXEnhancementManager {
         // Setup focus management
         this.setupFocusManagement();
         
-        console.log('♿ Accessibility enhancements applied');
+        // Log removed for cleaner console
     }
 
     /**
@@ -601,7 +601,7 @@ class UXEnhancementManager {
         this.eventListeners.clear();
 
         this.isInitialized = false;
-        console.log('🧹 UX Enhancement Manager destroyed');
+        // Log removed for cleaner console
     }
 }
 

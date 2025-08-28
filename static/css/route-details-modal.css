@@ -55,7 +55,7 @@
         border-radius: 16px;
         width: 90%;
     }
-    
+
     .route-details-modal.show .route-details-modal-content {
         transform: translate(-50%, -50%) scale(1);
     }
@@ -91,7 +91,8 @@
     font-weight: 600;
     margin: 0;
     text-align: center;
-    padding-right: 40px; /* Space for close button */
+    padding-right: 40px;
+    /* Space for close button */
 }
 
 .route-details-modal-subtitle {
@@ -189,11 +190,83 @@
     display: block;
 }
 
+/* Force map tab to maintain dimensions even when hidden on mobile */
+@media (max-width: 768px) {
+
+    /* Always keep map tab rendered but hidden when not active */
+    .route-details-tab-content[data-tab="map"] {
+        display: block !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: -9999px !important;
+        width: 100% !important;
+        height: auto !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        z-index: -1 !important;
+    }
+
+    .route-details-tab-content[data-tab="map"].active {
+        position: relative !important;
+        left: 0 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 1 !important;
+    }
+
+    /* ULTRA AGGRESSIVE map container sizing for mobile */
+    .route-details-tab-content[data-tab="map"] .route-map-container {
+        width: 100% !important;
+        height: 60vh !important;
+        min-height: 500px !important;
+        max-height: 80vh !important;
+        display: block !important;
+        position: relative !important;
+    }
+
+    .route-details-tab-content[data-tab="map"] #routeModalMap {
+        width: 100% !important;
+        height: 60vh !important;
+        min-height: 500px !important;
+        max-height: 80vh !important;
+        display: block !important;
+        position: relative !important;
+    }
+    
+    /* Force all elevation chart elements to be HUGE on mobile */
+    .elevation-chart-section {
+        width: 100vw !important;
+        min-height: 40vh !important;
+        height: 40vh !important;
+        max-height: 50vh !important;
+        display: block !important;
+        margin: 20px 0 !important;
+        padding: 20px !important;
+    }
+    
+    .elevation-chart-container {
+        width: 100% !important;
+        min-height: 30vh !important;
+        height: 30vh !important;
+        max-height: 40vh !important;
+        display: block !important;
+    }
+    
+    #modalElevationChart {
+        width: 100% !important;
+        height: 25vh !important;
+        min-height: 250px !important;
+        max-height: 35vh !important;
+        display: block !important;
+    }
+}
+
 @keyframes fadeInUp {
     from {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -262,19 +335,37 @@
     line-height: 1.6;
 }
 
-/* Map Tab */
+/* Map Tab - Mobile Optimized */
 .route-map-container {
     position: relative;
-    height: 400px;
+    height: 350px;
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid #e2e8f0;
     margin-bottom: 24px;
+    /* Force hardware acceleration */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    /* Ensure proper sizing */
+    width: 100%;
+    min-height: 350px;
 }
 
 .route-map {
-    width: 100%;
-    height: 100%;
+    width: 100% !important;
+    height: 100% !important;
+    /* Force proper rendering */
+    position: relative;
+    z-index: 1;
+}
+
+/* Ensure map renders properly on mobile */
+#routeModalMap {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 350px !important;
+    position: relative !important;
+    z-index: 1 !important;
 }
 
 .route-map-controls {
@@ -318,12 +409,15 @@
     margin-top: 20px;
 }
 
-/* Elevation Chart Styles */
+/* Elevation Chart Styles - Mobile Optimized */
 .elevation-chart-section {
     background: #f8fafc;
     border-radius: 12px;
     padding: 16px;
     border: 1px solid #e2e8f0;
+    /* Force proper rendering */
+    width: 100%;
+    min-height: 200px;
 }
 
 .elevation-header {
@@ -356,13 +450,19 @@
     padding: 8px;
     margin-bottom: 8px;
     border: 1px solid #e2e8f0;
+    /* Ensure proper sizing */
+    width: 100%;
+    min-height: 140px;
 }
 
 #modalElevationChart {
-    width: 100%;
-    height: 120px;
+    width: 100% !important;
+    height: 120px !important;
     cursor: crosshair;
     border-radius: 6px;
+    /* Force proper canvas rendering */
+    display: block !important;
+    position: relative !important;
 }
 
 .elevation-tooltip {
@@ -413,7 +513,7 @@
     border-radius: 50% !important;
     width: 16px !important;
     height: 16px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
 .elevation-map-popup {
@@ -461,7 +561,7 @@
     font-size: 9px;
     font-weight: bold;
     border: 2px solid white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     z-index: 10;
 }
 
@@ -576,8 +676,13 @@
 }
 
 @keyframes media-viewer-spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .media-viewer-content-wrapper {
@@ -860,8 +965,13 @@
 }
 
 @keyframes loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 .route-media-overlay {
@@ -919,8 +1029,13 @@
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Action Buttons */
@@ -974,37 +1089,94 @@
         max-height: 100vh;
         border-radius: 0;
     }
-    
+
     .route-details-modal-header::before {
         display: block;
     }
-    
+
     .route-stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
+    /* Aggressive mobile map container sizing */
     .route-map-container {
-        height: 300px;
+        height: 300px !important;
+        min-height: 300px !important;
+        max-height: 300px !important;
         margin-bottom: 16px;
+        width: 100% !important;
+        max-width: 100% !important;
+        position: relative !important;
+        overflow: hidden !important;
+        display: block !important;
+        visibility: visible !important;
     }
-    
+
+    /* Force map to render properly on mobile with aggressive sizing */
+    #routeModalMap {
+        width: 100% !important;
+        height: 300px !important;
+        min-height: 300px !important;
+        max-height: 300px !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        display: block !important;
+        visibility: visible !important;
+        z-index: 1 !important;
+    }
+
+    /* Leaflet container mobile fixes */
+    .route-map-container .leaflet-container {
+        width: 100% !important;
+        height: 300px !important;
+        min-height: 300px !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+    }
+
+    /* Elevation chart mobile fixes with aggressive sizing - LARGER */
+    .elevation-chart-section {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 25vh !important;
+        height: 25vh !important;
+        max-height: 300px !important;
+        display: block !important;
+        visibility: visible !important;
+    }
+
+    .elevation-chart-container {
+        width: 100% !important;
+        min-height: 20vh !important;
+        height: 20vh !important;
+        max-height: 250px !important;
+        position: relative !important;
+        display: block !important;
+    }
+
+    #modalElevationChart {
+        width: 100% !important;
+        height: 18vh !important;
+        min-height: 180px !important;
+        max-height: 220px !important;
+        display: block !important;
+        visibility: visible !important;
+    }
+
     .route-media-grid {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
-    
+
     .route-details-actions {
         flex-direction: column;
     }
-    
+
     .route-action-btn {
         min-width: auto;
-    }
-
-    /* Ensure map container is properly sized on mobile */
-    #routeModalMap {
-        width: 100% !important;
-        height: 100% !important;
-        min-height: 300px;
     }
 
     /* Mobile-specific map controls */
@@ -1025,35 +1197,47 @@
     .route-details-modal-header {
         padding: 16px;
     }
-    
+
     .route-details-tabs {
         padding: 0 16px;
     }
-    
+
     .route-details-tab {
         padding: 12px 16px;
     }
-    
+
     .route-details-tab-content {
         padding: 16px;
     }
-    
+
     .route-stats-grid {
         grid-template-columns: 1fr;
         gap: 12px;
     }
-    
+
     .route-poi-item {
         padding: 12px;
     }
-    
+
     .route-poi-icon {
         width: 40px;
         height: 40px;
     }
 
     .route-map-container {
-        height: 250px;
+        height: 250px !important;
+        min-height: 250px !important;
+        width: 100% !important;
+    }
+
+    #routeModalMap {
+        height: 250px !important;
+        min-height: 250px !important;
+    }
+
+    .elevation-chart-section {
+        width: calc(100vw - 32px) !important;
+        padding: 12px;
     }
 }
 
@@ -1063,16 +1247,73 @@
         padding: 16px 24px;
         min-height: 48px;
     }
-    
+
     .route-action-btn {
         min-height: 48px;
     }
-    
+
     .route-poi-item {
         min-height: 64px;
     }
-    
+
     .route-media-item {
         min-height: 120px;
+    }
+}
+
+/* Force proper rendering on mobile devices */
+@media screen and (max-width: 768px) and (orientation: portrait) {
+
+    .route-details-modal.show .route-map-container,
+    .route-details-modal.show .elevation-chart-section {
+        /* Force repaint */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        will-change: transform;
+    }
+
+    .route-details-modal.show #routeModalMap,
+    .route-details-modal.show #modalElevationChart {
+        /* Force GPU acceleration */
+        transform: translate3d(0, 0, 0);
+        -webkit-transform: translate3d(0, 0, 0);
+    }
+}
+
+/* Additional mobile fixes for better rendering */
+@media screen and (max-width: 768px) {
+
+    /* Force proper container sizing */
+    .route-details-modal-content {
+        contain: layout style paint;
+    }
+
+    .route-details-tab-content[data-tab="map"] {
+        /* Ensure map tab content is properly sized */
+        min-height: 400px;
+        contain: layout;
+    }
+
+    .route-map-container {
+        /* Force proper map container behavior */
+        contain: layout size;
+        isolation: isolate;
+    }
+
+    .elevation-chart-section {
+        /* Force proper chart container behavior */
+        contain: layout size;
+        isolation: isolate;
+    }
+
+    /* Ensure leaflet map tiles render properly */
+    .leaflet-container {
+        background: #f8f9fa !important;
+    }
+
+    .leaflet-tile {
+        /* Improve tile rendering on mobile */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
     }
 }

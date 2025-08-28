@@ -199,7 +199,7 @@ class ElevationChart {
          * @param {Object} elevationProfile - Pre-calculated elevation profile
          */
         try {
-            console.log('🏔️ Loading pre-calculated elevation profile:', elevationProfile);
+            // Log removed for cleaner console
             
             if (!elevationProfile || !elevationProfile.points || elevationProfile.points.length === 0) {
                 console.warn('No elevation profile data available');
@@ -220,8 +220,8 @@ class ElevationChart {
             // Store stats
             this.elevationStats = elevationProfile.stats || {};
             
-            console.log(`✅ Loaded ${this.elevationData.length} elevation points from database`);
-            console.log(`📊 Elevation range: ${this.elevationStats.min_elevation || 'unknown'}m - ${this.elevationStats.max_elevation || 'unknown'}m`);
+            // Log removed for cleaner console
+            // Log removed for cleaner console
             
             this.updateChart();
             this.updateStats();
@@ -502,14 +502,14 @@ class ElevationChart {
         
         // Use pre-calculated stats if available
         if (this.elevationStats && Object.keys(this.elevationStats).length > 0) {
-            console.log('📊 Using pre-calculated elevation stats');
+            // Log removed for cleaner console
             minElevation = this.elevationStats.min_elevation;
             maxElevation = this.elevationStats.max_elevation;
             totalAscent = this.elevationStats.total_ascent || 0;
             totalDescent = this.elevationStats.total_descent || 0;
         } else {
             // Calculate stats from elevation data
-            console.log('📊 Calculating elevation stats from data');
+            // Log removed for cleaner console
             const elevations = this.elevationData.map(d => d.elevation);
             minElevation = Math.min(...elevations);
             maxElevation = Math.max(...elevations);
