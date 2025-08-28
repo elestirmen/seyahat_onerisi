@@ -15,6 +15,7 @@ class RouteDetailsModal {
         this.elevationDataForInteraction = null;
         this.elevationMediaOverlayPoints = [];
         this.pendingElevationMediaMarkers = null;
+        this.elevationMediaScreenPoints = [];
         // Bind methods
         this.hide = this.hide.bind(this);
         this.handleKeydown = this.handleKeydown.bind(this);
@@ -2155,16 +2156,23 @@ class RouteDetailsModal {
         // Create Chart.js chart
         const self = this;
 
+        // Make elevation data available for plugins/hit-testing before chart render
+        this.elevationDataForInteraction = elevationData;
+
         // Chart-level plugin to draw media markers on top of the elevation line
         const mediaMarkersPlugin = {
             id: 'modalMediaMarkers',
             afterDatasetsDraw(chart, args, pluginOptions) {
                 try {
-                    if (!self.elevationMediaOverlayPoints || self.elevationMediaOverlayPoints.length === 0) return;
+                    if (!self.elevationMediaOverlayPoints || self.elevationMediaOverlayPoints.length === 0) {
+                        self.elevationMediaScreenPoints = [];
+                        return;
+                    }
                     const meta = chart.getDatasetMeta(0);
                     if (!meta || !meta.data) return;
                     const distances = (self.elevationDataForInteraction || []).map(d => d.distance);
                     const ctx2 = chart.ctx;
+                    const screenPoints = [];
                     self.elevationMediaOverlayPoints.forEach((mp, idx) => {
                         // Find nearest index by distance
                         let nearestIndex = 0;
@@ -2186,7 +2194,9 @@ class RouteDetailsModal {
                         ctx2.textBaseline = 'middle';
                         ctx2.fillText(iconChar, x, y);
                         ctx2.restore();
+                        screenPoints.push({ x, y, media: mp.media, type });
                     });
+                    self.elevationMediaScreenPoints = screenPoints;
                 } catch (e) {
                     console.warn('mediaMarkersPlugin draw error:', e);
                 }
@@ -2273,7 +2283,7 @@ class RouteDetailsModal {
             plugins: [mediaMarkersPlugin]
         });
 
-        // Store elevation data for mouse interaction
+        // Store elevation data for mouse interaction (ensure set)
         this.elevationDataForInteraction = elevationData;
 
         // Add mouse event handlers for map synchronization
@@ -2341,9 +2351,30 @@ class RouteDetailsModal {
         };
 
         const handleClick = (event) => {
-            if (!this.currentElevationPosition || !this.mapInstance) return;
+            const rect = canvas.getBoundingClientRect();
+            const cx = event.clientX - rect.left;
+            const cy = event.clientY - rect.top;
 
-            // Center map on clicked position
+            // First: try media marker hit-test (open viewer)
+            if (Array.isArray(this.elevationMediaScreenPoints) && this.elevationMediaScreenPoints.length) {
+                const hit = this.elevationMediaScreenPoints.find(p => {
+                    const dx = p.x - cx;
+                    const dy = p.y - cy;
+                    return (dx*dx + dy*dy) <= (14*14); // 14px radius
+                });
+                if (hit && hit.media) {
+                    const media = hit.media;
+                    const url = media.url || media.path || media.file_path || media.full_path || media.original_path || '';
+                    const type = (media.media_type && media.media_type.toLowerCase()) || this.getMediaTypeFromUrl(url);
+                    if (url) {
+                        this.showMediaViewer(url, type);
+                        return; // don't also pan the map
+                    }
+                }
+            }
+
+            // Otherwise: center map on current elevation position
+            if (!this.currentElevationPosition || !this.mapInstance) return;
             this.mapInstance.setView(
                 [this.currentElevationPosition.lat, this.currentElevationPosition.lng],
                 this.mapInstance.getZoom()
