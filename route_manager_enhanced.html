@@ -8707,7 +8707,8 @@
 
                     if (response.ok) {
                         const data = await response.json();
-                        if (data.success) {
+                        // Backend başarı durumunda { message: 'Route deleted successfully' } döndürüyor
+                        if ((data && data.message && !data.error) || data?.success) {
                             showNotification(`"${routeName}" rotası başarıyla silindi`, 'success');
 
                             // Remove from UI
@@ -8728,7 +8729,7 @@
                             updateBulkActions();
 
                         } else {
-                            showNotification(`Rota silinemedi: ${data.error}`, 'error');
+                            showNotification(`Rota silinemedi${data?.error ? `: ${data.error}` : ''}`, 'error');
                         }
                     } else if (response.status === 404) {
                         // Route already deleted
