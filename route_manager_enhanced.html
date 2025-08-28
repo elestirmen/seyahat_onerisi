@@ -3782,9 +3782,30 @@
             showNotification('Harita temizlendi', 'success');
         }
 
+        // Benzersiz rota adı üretici (Yeni Rota, Yeni Rota 2, ...)
+        function generateUniqueRouteName(baseName = 'Yeni Rota') {
+            try {
+                const existingNames = new Set((allRoutes || []).map(r => (r?.name || '').toLowerCase()));
+                if (!existingNames.has(baseName.toLowerCase())) return baseName;
+                let i = 2;
+                let candidate = '';
+                do {
+                    candidate = `${baseName} ${i}`;
+                    i++;
+                } while (existingNames.has(candidate.toLowerCase()));
+                return candidate;
+            } catch (e) {
+                // Her ihtimale karşı zaman damgası ile fallback
+                const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
+                return `${baseName} ${ts}`;
+            }
+        }
+
         async function createAndEditRoute() {
+            // İsim çakışmasını önlemek için benzersiz bir başlangıç adı üret
+            const uniqueName = generateUniqueRouteName('Yeni Rota');
             const routeData = {
-                name: 'Yeni Rota',
+                name: uniqueName,
                 description: '',
 
                 route_type: 'walking',
