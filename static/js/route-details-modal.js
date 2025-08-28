@@ -1990,7 +1990,25 @@ class RouteDetailsModal {
 
             if (this.currentRoute.elevation_profile) {
                 console.log('✅ Using pre-calculated elevation profile');
-                elevationData = this.currentRoute.elevation_profile.points || [];
+                // Normalize DB distances (meters) to km for the chart
+                const points = this.currentRoute.elevation_profile.points || [];
+                elevationData = points.map(p => {
+                    const rawDist = (p.distance !== undefined ? p.distance : p.dist);
+                    const distNum = typeof rawDist === 'number' ? rawDist : parseFloat(rawDist);
+                    const latRaw = (p.lat !== undefined ? p.lat : p.latitude);
+                    const lngRaw = (p.lng !== undefined ? p.lng : (p.longitude ?? p.lon));
+                    const latNum = typeof latRaw === 'number' ? latRaw : parseFloat(latRaw);
+                    const lngNum = typeof lngRaw === 'number' ? lngRaw : parseFloat(lngRaw);
+                    return {
+                        distance: isNaN(distNum) ? 0 : (distNum / 1000),
+                        elevation: p.elevation,
+                        lat: latNum,
+                        lng: lngNum,
+                        name: p.name || null
+                    };
+                });
+                // Sanitize series: remove invalids, sort, ensure monotonicity
+                elevationData = this._sanitizeElevationData(elevationData);
             } else {
                 console.log('🔄 Generating elevation data from route');
                 elevationData = await this.generateElevationData();
@@ -2012,7 +2030,8 @@ class RouteDetailsModal {
                     const elevation = baseElevation + variation;
 
                     elevationData.push({
-                        distance: distanceKm * 1000, // Convert to meters
+                        // Keep distance in km throughout Chart.js usage
+                        distance: distanceKm,
                         elevation: elevation,
                         lat: 38.6431 + (Math.random() - 0.5) * 0.1,
                         lng: 34.8286 + (Math.random() - 0.5) * 0.1,
@@ -2021,6 +2040,26 @@ class RouteDetailsModal {
                 }
                 console.log(`✅ Created ${elevationData.length} fallback elevation points`);
             }
+
+            // Optionally extend last point to route end if there is a small gap
+            try {
+                const routeKm = this._estimateRouteTotalKm(elevationData);
+                if (typeof routeKm === 'number' && elevationData.length > 0) {
+                    const maxKm = Math.max(...elevationData.map(d => d.distance || 0));
+                    const gap = routeKm - maxKm;
+                    // Only extend when the gap is small (50m–300m) to avoid misleading long tails
+                    if (gap > 0.05 && gap <= 0.3) {
+                        const last = elevationData[elevationData.length - 1];
+                        elevationData.push({
+                            distance: routeKm,
+                            elevation: last.elevation,
+                            lat: last.lat,
+                            lng: last.lng,
+                            name: last.name || 'Bitiş'
+                        });
+                    }
+                }
+            } catch (_) { /* ignore */ }
 
             // Create Chart.js elevation chart
             await this.createElevationChart(ctx, elevationData);
@@ -2182,7 +2221,7 @@ class RouteDetailsModal {
         // Prepare chart data
         const labels = elevationData.map(d => {
             if (d.distance === 0) return 'Başlangıç';
-            return `${(d.distance).toFixed(1)}km`;
+            return `${(d.distance).toFixed(2)}km`;
         });
 
         const elevations = elevationData.map(d => d.elevation);
@@ -2194,6 +2233,11 @@ class RouteDetailsModal {
         canvas.height = 120;
         canvas.style.width = '100%';
         canvas.style.height = '120px';
+
+        // Estimate full route distance (km) from metadata (for labels only)
+        const routeTotalKm = this._estimateRouteTotalKm(elevationData);
+        // Data-driven max distance (km) to clamp the axis so it doesn't extend to a "nice" 15km when data ends at ~12km
+        const dataMaxKm = Math.max(...elevationData.map(d => d.distance || 0));
 
         // Create Chart.js chart
         const self = this;
@@ -2295,6 +2339,7 @@ class RouteDetailsModal {
                         return g;
                     },
                     fill: true,
+                    spanGaps: true,
                     tension: 0.4,
                     pointBackgroundColor: '#3b82f6',
                     pointBorderColor: '#ffffff',
@@ -2329,11 +2374,11 @@ class RouteDetailsModal {
                                 return names[index];
                             },
                             label: function (context) {
-                                const elevation = context.parsed.y;
-                                const distance = context.parsed.x;
+                                const elevation = Number(context.parsed.y);
+                                const distance = Number(context.parsed.x);
                                 return [
-                                    `Yükseklik: ${elevation}m`,
-                                    `Mesafe: ${distance.toFixed(1)}km`
+                                    `Yükseklik: ${elevation.toFixed(2)}m`,
+                                    `Mesafe: ${distance.toFixed(2)}km`
                                 ];
                             }
                         }
@@ -2343,12 +2388,14 @@ class RouteDetailsModal {
                     x: {
                         type: 'linear',
                         display: true,
+                        min: 0,
+                        max: dataMaxKm,
                         title: {
                             display: false
                         },
                         ticks: {
                             maxTicksLimit: 6,
-                            callback: (val) => `${val}km`
+                            callback: (val) => `${Number(val).toFixed(2)}km`
                         }
                     },
                     y: {
@@ -2374,7 +2421,7 @@ class RouteDetailsModal {
         this.addChartMouseHandlers(canvas, elevationData);
 
         // Update statistics
-        this.updateElevationStats(elevationData);
+        this.updateElevationStats(elevationData, routeTotalKm);
 
         console.log('✅ Chart.js elevation chart created successfully');
     }
@@ -2655,7 +2702,7 @@ class RouteDetailsModal {
         }
     }
 
-    updateElevationStats(elevationData) {
+    updateElevationStats(elevationData, routeTotalKmOverride) {
         if (!elevationData || elevationData.length === 0) return;
 
         const elevations = elevationData.map(d => d.elevation);
@@ -2680,19 +2727,86 @@ class RouteDetailsModal {
         const ascentEl = document.getElementById('modalTotalAscent');
         const descentEl = document.getElementById('modalTotalDescent');
 
-        if (minEl) minEl.textContent = `${minElevation}m`;
-        if (maxEl) maxEl.textContent = `${maxElevation}m`;
-        if (ascentEl) ascentEl.textContent = `+${Math.round(totalAscent)}m`;
-        if (descentEl) descentEl.textContent = `-${Math.round(totalDescent)}m`;
+        if (minEl) minEl.textContent = `${Number(minElevation).toFixed(2)}m`;
+        if (maxEl) maxEl.textContent = `${Number(maxElevation).toFixed(2)}m`;
+        if (ascentEl) ascentEl.textContent = `+${Number(totalAscent).toFixed(2)}m`;
+        if (descentEl) descentEl.textContent = `-${Number(totalDescent).toFixed(2)}m`;
 
-        // Update distance labels
-        const startLabel = document.querySelector('.distance-start');
-        const endLabel = document.querySelector('.distance-end');
+        // Update distance labels (scope to modal container to avoid clashes)
+        const container = document.getElementById('routeModalElevationContainer');
+        const startLabel = container ? container.querySelector('.distance-start') : null;
+        const endLabel = container ? container.querySelector('.distance-end') : null;
 
-        if (startLabel) startLabel.textContent = '0 km';
+        if (startLabel) startLabel.textContent = '0.00 km';
         if (endLabel && elevationData.length > 0) {
-            const maxDistance = Math.max(...elevationData.map(d => d.distance));
-            endLabel.textContent = `${maxDistance.toFixed(1)} km`;
+            const dataMaxKm = Math.max(...elevationData.map(d => d.distance));
+            let finalKm = dataMaxKm;
+            if (typeof routeTotalKmOverride === 'number' && routeTotalKmOverride > 0) {
+                const diff = Math.abs(routeTotalKmOverride - dataMaxKm);
+                // Only show route total if it is very close (<= 0.3 km) to data max
+                if (diff <= 0.3) finalKm = routeTotalKmOverride;
+            }
+            endLabel.textContent = `${finalKm.toFixed(2)} km`;
+        }
+    }
+
+    // Estimate full route distance in km from geometry/metadata or fall back to data
+    _estimateRouteTotalKm(elevationData) {
+        // Prefer elevation_profile.total_distance (meters) if present
+        try {
+            if (this.currentRoute && this.currentRoute.elevation_profile && typeof this.currentRoute.elevation_profile.total_distance === 'number') {
+                const td = this.currentRoute.elevation_profile.total_distance;
+                if (td > 0) return td / 1000;
+            }
+        } catch (e) { /* ignore */ }
+
+        // Prefer geometry if available
+        try {
+            if (this.currentRoute && this.currentRoute.geometry && Array.isArray(this.currentRoute.geometry.coordinates)) {
+                const coords = this.currentRoute.geometry.coordinates;
+                let total = 0;
+                for (let i = 1; i < coords.length; i++) {
+                    const [lng1, lat1] = coords[i - 1];
+                    const [lng2, lat2] = coords[i];
+                    total += this.calculateDistance(lat1, lng1, lat2, lng2); // returns km
+                }
+                if (total > 0) return total;
+            }
+        } catch (e) { /* ignore */ }
+
+        // Use route.total_distance when available; normalize units
+        try {
+            const td = this.currentRoute && this.currentRoute.total_distance;
+            if (typeof td === 'number' && td > 0) {
+                // Heuristic: values > 100 => meters, else km
+                return td > 100 ? (td / 1000) : td;
+            }
+        } catch (e) { /* ignore */ }
+
+        // Fallback: use data max distance
+        if (Array.isArray(elevationData) && elevationData.length) {
+            return Math.max(...elevationData.map(d => d.distance || 0));
+        }
+        return undefined;
+    }
+
+    // Clean and sort elevation data
+    _sanitizeElevationData(data) {
+        try {
+            const cleaned = (data || [])
+                .filter(d => Number.isFinite(d.distance) && Number.isFinite(d.elevation))
+                .sort((a, b) => a.distance - b.distance);
+            const eps = 1e-6;
+            const result = [];
+            let last = -Infinity;
+            for (const d of cleaned) {
+                if (d.distance + eps <= last) continue; // drop non-monotonic
+                result.push(d);
+                last = d.distance;
+            }
+            return result;
+        } catch (_) {
+            return data || [];
         }
     }
 
