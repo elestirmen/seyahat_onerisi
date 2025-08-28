@@ -16,6 +16,13 @@ class RouteDetailsModal {
         this.elevationMediaOverlayPoints = [];
         this.pendingElevationMediaMarkers = null;
         this.elevationMediaScreenPoints = [];
+        // Elevation UX state
+        this.showElevationMediaMarkers = true;
+        this.useElevationGradient = true;
+        this.elevZoomEnabled = false;
+        this.elevZoomRange = null; // {min, max} in km
+        this._elevMouseX = null;
+        this._elevDragStart = null;
         // Bind methods
         this.hide = this.hide.bind(this);
         this.handleKeydown = this.handleKeydown.bind(this);
@@ -1793,6 +1800,28 @@ class RouteDetailsModal {
                 <div class="route-overview-section">
                     <h3><i class="fas fa-mountain"></i> Yükseklik Profili</h3>
                     <div class="elevation-chart-section">
+                        <div class="elevation-toolbar" id="modalElevationToolbar">
+                            <button class="elev-btn" id="elevToggleGradient" title="Renkli dolguyu aç/kapat">
+                                <i class="fas fa-fill-drip"></i>
+                                <span>Renk</span>
+                            </button>
+                            <button class="elev-btn" id="elevToggleMarkers" title="Medya işaretlerini aç/kapat">
+                                <i class="fas fa-camera"></i>
+                                <span>İşaretler</span>
+                            </button>
+                            <button class="elev-btn" id="elevEnableZoom" title="Sürükleyerek yakınlaştır">
+                                <i class="fas fa-search-plus"></i>
+                                <span>Yakınlaştır</span>
+                            </button>
+                            <button class="elev-btn" id="elevResetZoom" title="Yakınlaştırmayı sıfırla">
+                                <i class="fas fa-compress-arrows-alt"></i>
+                                <span>Sıfırla</span>
+                            </button>
+                            <button class="elev-btn" id="elevExpand" title="Grafiği genişlet">
+                                <i class="fas fa-arrows-alt-v"></i>
+                                <span>Genişlet</span>
+                            </button>
+                        </div>
                         <div class="elevation-header">
                             <div class="elevation-stats">
                                 <span class="elevation-stat">
@@ -1814,7 +1843,7 @@ class RouteDetailsModal {
                             </div>
                         </div>
                         <div class="elevation-chart-container">
-                            <canvas id="modalElevationChart" width="800" height="300"></canvas>
+                            <canvas id="modalElevationChart" width="800" height="280"></canvas>
                             <div class="elevation-tooltip" id="modalElevationTooltip"></div>
                         </div>
                         <div class="elevation-distance-labels">
@@ -1896,6 +1925,8 @@ class RouteDetailsModal {
                         offsetHeight: canvas.offsetHeight
                     });
                 }
+                // Attach elevation toolbar handlers
+                this.attachElevationToolbarHandlers();
                 await this.loadElevationProfile();
             }, 100);
 
@@ -1925,18 +1956,29 @@ class RouteDetailsModal {
             // Wait for canvas to be available with retry mechanism
             let canvas = document.getElementById('modalElevationChart');
             let retries = 0;
-            const maxRetries = 10;
+            const maxRetries = 20;
 
             while (!canvas && retries < maxRetries) {
                 console.log(`🔄 Waiting for elevation canvas... attempt ${retries + 1}/${maxRetries}`);
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 150));
                 canvas = document.getElementById('modalElevationChart');
                 retries++;
             }
 
             if (!canvas) {
                 console.error('❌ Elevation chart canvas not found after retries');
-                return;
+                // Try to create the canvas fallback
+                const cont = document.querySelector('#routeModalElevationContainer .elevation-chart-container');
+                if (cont) {
+                    const fallback = document.createElement('canvas');
+                    fallback.id = 'modalElevationChart';
+                    fallback.width = 800;
+                    fallback.height = 280;
+                    cont.appendChild(fallback);
+                    canvas = fallback;
+                } else {
+                    return;
+                }
             }
 
             console.log('✅ Elevation canvas found, proceeding with chart creation');
@@ -2162,18 +2204,49 @@ class RouteDetailsModal {
         // Chart-level plugin to draw media markers on top of the elevation line
         const mediaMarkersPlugin = {
             id: 'modalMediaMarkers',
-            afterDatasetsDraw(chart, args, pluginOptions) {
+            afterDatasetsDraw(chart) {
                 try {
-                    if (!self.elevationMediaOverlayPoints || self.elevationMediaOverlayPoints.length === 0) {
+                    // Draw drag selection overlay
+                    if (self.elevZoomEnabled && self._elevDragStart != null && self._elevMouseX != null) {
+                        const area = chart.chartArea;
+                        const ctx = chart.ctx;
+                        const x1 = Math.min(self._elevDragStart, self._elevMouseX);
+                        const x2 = Math.max(self._elevDragStart, self._elevMouseX);
+                        const left = Math.max(area.left, x1);
+                        const right = Math.min(area.right, x2);
+                        ctx.save();
+                        ctx.fillStyle = 'rgba(59,130,246,0.15)';
+                        ctx.fillRect(left, area.top, Math.max(0, right - left), area.bottom - area.top);
+                        ctx.restore();
+                    }
+
+                    // Crosshair line
+                    if (self._elevMouseX != null) {
+                        const area = chart.chartArea;
+                        const ctx = chart.ctx;
+                        const x = Math.max(area.left, Math.min(area.right, self._elevMouseX));
+                        ctx.save();
+                        ctx.strokeStyle = 'rgba(55, 65, 81, 0.5)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(x + 0.5, area.top);
+                        ctx.lineTo(x + 0.5, area.bottom);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    if (!self.showElevationMediaMarkers || !self.elevationMediaOverlayPoints || self.elevationMediaOverlayPoints.length === 0) {
                         self.elevationMediaScreenPoints = [];
                         return;
                     }
+
                     const meta = chart.getDatasetMeta(0);
                     if (!meta || !meta.data) return;
                     const distances = (self.elevationDataForInteraction || []).map(d => d.distance);
                     const ctx2 = chart.ctx;
                     const screenPoints = [];
-                    self.elevationMediaOverlayPoints.forEach((mp, idx) => {
+
+                    self.elevationMediaOverlayPoints.forEach((mp) => {
                         // Find nearest index by distance
                         let nearestIndex = 0;
                         let minDiff = Infinity;
@@ -2184,7 +2257,7 @@ class RouteDetailsModal {
                         const pt = meta.data[nearestIndex];
                         if (!pt) return;
                         const x = pt.x;
-                        const y = pt.y - 10; // slight offset above line
+                        const y = pt.y - 10;
                         const type = (mp.media && (mp.media.media_type || (mp.media.url||mp.media.path))) ? self.getMediaTypeFromUrl(mp.media.url || mp.media.path || '') : 'image';
                         const iconMap = { image: '📷', video: '🎥', audio: '🎵', model_3d: '🧊', unknown: '📍' };
                         const iconChar = iconMap[type] || iconMap.unknown;
@@ -2209,15 +2282,24 @@ class RouteDetailsModal {
                 labels: labels,
                 datasets: [{
                     label: 'Yükseklik (m)',
-                    data: elevations,
+                    data: elevationData.map(d => ({ x: d.distance, y: d.elevation })),
                     borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    backgroundColor: (c) => {
+                        if (!self.useElevationGradient || !self.elevationDataForInteraction) return 'rgba(59, 130, 246, 0.1)';
+                        const area = c.chart && c.chart.chartArea;
+                        if (!area) return 'rgba(59, 130, 246, 0.1)';
+                        const g = c.chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
+                        g.addColorStop(0, '#bde7bd');
+                        g.addColorStop(0.5, '#ffd27f');
+                        g.addColorStop(1, '#ff9b8e');
+                        return g;
+                    },
                     fill: true,
                     tension: 0.4,
                     pointBackgroundColor: '#3b82f6',
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
-                    pointRadius: 4,
+                    pointRadius: 3,
                     pointHoverRadius: 6
                 }]
             },
@@ -2248,7 +2330,7 @@ class RouteDetailsModal {
                             },
                             label: function (context) {
                                 const elevation = context.parsed.y;
-                                const distance = elevationData[context.dataIndex].distance;
+                                const distance = context.parsed.x;
                                 return [
                                     `Yükseklik: ${elevation}m`,
                                     `Mesafe: ${distance.toFixed(1)}km`
@@ -2259,12 +2341,14 @@ class RouteDetailsModal {
                 },
                 scales: {
                     x: {
+                        type: 'linear',
                         display: true,
                         title: {
                             display: false
                         },
                         ticks: {
-                            maxTicksLimit: 6
+                            maxTicksLimit: 6,
+                            callback: (val) => `${val}km`
                         }
                     },
                     y: {
@@ -2306,17 +2390,22 @@ class RouteDetailsModal {
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
 
+            // Save for crosshair rendering
+            this._elevMouseX = x;
+            if (this.elevationChartInstance) this.elevationChartInstance.draw();
+
             // Check if mouse is within chart area
-            const padding = 40; // Chart.js default padding
-            if (x < padding || x > rect.width - padding || y < padding || y > rect.height - padding) {
+            const chart = this.elevationChartInstance;
+            const area = chart && chart.chartArea ? chart.chartArea : {left: 40, right: rect.width - 40, top: 20, bottom: rect.height - 20};
+            if (x < area.left || x > area.right || y < area.top || y > area.bottom) {
                 this.hideElevationTooltip();
                 this.removeMapMarker();
                 return;
             }
 
-            // Calculate position along the route based on mouse X position
-            const chartWidth = rect.width - (padding * 2);
-            const relativeX = (x - padding) / chartWidth;
+            // Calculate position along the route based on mouse X position (using chart area)
+            const chartWidth = area.right - area.left;
+            const relativeX = (x - area.left) / chartWidth;
             const maxDistance = Math.max(...elevationData.map(d => d.distance));
             const targetDistance = relativeX * maxDistance;
 
@@ -2348,6 +2437,8 @@ class RouteDetailsModal {
             this.hideElevationTooltip();
             this.removeMapMarker();
             this.currentElevationPosition = null;
+            this._elevMouseX = null;
+            if (this.elevationChartInstance) this.elevationChartInstance.draw();
         };
 
         const handleClick = (event) => {
@@ -2386,6 +2477,22 @@ class RouteDetailsModal {
         canvas.addEventListener('mouseleave', handleMouseLeave);
         canvas.addEventListener('click', handleClick);
 
+        // Drag-zoom interactions
+        canvas.addEventListener('mousedown', (e) => {
+            if (!this.elevZoomEnabled || !this.elevationChartInstance) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const area = this.elevationChartInstance.chartArea;
+            if (x >= area.left && x <= area.right) {
+                this._elevDragStart = x;
+            }
+        });
+        window.addEventListener('mouseup', () => {
+            if (!this.elevZoomEnabled) {
+                this._elevDragStart = null;
+            }
+        });
+
         // Store references for cleanup
         this.chartEventListeners = {
             canvas,
@@ -2393,6 +2500,48 @@ class RouteDetailsModal {
             handleMouseLeave,
             handleClick
         };
+    }
+
+    attachElevationToolbarHandlers() {
+        const gradBtn = document.getElementById('elevToggleGradient');
+        const markBtn = document.getElementById('elevToggleMarkers');
+        const zoomBtn = document.getElementById('elevEnableZoom');
+        const resetBtn = document.getElementById('elevResetZoom');
+        const expandBtn = document.getElementById('elevExpand');
+
+        if (gradBtn) gradBtn.addEventListener('click', () => {
+            this.useElevationGradient = !this.useElevationGradient;
+            if (this.elevationChartInstance) this.elevationChartInstance.update();
+        });
+
+        if (markBtn) markBtn.addEventListener('click', () => {
+            this.showElevationMediaMarkers = !this.showElevationMediaMarkers;
+            if (this.elevationChartInstance) this.elevationChartInstance.update();
+        });
+
+        if (zoomBtn) zoomBtn.addEventListener('click', () => {
+            this.elevZoomEnabled = !this.elevZoomEnabled;
+            zoomBtn.classList.toggle('active', this.elevZoomEnabled);
+            if (!this.elevZoomEnabled) this._elevDragStart = null;
+            if (this.elevationChartInstance) this.elevationChartInstance.draw();
+        });
+
+        if (resetBtn) resetBtn.addEventListener('click', () => {
+            this.elevZoomRange = null;
+            if (this.elevationChartInstance) {
+                this.elevationChartInstance.options.scales.x.min = undefined;
+                this.elevationChartInstance.options.scales.x.max = undefined;
+                this.elevationChartInstance.update();
+            }
+        });
+
+        if (expandBtn) expandBtn.addEventListener('click', () => {
+            const container = document.querySelector('.elevation-chart-container');
+            if (container) {
+                container.classList.toggle('expanded');
+                setTimeout(() => { if (this.elevationChartInstance) this.elevationChartInstance.resize(); }, 150);
+            }
+        });
     }
 
     showElevationTooltip(x, y, point) {
