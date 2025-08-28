@@ -28,6 +28,7 @@ if (window.rateLimiter) {
 // Global variables
 let map = null;
 let markers = [];
+let poiCluster = null; // MarkerCluster group for performance
 let routingControl = null;
 let selectedPOIs = [];
 let mediaCache = {};
@@ -8161,7 +8162,15 @@ async function displayRoutePOIsOnMap(pois) {
     }
     
     // Clear existing markers
-    markers.forEach(marker => marker.remove());
+    markers.forEach(marker => {
+        try {
+            if (poiCluster && poiCluster.hasLayer && poiCluster.hasLayer(marker)) {
+                poiCluster.removeLayer(marker);
+            } else if (marker && marker.remove) {
+                marker.remove();
+            }
+        } catch (_) {}
+    });
     markers = [];
     
     // Add POI markers to map
@@ -8458,6 +8467,29 @@ async function performMainMapInitialization() {
         
         // Add base layers
         addBaseLayers(map);
+
+        // Initialize marker clustering for performance
+        try {
+            if (poiCluster && map.hasLayer(poiCluster)) {
+                map.removeLayer(poiCluster);
+            }
+            poiCluster = L.markerClusterGroup({
+                chunkedLoading: true,
+                chunkDelay: 25,
+                chunkInterval: 200,
+                // Even less aggressive clustering
+                disableClusteringAtZoom: 13,
+                spiderfyOnMaxZoom: true,
+                removeOutsideVisibleBounds: true,
+                maxClusterRadius: function (zoom) {
+                    // Split clusters sooner as zoom increases
+                    return zoom >= 13 ? 25 : Math.max(10, 50 - zoom * 3);
+                }
+            });
+            map.addLayer(poiCluster);
+        } catch (e) {
+            console.warn('MarkerCluster init failed or not available:', e);
+        }
 
         // Ensure POI search bar exists on dynamic map
         try { ensurePOISearchBar(); } catch (_) {}
@@ -10501,6 +10533,29 @@ async function initializeMap(recommendationData) {
     // Add base layers
     addBaseLayers(map);
 
+    // Initialize marker clustering for performance
+    try {
+        if (poiCluster && map.hasLayer(poiCluster)) {
+            map.removeLayer(poiCluster);
+        }
+        poiCluster = L.markerClusterGroup({
+            chunkedLoading: true,
+            chunkDelay: 25,
+            chunkInterval: 200,
+            // Even less aggressive clustering
+            disableClusteringAtZoom: 13,
+            spiderfyOnMaxZoom: true,
+            removeOutsideVisibleBounds: true,
+            maxClusterRadius: function (zoom) {
+                // Split clusters sooner as zoom increases
+                return zoom >= 13 ? 25 : Math.max(10, 50 - zoom * 3);
+            }
+        });
+        map.addLayer(poiCluster);
+    } catch (e) {
+        console.warn('MarkerCluster init failed or not available:', e);
+    }
+
     // Add map controls
     if (L.Control.Fullscreen) {
         map.addControl(new L.Control.Fullscreen());
@@ -12046,11 +12101,20 @@ function updateMapWithPOIs(allPOIs) {
 
     // Clear existing markers
     markers.forEach(marker => {
-        if (marker && marker.remove) {
-            marker.remove();
-        }
+        try {
+            if (poiCluster && poiCluster.hasLayer && poiCluster.hasLayer(marker)) {
+                poiCluster.removeLayer(marker);
+            } else if (marker && marker.remove) {
+                marker.remove();
+            }
+        } catch (_) {}
     });
     markers = [];
+
+    // Clear cluster group
+    if (poiCluster) {
+        try { poiCluster.clearLayers(); } catch (_) {}
+    }
 
     // Add markers for all POIs
     allPOIs.forEach((poi, index) => {
@@ -12061,8 +12125,12 @@ function updateMapWithPOIs(allPOIs) {
             }
 
             const customIcon = createCustomIcon(poi.category, poi.recommendationScore || 75, false);
-            const marker = L.marker([poi.latitude, poi.longitude], { icon: customIcon })
-                .addTo(map);
+            const marker = L.marker([poi.latitude, poi.longitude], { icon: customIcon });
+            if (poiCluster) {
+                poiCluster.addLayer(marker);
+            } else {
+                marker.addTo(map);
+            }
 
             // Create popup content
             const categoryDisplayName = getCategoryDisplayName(poi.category);
@@ -12103,8 +12171,12 @@ function updateMapWithPOIs(allPOIs) {
     // Fit map to show all markers if there are any
     if (markers.length > 0) {
         try {
-            const group = new L.featureGroup(markers);
-            map.fitBounds(group.getBounds().pad(0.1));
+            if (poiCluster && poiCluster.getLayers && poiCluster.getLayers().length) {
+                map.fitBounds(poiCluster.getBounds().pad(0.1));
+            } else {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
         } catch (error) {
             console.error('❌ Error fitting map bounds:', error);
             // Fallback to Ürgüp center
@@ -12202,21 +12274,25 @@ function filterPOIMarkers(query) {
             const name = marker.poiNameLower || '';
             const cat = (marker.poiCategory || '').toLowerCase();
             const match = !q || name.includes(q) || cat.includes(q);
-            const onMap = map.hasLayer(marker);
-            if (match && !onMap) {
-                marker.addTo(map);
-            } else if (!match && onMap) {
-                map.removeLayer(marker);
+            const inCluster = poiCluster && poiCluster.hasLayer && poiCluster.hasLayer(marker);
+            if (match && !inCluster) {
+                poiCluster ? poiCluster.addLayer(marker) : marker.addTo(map);
+            } else if (!match && inCluster) {
+                poiCluster ? poiCluster.removeLayer(marker) : map.removeLayer(marker);
             }
         } catch (e) { /* ignore per-marker errors */ }
     });
 
     // Optionally refit bounds if query narrowed results
-    const visible = markers.filter(m => map.hasLayer(m));
+    const visible = poiCluster && poiCluster.getLayers ? poiCluster.getLayers() : markers.filter(m => map.hasLayer(m));
     if (visible.length > 0) {
         try {
-            const group = new L.featureGroup(visible);
-            map.fitBounds(group.getBounds().pad(0.1));
+            if (poiCluster && poiCluster.getLayers) {
+                map.fitBounds(poiCluster.getBounds().pad(0.1));
+            } else {
+                const group = new L.featureGroup(visible);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
         } catch (_) {}
     }
 }

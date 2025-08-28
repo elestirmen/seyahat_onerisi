@@ -8070,6 +8070,13 @@ Mobile-Optimized Preferences Styles */
     margin-bottom: 40px;
 }
 
+/* Desktop: show two sliders per row */
+@media (min-width: 1024px) {
+    .preferences-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 .preference-item {
     background: #ffffff;
     border: 2px solid #f7fafc;
