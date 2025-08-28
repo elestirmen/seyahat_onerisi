@@ -12177,6 +12177,13 @@ function updateMapWithPOIs(allPOIs) {
                 const group = new L.featureGroup(markers);
                 map.fitBounds(group.getBounds().pad(0.1));
             }
+
+            // If the automatic fit zoomed out too far, focus on Ürgüp region instead
+            const MIN_ZOOM_FOR_REGION = 11; // avoid world view
+            if (typeof map.getZoom === 'function' && map.getZoom() < MIN_ZOOM_FOR_REGION) {
+                // Ürgüp center
+                map.setView([38.6436, 34.8128], 13);
+            }
         } catch (error) {
             console.error('❌ Error fitting map bounds:', error);
             // Fallback to Ürgüp center
