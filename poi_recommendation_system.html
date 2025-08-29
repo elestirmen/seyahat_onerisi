@@ -884,11 +884,11 @@
     <!-- Touch Optimizations -->
     <script src="static/js/touch-optimizations.js"></script>
 
+    <!-- Loading and Performance (load first so UX can integrate) -->
+    <script src="static/js/loading-performance.js" defer></script>
+
     <!-- UX Enhancement Manager -->
     <script src="static/js/ux-enhancement-manager.js" defer></script>
-
-    <!-- Loading and Performance -->
-    <script src="static/js/loading-performance.js" defer></script>
 
     <!-- Performance Optimizations -->
     <link rel="stylesheet" href="static/css/performance-optimizations.css">
@@ -1545,8 +1545,8 @@
                         <template id="predefinedRouteCardTemplate">
                             <div class="route-card">
                                 <div class="route-card-image">
-                                    <img src="https://via.placeholder.com/100x120?text=Rota" alt="Rota önizlemesi"
-                                        data-placeholder="https://via.placeholder.com/100x120?text=Rota"
+                                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='120'><rect width='100%25' height='100%25' fill='%23e5e7eb'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-family='Arial,sans-serif' font-size='14'>Rota</text></svg>" alt="Rota önizlemesi"
+                                        data-placeholder="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='120'><rect width='100%25' height='100%25' fill='%23e5e7eb'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-family='Arial,sans-serif' font-size='14'>Rota</text></svg>"
                                         onerror="handleImageError(event)">
                                 </div>
                                 <div class="route-card-content">

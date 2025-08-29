@@ -3085,7 +3085,8 @@ class RouteDetailsModal {
         const baseLayers = {
             "🗺️ OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
-                maxZoom: 20
+                maxZoom: 19,
+                maxNativeZoom: 19
             }),
             "🛰️ Uydu Görüntüsü": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: '© Esri, Maxar, Earthstar Geographics',

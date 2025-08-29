@@ -315,6 +315,13 @@ class UXEnhancementManager {
             this.performanceMonitor = window.loadingManager.performanceMonitor;
             // Log removed for cleaner console
         } else {
+            // If not yet available, hook into the ready event to attach later
+            const attachWhenReady = () => {
+                if (window.loadingManager && window.loadingManager.performanceMonitor) {
+                    this.performanceMonitor = window.loadingManager.performanceMonitor;
+                }
+            };
+            window.addEventListener('loadingManagerReady', attachWhenReady, { once: true });
             console.warn('LoadingManager not available, performance monitoring limited');
         }
     }

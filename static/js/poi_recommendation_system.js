@@ -44,6 +44,10 @@ const MEDIA_CONFIG = {
     showPlaceholderImages: false // Use external placeholder images as fallback
 };
 
+// CSP-safe inline SVG placeholders (data: URIs)
+const ROUTE_PLACEHOLDER_400x200 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='200'><rect width='100%' height='100%' fill='%23e5e7eb'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-family='Arial,sans-serif' font-size='20'>Rota</text></svg>";
+const ROUTE_PLACEHOLDER_100x120 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='120'><rect width='100%' height='100%' fill='%23e5e7eb'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-family='Arial,sans-serif' font-size='14'>Rota</text></svg>";
+
 // Route tabs management
 let currentTab = 'dynamic-routes';
 let predefinedRoutes = [];
@@ -6585,7 +6589,7 @@ function createRouteCard(route) {
     const duration = Math.round((route.estimated_duration || 0) / 60);
     const stopCount = route.poi_count || (route.waypoints ? route.waypoints.length : 0);
     const distance = ensureRouteDistance(route).toFixed(1);
-    const placeholderImage = 'https://via.placeholder.com/400x200?text=Rota';
+    const placeholderImage = ROUTE_PLACEHOLDER_400x200;
     const imageUrl = route.preview_image || placeholderImage;
     
     console.log('🏷️ Creating route card:', {
@@ -6944,15 +6948,8 @@ function showRouteCardPlaceholder(routeId) {
     // Show a default placeholder image
     const route = predefinedRoutes.find(r => r.id === routeId);
     if (route) {
-        const routeType = route.route_type || 'walking';
-        const placeholderUrls = {
-            'walking': 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=200&fit=crop&crop=center',
-            'hiking': 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=200&fit=crop&crop=center',
-            'cycling': 'https://images.unsplash.com/photo-1544191696-102dbdaeeaa1?w=400&h=200&fit=crop&crop=center',
-            'driving': 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=200&fit=crop&crop=center'
-        };
-        
-        mainImage.src = placeholderUrls[routeType] || placeholderUrls['walking'];
+        // Use CSP-safe inline placeholder to avoid external image loads
+        mainImage.src = ROUTE_PLACEHOLDER_400x200;
         mainImage.alt = `${route.name} - Varsayılan görsel`;
         mainImage.style.display = 'block';
         

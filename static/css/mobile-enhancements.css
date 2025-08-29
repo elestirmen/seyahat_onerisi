@@ -1,0 +1,20 @@
+/* Mobile Enhancements (placeholder)
+   This file is preloaded on mobile to optimize initial paint.
+   Keep minimal to avoid blocking and silence MIME-type errors. */
+
+:root {
+  --touch-target-size: 44px;
+}
+
+/* Slightly larger tap targets on mobile */
+@media (max-width: 768px) {
+  button, .btn, .leaflet-control-zoom a {
+    min-height: var(--touch-target-size);
+    min-width: var(--touch-target-size);
+  }
+
+  .route-card {
+    will-change: transform;
+  }
+}
+

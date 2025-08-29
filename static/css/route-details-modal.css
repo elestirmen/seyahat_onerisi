@@ -12,7 +12,9 @@
     z-index: 9999;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    /* Limit transitions to avoid unintended layout animations (prevents jitter) */
+    transition: opacity 0.3s cubic-bezier(0.4, 0.0, 0.2, 1),
+                visibility 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 .route-details-modal.show {
@@ -33,6 +35,9 @@
     transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
     max-height: 95vh;
     overflow: hidden;
+    /* Prevent horizontal scrollbar-induced width shifts */
+    overflow-x: hidden;
+    will-change: transform;
     display: flex;
     flex-direction: column;
 }
@@ -178,6 +183,9 @@
     flex: 1;
     overflow-y: auto;
     background: white;
+    /* Keep vertical scrollbar space reserved to avoid width jumps on hover */
+    scrollbar-gutter: stable both-edges;
+    overflow-anchor: none;
 }
 
 .route-details-tab-content {
