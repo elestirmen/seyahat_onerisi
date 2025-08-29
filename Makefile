@@ -7,6 +7,12 @@
 PYTHON ?= python3
 PIP ?= pip3
 
+# Prefer project venv if available
+ifneq (,$(wildcard venv/bin/python))
+	PYTHON := venv/bin/python
+	PIP := venv/bin/pip
+endif
+
 # Default target
 help:
 	@echo "🎯 Available targets:"
@@ -179,3 +185,9 @@ validate:
 	@echo "Checking Python syntax..."
 	@$(PYTHON) -m py_compile poi_api.py || (echo "❌ Python syntax error in poi_api.py" && exit 1)
 	@echo "✅ Project validation passed!"
+# Unified test runner
+.PHONY: test
+test:
+	@echo "🧪 Running tests (unified runner)..."
+	$(PYTHON) tests/run_all.py || (echo "❌ Tests failed" && exit 1)
+	@echo "✅ Tests completed. Reports (if any) in ./reports"

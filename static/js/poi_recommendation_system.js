@@ -5306,6 +5306,9 @@ function initializePredefinedRoutes() {
     // Initialize map control event listeners
     const clearMapBtn = document.getElementById('clearMapBtn');
     const fitMapBtn = document.getElementById('fitMapBtn');
+    const fullscreenMapBtn = document.getElementById('fullscreenMapBtn');
+    const mapViewEl = document.getElementById('mapView');
+    const mapCanvasEl = document.getElementById('predefinedRoutesMap');
     
     if (clearMapBtn) {
         clearMapBtn.addEventListener('click', (e) => {
@@ -5317,6 +5320,71 @@ function initializePredefinedRoutes() {
     }
     if (fitMapBtn) {
         fitMapBtn.addEventListener('click', fitMapToRoutes);
+    }
+
+    // Fullscreen toggle (especially for mobile)
+    if (fullscreenMapBtn && mapViewEl && mapCanvasEl) {
+        let prevScrollY = 0;
+
+        const exitOnEscape = (e) => {
+            if (e.key === 'Escape' && mapViewEl.classList.contains('fullscreen')) {
+                toggleFullscreen(false);
+            }
+        };
+
+        function toggleFullscreen(forceState) {
+            const entering = forceState !== undefined
+                ? forceState
+                : !mapViewEl.classList.contains('fullscreen');
+
+            if (entering) {
+                // Save scroll and prevent background scroll
+                prevScrollY = window.scrollY || window.pageYOffset || 0;
+                document.body.style.overflow = 'hidden';
+
+                // Apply fullscreen classes
+                mapViewEl.classList.add('fullscreen');
+                mapCanvasEl.classList.add('fullscreen');
+
+                // Ensure on top for safety
+                mapViewEl.style.zIndex = '9999';
+
+                // Resize Leaflet map after layout settles
+                setTimeout(() => { if (typeof predefinedMap !== 'undefined' && predefinedMap) predefinedMap.invalidateSize(); }, 50);
+                setTimeout(() => { if (typeof predefinedMap !== 'undefined' && predefinedMap) predefinedMap.invalidateSize(); }, 250);
+
+                // Bind escape to exit
+                document.addEventListener('keydown', exitOnEscape);
+            } else {
+                // Remove fullscreen classes
+                mapViewEl.classList.remove('fullscreen');
+                mapCanvasEl.classList.remove('fullscreen');
+
+                // Restore styles and scroll
+                mapViewEl.style.removeProperty('z-index');
+                document.body.style.overflow = '';
+                if (prevScrollY) window.scrollTo({ top: prevScrollY, behavior: 'instant' in window ? 'instant' : 'auto' });
+
+                // Resize map back
+                setTimeout(() => { if (typeof predefinedMap !== 'undefined' && predefinedMap) predefinedMap.invalidateSize(); }, 50);
+
+                // Unbind escape
+                document.removeEventListener('keydown', exitOnEscape);
+            }
+        }
+
+        fullscreenMapBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFullscreen();
+        });
+
+        // Handle orientation/resize while in fullscreen
+        window.addEventListener('resize', () => {
+            if (mapViewEl.classList.contains('fullscreen') && typeof predefinedMap !== 'undefined' && predefinedMap) {
+                setTimeout(() => predefinedMap.invalidateSize(), 100);
+            }
+        });
     }
     
     // Log removed for cleaner console
@@ -10466,6 +10534,22 @@ async function initializeEmptyMap() {
     // Add map controls
     if (L.Control.Fullscreen) {
         map.addControl(new L.Control.Fullscreen());
+        // Hide route planner text while in fullscreen via plugin
+        try {
+            const routeSection = document.getElementById('routeSection');
+            let prevDisplay = '';
+            map.on('enterFullscreen', () => {
+                if (routeSection) {
+                    prevDisplay = routeSection.style.display;
+                    routeSection.style.display = 'none';
+                }
+            });
+            map.on('exitFullscreen', () => {
+                if (routeSection) {
+                    routeSection.style.display = prevDisplay || '';
+                }
+            });
+        } catch (_) { /* noop */ }
     }
 
     // Clear existing markers
@@ -10556,6 +10640,22 @@ async function initializeMap(recommendationData) {
     // Add map controls
     if (L.Control.Fullscreen) {
         map.addControl(new L.Control.Fullscreen());
+        // Hide route planner text while in fullscreen via plugin
+        try {
+            const routeSection = document.getElementById('routeSection');
+            let prevDisplay = '';
+            map.on('enterFullscreen', () => {
+                if (routeSection) {
+                    prevDisplay = routeSection.style.display;
+                    routeSection.style.display = 'none';
+                }
+            });
+            map.on('exitFullscreen', () => {
+                if (routeSection) {
+                    routeSection.style.display = prevDisplay || '';
+                }
+            });
+        } catch (_) { /* noop */ }
     }
 
     // Clear existing markers
@@ -11839,6 +11939,70 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
+    
+    // Dynamic map fullscreen (mobile FAB)
+    (function setupDynamicMapFullscreen() {
+        const btn = document.getElementById('dynamicMapFullscreenBtn');
+        const container = document.getElementById('mapContainer');
+        if (!btn || !container) return;
+
+        let prevScrollY = 0;
+        let previousRouteSectionDisplay = '';
+        const routeSection = document.getElementById('routeSection');
+        const escHandler = (e) => {
+            if (e.key === 'Escape' && container.classList.contains('fullscreen')) toggle(false);
+        };
+
+        function toggle(force) {
+            const entering = force !== undefined ? force : !container.classList.contains('fullscreen');
+            if (entering) {
+                prevScrollY = window.scrollY || window.pageYOffset || 0;
+                document.body.style.overflow = 'hidden';
+                container.classList.add('fullscreen');
+                // Hide route planner section to avoid overlaying text
+                if (routeSection) {
+                    previousRouteSectionDisplay = routeSection.style.display;
+                    routeSection.style.display = 'none';
+                }
+                // Resize Leaflet map after layout change
+                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 50);
+                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 250);
+                const icon = btn.querySelector('i');
+                if (icon && icon.classList.contains('fa-expand')) {
+                    icon.classList.remove('fa-expand');
+                    icon.classList.add('fa-compress');
+                }
+                document.addEventListener('keydown', escHandler);
+            } else {
+                container.classList.remove('fullscreen');
+                document.body.style.overflow = '';
+                // Restore route planner section
+                if (routeSection) {
+                    routeSection.style.display = previousRouteSectionDisplay || '';
+                }
+                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 50);
+                const icon = btn.querySelector('i');
+                if (icon && icon.classList.contains('fa-compress')) {
+                    icon.classList.remove('fa-compress');
+                    icon.classList.add('fa-expand');
+                }
+                document.removeEventListener('keydown', escHandler);
+                if (prevScrollY) window.scrollTo({ top: prevScrollY, behavior: 'auto' });
+            }
+        }
+
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggle();
+        });
+
+        window.addEventListener('resize', () => {
+            if (container.classList.contains('fullscreen') && typeof map !== 'undefined' && map) {
+                setTimeout(() => map.invalidateSize(), 100);
+            }
+        });
+    })();
 });
 
 // Also initialize if DOM is already loaded
@@ -12229,15 +12393,15 @@ function ensurePOISearchBar(allPOIs = []) {
         bar = document.createElement('div');
         bar.id = 'poiSearchBar';
         bar.style.cssText = `
-            position: absolute; top: 10px; left: 10px; right: auto; z-index: 1000;
+            position: absolute; top: 12px; left: 12px; right: auto; z-index: 1100;
             background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0; border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;
-            padding: 6px 10px; backdrop-filter: blur(6px);
+            padding: 8px 10px; backdrop-filter: blur(6px);
         `;
         bar.innerHTML = `
             <i class="fas fa-search" style="color:#64748b"></i>
             <input id="poiSearchInput" type="text" placeholder="POI ara..." style="
-                border:none; outline:none; background:transparent; width: 200px; color:#111827; font-size: 14px;" />
+                border:none; outline:none; background:transparent; width: 200px; max-width: 60vw; color:#111827; font-size: 14px;" />
             <button id="poiSearchClear" title="Temizle" style="
                 border:none; background:#f1f5f9; color:#334155; border-radius:8px; padding:4px 8px; cursor:pointer;">Temizle</button>
         `;
@@ -12248,8 +12412,41 @@ function ensurePOISearchBar(allPOIs = []) {
         const handler = () => filterPOIMarkers(input.value || '');
         input.addEventListener('input', handler);
         clearBtn.addEventListener('click', () => { input.value = ''; handler(); });
+
+        // Mobile-friendly sizing: stretch across map with margins
+        const applyResponsiveSearchBar = () => {
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                bar.style.left = '12px';
+                bar.style.right = '12px';
+                bar.style.maxWidth = 'unset';
+                input.style.width = '100%';
+                input.style.maxWidth = '100%';
+            } else {
+                bar.style.right = 'auto';
+                input.style.width = '240px';
+                input.style.maxWidth = '60vw';
+            }
+        };
+        applyResponsiveSearchBar();
+        window.addEventListener('resize', applyResponsiveSearchBar);
     } else {
         bar.style.display = 'flex';
+        // Ensure visibility and responsive layout on re-show
+        const input = bar.querySelector('#poiSearchInput');
+        if (input) {
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                bar.style.left = '12px';
+                bar.style.right = '12px';
+                input.style.width = '100%';
+                input.style.maxWidth = '100%';
+            } else {
+                bar.style.right = 'auto';
+                input.style.width = '240px';
+                input.style.maxWidth = '60vw';
+            }
+        }
     }
 
     // Register hotkey: '/' focuses the POI search when map section is visible

@@ -7134,6 +7134,18 @@ ute Preview Map Styles */
     }
 }
 
+/* Dynamic Map Full-Screen State */
+#mapContainer.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    border-radius: 0;
+    background: #ffffff;
+}
+
 /* Mobile-First Map Container Optimization */
 @media (max-width: 480px) {
     /* Small Mobile - Enhanced Map Visibility */

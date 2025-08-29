@@ -1266,7 +1266,14 @@
                             Önerilen yerleri harita üzerinde görün ve detaylarına ulaşın. Marker'lara tıklayarak daha
                             fazla bilgi alabilirsiniz.
                         </p>
-                        <div id="mapContainer" class="map-container-enhanced"></div>
+                        <div id="mapContainer" class="map-container-enhanced">
+                            <!-- Mobile FAB for fullscreen toggle -->
+                            <div class="mobile-map-fab" aria-hidden="false">
+                                <button class="fab-button" id="dynamicMapFullscreenBtn" title="Tam Ekran">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
                         <!-- Elevation Chart Container -->
                         <div id="elevationChartContainer" class="elevation-chart-hidden"></div>
                     </div>
