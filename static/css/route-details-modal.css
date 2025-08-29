@@ -243,30 +243,30 @@
         position: relative !important;
     }
     
-    /* Force all elevation chart elements to be HUGE on mobile */
+    /* Compact elevation section on mobile */
     .elevation-chart-section {
-        width: 100vw !important;
-        min-height: 40vh !important;
-        height: 40vh !important;
-        max-height: 50vh !important;
+        width: 100% !important;
+        min-height: unset !important;
+        height: auto !important;
+        max-height: none !important;
         display: block !important;
-        margin: 20px 0 !important;
-        padding: 20px !important;
+        margin: 8px 0 !important;
+        padding: 10px !important;
     }
-    
+
     .elevation-chart-container {
         width: 100% !important;
-        min-height: 30vh !important;
-        height: 30vh !important;
-        max-height: 40vh !important;
+        min-height: 0 !important;
+        height: auto !important;
+        max-height: none !important;
         display: block !important;
     }
-    
+
     #modalElevationChart {
         width: 100% !important;
-        height: 25vh !important;
-        min-height: 250px !important;
-        max-height: 35vh !important;
+        height: 110px !important;
+        min-height: 110px !important;
+        max-height: 140px !important;
         display: block !important;
     }
 }
@@ -416,7 +416,7 @@
 
 /* Elevation Profile in Map Tab */
 #routeModalElevationContainer {
-    margin-top: 20px;
+    margin-top: 8px;
 }
 
 /* Elevation Chart Styles - Mobile Optimized */
@@ -483,6 +483,31 @@
     font-size: 0.85rem;
 }
 
+/* Thinner stats in the modal: make value badges much slimmer */
+.route-details-modal .elevation-header { 
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 6px;
+}
+
+/* Override generic .elevation-stats span rules from other stylesheets */
+.route-details-modal .elevation-header .elevation-stats span,
+.route-details-modal .elevation-header .elevation-stats .elevation-stat {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 2px 6px !important;
+    border-radius: 6px !important;
+    font-weight: 400 !important;
+    font-size: 0.8rem !important;
+    line-height: 1.1 !important;
+    color: #475569 !important; /* slate-600 for better readability */
+}
+
+.route-details-modal .elevation-header .elevation-stats .elevation-stat i {
+    font-size: 0.85em;
+}
+
 .elevation-chart-container {
     position: relative;
     background: white;
@@ -503,6 +528,29 @@
     /* Force proper canvas rendering */
     display: block !important;
     position: relative !important;
+}
+
+/* Compact elevation section inside the route modal */
+.route-details-modal #routeModalElevationContainer .route-overview-section {
+    margin-bottom: 8px;
+    padding: 0;
+}
+.route-details-modal #routeModalElevationContainer .route-overview-section h3 {
+    margin: 0 0 6px 0;
+}
+.route-details-modal .elevation-chart-section {
+    min-height: 0 !important;
+    margin: 8px 0;
+    padding: 10px;
+}
+.route-details-modal .elevation-chart-container {
+    min-height: 0 !important;
+    padding: 6px;
+    margin-bottom: 6px;
+}
+.route-details-modal .elevation-distance-labels {
+    margin-top: 2px;
+    font-size: 0.72rem;
 }
 
 .elevation-tooltip {
@@ -1179,31 +1227,33 @@
         left: 0 !important;
     }
 
-    /* Elevation chart mobile fixes with aggressive sizing - LARGER */
+    /* Elevation chart mobile fixes - compact */
     .elevation-chart-section {
         width: 100% !important;
         max-width: 100% !important;
-        min-height: 25vh !important;
-        height: 25vh !important;
-        max-height: 300px !important;
+        min-height: 0 !important;
+        height: auto !important;
+        max-height: none !important;
         display: block !important;
         visibility: visible !important;
+        margin: 8px 0 !important;
+        padding: 10px !important;
     }
 
     .elevation-chart-container {
         width: 100% !important;
-        min-height: 20vh !important;
-        height: 20vh !important;
-        max-height: 250px !important;
+        min-height: 0 !important;
+        height: auto !important;
+        max-height: none !important;
         position: relative !important;
         display: block !important;
     }
 
     #modalElevationChart {
         width: 100% !important;
-        height: 18vh !important;
-        min-height: 180px !important;
-        max-height: 220px !important;
+        height: 110px !important;
+        min-height: 110px !important;
+        max-height: 140px !important;
         display: block !important;
         visibility: visible !important;
     }

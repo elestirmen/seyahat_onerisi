@@ -1823,28 +1823,6 @@ class RouteDetailsModal {
                 <div class="route-overview-section">
                     <h3><i class="fas fa-mountain"></i> Yükseklik Profili</h3>
                     <div class="elevation-chart-section">
-                        <div class="elevation-toolbar" id="modalElevationToolbar">
-                            <button class="elev-btn" id="elevToggleGradient" title="Renkli dolguyu aç/kapat">
-                                <i class="fas fa-fill-drip"></i>
-                                <span>Renk</span>
-                            </button>
-                            <button class="elev-btn" id="elevToggleMarkers" title="Medya işaretlerini aç/kapat">
-                                <i class="fas fa-camera"></i>
-                                <span>İşaretler</span>
-                            </button>
-                            <button class="elev-btn" id="elevEnableZoom" title="Sürükleyerek yakınlaştır">
-                                <i class="fas fa-search-plus"></i>
-                                <span>Yakınlaştır</span>
-                            </button>
-                            <button class="elev-btn" id="elevResetZoom" title="Yakınlaştırmayı sıfırla">
-                                <i class="fas fa-compress-arrows-alt"></i>
-                                <span>Sıfırla</span>
-                            </button>
-                            <button class="elev-btn" id="elevExpand" title="Grafiği genişlet">
-                                <i class="fas fa-arrows-alt-v"></i>
-                                <span>Genişlet</span>
-                            </button>
-                        </div>
                         <div class="elevation-header">
                             <div class="elevation-stats">
                                 <span class="elevation-stat">
@@ -1888,55 +1866,42 @@ class RouteDetailsModal {
                 // ULTRA AGGRESSIVE mobile canvas sizing
                 const isMobile = window.innerWidth <= 768;
                 if (canvas && isMobile) {
-                    const viewportWidth = window.innerWidth || 375;
-                    const viewportHeight = window.innerHeight || 667;
-                    const canvasWidth = viewportWidth - 40;
-                    const canvasHeight = Math.max(350, viewportHeight * 0.4);
-
-                    // Force canvas container to be large
+                    // Keep the elevation chart compact on mobile
                     const canvasContainer = canvas.closest('.elevation-chart-container');
                     const chartSection = canvas.closest('.elevation-chart-section');
 
                     if (chartSection) {
                         chartSection.style.cssText = `
                             width: 100% !important;
-                            min-height: ${canvasHeight + 100}px !important;
-                            height: auto !important;
                             display: block !important;
-                            background: #f8f9fa !important;
-                            border: 3px solid #28a745 !important;
-                            border-radius: 8px !important;
-                            padding: 20px !important;
-                            margin: 20px 0 !important;
+                            margin: 8px 0 !important;
+                            padding: 10px !important;
                         `;
                     }
 
                     if (canvasContainer) {
                         canvasContainer.style.cssText = `
                             width: 100% !important;
-                            height: ${canvasHeight}px !important;
-                            min-height: ${canvasHeight}px !important;
+                            height: auto !important;
+                            min-height: 0 !important;
                             display: block !important;
                             position: relative !important;
                         `;
                     }
 
-                    // Force canvas size
                     canvas.style.cssText = `
-                        width: ${canvasWidth}px !important;
-                        height: ${canvasHeight}px !important;
+                        width: 100% !important;
+                        height: 110px !important;
                         max-width: 100% !important;
                         display: block !important;
-                        margin: 0 auto !important;
-                        border: 2px solid #007bff !important;
+                        margin: 0 !important;
+                        border: 0 !important;
                         border-radius: 4px !important;
                     `;
 
-                    // Set canvas attributes for high DPI
-                    canvas.width = canvasWidth * 2;
-                    canvas.height = canvasHeight * 2;
-
-                    // Canvas sizing applied (log removed for cleaner console)
+                    // Let Chart.js manage resolution; avoid forcing attrs here
+                    canvas.removeAttribute('width');
+                    canvas.removeAttribute('height');
                 }
 
                 if (canvas) {
