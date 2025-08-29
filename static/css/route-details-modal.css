@@ -608,6 +608,37 @@
     pointer-events: none;
 }
 
+/* Absolute overlay layer on top of the canvas for clickable icons */
+.route-details-modal .elevation-overlay-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none; /* children will enable */
+    z-index: 5;
+}
+
+.route-details-modal .elevation-poi-icon {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    font-size: 12px;
+    pointer-events: auto;
+}
+
+.route-details-modal .elevation-poi-icon i {
+    line-height: 1;
+}
+
 .elevation-error {
     text-align: center;
     padding: 2rem;

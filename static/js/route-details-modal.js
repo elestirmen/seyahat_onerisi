@@ -16,6 +16,10 @@ class RouteDetailsModal {
         this.elevationMediaOverlayPoints = [];
         this.pendingElevationMediaMarkers = null;
         this.elevationMediaScreenPoints = [];
+        // POI overlays for elevation chart
+        this.elevationPoiOverlayPoints = [];
+        this.pendingElevationPoiMarkers = null;
+        this.elevationPoiScreenPoints = [];
         // Elevation UX state
         this.showElevationMediaMarkers = true;
         this.useElevationGradient = true;
@@ -1000,6 +1004,15 @@ class RouteDetailsModal {
 
             poisContainer.innerHTML = poisHTML;
 
+            // Also reflect POIs on the elevation chart as overlay icons
+            try {
+                if (this.elevationChartInstance) {
+                    this.updateElevationPoiMarkers(pois);
+                } else {
+                    this.pendingElevationPoiMarkers = pois;
+                }
+            } catch (_) { /* ignore */ }
+
         } catch (error) {
             console.error('❌ Error loading POIs:', error);
             poisContainer.innerHTML = `
@@ -1824,6 +1837,7 @@ class RouteDetailsModal {
                     <div class="elevation-chart-container">
                         <div class="elevation-top-value" id="modalElevationTopValue" style="display:none">-- m</div>
                         <canvas id="modalElevationChart" width="800" height="280"></canvas>
+                        <div class="elevation-overlay-layer" id="modalElevationOverlayLayer"></div>
                     </div>
                 </div>
             `;
@@ -2032,6 +2046,20 @@ class RouteDetailsModal {
                 this.updateElevationMediaMarkers(this.pendingElevationMediaMarkers, { onlyImages: true });
                 this.pendingElevationMediaMarkers = null;
             }
+
+            // If POIs were queued before chart readiness, apply them now
+            if (this.pendingElevationPoiMarkers && this.pendingElevationPoiMarkers.length) {
+                this.updateElevationPoiMarkers(this.pendingElevationPoiMarkers);
+                this.pendingElevationPoiMarkers = null;
+            }
+
+            // Also map POIs/waypoints onto the elevation chart
+            try {
+                const pois = (this.currentRoute && (this.currentRoute.pois || this.currentRoute.waypoints)) || [];
+                if (pois && pois.length) {
+                    this.updateElevationPoiMarkers(pois);
+                }
+            } catch (_) { /* ignore */ }
 
             console.log('✅ Elevation profile loaded successfully');
 
@@ -2327,19 +2355,43 @@ class RouteDetailsModal {
                         ctx.restore();
                     }
 
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta || !meta.data) return;
+                    const distances = (self.elevationDataForInteraction || []).map(d => d.distance);
+
+                    // Position POI icons as DOM overlays matching their map icons
+                    const poiScreen = [];
+                    if (Array.isArray(self.elevationPoiOverlayPoints) && self.elevationPoiOverlayPoints.length) {
+                        const positions = [];
+                        self.elevationPoiOverlayPoints.forEach(poi => {
+                            let nearestIndex = 0;
+                            let minDiff = Infinity;
+                            for (let i = 0; i < distances.length; i++) {
+                                const diff = Math.abs(distances[i] - poi.distance);
+                                if (diff < minDiff) { minDiff = diff; nearestIndex = i; }
+                            }
+                            const pt = meta.data[nearestIndex];
+                            if (!pt) return;
+                            const x = pt.x;
+                            const y = pt.y - 6;
+                            positions.push({ x, y, poi: poi.poi });
+                            poiScreen.push({ x, y, poi: poi.poi });
+                        });
+                        self.updateElevationPoiDom(positions, chart);
+                        self.elevationPoiScreenPoints = poiScreen;
+                    } else {
+                        self.elevationPoiScreenPoints = [];
+                        self.updateElevationPoiDom([], chart);
+                    }
+
+                    // Draw media markers
                     if (!self.showElevationMediaMarkers || !self.elevationMediaOverlayPoints || self.elevationMediaOverlayPoints.length === 0) {
                         self.elevationMediaScreenPoints = [];
                         return;
                     }
-
-                    const meta = chart.getDatasetMeta(0);
-                    if (!meta || !meta.data) return;
-                    const distances = (self.elevationDataForInteraction || []).map(d => d.distance);
                     const ctx2 = chart.ctx;
                     const screenPoints = [];
-
                     self.elevationMediaOverlayPoints.forEach((mp) => {
-                        // Find nearest index by distance
                         let nearestIndex = 0;
                         let minDiff = Infinity;
                         for (let i = 0; i < distances.length; i++) {
@@ -2349,7 +2401,7 @@ class RouteDetailsModal {
                         const pt = meta.data[nearestIndex];
                         if (!pt) return;
                         const x = pt.x;
-                        const y = pt.y - 10;
+                        const y = pt.y - 12;
                         const type = (mp.media && (mp.media.media_type || (mp.media.url||mp.media.path))) ? self.getMediaTypeFromUrl(mp.media.url || mp.media.path || '') : 'image';
                         const iconMap = { image: '📷', video: '🎥', audio: '🎵', model_3d: '🧊', unknown: '📍' };
                         const iconChar = iconMap[type] || iconMap.unknown;
@@ -2523,7 +2575,25 @@ class RouteDetailsModal {
             const cx = event.clientX - rect.left;
             const cy = event.clientY - rect.top;
 
-            // First: try media marker hit-test (open viewer)
+            // First: try POI marker hit-test (focus on POI)
+            if (Array.isArray(this.elevationPoiScreenPoints) && this.elevationPoiScreenPoints.length) {
+                const hitPoi = this.elevationPoiScreenPoints.find(p => {
+                    const dx = p.x - cx;
+                    const dy = p.y - cy;
+                    return (dx*dx + dy*dy) <= (10*10); // 10px radius
+                });
+                if (hitPoi && hitPoi.poi) {
+                    const poi = hitPoi.poi;
+                    const lat = poi.latitude || poi.lat;
+                    const lng = poi.longitude || poi.lng || poi.lon;
+                    if (lat && lng) {
+                        this.focusOnPoi(lat, lng);
+                        return;
+                    }
+                }
+            }
+
+            // Next: try media marker hit-test (open viewer)
             if (Array.isArray(this.elevationMediaScreenPoints) && this.elevationMediaScreenPoints.length) {
                 const hit = this.elevationMediaScreenPoints.find(p => {
                     const dx = p.x - cx;
@@ -2577,6 +2647,110 @@ class RouteDetailsModal {
             handleMouseLeave,
             handleClick
         };
+    }
+
+    // Map POIs/waypoints onto elevation chart distances for overlay icons
+    updateElevationPoiMarkers(pois) {
+        try {
+            const items = Array.isArray(pois) ? pois : [];
+            if (!items.length) {
+                this.elevationPoiOverlayPoints = [];
+                if (this.elevationChartInstance) this.elevationChartInstance.update();
+                return;
+            }
+            if (!this.elevationDataForInteraction || !this.elevationDataForInteraction.length) {
+                this.pendingElevationPoiMarkers = items;
+                return;
+            }
+
+            const overlay = [];
+            items.forEach(poi => {
+                const lat = parseFloat(poi.latitude ?? poi.lat);
+                const lng = parseFloat(poi.longitude ?? poi.lng ?? poi.lon);
+                if (isNaN(lat) || isNaN(lng)) return;
+                let closest = null;
+                let min = Infinity;
+                for (const d of this.elevationDataForInteraction) {
+                    const dx = this.calculateDistance(lat, lng, d.lat, d.lng);
+                    if (dx < min) { min = dx; closest = d; }
+                }
+                if (closest) overlay.push({ distance: closest.distance, elevation: closest.elevation, poi });
+            });
+
+            this.elevationPoiOverlayPoints = overlay;
+            if (this.elevationChartInstance) this.elevationChartInstance.update();
+        } catch (e) {
+            console.warn('updateElevationPoiMarkers failed:', e);
+        }
+    }
+
+    // Create DOM overlays for POI icons with same icon/color as map markers
+    updateElevationPoiDom(positions, chart) {
+        try {
+            const layer = document.getElementById('modalElevationOverlayLayer');
+            if (!layer) return;
+            // Reset for simplicity; list is small
+            while (layer.firstChild) layer.removeChild(layer.firstChild);
+            const containerRect = chart.canvas.getBoundingClientRect();
+            const layerRect = layer.getBoundingClientRect();
+            positions.forEach(pos => {
+                const poi = pos.poi || {};
+                const cat = this.getCategoryStyle(poi.category || 'diger');
+                const el = document.createElement('div');
+                el.className = 'elevation-poi-icon';
+                el.style.backgroundColor = cat.color || '#666';
+                el.style.left = `${pos.x}px`;
+                el.style.top = `${pos.y}px`;
+                el.title = poi.name || 'Durak';
+                const i = document.createElement('i');
+                i.className = cat.iconClass || 'fas fa-map-marker-alt';
+                el.appendChild(i);
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.openPoiPopupOnMap(poi);
+                });
+                layer.appendChild(el);
+            });
+        } catch (_) { /* ignore */ }
+    }
+
+    // Open the same POI popup used on map markers, from elevation overlay clicks
+    openPoiPopupOnMap(poi) {
+        try {
+            if (!poi) return;
+            const lat = parseFloat(poi.latitude ?? poi.lat);
+            const lng = parseFloat(poi.longitude ?? poi.lng ?? poi.lon);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+            // Determine stop number from current route order
+            const list = (this.currentRoute && (this.currentRoute.pois || this.currentRoute.waypoints)) || [];
+            let stopIndex = -1;
+            for (let i = 0; i < list.length; i++) {
+                const p = list[i];
+                if (p === poi || (p.id && poi.id && p.id === poi.id) || (p.poi_id && poi.poi_id && p.poi_id === poi.poi_id)) {
+                    stopIndex = i; break;
+                }
+            }
+            const stopNumber = stopIndex >= 0 ? (stopIndex + 1) : 1;
+
+            // Build same popup HTML
+            const html = this.createDetailedPOIPopup(poi, stopNumber);
+
+            // Ensure map tab visible, then show popup
+            this.switchTab('map');
+            setTimeout(() => {
+                if (!this.mapInstance) return;
+                this.mapInstance.setView([lat, lng], Math.max(14, this.mapInstance.getZoom() || 13));
+                const popup = L.popup({
+                    maxWidth: 300,
+                    minWidth: 250,
+                    className: 'custom-poi-popup'
+                })
+                    .setLatLng([lat, lng])
+                    .setContent(html);
+                popup.openOn(this.mapInstance);
+            }, 250);
+        } catch (_) { /* ignore */ }
     }
 
     attachElevationToolbarHandlers() {
