@@ -2626,12 +2626,35 @@ class RouteDetailsModal {
                 }
             }
 
-            // Otherwise: center map on current elevation position
-            if (!this.currentElevationPosition || !this.mapInstance) return;
-            this.mapInstance.setView(
-                [this.currentElevationPosition.lat, this.currentElevationPosition.lng],
-                this.mapInstance.getZoom()
-            );
+            // Otherwise: center + zoom map to the clicked elevation position
+            if (!this.mapInstance || !this.elevationChartInstance) return;
+
+            // Derive closest data point at click X (don't rely on prior mousemove)
+            const chart = this.elevationChartInstance;
+            const area = chart.chartArea;
+            const x = cx;
+            if (x < area.left || x > area.right) return;
+            const chartWidth = area.right - area.left;
+            const relativeX = (x - area.left) / chartWidth;
+            const data = this.elevationDataForInteraction || elevationData || [];
+            if (!data.length) return;
+            const maxDistance = Math.max(...data.map(d => d.distance));
+            const targetDistance = relativeX * maxDistance;
+            let closestPoint = null, minDiff = Infinity;
+            for (const p of data) {
+                const d = Math.abs(p.distance - targetDistance);
+                if (d < minDiff) { minDiff = d; closestPoint = p; }
+            }
+            if (!closestPoint) return;
+            this.currentElevationPosition = closestPoint;
+
+            // Zoom in to level ~16 (or keep higher), animate
+            const zoomTarget = Math.max(16, this.mapInstance.getZoom() || 13);
+            if (typeof this.mapInstance.flyTo === 'function') {
+                this.mapInstance.flyTo([closestPoint.lat, closestPoint.lng], zoomTarget, { duration: 0.7 });
+            } else {
+                this.mapInstance.setView([closestPoint.lat, closestPoint.lng], zoomTarget);
+            }
         };
 
         // Add event listeners
