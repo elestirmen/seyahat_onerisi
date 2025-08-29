@@ -1818,39 +1818,12 @@ class RouteDetailsModal {
             // Clear any existing content
             container.innerHTML = '';
 
-            // Create the elevation chart structure with proper styling
+            // Create the elevation chart structure only (no title or stats)
             container.innerHTML = `
-                <div class="route-overview-section">
-                    <h3><i class="fas fa-mountain"></i> Yükseklik Profili</h3>
-                    <div class="elevation-chart-section">
-                        <div class="elevation-header">
-                            <div class="elevation-stats">
-                                <span class="elevation-stat">
-                                    <i class="fas fa-arrow-up"></i>
-                                    <span id="modalMinElevation">--m</span>
-                                </span>
-                                <span class="elevation-stat">
-                                    <i class="fas fa-arrow-down"></i>
-                                    <span id="modalMaxElevation">--m</span>
-                                </span>
-                                <span class="elevation-stat">
-                                    <i class="fas fa-trending-up"></i>
-                                    <span id="modalTotalAscent">+--m</span>
-                                </span>
-                                <span class="elevation-stat">
-                                    <i class="fas fa-trending-down"></i>
-                                    <span id="modalTotalDescent">---m</span>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="elevation-chart-container">
-                            <canvas id="modalElevationChart" width="800" height="280"></canvas>
-                            <div class="elevation-tooltip" id="modalElevationTooltip"></div>
-                        </div>
-                        <div class="elevation-distance-labels">
-                            <span class="distance-start">0 km</span>
-                            <span class="distance-end">-- km</span>
-                        </div>
+                <div class="elevation-chart-section">
+                    <div class="elevation-chart-container">
+                        <div class="elevation-top-value" id="modalElevationTopValue" style="display:none">-- m</div>
+                        <canvas id="modalElevationChart" width="800" height="280"></canvas>
                     </div>
                 </div>
             `;
@@ -1955,19 +1928,21 @@ class RouteDetailsModal {
 
             if (!canvas) {
                 console.error('❌ Elevation chart canvas not found after retries');
-                // Try to create the canvas fallback
+                return;
+            }
+
+            // Ensure only a single canvas exists inside the container
+            try {
                 const cont = document.querySelector('#routeModalElevationContainer .elevation-chart-container');
                 if (cont) {
-                    const fallback = document.createElement('canvas');
-                    fallback.id = 'modalElevationChart';
-                    fallback.width = 800;
-                    fallback.height = 280;
-                    cont.appendChild(fallback);
-                    canvas = fallback;
-                } else {
-                    return;
+                    const list = cont.querySelectorAll('canvas');
+                    if (list.length > 1) {
+                        for (let i = 1; i < list.length; i++) {
+                            list[i].remove();
+                        }
+                    }
                 }
-            }
+            } catch (_) { /* ignore */ }
 
             console.log('✅ Elevation canvas found, proceeding with chart creation');
 
@@ -2252,7 +2227,7 @@ class RouteDetailsModal {
                         ctx.restore();
                     }
 
-                    // Crosshair line
+                    // Crosshair line + metric labels (distance bottom, elevation top)
                     if (self._elevMouseX != null) {
                         const area = chart.chartArea;
                         const ctx = chart.ctx;
@@ -2264,6 +2239,91 @@ class RouteDetailsModal {
                         ctx.moveTo(x + 0.5, area.top);
                         ctx.lineTo(x + 0.5, area.bottom);
                         ctx.stroke();
+
+                        // Find nearest data point by distance for label values
+                        const xScale = chart.scales.x;
+                        const yScale = chart.scales.y;
+                        if (xScale && yScale && Array.isArray(self.elevationDataForInteraction)) {
+                            const distAtX = xScale.getValueForPixel(x);
+                            let nearest = null, minDiff = Infinity, nearestIndex = 0;
+                            self.elevationDataForInteraction.forEach((p, i) => {
+                                const d = Math.abs((p.distance || 0) - distAtX);
+                                if (d < minDiff) { minDiff = d; nearest = p; nearestIndex = i; }
+                            });
+
+                            if (nearest) {
+                                const px = x;
+                                const py = chart.getDatasetMeta(0)?.data?.[nearestIndex]?.y ?? yScale.getPixelForValue(nearest.elevation);
+
+                                // Bottom distance label (blue capsule)
+                                const distLabel = `${(nearest.distance || 0).toFixed(1)} km`;
+                                const padX = 6, padY = 3;
+                                ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                const w = ctx.measureText(distLabel).width + padX * 2;
+                                const h = 18;
+                                const bx = Math.max(area.left + w / 2 + 2, Math.min(area.right - w / 2 - 2, px));
+                                const by = Math.min(area.bottom - h / 2 - 2, area.bottom - 10);
+                                ctx.fillStyle = '#2563eb';
+                                ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+                                ctx.lineWidth = 1;
+                                ctx.beginPath();
+                                const r = 6;
+                                // rounded rect
+                                ctx.moveTo(bx - w/2 + r, by - h/2);
+                                ctx.lineTo(bx + w/2 - r, by - h/2);
+                                ctx.quadraticCurveTo(bx + w/2, by - h/2, bx + w/2, by - h/2 + r);
+                                ctx.lineTo(bx + w/2, by + h/2 - r);
+                                ctx.quadraticCurveTo(bx + w/2, by + h/2, bx + w/2 - r, by + h/2);
+                                ctx.lineTo(bx - w/2 + r, by + h/2);
+                                ctx.quadraticCurveTo(bx - w/2, by + h/2, bx - w/2, by + h/2 - r);
+                                ctx.lineTo(bx - w/2, by - h/2 + r);
+                                ctx.quadraticCurveTo(bx - w/2, by - h/2, bx - w/2 + r, by - h/2);
+                                ctx.closePath();
+                                ctx.fill();
+                                ctx.stroke();
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillText(distLabel, bx, by + 0.5);
+
+                                // Update DOM top label outside the canvas
+                                try {
+                                    const topEl = document.getElementById('modalElevationTopValue');
+                                    if (topEl) {
+                                        topEl.style.display = 'block';
+                                        topEl.textContent = `${Math.round(nearest.elevation)} m`;
+                                        const cont = chart.canvas.parentElement;
+                                        const contRect = cont.getBoundingClientRect();
+                                        const canvasRect = chart.canvas.getBoundingClientRect();
+                                        // x is relative to canvas; convert to container and center via translateX(-50%)
+                                        const left = canvasRect.left + px - contRect.left;
+                                        // Clamp inside container bounds a bit
+                                        const clamped = Math.max(8, Math.min(contRect.width - 8, left));
+                                        topEl.style.left = clamped + 'px';
+                                    }
+                                } catch (_) { /* ignore */ }
+                            }
+                        }
+                        // Draw small blue selection dot at nearest point
+                        try {
+                            const xScale = chart.scales.x;
+                            const distAtX2 = xScale ? xScale.getValueForPixel(x) : null;
+                            if (distAtX2 != null && Array.isArray(self.elevationDataForInteraction)) {
+                                let nearest2 = null, min2 = Infinity, idx2 = 0;
+                                self.elevationDataForInteraction.forEach((p, i) => {
+                                    const d = Math.abs((p.distance || 0) - distAtX2);
+                                    if (d < min2) { min2 = d; nearest2 = p; idx2 = i; }
+                                });
+                                const py2 = chart.getDatasetMeta(0)?.data?.[idx2]?.y ?? chart.scales.y.getPixelForValue(nearest2.elevation);
+                                ctx.beginPath();
+                                ctx.arc(x + 0.5, py2, 4, 0, Math.PI * 2);
+                                ctx.fillStyle = '#0ea5e9';
+                                ctx.strokeStyle = '#ffffff';
+                                ctx.lineWidth = 2;
+                                ctx.fill();
+                                ctx.stroke();
+                            }
+                        } catch (_) {}
                         ctx.restore();
                     }
 
@@ -2315,25 +2375,24 @@ class RouteDetailsModal {
                 datasets: [{
                     label: 'Yükseklik (m)',
                     data: elevationData.map(d => ({ x: d.distance, y: d.elevation })),
-                    borderColor: '#3b82f6',
+                    borderColor: '#f59e0b',
+                    borderWidth: 2,
                     backgroundColor: (c) => {
-                        if (!self.useElevationGradient || !self.elevationDataForInteraction) return 'rgba(59, 130, 246, 0.1)';
                         const area = c.chart && c.chart.chartArea;
-                        if (!area) return 'rgba(59, 130, 246, 0.1)';
+                        if (!area) return 'rgba(34, 197, 94, 0.25)';
                         const g = c.chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
-                        g.addColorStop(0, '#bde7bd');
-                        g.addColorStop(0.5, '#ffd27f');
-                        g.addColorStop(1, '#ff9b8e');
+                        g.addColorStop(0, 'rgba(163, 230, 53, 0.45)');   // green-400
+                        g.addColorStop(1, 'rgba(34, 197, 94, 0.15)');   // green-500
                         return g;
                     },
                     fill: true,
                     spanGaps: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#3b82f6',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 3,
-                    pointHoverRadius: 6
+                    tension: 0.25,
+                    pointBackgroundColor: '#fde047', // yellow points
+                    pointBorderColor: '#a16207',
+                    pointBorderWidth: 1,
+                    pointRadius: 2,
+                    pointHoverRadius: 4
                 }]
             },
             options: {
@@ -2341,36 +2400,22 @@ class RouteDetailsModal {
                 maintainAspectRatio: false,
                 layout: {
                     padding: {
-                        top: 10,
-                        bottom: 10,
-                        left: 10,
-                        right: 10
+                        top: 8,
+                        bottom: 6,
+                        left: 0,
+                        right: 0
                     }
                 },
                 interaction: {
                     intersect: false,
-                    mode: 'index'
+                    mode: 'nearest',
+                    axis: 'x'
                 },
                 plugins: {
                     legend: {
                         display: false
                     },
-                    tooltip: {
-                        callbacks: {
-                            title: function (context) {
-                                const index = context[0].dataIndex;
-                                return names[index];
-                            },
-                            label: function (context) {
-                                const elevation = Number(context.parsed.y);
-                                const distance = Number(context.parsed.x);
-                                return [
-                                    `Yükseklik: ${elevation.toFixed(2)}m`,
-                                    `Mesafe: ${distance.toFixed(2)}km`
-                                ];
-                            }
-                        }
-                    }
+                    tooltip: { enabled: false }
                 },
                 scales: {
                     x: {
@@ -2381,21 +2426,22 @@ class RouteDetailsModal {
                         title: {
                             display: false
                         },
-                        ticks: {
-                            maxTicksLimit: 6,
-                            callback: (val) => `${Number(val).toFixed(2)}km`
-                        }
+                        ticks: { display: false },
+                        grid: { display: false },
+                        border: { display: false },
+                        offset: false,
+                        bounds: 'ticks'
                     },
                     y: {
                         display: true,
                         title: {
                             display: false
                         },
-                        ticks: {
-                            callback: function (value) {
-                                return value + 'm';
-                            }
-                        }
+                        ticks: { display: false },
+                        grid: { display: false },
+                        border: { display: false },
+                        offset: false,
+                        bounds: 'ticks'
                     }
                 }
             },
@@ -2415,7 +2461,6 @@ class RouteDetailsModal {
     }
 
     addChartMouseHandlers(canvas, elevationData) {
-        const tooltip = document.getElementById('modalElevationTooltip');
         let isHovering = false;
 
         const handleMouseMove = (event) => {
@@ -2433,7 +2478,6 @@ class RouteDetailsModal {
             const chart = this.elevationChartInstance;
             const area = chart && chart.chartArea ? chart.chartArea : {left: 40, right: rect.width - 40, top: 20, bottom: rect.height - 20};
             if (x < area.left || x > area.right || y < area.top || y > area.bottom) {
-                this.hideElevationTooltip();
                 this.removeMapMarker();
                 return;
             }
@@ -2457,9 +2501,6 @@ class RouteDetailsModal {
             });
 
             if (closestPoint) {
-                // Show tooltip
-                this.showElevationTooltip(event.clientX, event.clientY, closestPoint);
-
                 // Update map marker
                 this.updateMapMarkerForElevation(closestPoint);
 
@@ -2469,10 +2510,11 @@ class RouteDetailsModal {
         };
 
         const handleMouseLeave = () => {
-            this.hideElevationTooltip();
             this.removeMapMarker();
             this.currentElevationPosition = null;
             this._elevMouseX = null;
+            const topEl = document.getElementById('modalElevationTopValue');
+            if (topEl) topEl.style.display = 'none';
             if (this.elevationChartInstance) this.elevationChartInstance.draw();
         };
 
