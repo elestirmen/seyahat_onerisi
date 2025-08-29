@@ -186,6 +186,8 @@
     /* Keep vertical scrollbar space reserved to avoid width jumps on hover */
     scrollbar-gutter: stable both-edges;
     overflow-anchor: none;
+    /* Contain absolutely positioned offscreen tabs (map) */
+    position: relative;
 }
 
 .route-details-tab-content {
@@ -222,6 +224,13 @@
         opacity: 1 !important;
         z-index: 1 !important;
         pointer-events: auto !important;
+    }
+
+    /* Fix: Remove unexpected top gap on POIs/Media tabs on mobile */
+    .route-details-tab-content[data-tab="pois"],
+    .route-details-tab-content[data-tab="media"] {
+        margin-top: 0 !important;
+        padding-top: 12px;
     }
 
     /* ULTRA AGGRESSIVE map container sizing for mobile */
@@ -1339,15 +1348,74 @@
     }
 
     .route-media-grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        /* On mobile, turn media list into a horizontal scroller */
+        display: flex !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        gap: 12px !important;
+        padding: 8px 8px 4px 8px !important;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+
+    .route-media-grid::-webkit-scrollbar {
+        height: 8px;
+    }
+    .route-media-grid::-webkit-scrollbar-thumb {
+        background: rgba(0,0,0,0.2);
+        border-radius: 4px;
+    }
+
+    .route-media-item {
+        flex: 0 0 85% !important; /* show one item mostly full width */
+        max-width: 85% !important;
+        scroll-snap-align: center;
+        border-radius: 12px;
+    }
+
+    /* Slightly wider screens can show bigger previews */
+    @media (min-width: 540px) and (max-width: 768px) {
+        .route-media-item {
+            flex-basis: 65% !important;
+            max-width: 65% !important;
+        }
     }
 
     .route-details-actions {
-        flex-direction: column;
+        padding: 10px;
+        gap: 8px;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: nowrap;
     }
 
     .route-action-btn {
-        min-width: auto;
+        min-width: 44px;
+        min-height: 44px;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        flex: 0 0 auto;
+    }
+
+    .route-action-btn i {
+        font-size: 18px;
+        line-height: 1;
+    }
+
+    .route-action-btn span {
+        display: none;
+    }
+
+    .route-action-btn.secondary {
+        border-width: 1px;
     }
 
     /* Mobile-specific map controls */
@@ -1369,12 +1437,19 @@
         padding: 16px;
     }
 
+    /* Make tabs slightly more compact on small phones */
     .route-details-tabs {
-        padding: 0 16px;
+        padding: 0 8px;
     }
 
     .route-details-tab {
-        padding: 12px 16px;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        gap: 6px;
+    }
+
+    .route-details-tab i {
+        font-size: 0.9rem;
     }
 
     .route-details-tab-content {
@@ -1429,6 +1504,14 @@
 
     .route-media-item {
         min-height: 120px;
+    }
+}
+
+/* On very small touch devices, prefer compact tabs */
+@media (pointer: coarse) and (max-width: 480px) {
+    .route-details-tab {
+        padding: 8px 12px;
+        min-height: 40px;
     }
 }
 

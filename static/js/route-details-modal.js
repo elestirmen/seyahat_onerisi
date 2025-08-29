@@ -164,15 +164,15 @@ class RouteDetailsModal {
                     </div>
                     
                     <div class="route-details-actions">
-                        <button class="route-action-btn primary" id="startNavigationBtn">
-                            <i class="fas fa-navigation"></i>
+                        <button class="route-action-btn primary" id="startNavigationBtn" aria-label="Navigasyonu Başlat" title="Navigasyonu Başlat">
+                            <i class="fas fa-location-arrow"></i>
                             <span>Navigasyonu Başlat</span>
                         </button>
-                        <button class="route-action-btn secondary" id="exportRouteBtn">
+                        <button class="route-action-btn secondary" id="exportRouteBtn" aria-label="Dışa Aktar" title="Dışa Aktar">
                             <i class="fas fa-download"></i>
                             <span>Dışa Aktar</span>
                         </button>
-                        <button class="route-action-btn secondary" id="shareRouteBtn">
+                        <button class="route-action-btn secondary" id="shareRouteBtn" aria-label="Paylaş" title="Paylaş">
                             <i class="fas fa-share-alt"></i>
                             <span>Paylaş</span>
                         </button>
