@@ -615,8 +615,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    pointer-events: none; /* children will enable */
-    z-index: 5;
+    pointer-events: auto; /* allow clicks and relay when needed */
+    z-index: 10;
 }
 
 .route-details-modal .elevation-poi-icon {
@@ -636,6 +636,26 @@
 }
 
 .route-details-modal .elevation-poi-icon i {
+    line-height: 1;
+}
+
+.route-details-modal .elevation-media-icon {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    font-size: 12px;
+    pointer-events: auto;
+}
+
+.route-details-modal .elevation-media-icon i {
     line-height: 1;
 }
 

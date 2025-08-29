@@ -2389,8 +2389,8 @@ class RouteDetailsModal {
                         self.elevationMediaScreenPoints = [];
                         return;
                     }
-                    const ctx2 = chart.ctx;
                     const screenPoints = [];
+                    const mediaPositions = [];
                     self.elevationMediaOverlayPoints.forEach((mp) => {
                         let nearestIndex = 0;
                         let minDiff = Infinity;
@@ -2403,17 +2403,11 @@ class RouteDetailsModal {
                         const x = pt.x;
                         const y = pt.y - 12;
                         const type = (mp.media && (mp.media.media_type || (mp.media.url||mp.media.path))) ? self.getMediaTypeFromUrl(mp.media.url || mp.media.path || '') : 'image';
-                        const iconMap = { image: '📷', video: '🎥', audio: '🎵', model_3d: '🧊', unknown: '📍' };
-                        const iconChar = iconMap[type] || iconMap.unknown;
-                        ctx2.save();
-                        ctx2.font = '16px sans-serif';
-                        ctx2.textAlign = 'center';
-                        ctx2.textBaseline = 'middle';
-                        ctx2.fillText(iconChar, x, y);
-                        ctx2.restore();
                         screenPoints.push({ x, y, media: mp.media, type });
+                        mediaPositions.push({ x, y, media: mp.media, type });
                     });
                     self.elevationMediaScreenPoints = screenPoints;
+                    self.updateElevationMediaDom(mediaPositions, chart);
                 } catch (e) {
                     console.warn('mediaMarkersPlugin draw error:', e);
                 }
@@ -2505,6 +2499,27 @@ class RouteDetailsModal {
 
         // Add mouse event handlers for map synchronization
         this.addChartMouseHandlers(canvas, elevationData);
+
+        // Bridge overlay events to canvas so hover/click still work when not on icons
+        try {
+            const overlay = document.getElementById('modalElevationOverlayLayer');
+            if (overlay) {
+                const relay = (type) => (e) => {
+                    // If clicked on an icon, its handler will run; only relay when target is the overlay background
+                    if (e.target !== overlay) return;
+                    const evt = new MouseEvent(type, {
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: e.clientX,
+                        clientY: e.clientY
+                    });
+                    canvas.dispatchEvent(evt);
+                };
+                overlay.addEventListener('mousemove', relay('mousemove'));
+                overlay.addEventListener('mouseleave', relay('mouseleave'));
+                overlay.addEventListener('click', relay('click'));
+            }
+        } catch (_) { /* ignore */ }
 
         // Update statistics
         this.updateElevationStats(elevationData, routeTotalKm);
@@ -2689,10 +2704,8 @@ class RouteDetailsModal {
         try {
             const layer = document.getElementById('modalElevationOverlayLayer');
             if (!layer) return;
-            // Reset for simplicity; list is small
-            while (layer.firstChild) layer.removeChild(layer.firstChild);
-            const containerRect = chart.canvas.getBoundingClientRect();
-            const layerRect = layer.getBoundingClientRect();
+            // Remove only existing POI icons (do not touch media icons)
+            Array.from(layer.querySelectorAll('.elevation-poi-icon')).forEach(el => el.remove());
             positions.forEach(pos => {
                 const poi = pos.poi || {};
                 const cat = this.getCategoryStyle(poi.category || 'diger');
@@ -2708,6 +2721,40 @@ class RouteDetailsModal {
                 el.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.openPoiPopupOnMap(poi);
+                });
+                layer.appendChild(el);
+            });
+        } catch (_) { /* ignore */ }
+    }
+
+    // Create DOM overlays for media icons; clicking opens media viewer
+    updateElevationMediaDom(positions, chart) {
+        try {
+            const layer = document.getElementById('modalElevationOverlayLayer');
+            if (!layer) return;
+            // Remove only existing media icons (do not touch POI icons)
+            Array.from(layer.querySelectorAll('.elevation-media-icon')).forEach(el => el.remove());
+            positions.forEach(pos => {
+                const media = pos.media || {};
+                const rawUrl = media.url || media.path || media.file_path || media.full_path || media.original_path || '';
+                const type = (media.media_type && media.media_type.toLowerCase()) || this.getMediaTypeFromUrl(rawUrl);
+                const el = document.createElement('div');
+                el.className = 'elevation-media-icon';
+                el.style.left = `${pos.x}px`;
+                el.style.top = `${pos.y}px`;
+                el.title = media.caption || media.alt_text || 'Medya';
+                // Color + icon per type
+                let bg = '#f59e0b', icon = 'fas fa-camera';
+                if (type === 'video') { bg = '#ef4444'; icon = 'fas fa-play'; }
+                else if (type === 'audio') { bg = '#10b981'; icon = 'fas fa-volume-up'; }
+                else if (type === 'model_3d') { bg = '#6366f1'; icon = 'fas fa-cube'; }
+                el.style.backgroundColor = bg;
+                const i = document.createElement('i');
+                i.className = icon;
+                el.appendChild(i);
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (rawUrl) this.showMediaViewer(rawUrl, type);
                 });
                 layer.appendChild(el);
             });
