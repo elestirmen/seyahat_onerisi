@@ -15,6 +15,10 @@
     /* Limit transitions to avoid unintended layout animations (prevents jitter) */
     transition: opacity 0.3s cubic-bezier(0.4, 0.0, 0.2, 1),
                 visibility 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    /* Prevent modal jitter during interactions */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: opacity, visibility;
 }
 
 .route-details-modal.show {
@@ -40,6 +44,9 @@
     will-change: transform;
     display: flex;
     flex-direction: column;
+    /* Prevent content jitter during interactions */
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
 }
 
 .route-details-modal.show .route-details-modal-content {

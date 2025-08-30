@@ -27,6 +27,10 @@ class RouteDetailsModal {
         this.elevZoomRange = null; // {min, max} in km
         this._elevMouseX = null;
         this._elevDragStart = null;
+        // Throttling variables to prevent modal jitter
+        this.lastElevationMouseMoveTime = null;
+        this.lastElevationDrawnX = null;
+        this.lastElevationMarkerPoint = null;
         // Bind methods
         this.hide = this.hide.bind(this);
         this.handleKeydown = this.handleKeydown.bind(this);
@@ -2544,13 +2548,26 @@ class RouteDetailsModal {
         const handleMouseMove = (event) => {
             if (!this.mapInstance || !elevationData.length) return;
 
+            // Throttle mouse move events to prevent modal jitter
+            const now = Date.now();
+            if (this.lastElevationMouseMoveTime && now - this.lastElevationMouseMoveTime < 16) { // ~60fps
+                return;
+            }
+            this.lastElevationMouseMoveTime = now;
+
             const rect = canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
 
-            // Save for crosshair rendering
-            this._elevMouseX = x;
-            if (this.elevationChartInstance) this.elevationChartInstance.draw();
+            // Only redraw if position significantly changed
+            const currentX = Math.round(x / 5) * 5; // Round to nearest 5px
+            if (this.lastElevationDrawnX !== currentX) {
+                this.lastElevationDrawnX = currentX;
+                
+                // Save for crosshair rendering
+                this._elevMouseX = x;
+                if (this.elevationChartInstance) this.elevationChartInstance.draw();
+            }
 
             // Check if mouse is within chart area
             const chart = this.elevationChartInstance;
@@ -2579,8 +2596,14 @@ class RouteDetailsModal {
             });
 
             if (closestPoint) {
-                // Update map marker
-                this.updateMapMarkerForElevation(closestPoint);
+                // Only update map marker if point significantly changed
+                const pointKey = `${closestPoint.lat.toFixed(4)},${closestPoint.lng.toFixed(4)}`;
+                if (this.lastElevationMarkerPoint !== pointKey) {
+                    this.lastElevationMarkerPoint = pointKey;
+                    
+                    // Update map marker
+                    this.updateMapMarkerForElevation(closestPoint);
+                }
 
                 // Store current position for cleanup
                 this.currentElevationPosition = closestPoint;
@@ -2591,6 +2614,9 @@ class RouteDetailsModal {
             this.removeMapMarker();
             this.currentElevationPosition = null;
             this._elevMouseX = null;
+            this.lastElevationDrawnX = null;
+            this.lastElevationMarkerPoint = null;
+            this.lastElevationMouseMoveTime = null;
             const topEl = document.getElementById('modalElevationTopValue');
             if (topEl) topEl.style.display = 'none';
             if (this.elevationChartInstance) this.elevationChartInstance.draw();

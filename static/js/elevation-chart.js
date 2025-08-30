@@ -17,6 +17,11 @@ class ElevationChart {
         this.mapMarker = null;
         this.isMouseOver = false;
         
+        // Throttling variables to prevent modal jitter
+        this.lastMouseMoveTime = null;
+        this.lastDrawnX = null;
+        this.lastMarkerPoint = null;
+        
         this.init();
     }
 
@@ -583,6 +588,13 @@ class ElevationChart {
     handleMouseMove(e) {
         if (!this.elevationData.length || !this.isMouseOver) return;
 
+        // Throttle mouse move events to prevent modal jitter
+        const now = Date.now();
+        if (this.lastMouseMoveTime && now - this.lastMouseMoveTime < 16) { // ~60fps
+            return;
+        }
+        this.lastMouseMoveTime = now;
+
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
@@ -615,18 +627,33 @@ class ElevationChart {
         // Use graph elevation at this X (nearest point on the polyline)
         const cursorElevation = closestPoint ? Math.round(closestPoint.elevation) : null;
 
-        // Redraw chart base and draw crosshair overlay with inline label pinned to graph line
-        this.updateChart();
-        this.drawCrosshair(x, cursorElevation);
+        // Only redraw if position significantly changed
+        const currentX = Math.round(x / 5) * 5; // Round to nearest 5px
+        if (this.lastDrawnX !== currentX) {
+            this.lastDrawnX = currentX;
+            
+            // Redraw chart base and draw crosshair overlay with inline label pinned to graph line
+            this.updateChart();
+            this.drawCrosshair(x, cursorElevation);
+        }
 
         if (closestPoint) {
             this.showTooltip(e.clientX, e.clientY, closestPoint, cursorElevation);
-            this.updateMapMarker(closestPoint);
+            
+            // Only update map marker if point significantly changed
+            const pointKey = `${closestPoint.lat.toFixed(4)},${closestPoint.lng.toFixed(4)}`;
+            if (this.lastMarkerPoint !== pointKey) {
+                this.lastMarkerPoint = pointKey;
+                this.updateMapMarker(closestPoint);
+            }
         }
     }
 
     handleMouseLeave() {
         this.isMouseOver = false;
+        this.lastDrawnX = null;
+        this.lastMarkerPoint = null;
+        this.lastMouseMoveTime = null;
         this.hideTooltip();
         this.removeMapMarker();
         // Clear overlays by redrawing chart
