@@ -158,11 +158,9 @@ class RouteDetailsModal {
                         
                         <!-- Media Tab -->
                         <div class="route-details-tab-content" data-tab="media" role="tabpanel" aria-hidden="true">
-                            <div class="route-media-grid" id="routeMediaGrid">
-                                <div class="route-details-loading">
-                                    <i class="fas fa-spinner"></i>
-                                    <p>Medya yükleniyor...</p>
-                                </div>
+                            <div class="route-details-loading">
+                                <i class="fas fa-spinner"></i>
+                                <p>Medya yükleniyor...</p>
                             </div>
                         </div>
                     </div>
@@ -1040,8 +1038,8 @@ class RouteDetailsModal {
     }
 
     async loadMediaContent() {
-        const mediaContainer = document.getElementById('routeMediaGrid');
-        if (!mediaContainer) return;
+        const mediaTabContent = document.querySelector('.route-details-tab-content[data-tab="media"]');
+        if (!mediaTabContent) return;
 
         try {
             console.log('🎬 Loading media content for route:', this.currentRoute.name);
@@ -1070,94 +1068,207 @@ class RouteDetailsModal {
             }
 
             if (mediaFiles.length === 0) {
-                mediaContainer.innerHTML = `
+                mediaTabContent.innerHTML = `
                     <div class="route-media-empty">
                         <i class="fas fa-camera"></i>
-                        <p>Bu rota için medya bulunmuyor</p>
+                        <h4>Medya Bulunamadı</h4>
+                        <p>Bu rota için henüz medya dosyası eklenmemiş</p>
                     </div>
                 `;
                 return;
             }
 
-            // Render media items
-            const mediaHTML = mediaFiles.map(media => {
-                const isVideo = media.media_type === 'video' || media.path?.includes('.mp4');
-                const isAudio = media.media_type === 'audio' || media.path?.includes('.mp3');
-
-                // Debug media URL construction
-                console.log('🎬 Media item URL construction:', {
-                    mediaId: media.id || media._id,
-                    url: media.url,
-                    path: media.path,
-                    thumbnail_path: media.thumbnail_path,
-                    file_path: media.file_path,
-                    original_path: media.original_path,
-                    full_path: media.full_path,
-                    filename: media.filename,
-                    mediaKeys: Object.keys(media)
-                });
-
-                // Construct proper media URL - prioritize full resolution over thumbnails
-                let mediaUrl = media.url || media.path || media.filename;
-                if (mediaUrl && !mediaUrl.startsWith('http')) {
-                    // Prioritize full-resolution paths over thumbnails
-                    if (media.original_path) {
-                        mediaUrl = `/${media.original_path}`;
-                        console.log('🎯 Using original_path for full resolution');
-                    } else if (media.full_path) {
-                        mediaUrl = `/${media.full_path}`;
-                        console.log('🎯 Using full_path for full resolution');
-                    } else if (media.file_path) {
-                        mediaUrl = `/${media.file_path}`;
-                        console.log('🎯 Using file_path for full resolution');
-                    } else if (media.path) {
-                        mediaUrl = media.path.startsWith('/') ? media.path : `/${media.path}`;
-                        console.log('🎯 Using path for full resolution');
-                    } else if (media.filename) {
-                        // For files served from root domain (like the error shows)
-                        mediaUrl = `/${media.filename}`;
-                        console.log('🎯 Using filename for full resolution');
-                    } else {
-                        // Last resort - serve from uploads directory
-                        mediaUrl = `/uploads/${mediaUrl}`;
-                        console.log('🎯 Using uploads directory as fallback');
-                    }
-                }
-
-                console.log('🎬 Final media URL for display:', mediaUrl);
-
-                let typeIcon = 'fas fa-file';
-                if (isVideo) typeIcon = 'fas fa-play';
-                else if (isAudio) typeIcon = 'fas fa-volume-up';
-                else typeIcon = 'fas fa-image';
-
-                return `
-                    <div class="route-media-item" onclick="window.routeDetailsModalInstance.showMediaViewer('${mediaUrl}', '${media.media_type || 'image'}')">
-                        ${isVideo ?
-                        `<video src="${mediaUrl}" muted onload="this.classList.add('loaded')" onerror="console.error('Failed to load video:', '${mediaUrl}'); this.parentElement.style.display='none';"></video>` :
-                        `<img src="${mediaUrl}" alt="${media.alt_text || 'Rota medyası'}" loading="lazy" onload="this.classList.add('loaded')" onerror="console.error('Failed to load image:', '${mediaUrl}'); this.parentElement.style.display='none';">`
-                    }
-                        <div class="route-media-type-icon">
-                            <i class="${typeIcon}"></i>
-                        </div>
-                        <div class="route-media-overlay">
-                            ${media.caption || media.alt_text || 'Medya'}
+            // Create enhanced media strip layout
+            const mediaStripHTML = `
+                <div class="route-media-container">
+                    <div class="media-strip-header">
+                        <h3 class="media-strip-title">
+                            <i class="fas fa-camera"></i>
+                            Rota Medyaları (${mediaFiles.length})
+                        </h3>
+                        <div class="media-strip-controls">
+                            <button class="media-nav-btn" id="mediaPrevBtn" title="Önceki">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button class="media-nav-btn" id="mediaNextBtn" title="Sonraki">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
                         </div>
                     </div>
-                `;
-            }).join('');
-
-            mediaContainer.innerHTML = mediaHTML;
-
-        } catch (error) {
-            console.error('❌ Error loading media:', error);
-            mediaContainer.innerHTML = `
-                <div class="route-media-empty">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Medya yüklenirken hata oluştu</p>
+                    <div class="route-media-grid" id="routeMediaGrid">
+                        ${this.renderMediaItems(mediaFiles)}
+                    </div>
                 </div>
             `;
+
+            mediaTabContent.innerHTML = mediaStripHTML;
+
+            // Initialize media navigation
+            this.initializeMediaNavigation();
+
+        } catch (error) {
+            console.error('❌ Error loading media content:', error);
+            const mediaContainer = document.getElementById('routeMediaGrid');
+            if (mediaContainer) {
+                mediaContainer.innerHTML = `
+                    <div class="route-media-empty">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h4>Medya Yüklenemedi</h4>
+                        <p>Medya dosyaları yüklenirken bir hata oluştu</p>
+                    </div>
+                `;
+            }
         }
+    }
+
+    renderMediaItems(mediaFiles) {
+        return mediaFiles.map((media, index) => {
+            const isVideo = media.media_type === 'video' || media.path?.includes('.mp4');
+            const isAudio = media.media_type === 'audio' || media.path?.includes('.mp3');
+            const is3D = media.media_type === 'model_3d' || media.path?.includes('.glb');
+
+            // Debug media URL construction
+            console.log('🎬 Media item URL construction:', {
+                mediaId: media.id || media._id,
+                url: media.url,
+                path: media.path,
+                thumbnail_path: media.thumbnail_path,
+                file_path: media.file_path,
+                original_path: media.original_path,
+                full_path: media.full_path,
+                filename: media.filename,
+                mediaKeys: Object.keys(media)
+            });
+
+            // Construct proper media URL - prioritize full resolution over thumbnails
+            let mediaUrl = media.url || media.path || media.filename;
+            if (mediaUrl && !mediaUrl.startsWith('http')) {
+                // Prioritize full-resolution paths over thumbnails
+                if (media.original_path) {
+                    mediaUrl = `/${media.original_path}`;
+                    console.log('🎯 Using original_path for full resolution');
+                } else if (media.full_path) {
+                    mediaUrl = `/${media.full_path}`;
+                    console.log('🎯 Using full_path for full resolution');
+                } else if (media.file_path) {
+                    mediaUrl = `/${media.file_path}`;
+                    console.log('🎯 Using file_path for full resolution');
+                } else if (media.path) {
+                    mediaUrl = media.path.startsWith('/') ? media.path : `/${media.path}`;
+                    console.log('🎯 Using path for full resolution');
+                } else if (media.filename) {
+                    // For files served from root domain (like the error shows)
+                    mediaUrl = `/${media.filename}`;
+                    console.log('🎯 Using filename for full resolution');
+                } else {
+                    // Last resort - serve from uploads directory
+                    mediaUrl = `/uploads/${mediaUrl}`;
+                    console.log('🎯 Using uploads directory as fallback');
+                }
+            }
+
+            console.log('🎬 Final media URL for display:', mediaUrl);
+
+            let typeIcon = 'fas fa-file';
+            if (isVideo) typeIcon = 'fas fa-play';
+            else if (isAudio) typeIcon = 'fas fa-volume-up';
+            else if (is3D) typeIcon = 'fas fa-cube';
+            else typeIcon = 'fas fa-image';
+
+            const mediaTitle = media.caption || media.alt_text || `Medya ${index + 1}`;
+            const mediaInfo = `${media.media_type || 'image'} • ${this.formatFileSize(media.file_size)}`;
+
+            return `
+                <div class="route-media-item" data-media-index="${index}" onclick="window.routeDetailsModalInstance.showMediaViewer('${mediaUrl}', '${media.media_type || 'image'}', ${index})">
+                    ${isVideo ?
+                    `<video src="${mediaUrl}" muted preload="metadata" onloadeddata="this.classList.add('loaded')" onerror="console.error('Failed to load video:', '${mediaUrl}'); this.parentElement.style.display='none';"></video>
+                     <div class="route-media-play-btn">
+                         <i class="fas fa-play"></i>
+                     </div>` :
+                    isAudio ?
+                    `<div class="route-media-audio-placeholder">
+                         <i class="fas fa-music"></i>
+                     </div>` :
+                    is3D ?
+                    `<div class="route-media-3d-placeholder">
+                         <i class="fas fa-cube"></i>
+                     </div>` :
+                    `<img src="${mediaUrl}" alt="${media.alt_text || 'Rota medyası'}" loading="lazy" onload="this.classList.add('loaded')" onerror="console.error('Failed to load image:', '${mediaUrl}'); this.parentElement.style.display='none';">`
+                    }
+                    <div class="route-media-type-icon">
+                        <i class="${typeIcon}"></i>
+                    </div>
+                    <div class="route-media-overlay">
+                        <div class="route-media-title">${mediaTitle}</div>
+                        <div class="route-media-info">
+                            <i class="fas fa-info-circle"></i>
+                            ${mediaInfo}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    initializeMediaNavigation() {
+        const mediaGrid = document.getElementById('routeMediaGrid');
+        const prevBtn = document.getElementById('mediaPrevBtn');
+        const nextBtn = document.getElementById('mediaNextBtn');
+
+        if (!mediaGrid || !prevBtn || !nextBtn) return;
+
+        const scrollAmount = 340; // Width of one media item + gap
+
+        // Update button states
+        const updateButtonStates = () => {
+            const scrollLeft = mediaGrid.scrollLeft;
+            const maxScroll = mediaGrid.scrollWidth - mediaGrid.clientWidth;
+
+            prevBtn.disabled = scrollLeft <= 0;
+            nextBtn.disabled = scrollLeft >= maxScroll - 1;
+        };
+
+        // Navigation handlers
+        prevBtn.addEventListener('click', () => {
+            mediaGrid.scrollBy({
+                left: -scrollAmount,
+                behavior: 'smooth'
+            });
+        });
+
+        nextBtn.addEventListener('click', () => {
+            mediaGrid.scrollBy({
+                left: scrollAmount,
+                behavior: 'smooth'
+            });
+        });
+
+        // Update button states on scroll
+        mediaGrid.addEventListener('scroll', updateButtonStates);
+
+        // Initial button state
+        setTimeout(updateButtonStates, 100);
+
+        // Keyboard navigation
+        mediaGrid.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevBtn.click();
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                nextBtn.click();
+            }
+        });
+
+        // Make grid focusable for keyboard navigation
+        mediaGrid.setAttribute('tabindex', '0');
+    }
+
+    formatFileSize(bytes) {
+        if (!bytes) return 'Bilinmiyor';
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
     }
 
     async displayRouteOnMap() {
@@ -3149,13 +3260,16 @@ class RouteDetailsModal {
         }
     }
 
-    showMediaViewer(mediaUrl, mediaType) {
-        console.log('🎬 Show media viewer:', mediaUrl, mediaType);
+    showMediaViewer(mediaUrl, mediaType, mediaIndex = 0) {
+        console.log('🎬 Show media viewer:', mediaUrl, mediaType, 'index:', mediaIndex);
 
         if (!mediaUrl) {
             console.error('❌ No media URL provided to showMediaViewer');
             return;
         }
+
+        // Store current media index for navigation
+        this.currentMediaIndex = mediaIndex;
 
         // Test the media URL to see if it's accessible
         this.testMediaUrl(mediaUrl).then(isAccessible => {
@@ -3166,7 +3280,7 @@ class RouteDetailsModal {
             return mediaUrl;
         }).then(workingUrl => {
             if (workingUrl) {
-                this.createMediaViewerModal(workingUrl, mediaType);
+                this.createMediaViewerModal(workingUrl, mediaType, mediaIndex);
             } else {
                 console.error('❌ Could not find working media URL');
                 alert('Medya dosyası yüklenemiyor. Lütfen daha sonra tekrar deneyin.');
@@ -3219,32 +3333,61 @@ class RouteDetailsModal {
         return null;
     }
 
-    createMediaViewerModal(mediaUrl, mediaType) {
-        // Create a media viewer modal with loading state
+    createMediaViewerModal(mediaUrl, mediaType, mediaIndex) {
+        // Get all media items for navigation
+        const mediaItems = document.querySelectorAll('.route-media-item');
+        const totalMedia = mediaItems.length;
+        const hasPrevious = mediaIndex > 0;
+        const hasNext = mediaIndex < totalMedia - 1;
+
+        // Create enhanced media viewer modal with navigation
         const viewerModal = document.createElement('div');
         viewerModal.className = 'media-viewer-modal';
         viewerModal.innerHTML = `
             <div class="media-viewer-overlay" onclick="this.parentElement.remove()"></div>
             <div class="media-viewer-content">
-                <button class="media-viewer-close" onclick="this.parentElement.parentElement.remove()">
-                    <i class="fas fa-times"></i>
+                <div class="media-viewer-header">
+                    <div class="media-viewer-info">
+                        <span class="media-counter">${mediaIndex + 1} / ${totalMedia}</span>
+                        <span class="media-type-badge">${this.getMediaTypeName(mediaType)}</span>
+                    </div>
+                    <button class="media-viewer-close" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                ${hasPrevious ? `
+                <button class="media-nav-btn media-nav-prev" onclick="window.routeDetailsModalInstance.navigateMedia(-1)">
+                    <i class="fas fa-chevron-left"></i>
                 </button>
+                ` : ''}
+                
+                ${hasNext ? `
+                <button class="media-nav-btn media-nav-next" onclick="window.routeDetailsModalInstance.navigateMedia(1)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                ` : ''}
+                
                 <div class="media-viewer-body">
                     <div class="media-viewer-loading">
                         <div class="media-viewer-spinner"></div>
                         <p>Medya yükleniyor...</p>
                     </div>
                     <div class="media-viewer-content-wrapper" style="display: none;">
-                        ${mediaType === 'video' ?
-                `<video src="${mediaUrl}" controls autoplay style="max-width: 100%; max-height: 80vh;" onload="this.parentElement.style.display='block'; this.parentElement.previousElementSibling.style.display='none';" onerror="console.error('Failed to load video in viewer:', '${mediaUrl}'); this.parentElement.innerHTML='<p>Video yüklenemedi</p>'"></video>` :
-                mediaType === 'audio' ?
-                    `<audio src="${mediaUrl}" controls autoplay style="width: 100%;" onload="this.parentElement.style.display='block'; this.parentElement.previousElementSibling.style.display='none';" onerror="console.error('Failed to load audio in viewer:', '${mediaUrl}'); this.parentElement.innerHTML='<p>Ses dosyası yüklenemedi</p>'"></audio>` :
-                    `<img src="${mediaUrl}" alt="Media" style="max-width: 100%; max-height: 80vh; object-fit: contain;" onload="this.parentElement.style.display='block'; this.parentElement.previousElementSibling.style.display='none';" onerror="console.error('Failed to load image in viewer:', '${mediaUrl}'); this.parentElement.innerHTML='<p>Resim yüklenemedi</p>'">`
-            }
+                        ${this.createMediaElement(mediaUrl, mediaType)}
+                    </div>
+                </div>
+                
+                <div class="media-viewer-footer">
+                    <div class="media-thumbnails">
+                        ${this.createMediaThumbnails(mediaItems, mediaIndex)}
                     </div>
                 </div>
             </div>
         `;
+
+        // Store reference for navigation
+        this.currentMediaViewer = viewerModal;
 
         // Prefer to contain the viewer within the media tab content so tabs remain clickable
         const mediaTab = this.modal.querySelector('.route-details-tab-content[data-tab="media"]');
@@ -3253,7 +3396,112 @@ class RouteDetailsModal {
         } else {
             document.body.appendChild(viewerModal);
         }
-        console.log('✅ Media viewer modal created with URL:', mediaUrl);
+
+        // Add keyboard navigation
+        this.addMediaViewerKeyboardNavigation(viewerModal);
+
+        console.log('✅ Enhanced media viewer modal created with URL:', mediaUrl);
+    }
+
+    createMediaElement(mediaUrl, mediaType) {
+        switch (mediaType) {
+            case 'video':
+                return `<video src="${mediaUrl}" controls autoplay style="max-width: 100%; max-height: 80vh;" 
+                        onloadeddata="this.parentElement.style.display='block'; this.parentElement.previousElementSibling.style.display='none';" 
+                        onerror="console.error('Failed to load video in viewer:', '${mediaUrl}'); this.parentElement.innerHTML='<p>Video yüklenemedi</p>'"></video>`;
+            case 'audio':
+                return `<audio src="${mediaUrl}" controls autoplay style="width: 100%;" 
+                        onloadeddata="this.parentElement.style.display='block'; this.parentElement.previousElementSibling.style.display='none';" 
+                        onerror="console.error('Failed to load audio in viewer:', '${mediaUrl}'); this.parentElement.innerHTML='<p>Ses dosyası yüklenemedi</p>'"></audio>`;
+            case 'model_3d':
+                return `<model-viewer src="${mediaUrl}" alt="3D Model" auto-rotate camera-controls 
+                        style="width: 100%; height: 80vh;" 
+                        onload="this.parentElement.style.display='block'; this.parentElement.previousElementSibling.style.display='none';" 
+                        onerror="console.error('Failed to load 3D model in viewer:', '${mediaUrl}'); this.parentElement.innerHTML='<p>3D model yüklenemedi</p>'"></model-viewer>`;
+            default:
+                return `<img src="${mediaUrl}" alt="Media" style="max-width: 100%; max-height: 80vh; object-fit: contain;" 
+                        onload="this.parentElement.style.display='block'; this.parentElement.previousElementSibling.style.display='none';" 
+                        onerror="console.error('Failed to load image in viewer:', '${mediaUrl}'); this.parentElement.innerHTML='<p>Resim yüklenemedi</p>'">`;
+        }
+    }
+
+    createMediaThumbnails(mediaItems, currentIndex) {
+        return Array.from(mediaItems).map((item, index) => {
+            const isActive = index === currentIndex;
+            const img = item.querySelector('img, video');
+            const src = img ? (img.src || img.poster) : '';
+            
+            return `
+                <div class="media-thumbnail ${isActive ? 'active' : ''}" 
+                     onclick="window.routeDetailsModalInstance.jumpToMedia(${index})">
+                    ${src ? `<img src="${src}" alt="Thumbnail ${index + 1}">` : `<div class="thumbnail-placeholder"><i class="fas fa-file"></i></div>`}
+                </div>
+            `;
+        }).join('');
+    }
+
+    getMediaTypeName(mediaType) {
+        const typeNames = {
+            'image': 'Resim',
+            'video': 'Video',
+            'audio': 'Ses',
+            'model_3d': '3D Model'
+        };
+        return typeNames[mediaType] || 'Medya';
+    }
+
+    navigateMedia(direction) {
+        const mediaItems = document.querySelectorAll('.route-media-item');
+        const newIndex = this.currentMediaIndex + direction;
+        
+        if (newIndex >= 0 && newIndex < mediaItems.length) {
+            const newMediaItem = mediaItems[newIndex];
+            newMediaItem.click();
+        }
+    }
+
+    jumpToMedia(index) {
+        const mediaItems = document.querySelectorAll('.route-media-item');
+        if (index >= 0 && index < mediaItems.length) {
+            const mediaItem = mediaItems[index];
+            mediaItem.click();
+        }
+    }
+
+    addMediaViewerKeyboardNavigation(viewerModal) {
+        const handleKeydown = (e) => {
+            switch (e.key) {
+                case 'Escape':
+                    viewerModal.remove();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    this.navigateMedia(-1);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    this.navigateMedia(1);
+                    break;
+            }
+        };
+
+        document.addEventListener('keydown', handleKeydown);
+        
+        // Clean up event listener when modal is removed
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    mutation.removedNodes.forEach((node) => {
+                        if (node === viewerModal) {
+                            document.removeEventListener('keydown', handleKeydown);
+                            observer.disconnect();
+                        }
+                    });
+                }
+            });
+        });
+        
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
     createDifficultyStars(level) {
