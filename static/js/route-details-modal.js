@@ -564,6 +564,19 @@ class RouteDetailsModal {
             tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
         });
 
+        // Handle mobile full screen for map tab
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            const modal = document.querySelector('.route-details-modal');
+            if (modal) {
+                if (tabName === 'map') {
+                    modal.classList.add('map-tab-active');
+                } else {
+                    modal.classList.remove('map-tab-active');
+                }
+            }
+        }
+
         // Close media viewer if leaving media tab
         if (this.currentTab === 'media' && tabName !== 'media') {
             const openViewer = this.modal.querySelector('.media-viewer-modal');
@@ -590,7 +603,6 @@ class RouteDetailsModal {
         }
 
         // Force layout reflow on mobile before loading content
-        const isMobile = window.innerWidth <= 768;
         if (isMobile && tabName === 'map') {
             const mapTab = document.querySelector('.route-details-tab-content[data-tab="map"]');
             const mapContainer = document.getElementById('routeModalMap');
@@ -627,7 +639,6 @@ class RouteDetailsModal {
 
         // Special handling for map tab to ensure proper rendering with mobile optimization
         if (tabName === 'map') {
-            const isMobile = window.innerWidth <= 768;
             const delay = isMobile ? 500 : 300;
 
             setTimeout(() => {
@@ -2690,6 +2701,14 @@ class RouteDetailsModal {
     // Map POIs/waypoints onto elevation chart distances for overlay icons
     updateElevationPoiMarkers(pois) {
         try {
+            // Hide POI markers on mobile for cleaner view
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                this.elevationPoiOverlayPoints = [];
+                if (this.elevationChartInstance) this.elevationChartInstance.update();
+                return;
+            }
+
             const items = Array.isArray(pois) ? pois : [];
             if (!items.length) {
                 this.elevationPoiOverlayPoints = [];
@@ -2929,6 +2948,14 @@ class RouteDetailsModal {
     // Map media items onto elevation chart distances and trigger redraw
     updateElevationMediaMarkers(mediaItems, options = {}) {
         try {
+            // Hide media markers on mobile for cleaner view
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                this.elevationMediaOverlayPoints = [];
+                if (this.elevationChartInstance) this.elevationChartInstance.update();
+                return;
+            }
+
             const onlyImages = options.onlyImages === true;
             const items = Array.isArray(mediaItems) ? mediaItems : [];
             if (!items.length) {

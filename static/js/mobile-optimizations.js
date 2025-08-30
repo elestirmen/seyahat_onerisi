@@ -102,11 +102,16 @@ class MobileOptimizations {
 
     preloadCriticalResources() {
         if (this.isMobile) {
-            // Preload mobile-specific CSS
+            // Load mobile-specific CSS immediately
             const mobileCSS = document.createElement('link');
-            mobileCSS.rel = 'preload';
-            mobileCSS.as = 'style';
+            mobileCSS.rel = 'stylesheet';
             mobileCSS.href = 'static/css/mobile-enhancements.css';
+            mobileCSS.onload = () => {
+                console.log('Mobile enhancements CSS loaded');
+            };
+            mobileCSS.onerror = () => {
+                console.warn('Mobile enhancements CSS failed to load');
+            };
             document.head.appendChild(mobileCSS);
         }
     }

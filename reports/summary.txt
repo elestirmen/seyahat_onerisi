@@ -1,1 +1,1 @@
-Pytest finished with exit code 0 in 0.49s
+Pytest finished with exit code 0 in 0.63s

@@ -139,6 +139,7 @@ class ElevationChart {
                 height: 120px;
                 cursor: crosshair;
                 border-radius: 6px;
+                touch-action: pan-y pinch-zoom;
             }
 
             .elevation-tooltip {
@@ -191,6 +192,34 @@ class ElevationChart {
         this.canvas.addEventListener('mouseenter', () => this.isMouseOver = true);
         this.canvas.addEventListener('mouseleave', () => this.handleMouseLeave());
         this.canvas.addEventListener('click', (e) => this.handleClick(e));
+        
+        // Mobile touch events for better scrolling
+        this.canvas.addEventListener('touchstart', (e) => {
+            this.touchStartY = e.touches[0].clientY;
+            this.touchStartX = e.touches[0].clientX;
+        }, { passive: true });
+        
+        this.canvas.addEventListener('touchmove', (e) => {
+            if (!this.touchStartY || !this.touchStartX) return;
+            
+            const touch = e.touches[0];
+            const deltaY = Math.abs(touch.clientY - this.touchStartY);
+            const deltaX = Math.abs(touch.clientX - this.touchStartX);
+            
+            // If it's primarily a vertical gesture, allow scrolling
+            if (deltaY > deltaX && deltaY > 10) {
+                return; // Allow default scroll behavior
+            }
+            
+            // Handle horizontal chart interaction
+            this.handleTouchMove(e);
+        }, { passive: true });
+        
+        this.canvas.addEventListener('touchend', () => {
+            this.touchStartY = null;
+            this.touchStartX = null;
+            this.handleMouseLeave();
+        }, { passive: true });
     }
 
     async loadElevationProfile(elevationProfile) {
@@ -454,37 +483,49 @@ class ElevationChart {
             });
             ctx.stroke();
 
-            // Draw POI markers if available
-            this.elevationData.forEach((point, index) => {
-                if (point.poi) {
-                    const x = padding + (point.distance / maxDistance) * chartWidth;
-                    const y = height - padding - ((point.elevation - minElevation) / elevationRange) * chartHeight;
-                    
-                    ctx.beginPath();
-                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
-                    ctx.fillStyle = '#ef4444';
-                    ctx.fill();
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                }
-            });
-
-            // Draw media markers if provided
-            if (Array.isArray(this.mediaOverlayPoints) && this.mediaOverlayPoints.length > 0) {
-                this.mediaOverlayPoints.forEach(mediaPoint => {
-                    const x = padding + (mediaPoint.distance / maxDistance) * chartWidth;
-                    const y = height - padding - ((mediaPoint.elevation - minElevation) / elevationRange) * chartHeight;
-                    const type = mediaPoint.media?.media_type || 'image';
-                    const iconMap = { image: '📷', video: '🎥', audio: '🎵', model_3d: '🧊', unknown: '📍' };
-                    const iconChar = iconMap[type] || iconMap.unknown;
-                    ctx.save();
-                    ctx.font = '16px sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(iconChar, x, y);
-                    ctx.restore();
+            // Draw POI and media markers only on desktop for cleaner mobile view
+            const isMobile = window.innerWidth <= 768;
+            
+            if (!isMobile) {
+                // Draw POI markers if available
+                this.elevationData.forEach((point, index) => {
+                    if (point.poi) {
+                        const x = padding + (point.distance / maxDistance) * chartWidth;
+                        const y = height - padding - ((point.elevation - minElevation) / elevationRange) * chartHeight;
+                        
+                        // Outer glow
+                        ctx.beginPath();
+                        ctx.arc(x, y, 8, 0, 2 * Math.PI);
+                        ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+                        ctx.fill();
+                        
+                        // Main marker
+                        ctx.beginPath();
+                        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                        ctx.fillStyle = '#ef4444';
+                        ctx.fill();
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
                 });
+
+                // Draw media markers if provided
+                if (Array.isArray(this.mediaOverlayPoints) && this.mediaOverlayPoints.length > 0) {
+                    this.mediaOverlayPoints.forEach(mediaPoint => {
+                        const x = padding + (mediaPoint.distance / maxDistance) * chartWidth;
+                        const y = height - padding - ((mediaPoint.elevation - minElevation) / elevationRange) * chartHeight;
+                        const type = mediaPoint.media?.media_type || 'image';
+                        const iconMap = { image: '📷', video: '🎥', audio: '🎵', model_3d: '🧊', unknown: '📍' };
+                        const iconChar = iconMap[type] || iconMap.unknown;
+                        ctx.save();
+                        ctx.font = '16px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(iconChar, x, y);
+                        ctx.restore();
+                    });
+                }
             }
         }
 
@@ -635,6 +676,52 @@ class ElevationChart {
                     `)
                     .openOn(this.map);
             }
+        }
+    }
+
+    handleTouchMove(e) {
+        if (!this.elevationData.length) return;
+        
+        const touch = e.touches[0];
+        const rect = this.canvas.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        
+        const padding = 20;
+        const chartWidth = rect.width - (padding * 2);
+        const chartHeight = rect.height - (padding * 2);
+        
+        if (x < padding || x > rect.width - padding || y < padding || y > rect.height - padding) {
+            return;
+        }
+
+        // Calculate position along route (X)
+        const maxDistance = Math.max(...this.elevationData.map(d => d.distance));
+        const relativeX = (x - padding) / chartWidth;
+        const targetDistance = relativeX * maxDistance;
+
+        // Find closest point to X position
+        let closestPoint = null;
+        let minDiff = Infinity;
+        
+        this.elevationData.forEach(point => {
+            const diff = Math.abs(point.distance - targetDistance);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestPoint = point;
+            }
+        });
+
+        // Use graph elevation at this X (nearest point on the polyline)
+        const cursorElevation = closestPoint ? Math.round(closestPoint.elevation) : null;
+
+        // Redraw chart base and draw crosshair overlay with inline label pinned to graph line
+        this.updateChart();
+        this.drawCrosshair(x, cursorElevation);
+
+        if (closestPoint) {
+            this.showTooltip(touch.clientX, touch.clientY, closestPoint, cursorElevation);
+            this.updateMapMarker(closestPoint);
         }
     }
 
