@@ -96,11 +96,12 @@
         }
 
         .poi-marker-circle {
-            transition: transform 0.2s ease;
+            transition: all 0.2s ease;
         }
 
         .poi-marker-circle:hover {
-            transform: scale(1.1);
+            filter: brightness(1.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         /* Mobile View Toggle Styles */
@@ -256,7 +257,6 @@
 
         .map-control-btn:hover {
             background: rgba(255, 255, 255, 1);
-            transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
@@ -614,7 +614,6 @@
             .route-quick-action:active {
                 background: rgba(45, 55, 72, 0.1);
                 color: var(--primary-color);
-                transform: scale(1.05);
             }
 
             .route-quick-action.favorite.active {
@@ -721,7 +720,6 @@
 
             .filters-open-btn:hover {
                 background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-                transform: translateY(-2px);
                 box-shadow: 0 4px 12px rgba(45, 55, 72, 0.3);
             }
 
@@ -866,7 +864,6 @@
             }
 
             .route-card:hover {
-                transform: translateY(-4px);
                 box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
             }
         }
@@ -1230,8 +1227,7 @@
                         align-items: center;
                         justify-content: center;
                         gap: 8px;
-                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(40, 167, 69, 0.4)'"
-                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(40, 167, 69, 0.3)'">
+                    ">
                         <i class="fas fa-globe btn-icon"></i>
                         <span class="btn-text">Tüm POI'leri Göster</span>
                     </button>

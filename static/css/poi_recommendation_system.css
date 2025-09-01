@@ -1281,7 +1281,6 @@
         }
 
         .route-card:hover {
-            transform: translateY(-6px) scale(1.02);
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
             border-color: #cbd5e0;
         }
@@ -1295,7 +1294,7 @@
         }
 
         .route-card:active {
-            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
         }
 
         .route-card-header {
@@ -2267,7 +2266,6 @@
             }
 
             .route-card:hover {
-                transform: translateY(-2px);
                 box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
             }
 
@@ -2289,7 +2287,7 @@
             }
 
             .route-card:hover .route-card-image img {
-                transform: scale(1.02);
+                filter: brightness(1.05);
             }
 
             .route-card-content {
@@ -2368,7 +2366,6 @@
             }
 
             .route-quick-action:hover {
-                transform: scale(1.1);
                 box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
             }
 
@@ -5543,8 +5540,8 @@ arker styles */
         }
 
         .simple-poi-marker:hover .simple-marker {
-            transform: scale(1.1) !important;
-            transition: transform 0.2s ease !important;
+            filter: brightness(1.2) !important;
+            transition: filter 0.2s ease !important;
         }
 
         /* Pop
@@ -7030,7 +7027,6 @@ ute Preview Map Styles */
 .map-control-btn:hover {
     background: var(--primary-color);
     color: white;
-    transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -7069,12 +7065,11 @@ ute Preview Map Styles */
 }
 
 .fab-button:hover {
-    transform: translateY(-2px) scale(1.05);
     box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
 }
 
 .fab-button:active {
-    transform: translateY(0) scale(0.95);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 /* Full-Screen Map State */
