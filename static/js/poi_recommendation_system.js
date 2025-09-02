@@ -65,6 +65,80 @@ const AppState = {
     intervals: new Set()
 };
 
+// Hover event management system
+let poiHoverIntegration = null;
+
+/**
+ * Initialize the hover event management system
+ */
+async function initializeHoverSystem() {
+    try {
+        if (poiHoverIntegration) {
+            console.log('Hover system already initialized');
+            return true;
+        }
+
+        // Initialize POI hover integration
+        poiHoverIntegration = new POIHoverIntegration({
+            enableDebugLogging: false, // Set to true for debugging
+            debounceDelay: 100,
+            hoverDelay: 50,
+            leaveDelay: 150,
+            enableHoverEffects: true,
+            enableClickHandling: true,
+            enableTouchSupport: true
+        });
+
+        const success = await poiHoverIntegration.initialize();
+        
+        if (success) {
+            console.log('POI hover event system initialized successfully');
+            
+            // Setup custom event listeners for integration
+            setupHoverEventListeners();
+            
+            return true;
+        } else {
+            console.error('Failed to initialize POI hover event system');
+            return false;
+        }
+
+    } catch (error) {
+        console.error('Error initializing hover system:', error);
+        return false;
+    }
+}
+
+/**
+ * Setup custom event listeners for hover system integration
+ */
+function setupHoverEventListeners() {
+    // Listen for POI modal requests
+    document.addEventListener('poi-modal-request', (event) => {
+        const { markerId, poiData } = event.detail;
+        
+        // Use existing modal function if available
+        if (typeof showPOIDetailModal === 'function') {
+            showPOIDetailModal(poiData);
+        } else if (typeof openPOIModal === 'function') {
+            openPOIModal(poiData);
+        } else {
+            console.warn('No POI modal function available');
+        }
+    });
+
+    // Listen for hover events for additional processing
+    document.addEventListener('poi-hover-start', (event) => {
+        const { markerId, poiData } = event.detail;
+        // Additional hover start processing can be added here
+    });
+
+    document.addEventListener('poi-hover-end', (event) => {
+        const { markerId, poiData, duration } = event.detail;
+        // Additional hover end processing can be added here
+    });
+}
+
 // Import centralized category configuration
 // Note: This will be loaded via script tag in HTML for browser compatibility
 
@@ -374,6 +448,32 @@ function createCategoryMarker(lat, lng, poi, index = 0) {
             popupAnchor: [0, -15]
         })
     });
+
+    // Register marker with hover system if available
+    if (poiHoverIntegration && poiHoverIntegration.isInitialized) {
+        poiHoverIntegration.registerPOIMarker(marker, poi, {
+            onHoverStart: (event, markerId, poiData) => {
+                // Optional: Add custom hover start behavior
+            },
+            onHoverEnd: (event, markerId, poiData, duration) => {
+                // Optional: Add custom hover end behavior
+            },
+            onClick: (event, markerId, poiData, context) => {
+                // Use existing POI detail modal functionality
+                if (typeof showPOIDetailModal === 'function') {
+                    showPOIDetailModal(poiData);
+                } else {
+                    // Fallback to basic popup
+                    const popupContent = createDetailedPOIPopup(poiData, index + 1);
+                    marker.bindPopup(popupContent, {
+                        maxWidth: 300,
+                        minWidth: 250,
+                        className: 'poi-popup-enhanced'
+                    }).openPopup();
+                }
+            }
+        });
+    }
     
     return marker;
 }
@@ -668,11 +768,11 @@ class RouteDetailsPanel {
                 // Add temporary highlight effect
                 const markerElement = marker.getElement();
                 if (markerElement) {
-                    markerElement.style.transform += ' scale(1.2)';
-                    markerElement.style.transition = 'transform 0.3s ease';
+                    // Use CSS class instead of inline styles for better performance
+                    markerElement.classList.add('poi-marker-highlighted');
 
                     setTimeout(() => {
-                        markerElement.style.transform = markerElement.style.transform.replace(' scale(1.2)', '');
+                        markerElement.classList.remove('poi-marker-highlighted');
                     }, 1000);
                 }
             }
@@ -9349,6 +9449,12 @@ function cleanupApplication() {
         // Clear caches
         mediaCache = {};
         
+        // Clean up hover system
+        if (poiHoverIntegration) {
+            poiHoverIntegration.cleanup();
+            poiHoverIntegration = null;
+        }
+        
         // Reset state variables
         markers = [];
         selectedPOIs = [];
@@ -11030,9 +11136,8 @@ function toggleLowScorePOIs() {
 
                     // Animate marker appearance
                     setTimeout(() => {
-                        marker._icon.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+                        marker._icon.classList.add('poi-marker-low-score-visible');
                         marker.setOpacity(0.7); // Silik ama görünür
-                        marker._icon.style.transform += ' scale(1)';
                     }, 100);
                 }
             });
@@ -11087,9 +11192,8 @@ function toggleLowScorePOIs() {
         if (markers && markers.length > 0) {
             markers.forEach(marker => {
                 if (marker.isLowScore) {
-                    marker._icon.style.transition = 'opacity 0.3s ease-in, transform 0.3s ease-in';
+                    marker._icon.classList.add('poi-marker-low-score-hidden');
                     marker.setOpacity(0);
-                    marker._icon.style.transform += ' scale(0.8)';
 
                     setTimeout(() => {
                         marker._icon.style.display = 'none';
@@ -11752,6 +11856,15 @@ async function initializeApp() {
             initializeEnhancedFilters();
         } catch (err) {
             console.error('Enhanced filters initialization failed:', err);
+        }
+    }
+
+    // Initialize hover event management system
+    if (typeof POIHoverIntegration !== 'undefined') {
+        try {
+            await initializeHoverSystem();
+        } catch (err) {
+            console.error('Hover system initialization failed:', err);
         }
     }
 

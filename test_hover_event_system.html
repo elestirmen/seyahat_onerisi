@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POI Hover Event System Test</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    
+    <!-- POI Hover Stability CSS -->
+    <link rel="stylesheet" href="static/css/poi-hover-stability-fix.css">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .header h1 {
+            color: #2d3748;
+            margin: 0 0 10px 0;
+        }
+        
+        .header p {
+            color: #718096;
+            margin: 0;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+        }
+        
+        .test-section h2 {
+            color: #2d3748;
+            border-left: 4px solid #4299e1;
+            padding-left: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .map-container {
+            height: 400px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 20px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #3182ce;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c53030;
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .metric-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .metric-title {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        .log-container {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-entry.error {
+            color: #fc8181;
+        }
+        
+        .log-entry.success {
+            color: #68d391;
+        }
+        
+        .log-entry.info {
+            color: #63b3ed;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-indicator.active {
+            background: #48bb78;
+            box-shadow: 0 0 8px rgba(72, 187, 120, 0.5);
+        }
+        
+        .status-indicator.inactive {
+            background: #e53e3e;
+        }
+        
+        .status-indicator.warning {
+            background: #ed8936;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>POI Hover Event System Test</h1>
+            <p>Test the hover event management system with debouncing, event delegation, and memory leak prevention</p>
+        </div>
+        
+        <div class="test-section">
+            <h2>System Status</h2>
+            <div id="systemStatus">
+                <div>
+                    <span class="status-indicator inactive" id="hoverManagerStatus"></span>
+                    Hover Event Manager: <span id="hoverManagerText">Not Initialized</span>
+                </div>
+                <div>
+                    <span class="status-indicator inactive" id="delegationManagerStatus"></span>
+                    Event Delegation Manager: <span id="delegationManagerText">Not Initialized</span>
+                </div>
+                <div>
+                    <span class="status-indicator inactive" id="integrationStatus"></span>
+                    POI Integration: <span id="integrationText">Not Initialized</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Interactive Map Test</h2>
+            <div class="controls">
+                <button class="btn btn-primary" onclick="initializeSystem()">Initialize System</button>
+                <button class="btn btn-secondary" onclick="addTestMarkers()">Add Test Markers</button>
+                <button class="btn btn-secondary" onclick="addStressTestMarkers()">Stress Test (50 markers)</button>
+                <button class="btn btn-danger" onclick="clearAllMarkers()">Clear Markers</button>
+                <button class="btn btn-secondary" onclick="runHoverTest()">Run Hover Test</button>
+                <button class="btn btn-secondary" onclick="runClickTest()">Run Click Test</button>
+            </div>
+            <div id="mapContainer" class="map-container"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Performance Metrics</h2>
+            <div class="metrics" id="metricsContainer">
+                <!-- Metrics will be populated by JavaScript -->
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Event Log</h2>
+            <div class="controls">
+                <button class="btn btn-secondary" onclick="clearLog()">Clear Log</button>
+                <button class="btn btn-secondary" onclick="toggleAutoScroll()">Toggle Auto-scroll</button>
+            </div>
+            <div id="logContainer" class="log-container">
+                <div class="log-entry info">System ready for testing...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Hover Event Management System -->
+    <script src="static/js/hover-event-manager.js"></script>
+    <script src="static/js/event-delegation-manager.js"></script>
+    <script src="static/js/poi-hover-integration.js"></script>
+    
+    <script>
+        // Test system variables
+        let map = null;
+        let hoverIntegration = null;
+        let testMarkers = [];
+        let autoScroll = true;
+        let testCounter = 0;
+        
+        // Initialize the test system
+        async function initializeSystem() {
+            try {
+                log('Initializing hover event system...', 'info');
+                
+                // Initialize map
+                if (!map) {
+                    map = L.map('mapContainer').setView([38.6436, 34.8128], 13);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(map);
+                    log('Map initialized', 'success');
+                }
+                
+                // Initialize hover integration
+                hoverIntegration = new POIHoverIntegration({
+                    enableDebugLogging: true,
+                    debounceDelay: 100,
+                    hoverDelay: 50
+                });
+                
+                const success = await hoverIntegration.initialize();
+                
+                if (success) {
+                    log('Hover integration system initialized successfully', 'success');
+                    updateSystemStatus();
+                    setupEventListeners();
+                } else {
+                    log('Failed to initialize hover integration system', 'error');
+                }
+                
+            } catch (error) {
+                log(`Initialization error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Add test markers
+        function addTestMarkers() {
+            if (!map || !hoverIntegration) {
+                log('System not initialized', 'error');
+                return;
+            }
+            
+            const testPOIs = [
+                { id: 1, name: 'Test POI 1', lat: 38.6436, lng: 34.8128, category: 'doga' },
+                { id: 2, name: 'Test POI 2', lat: 38.6500, lng: 34.8200, category: 'tarihi' },
+                { id: 3, name: 'Test POI 3', lat: 38.6400, lng: 34.8300, category: 'yemek' },
+                { id: 4, name: 'Test POI 4', lat: 38.6350, lng: 34.8150, category: 'eglence' },
+                { id: 5, name: 'Test POI 5', lat: 38.6480, lng: 34.8080, category: 'macera' }
+            ];
+            
+            testPOIs.forEach(poi => {
+                const marker = createTestMarker(poi);
+                testMarkers.push(marker);
+                
+                // Register with hover system
+                hoverIntegration.registerPOIMarker(marker, poi, {
+                    onHoverStart: (event, markerId, poiData) => {
+                        log(`Hover started: ${poiData.name}`, 'info');
+                    },
+                    onHoverEnd: (event, markerId, poiData, duration) => {
+                        log(`Hover ended: ${poiData.name} (${duration}ms)`, 'info');
+                    },
+                    onClick: (event, markerId, poiData) => {
+                        log(`Clicked: ${poiData.name}`, 'success');
+                        alert(`POI Clicked: ${poiData.name}\nCategory: ${poiData.category}`);
+                    }
+                });
+            });
+            
+            log(`Added ${testPOIs.length} test markers`, 'success');
+            updateMetrics();
+        }
+        
+        // Add stress test markers
+        function addStressTestMarkers() {
+            if (!map || !hoverIntegration) {
+                log('System not initialized', 'error');
+                return;
+            }
+            
+            const centerLat = 38.6436;
+            const centerLng = 34.8128;
+            const radius = 0.02;
+            
+            for (let i = 0; i < 50; i++) {
+                const angle = (i / 50) * 2 * Math.PI;
+                const distance = Math.random() * radius;
+                const lat = centerLat + distance * Math.cos(angle);
+                const lng = centerLng + distance * Math.sin(angle);
+                
+                const poi = {
+                    id: `stress_${i}`,
+                    name: `Stress Test POI ${i + 1}`,
+                    lat: lat,
+                    lng: lng,
+                    category: ['doga', 'tarihi', 'yemek', 'eglence', 'macera'][i % 5]
+                };
+                
+                const marker = createTestMarker(poi);
+                testMarkers.push(marker);
+                
+                hoverIntegration.registerPOIMarker(marker, poi, {
+                    onHoverStart: (event, markerId, poiData) => {
+                        // Reduced logging for stress test
+                        if (i % 10 === 0) {
+                            log(`Stress hover: ${poiData.name}`, 'info');
+                        }
+                    },
+                    onClick: (event, markerId, poiData) => {
+                        log(`Stress click: ${poiData.name}`, 'success');
+                    }
+                });
+            }
+            
+            log('Added 50 stress test markers', 'success');
+            updateMetrics();
+        }
+        
+        // Create a test marker
+        function createTestMarker(poi) {
+            const categoryColors = {
+                'doga': '#48bb78',
+                'tarihi': '#ed8936',
+                'yemek': '#4299e1',
+                'eglence': '#9f7aea',
+                'macera': '#e53e3e'
+            };
+            
+            const categoryIcons = {
+                'doga': '🌲',
+                'tarihi': '🏛️',
+                'yemek': '🍽️',
+                'eglence': '🎮',
+                'macera': '⛰️'
+            };
+            
+            const color = categoryColors[poi.category] || '#718096';
+            const icon = categoryIcons[poi.category] || '📍';
+            
+            const marker = L.marker([poi.lat, poi.lng], {
+                icon: L.divIcon({
+                    className: 'custom-poi-marker',
+                    html: `
+                        <div class="poi-marker-container" style="background: ${color};">
+                            <span style="font-size: 16px;">${icon}</span>
+                        </div>
+                    `,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                }),
+                markerId: poi.id
+            }).addTo(map);
+            
+            return marker;
+        }
+        
+        // Clear all markers
+        function clearAllMarkers() {
+            testMarkers.forEach(marker => {
+                if (hoverIntegration) {
+                    hoverIntegration.unregisterPOIMarker(marker);
+                }
+                map.removeLayer(marker);
+            });
+            
+            testMarkers = [];
+            log('All markers cleared', 'info');
+            updateMetrics();
+        }
+        
+        // Run hover test
+        function runHoverTest() {
+            if (testMarkers.length === 0) {
+                log('No markers to test', 'error');
+                return;
+            }
+            
+            log('Running automated hover test...', 'info');
+            
+            let markerIndex = 0;
+            const testInterval = setInterval(() => {
+                if (markerIndex >= testMarkers.length) {
+                    clearInterval(testInterval);
+                    log('Hover test completed', 'success');
+                    return;
+                }
+                
+                const marker = testMarkers[markerIndex];
+                const element = marker._icon;
+                
+                if (element) {
+                    // Simulate mouse enter
+                    const enterEvent = new MouseEvent('mouseenter', { bubbles: true });
+                    element.dispatchEvent(enterEvent);
+                    
+                    setTimeout(() => {
+                        // Simulate mouse leave
+                        const leaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+                        element.dispatchEvent(leaveEvent);
+                    }, 200);
+                }
+                
+                markerIndex++;
+            }, 500);
+        }
+        
+        // Run click test
+        function runClickTest() {
+            if (testMarkers.length === 0) {
+                log('No markers to test', 'error');
+                return;
+            }
+            
+            log('Running automated click test...', 'info');
+            
+            let markerIndex = 0;
+            const testInterval = setInterval(() => {
+                if (markerIndex >= Math.min(5, testMarkers.length)) {
+                    clearInterval(testInterval);
+                    log('Click test completed', 'success');
+                    return;
+                }
+                
+                const marker = testMarkers[markerIndex];
+                const element = marker._icon;
+                
+                if (element) {
+                    // Simulate click
+                    const clickEvent = new MouseEvent('click', { bubbles: true });
+                    element.dispatchEvent(clickEvent);
+                }
+                
+                markerIndex++;
+            }, 1000);
+        }
+        
+        // Setup event listeners for custom events
+        function setupEventListeners() {
+            document.addEventListener('poi-hover-start', (event) => {
+                const { markerId, poiData } = event.detail;
+                log(`Custom event - Hover start: ${poiData.name}`, 'info');
+            });
+            
+            document.addEventListener('poi-hover-end', (event) => {
+                const { markerId, poiData, duration } = event.detail;
+                log(`Custom event - Hover end: ${poiData.name} (${duration}ms)`, 'info');
+            });
+            
+            document.addEventListener('poi-click', (event) => {
+                const { markerId, poiData, isHovering } = event.detail;
+                log(`Custom event - Click: ${poiData.name} ${isHovering ? '(while hovering)' : ''}`, 'success');
+            });
+        }
+        
+        // Update system status indicators
+        function updateSystemStatus() {
+            const hoverStatus = document.getElementById('hoverManagerStatus');
+            const hoverText = document.getElementById('hoverManagerText');
+            const delegationStatus = document.getElementById('delegationManagerStatus');
+            const delegationText = document.getElementById('delegationManagerText');
+            const integrationStatus = document.getElementById('integrationStatus');
+            const integrationText = document.getElementById('integrationText');
+            
+            if (hoverIntegration && hoverIntegration.hoverManager) {
+                hoverStatus.className = 'status-indicator active';
+                hoverText.textContent = 'Active';
+            }
+            
+            if (hoverIntegration && hoverIntegration.delegationManager) {
+                delegationStatus.className = 'status-indicator active';
+                delegationText.textContent = 'Active';
+            }
+            
+            if (hoverIntegration && hoverIntegration.isInitialized) {
+                integrationStatus.className = 'status-indicator active';
+                integrationText.textContent = 'Active';
+            }
+        }
+        
+        // Update metrics display
+        function updateMetrics() {
+            if (!hoverIntegration) return;
+            
+            const metrics = hoverIntegration.getMetrics();
+            const container = document.getElementById('metricsContainer');
+            
+            container.innerHTML = `
+                <div class="metric-card">
+                    <div class="metric-title">Registered Markers</div>
+                    <div class="metric-value">${metrics.registeredMarkers}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Active Hovers</div>
+                    <div class="metric-value">${metrics.activeHovers}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Total Hovers</div>
+                    <div class="metric-value">${metrics.hoversProcessed}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Total Clicks</div>
+                    <div class="metric-value">${metrics.clicksProcessed}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Errors Handled</div>
+                    <div class="metric-value">${metrics.errorsHandled}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Memory Usage</div>
+                    <div class="metric-value">${metrics.hoverManager ? metrics.hoverManager.activeHovers : 0}</div>
+                </div>
+            `;
+        }
+        
+        // Logging function
+        function log(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            
+            container.appendChild(entry);
+            
+            if (autoScroll) {
+                container.scrollTop = container.scrollHeight;
+            }
+            
+            // Update metrics after each log
+            setTimeout(updateMetrics, 100);
+        }
+        
+        // Clear log
+        function clearLog() {
+            const container = document.getElementById('logContainer');
+            container.innerHTML = '<div class="log-entry info">Log cleared...</div>';
+        }
+        
+        // Toggle auto-scroll
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            log(`Auto-scroll ${autoScroll ? 'enabled' : 'disabled'}`, 'info');
+        }
+        
+        // Update metrics periodically
+        setInterval(updateMetrics, 2000);
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Test page loaded. Click "Initialize System" to begin.', 'info');
+        });
+    </script>
+</body>
+</html>

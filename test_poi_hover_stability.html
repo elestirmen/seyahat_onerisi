@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POI Hover Stability Test</title>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- POI Hover Stability Fix CSS -->
+    <link rel="stylesheet" href="static/css/poi-hover-stability-fix.css">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .test-section {
+            margin-bottom: 40px;
+        }
+        
+        .test-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+        
+        .markers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .marker-test-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .marker-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-align: center;
+        }
+        
+        /* Test marker positioning */
+        .custom-poi-marker {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #2196f3;
+            margin-bottom: 30px;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        
+        .instructions ul {
+            margin-bottom: 0;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>POI Hover Stability Test</h1>
+        
+        <div class="instructions">
+            <h3>Test Instructions:</h3>
+            <ul>
+                <li>Hover over the POI markers below to test stability</li>
+                <li>Check for smooth transitions without jittering</li>
+                <li>Verify that markers remain clickable during hover</li>
+                <li>Test rapid mouse movements between markers</li>
+                <li>Check that hover effects work consistently across different marker types</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">Standard POI Markers</div>
+            <div class="markers-grid">
+                <div class="marker-test-item">
+                    <div class="custom-poi-marker">
+                        <div class="poi-marker-container" style="background-color: #22543d;">
+                            <i class="fas fa-tree"></i>
+                        </div>
+                        <div class="poi-marker-score">85</div>
+                    </div>
+                    <div class="marker-label">Nature (Doğa)</div>
+                </div>
+                
+                <div class="marker-test-item">
+                    <div class="custom-poi-marker">
+                        <div class="poi-marker-container" style="background-color: #c53030;">
+                            <i class="fas fa-utensils"></i>
+                        </div>
+                        <div class="poi-marker-score">92</div>
+                    </div>
+                    <div class="marker-label">Food (Yemek)</div>
+                </div>
+                
+                <div class="marker-test-item">
+                    <div class="custom-poi-marker">
+                        <div class="poi-marker-container" style="background-color: #553c9a;">
+                            <i class="fas fa-landmark"></i>
+                        </div>
+                        <div class="poi-marker-score">78</div>
+                    </div>
+                    <div class="marker-label">Historical (Tarihi)</div>
+                </div>
+                
+                <div class="marker-test-item">
+                    <div class="custom-poi-marker">
+                        <div class="poi-marker-container" style="background-color: #d69e2e;">
+                            <i class="fas fa-gamepad"></i>
+                        </div>
+                        <div class="poi-marker-score">67</div>
+                    </div>
+                    <div class="marker-label">Entertainment (Eğlence)</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">Teardrop Route Markers</div>
+            <div class="markers-grid">
+                <div class="marker-test-item">
+                    <div class="custom-poi-marker">
+                        <div class="poi-marker-container teardrop" style="background-color: #2b6cb0;">
+                            <i class="fas fa-palette"></i>
+                        </div>
+                        <div class="poi-order-number">1</div>
+                    </div>
+                    <div class="marker-label">Art & Culture</div>
+                </div>
+                
+                <div class="marker-test-item">
+                    <div class="custom-poi-marker">
+                        <div class="poi-marker-container teardrop" style="background-color: #c05621;">
+                            <i class="fas fa-mountain"></i>
+                        </div>
+                        <div class="poi-order-number">2</div>
+                    </div>
+                    <div class="marker-label">Adventure</div>
+                </div>
+                
+                <div class="marker-test-item">
+                    <div class="custom-poi-marker">
+                        <div class="poi-marker-container teardrop" style="background-color: #2c7a7b;">
+                            <i class="fas fa-spa"></i>
+                        </div>
+                        <div class="poi-order-number">3</div>
+                    </div>
+                    <div class="marker-label">Relaxing</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">Media Markers</div>
+            <div class="markers-grid">
+                <div class="marker-test-item">
+                    <div class="media-marker image">
+                        <i class="fas fa-image"></i>
+                    </div>
+                    <div class="marker-label">Image</div>
+                </div>
+                
+                <div class="marker-test-item">
+                    <div class="media-marker video">
+                        <i class="fas fa-video"></i>
+                    </div>
+                    <div class="marker-label">Video</div>
+                </div>
+                
+                <div class="marker-test-item">
+                    <div class="media-marker audio">
+                        <i class="fas fa-volume-up"></i>
+                    </div>
+                    <div class="marker-label">Audio</div>
+                </div>
+                
+                <div class="marker-test-item">
+                    <div class="media-marker model_3d">
+                        <i class="fas fa-cube"></i>
+                    </div>
+                    <div class="marker-label">3D Model</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">Interactive Tests</div>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+                <button onclick="testHighlight()" style="padding: 12px 24px; background: #4299e1; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                    Test Highlight Animation
+                </button>
+                <button onclick="testLowScore()" style="padding: 12px 24px; background: #ed8936; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                    Test Low Score State
+                </button>
+                <button onclick="resetMarkers()" style="padding: 12px 24px; background: #48bb78; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                    Reset Markers
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function testHighlight() {
+            const markers = document.querySelectorAll('.poi-marker-container');
+            markers.forEach((marker, index) => {
+                setTimeout(() => {
+                    marker.classList.add('poi-marker-highlighted');
+                    setTimeout(() => {
+                        marker.classList.remove('poi-marker-highlighted');
+                    }, 1000);
+                }, index * 200);
+            });
+        }
+        
+        function testLowScore() {
+            const markers = document.querySelectorAll('.poi-marker-container');
+            markers.forEach(marker => {
+                marker.classList.add('poi-marker-low-score-hidden');
+            });
+            
+            setTimeout(() => {
+                markers.forEach(marker => {
+                    marker.classList.remove('poi-marker-low-score-hidden');
+                    marker.classList.add('poi-marker-low-score-visible');
+                });
+            }, 1000);
+        }
+        
+        function resetMarkers() {
+            const markers = document.querySelectorAll('.poi-marker-container');
+            markers.forEach(marker => {
+                marker.classList.remove('poi-marker-highlighted', 'poi-marker-low-score-hidden', 'poi-marker-low-score-visible');
+            });
+        }
+        
+        // Add click handlers to test clickability
+        document.querySelectorAll('.custom-poi-marker, .media-marker').forEach(marker => {
+            marker.addEventListener('click', function() {
+                alert('Marker clicked successfully! Hover stability maintained.');
+            });
+        });
+        
+        // Performance monitoring
+        let hoverCount = 0;
+        let startTime = Date.now();
+        
+        document.querySelectorAll('.poi-marker-container, .media-marker').forEach(marker => {
+            marker.addEventListener('mouseenter', function() {
+                hoverCount++;
+                if (hoverCount === 1) {
+                    startTime = Date.now();
+                }
+            });
+        });
+        
+        // Log performance after 10 hovers
+        document.addEventListener('mouseover', function() {
+            if (hoverCount >= 10) {
+                const endTime = Date.now();
+                const avgTime = (endTime - startTime) / hoverCount;
+                console.log(`Average hover response time: ${avgTime.toFixed(2)}ms over ${hoverCount} hovers`);
+                hoverCount = 0; // Reset counter
+            }
+        });
+    </script>
+</body>
+</html>

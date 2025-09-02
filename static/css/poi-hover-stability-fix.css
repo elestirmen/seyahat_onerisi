@@ -1,0 +1,369 @@
+/* POI Hover Stability Fix - Hardware Accelerated CSS */
+
+/* Base POI marker styles with hardware acceleration */
+.poi-marker-circle, .poi-marker-container {
+    /* Hardware acceleration optimizations */
+    will-change: transform, opacity;
+    transform: translateZ(0); /* Force hardware acceleration */
+    backface-visibility: hidden; /* Prevent flickering */
+    
+    /* Smooth transitions using transform and opacity only */
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Ensure proper layering */
+    position: relative;
+    z-index: 100;
+}
+
+/* Optimized hover states - no filter or box-shadow */
+.poi-marker-circle:hover, .poi-marker-container:hover {
+    /* Use transform and opacity instead of filter and box-shadow */
+    transform: translateZ(0) scale(1.1);
+    opacity: 0.9;
+    
+    /* Increase z-index for hover state */
+    z-index: 200;
+}
+
+/* Enhanced POI marker container styles */
+.poi-marker-container {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    border: 3px solid white;
+    
+    /* Use pseudo-element for shadow effect to avoid box-shadow performance issues */
+    position: relative;
+}
+
+.poi-marker-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: inherit;
+    background: rgba(0, 0, 0, 0.2);
+    transform: translateZ(-1px) translate(2px, 2px);
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.poi-marker-container:hover::before {
+    opacity: 0.8;
+    transform: translateZ(-1px) translate(3px, 3px);
+}
+
+/* Teardrop-shaped markers for route POIs */
+.poi-marker-container.teardrop {
+    border-radius: 50% 50% 50% 0;
+    transform: translateZ(0) rotate(-45deg);
+}
+
+.poi-marker-container.teardrop i {
+    transform: rotate(45deg);
+    z-index: 2;
+}
+
+.poi-marker-container.teardrop:hover {
+    transform: translateZ(0) rotate(-45deg) scale(1.1);
+}
+
+/* Custom POI marker wrapper */
+.custom-poi-marker {
+    background: transparent !important;
+    border: none !important;
+    /* Ensure proper stacking context */
+    z-index: auto;
+}
+
+/* POI marker score/number badges */
+.poi-marker-score, .poi-marker-number, .poi-order-number {
+    position: absolute;
+    background: #ff4757;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    border: 2px solid white;
+    
+    /* Hardware acceleration for badges */
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    
+    /* Smooth transitions */
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Ensure badges stay above marker */
+    z-index: 101;
+}
+
+/* Score badge positioning and sizing */
+.poi-marker-score {
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
+}
+
+/* Number badge positioning and sizing */
+.poi-marker-number {
+    top: -8px;
+    right: -8px;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+}
+
+/* Order number for route POIs */
+.poi-order-number {
+    bottom: -8px;
+    right: -8px;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    transform: translateZ(0) rotate(45deg);
+}
+
+/* Hover effects for badges */
+.poi-marker-container:hover .poi-marker-score, .poi-marker-container:hover .poi-marker-number, .poi-marker-container:hover .poi-order-number {
+    transform: translateZ(0) scale(1.05);
+}
+
+.poi-marker-container.teardrop:hover .poi-order-number {
+    transform: translateZ(0) rotate(45deg) scale(1.05);
+}
+
+/* Font Awesome icon optimizations */
+.poi-marker-container .fas, .poi-marker-container .far, .poi-marker-container .fab, .poi-marker-circle .fas, .poi-marker-circle .far, .poi-marker-circle .fab {
+    font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "FontAwesome" !important;
+    font-weight: 900 !important;
+    -webkit-font-smoothing: antialiased;
+    display: inline-block !important;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    line-height: 1;
+    
+    /* Hardware acceleration for icons */
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* Z-index hierarchy to prevent modal conflicts */
+.leaflet-marker-pane {
+    z-index: 600;
+}
+
+.leaflet-popup-pane {
+    z-index: 700;
+}
+
+.leaflet-marker-pane .custom-poi-marker {
+    z-index: 100;
+}
+
+.leaflet-marker-pane .custom-poi-marker:hover {
+    z-index: 200;
+}
+
+/* Media markers with hardware acceleration */
+.media-marker {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    border: 2px solid white;
+    font-size: 12px;
+    
+    /* Hardware acceleration */
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Z-index for media markers */
+    z-index: 150;
+}
+
+.media-marker:hover {
+    transform: translateZ(0) scale(1.15);
+    z-index: 250;
+}
+
+/* Media marker type colors */
+.media-marker.image {
+    background: #f59e0b;
+}
+
+.media-marker.video {
+    background: #ef4444;
+}
+
+.media-marker.audio {
+    background: #10b981;
+}
+
+.media-marker.model_3d {
+    background: #6366f1;
+}
+
+/* Cross-browser compatibility and fallbacks */
+
+/* Webkit browsers */
+@supports (-webkit-transform: translateZ(0)) {
+    .poi-marker-circle, .poi-marker-container {
+        -webkit-transform: translateZ(0);
+        -webkit-backface-visibility: hidden;
+        -webkit-transition: -webkit-transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .poi-marker-circle:hover, .poi-marker-container:hover {
+        -webkit-transform: translateZ(0) scale(1.1);
+    }
+}
+
+/* Firefox */
+@supports (-moz-transform: translateZ(0)) {
+    .poi-marker-circle, .poi-marker-container {
+        -moz-transform: translateZ(0);
+        -moz-backface-visibility: hidden;
+        -moz-transition: -moz-transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .poi-marker-circle:hover, .poi-marker-container:hover {
+        -moz-transform: translateZ(0) scale(1.1);
+    }
+}
+
+/* Fallback for browsers without 3D transform support */
+@supports not (transform: translateZ(0)) {
+    .poi-marker-circle, .poi-marker-container {
+        /* Use 2D transforms as fallback */
+        transform: scale(1);
+        transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    
+    .poi-marker-circle:hover, .poi-marker-container:hover {
+        transform: scale(1.1);
+        opacity: 0.9;
+    }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .poi-marker-circle, .poi-marker-container, .poi-marker-score, .poi-marker-number, .poi-order-number, .media-marker {
+        transition: none;
+        will-change: auto;
+    }
+    
+    .poi-marker-circle:hover, .poi-marker-container:hover {
+        transform: translateZ(0) scale(1.05); /* Reduced scale for accessibility */
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .poi-marker-container {
+        border-width: 4px;
+    }
+    
+    .poi-marker-container::before {
+        opacity: 0.9;
+    }
+}
+
+/* Performance optimizations for mobile devices */
+@media (max-width: 768px) {
+    .poi-marker-circle, .poi-marker-container {
+        /* Slightly reduce animation complexity on mobile */
+        transition-duration: 0.15s;
+    }
+    
+    .poi-marker-container:hover {
+        transform: translateZ(0) scale(1.08); /* Smaller scale on mobile */
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .poi-marker-circle:hover, .poi-marker-container:hover {
+        /* Disable hover effects on touch devices */
+        transform: translateZ(0);
+        opacity: 1;
+        z-index: 100;
+    }
+    
+    /* Add active state for touch */
+    .poi-marker-circle:active, .poi-marker-container:active {
+        transform: translateZ(0) scale(1.05);
+        opacity: 0.9;
+    }
+}
+
+/* Highlighted marker state for programmatic highlighting */
+.poi-marker-highlighted {
+    transform: translateZ(0) scale(1.2) !important;
+    z-index: 300 !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.poi-marker-highlighted.teardrop {
+    transform: translateZ(0) rotate(-45deg) scale(1.2) !important;
+}
+
+/* JavaScript-managed hover states */
+.poi-marker-hovering {
+    z-index: 200 !important;
+}
+
+.poi-marker-container-hovering {
+    transform: translateZ(0) scale(1.1) !important;
+    opacity: 0.9 !important;
+    z-index: 200 !important;
+}
+
+.poi-marker-container-hovering.teardrop {
+    transform: translateZ(0) rotate(-45deg) scale(1.1) !important;
+}
+
+/* Ensure clickability during hover states */
+.poi-marker-hovering, .poi-marker-container-hovering {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+/* Smooth transitions for JavaScript-managed states */
+.poi-marker-hovering, .poi-marker-container-hovering {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                z-index 0s !important;
+}
+
+/* Low score marker states */
+.poi-marker-low-score-visible {
+    opacity: 0.7 !important;
+    transform: translateZ(0) scale(1) !important;
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out !important;
+}
+
+.poi-marker-low-score-hidden {
+    opacity: 0 !important;
+    transform: translateZ(0) scale(0.8) !important;
+    transition: opacity 0.3s ease-in, transform 0.3s ease-in !important;
+}

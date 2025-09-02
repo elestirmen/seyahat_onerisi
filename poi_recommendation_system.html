@@ -27,6 +27,8 @@
     <link rel="stylesheet" href="static/css/poi_recommendation_system.css">
     <!-- Route Details Modal CSS -->
     <link rel="stylesheet" href="static/css/route-details-modal.css">
+    <!-- POI Hover Stability Fix CSS -->
+    <link rel="stylesheet" href="static/css/poi-hover-stability-fix.css">
 
     <!-- Centralized POI Category Configuration -->
     <script src="static/js/poi-categories.js"></script>
@@ -95,14 +97,7 @@
             border: none !important;
         }
 
-        .poi-marker-circle {
-            transition: all 0.2s ease;
-        }
-
-        .poi-marker-circle:hover {
-            filter: brightness(1.2);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
+        /* POI marker circle styles moved to poi-hover-stability-fix.css */
 
         /* Mobile View Toggle Styles */
         .mobile-view-toggle {
@@ -893,6 +888,11 @@
 
     <!-- Mobile Optimizations -->
     <script src="static/js/mobile-optimizations.js" defer></script>
+
+    <!-- Hover Event Management System -->
+    <script src="static/js/hover-event-manager.js" defer></script>
+    <script src="static/js/event-delegation-manager.js" defer></script>
+    <script src="static/js/poi-hover-integration.js" defer></script>
 </head>
 
 <body>
