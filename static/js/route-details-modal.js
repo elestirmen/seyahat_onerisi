@@ -31,6 +31,10 @@ class RouteDetailsModal {
         this.lastElevationMouseMoveTime = null;
         this.lastElevationDrawnX = null;
         this.lastElevationMarkerPoint = null;
+        // Media viewer optimization caches/state
+        this.mediaElementCache = new Map(); // url -> DOM element
+        this.currentMediaList = []; // {url,type}
+        this.currentMediaIndex = 0;
         // Bind methods
         this.hide = this.hide.bind(this);
         this.handleKeydown = this.handleKeydown.bind(this);
@@ -427,8 +431,8 @@ class RouteDetailsModal {
         this.modal.classList.add('show');
         this.isVisible = true;
 
-        // Prevent body scroll
-        document.body.style.overflow = 'hidden';
+        // Use scroll lock to keep page position without toggling body scrollbars
+        ScrollLock.enable(this.modal);
 
         // Reset modal scroll to top for better UX
         const bodyEl = document.getElementById('routeModalBody');
@@ -496,8 +500,8 @@ class RouteDetailsModal {
         this.modal.classList.remove('show');
         this.isVisible = false;
 
-        // Restore body scroll
-        document.body.style.overflow = '';
+        // Release scroll lock
+        ScrollLock.disable();
 
         // Clean up resize listener
         this.removeResizeListener();
@@ -3268,10 +3272,21 @@ class RouteDetailsModal {
             return;
         }
 
+        // Ensure media list is available
+        if (!this.currentMediaList || this.currentMediaList.length === 0) {
+            this.currentMediaList = this.buildCurrentMediaList();
+        }
+
+        // If viewer is already open, just swap content without rebuilding
+        if (this.currentMediaViewer && document.contains(this.currentMediaViewer)) {
+            this.setViewerIndex(mediaIndex);
+            return;
+        }
+
         // Store current media index for navigation
         this.currentMediaIndex = mediaIndex;
 
-        // Test the media URL to see if it's accessible
+        // Test the media URL to see if it's accessible (only on first open)
         this.testMediaUrl(mediaUrl).then(isAccessible => {
             if (!isAccessible) {
                 console.warn('⚠️ Media URL not accessible, trying alternative patterns...');
@@ -3351,9 +3366,20 @@ class RouteDetailsModal {
                         <span class="media-counter">${mediaIndex + 1} / ${totalMedia}</span>
                         <span class="media-type-badge">${this.getMediaTypeName(mediaType)}</span>
                     </div>
-                    <button class="media-viewer-close" onclick="this.parentElement.parentElement.remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <div class="media-viewer-toolbar">
+                        <button class="media-viewer-tool" title="Yeni Sekmede Aç" aria-label="Yeni Sekmede Aç" onclick="window.routeDetailsModalInstance.openCurrentMediaInNewTab()">
+                            <i class="fas fa-external-link-alt"></i>
+                        </button>
+                        <button class="media-viewer-tool" title="Bağlantıyı Kopyala" aria-label="Bağlantıyı Kopyala" onclick="window.routeDetailsModalInstance.copyCurrentMediaLink()">
+                            <i class="fas fa-link"></i>
+                        </button>
+                        <button class="media-viewer-tool" title="İndir" aria-label="İndir" onclick="window.routeDetailsModalInstance.downloadCurrentMedia()">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="media-viewer-close" onclick="this.parentElement.parentElement.remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 ${hasPrevious ? `
@@ -3401,6 +3427,17 @@ class RouteDetailsModal {
         this.addMediaViewerKeyboardNavigation(viewerModal);
 
         console.log('✅ Enhanced media viewer modal created with URL:', mediaUrl);
+
+        // Build/stash current media list for fast navigation
+        this.currentMediaList = this.buildCurrentMediaList();
+
+        // Ensure lazy loader observes new thumbnails
+        if (window.lazyLoader && typeof window.lazyLoader.observeLazyImages === 'function') {
+            window.lazyLoader.observeLazyImages();
+        }
+        // Auto-hide controls on inactivity and enable swipe navigation
+        this.setupAutoHideControls(viewerModal);
+        this.addViewerSwipeNavigation(viewerModal);
     }
 
     createMediaElement(mediaUrl, mediaType) {
@@ -3430,11 +3467,15 @@ class RouteDetailsModal {
             const isActive = index === currentIndex;
             const img = item.querySelector('img, video');
             const src = img ? (img.src || img.poster) : '';
-            
+
+            const imgHTML = src
+                ? `<img data-src="${src}" alt="Thumbnail ${index + 1}" loading="lazy" class="lazy-image">`
+                : `<div class="thumbnail-placeholder"><i class="fas fa-file"></i></div>`;
+
             return `
-                <div class="media-thumbnail ${isActive ? 'active' : ''}" 
+                <div class="media-thumbnail ${isActive ? 'active' : ''}" data-index="${index}" 
                      onclick="window.routeDetailsModalInstance.jumpToMedia(${index})">
-                    ${src ? `<img src="${src}" alt="Thumbnail ${index + 1}">` : `<div class="thumbnail-placeholder"><i class="fas fa-file"></i></div>`}
+                    ${imgHTML}
                 </div>
             `;
         }).join('');
@@ -3451,21 +3492,310 @@ class RouteDetailsModal {
     }
 
     navigateMedia(direction) {
-        const mediaItems = document.querySelectorAll('.route-media-item');
         const newIndex = this.currentMediaIndex + direction;
-        
-        if (newIndex >= 0 && newIndex < mediaItems.length) {
-            const newMediaItem = mediaItems[newIndex];
-            newMediaItem.click();
+        if (this.currentMediaViewer && this.currentMediaList.length) {
+            if (newIndex >= 0 && newIndex < this.currentMediaList.length) {
+                this.setViewerIndex(newIndex);
+            }
+        } else {
+            // Fallback (no viewer?)
+            const mediaItems = document.querySelectorAll('.route-media-item');
+            if (newIndex >= 0 && newIndex < mediaItems.length) {
+                mediaItems[newIndex].click();
+            }
         }
     }
 
     jumpToMedia(index) {
+        if (this.currentMediaViewer && this.currentMediaList.length) {
+            if (index >= 0 && index < this.currentMediaList.length) {
+                this.setViewerIndex(index);
+            }
+            return;
+        }
         const mediaItems = document.querySelectorAll('.route-media-item');
         if (index >= 0 && index < mediaItems.length) {
-            const mediaItem = mediaItems[index];
-            mediaItem.click();
+            mediaItems[index].click();
         }
+    }
+
+    buildCurrentMediaList() {
+        const items = Array.from(document.querySelectorAll('.route-media-item'));
+        return items.map((item) => {
+            const imgOrVideo = item.querySelector('img, video');
+            const url = imgOrVideo ? (imgOrVideo.src || imgOrVideo.poster) : '';
+            const type = window.getMediaTypeFromPath ? window.getMediaTypeFromPath(url) : 'image';
+            return { url, type };
+        });
+    }
+
+    setViewerIndex(newIndex) {
+        if (newIndex < 0 || newIndex >= this.currentMediaList.length) return;
+        this.currentMediaIndex = newIndex;
+        this.updateViewerContent();
+        this.preloadNeighborMedia();
+    }
+
+    getOrCreateMediaElement(url, type) {
+        if (this.mediaElementCache.has(url)) return this.mediaElementCache.get(url);
+        let el;
+        switch (type) {
+            case 'video': {
+                const v = document.createElement('video');
+                v.controls = true;
+                v.preload = 'metadata';
+                v.style.maxWidth = '100%';
+                v.style.maxHeight = '80vh';
+                v.src = url;
+                el = v; break;
+            }
+            case 'audio': {
+                const a = document.createElement('audio');
+                a.controls = true;
+                a.preload = 'metadata';
+                a.style.width = '100%';
+                a.src = url;
+                el = a; break;
+            }
+            case 'model_3d': {
+                const mv = document.createElement('model-viewer');
+                mv.setAttribute('src', url);
+                mv.setAttribute('auto-rotate', '');
+                mv.setAttribute('camera-controls', '');
+                mv.style.width = '100%';
+                mv.style.height = '80vh';
+                el = mv; break;
+            }
+            default: {
+                const img = new Image();
+                img.src = url;
+                img.alt = 'Media';
+                img.decoding = 'async';
+                img.style.maxWidth = '100%';
+                img.style.maxHeight = '80vh';
+                img.style.objectFit = 'contain';
+                el = img; break;
+            }
+        }
+        this.mediaElementCache.set(url, el);
+        return el;
+    }
+
+    updateViewerContent() {
+        if (!this.currentMediaViewer) return;
+        const wrapper = this.currentMediaViewer.querySelector('.media-viewer-content-wrapper');
+        const loading = this.currentMediaViewer.querySelector('.media-viewer-loading');
+        const counter = this.currentMediaViewer.querySelector('.media-counter');
+        const typeBadge = this.currentMediaViewer.querySelector('.media-type-badge');
+        const total = this.currentMediaList.length;
+        const { url, type } = this.currentMediaList[this.currentMediaIndex];
+
+        // Update header UI
+        if (counter) counter.textContent = `${this.currentMediaIndex + 1} / ${total}`;
+        if (typeBadge) typeBadge.textContent = this.getMediaTypeName(type);
+
+        // Swap element
+        const el = this.getOrCreateMediaElement(url, type);
+        if (wrapper) {
+            loading.style.display = 'none';
+            wrapper.style.display = 'block';
+            wrapper.innerHTML = '';
+            wrapper.appendChild(el);
+        }
+
+        // Update active thumbnail highlight
+        const thumbs = this.currentMediaViewer.querySelectorAll('.media-thumbnail');
+        thumbs.forEach(t => t.classList.remove('active'));
+        const active = this.currentMediaViewer.querySelector(`.media-thumbnail[data-index="${this.currentMediaIndex}"]`);
+        if (active) active.classList.add('active');
+
+        // Update nav buttons enabled visibility
+        const prevBtn = this.currentMediaViewer.querySelector('.media-nav-prev');
+        const nextBtn = this.currentMediaViewer.querySelector('.media-nav-next');
+        if (prevBtn) prevBtn.style.display = this.currentMediaIndex > 0 ? 'block' : 'none';
+        if (nextBtn) nextBtn.style.display = this.currentMediaIndex < total - 1 ? 'block' : 'none';
+
+        // Ensure active thumbnail is visible
+        const thumbsWrapper = this.currentMediaViewer.querySelector('.media-thumbnails');
+        if (thumbsWrapper && active) {
+            active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+
+        // Enable basic zoom/pan for images
+        if (el && el.tagName === 'IMG') {
+            this.attachImageZoomPan(el);
+        }
+    }
+
+    preloadNeighborMedia() {
+        const preload = (idx) => {
+            if (idx < 0 || idx >= this.currentMediaList.length) return;
+            const { url, type } = this.currentMediaList[idx];
+            if (type !== 'image') return;
+            const img = new Image();
+            img.decoding = 'async';
+            img.src = url;
+        };
+        preload(this.currentMediaIndex + 1);
+        preload(this.currentMediaIndex - 1);
+    }
+
+    // UX actions: toolbar
+    getCurrentMedia() {
+        return this.currentMediaList[this.currentMediaIndex] || null;
+    }
+
+    openCurrentMediaInNewTab() {
+        const cur = this.getCurrentMedia();
+        if (cur && cur.url) window.open(cur.url, '_blank', 'noopener');
+    }
+
+    async copyCurrentMediaLink() {
+        const cur = this.getCurrentMedia();
+        if (!cur || !cur.url) return;
+        try {
+            await navigator.clipboard.writeText(cur.url);
+        } catch (_) {
+            // Fallback
+            const ta = document.createElement('textarea');
+            ta.value = cur.url;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+    }
+
+    downloadCurrentMedia() {
+        const cur = this.getCurrentMedia();
+        if (!cur || !cur.url) return;
+        const a = document.createElement('a');
+        a.href = cur.url;
+        const name = cur.url.split('/').pop() || 'media';
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    // Auto-hide header/controls on inactivity
+    setupAutoHideControls(viewerModal) {
+        let hideTimer = null;
+        const resetTimer = () => {
+            viewerModal.classList.remove('controls-hidden');
+            if (hideTimer) clearTimeout(hideTimer);
+            hideTimer = setTimeout(() => {
+                viewerModal.classList.add('controls-hidden');
+            }, 2000);
+        };
+        ['mousemove','touchstart','keydown'].forEach(evt => {
+            viewerModal.addEventListener(evt, resetTimer, { passive: true });
+        });
+        resetTimer();
+    }
+
+    // Swipe navigation for mobile
+    addViewerSwipeNavigation(viewerModal) {
+        let startX = null;
+        let startY = null;
+        const onTouchStart = (e) => {
+            const t = e.touches && e.touches[0];
+            if (!t) return;
+            startX = t.clientX; startY = t.clientY;
+        };
+        const onTouchEnd = (e) => {
+            if (startX === null) return;
+            const t = e.changedTouches && e.changedTouches[0];
+            if (!t) return;
+            const dx = t.clientX - startX;
+            const dy = t.clientY - startY;
+            // Horizontal swipe dominant
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+                if (dx < 0) this.navigateMedia(1); else this.navigateMedia(-1);
+            }
+            startX = startY = null;
+        };
+        viewerModal.addEventListener('touchstart', onTouchStart, { passive: true });
+        viewerModal.addEventListener('touchend', onTouchEnd, { passive: true });
+    }
+
+    // Simple image zoom and pan
+    attachImageZoomPan(img) {
+        let scale = 1;
+        let originX = 0; let originY = 0;
+        let lastX = 0; let lastY = 0;
+        let dragging = false;
+
+        const apply = () => {
+            img.style.transform = `translate(${lastX}px, ${lastY}px) scale(${scale})`;
+            img.style.cursor = scale > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in';
+            img.style.transition = dragging ? 'none' : 'transform 0.15s ease';
+        };
+
+        const reset = () => { scale = 1; lastX = 0; lastY = 0; apply(); };
+
+        // Double click / double tap to toggle zoom
+        let lastTap = 0;
+        img.addEventListener('click', (e) => {
+            const now = Date.now();
+            if (now - lastTap < 300) {
+                // double tap
+                scale = scale > 1 ? 1 : 2.5;
+                lastX = lastY = 0;
+                apply();
+                e.preventDefault();
+            }
+            lastTap = now;
+        });
+
+        img.addEventListener('wheel', (e) => {
+            if (!e.ctrlKey && !e.metaKey) return; // prevent accidental zoom; require ctrl/cmd
+            e.preventDefault();
+            const delta = -Math.sign(e.deltaY) * 0.2;
+            scale = Math.min(4, Math.max(1, scale + delta));
+            apply();
+        }, { passive: false });
+
+        img.addEventListener('pointerdown', (e) => {
+            if (scale === 1) return;
+            dragging = true;
+            originX = e.clientX - lastX;
+            originY = e.clientY - lastY;
+            img.setPointerCapture(e.pointerId);
+            apply();
+        });
+        img.addEventListener('pointermove', (e) => {
+            if (!dragging) return;
+            lastX = e.clientX - originX;
+            lastY = e.clientY - originY;
+            apply();
+        });
+        const endDrag = (e) => {
+            if (!dragging) return;
+            dragging = false;
+            img.releasePointerCapture(e.pointerId);
+            apply();
+        };
+        img.addEventListener('pointerup', endDrag);
+        img.addEventListener('pointercancel', endDrag);
+
+        // Reset on escape
+        const onKey = (e) => { if (e.key === 'Escape') reset(); };
+        document.addEventListener('keydown', onKey);
+        // Clean-up when viewer closes
+        const obs = new MutationObserver((muts) => {
+            muts.forEach(m => {
+                m.removedNodes.forEach(node => {
+                    if (node === this.currentMediaViewer) {
+                        document.removeEventListener('keydown', onKey);
+                        obs.disconnect();
+                    }
+                });
+            });
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+
+        apply();
     }
 
     addMediaViewerKeyboardNavigation(viewerModal) {
@@ -3728,6 +4058,63 @@ class RouteDetailsModal {
         }
     }
 }
+
+// Lightweight scroll lock that prevents background scrolling without changing body overflow
+const ScrollLock = (() => {
+    let locked = false;
+    let lockEl = null;
+    const wheelHandler = (e) => {
+        if (!lockEl) return;
+        // Allow scroll if the event target is inside a scrollable area within the modal
+        const pathEl = e.target.closest('.route-details-modal-content');
+        if (pathEl) {
+            // Determine if can scroll inside
+            const delta = e.deltaY;
+            const scroller = e.target.closest('.route-details-modal-body, .route-details-tab-content, .route-map-container');
+            if (scroller) {
+                const { scrollTop, scrollHeight, clientHeight } = scroller;
+                const atTop = scrollTop <= 0;
+                const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
+                if ((delta < 0 && !atTop) || (delta > 0 && !atBottom)) {
+                    // Let it scroll inside modal
+                    return;
+                }
+            }
+        }
+        e.preventDefault();
+    };
+    const touchMoveHandler = (e) => {
+        if (!lockEl) return;
+        if (e.target && e.target.closest && e.target.closest('#routeDetailsModal')) {
+            // Allow default; modal body has its own scrolling
+            return;
+        }
+        e.preventDefault();
+    };
+    const keydownHandler = (e) => {
+        if (!lockEl) return;
+        const keys = ['ArrowUp','ArrowDown','PageUp','PageDown','Home','End','Space',' '];
+        if (keys.includes(e.key)) {
+            // If focus is inside modal, allow; else prevent
+            if (document.activeElement && lockEl.contains(document.activeElement)) return;
+            e.preventDefault();
+        }
+    };
+    return {
+        enable(el) {
+            if (locked) return; locked = true; lockEl = el;
+            window.addEventListener('wheel', wheelHandler, { passive: false });
+            window.addEventListener('touchmove', touchMoveHandler, { passive: false });
+            window.addEventListener('keydown', keydownHandler, { passive: false });
+        },
+        disable() {
+            if (!locked) return; locked = false; lockEl = null;
+            window.removeEventListener('wheel', wheelHandler, { passive: false });
+            window.removeEventListener('touchmove', touchMoveHandler, { passive: false });
+            window.removeEventListener('keydown', keydownHandler, { passive: false });
+        }
+    };
+})();
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {

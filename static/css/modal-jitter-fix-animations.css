@@ -1,0 +1,409 @@
+/**
+ * Modal Jitter Fix - Animation State Reset CSS
+ * 
+ * This CSS file provides animation state reset utilities and enhanced
+ * modal transition handling to prevent jitter during modal operations.
+ * 
+ * Requirements: 3.1, 3.2 - CSS animation state reset for modal transitions
+ */
+
+/* =============================================================================
+   ANIMATION STATE RESET UTILITIES
+   ============================================================================= */
+
+/* Base animation reset class */
+.modal-animation-reset {
+    /* Reset all animation properties */
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    
+    /* Reset will-change to prevent unnecessary GPU layers */
+    will-change: auto !important;
+    
+    /* Force immediate layout calculation */
+    contain: layout !important;
+}
+
+/* Animation state reset for modal containers */
+.route-details-modal.modal-animation-reset,
+.route-details-modal-content.modal-animation-reset {
+    /* Reset transform and animation properties */
+    transform: translateZ(0) !important;
+    animation: none !important;
+    transition: none !important;
+    
+    /* Reset opacity and visibility */
+    opacity: 1 !important;
+    visibility: visible !important;
+    
+    /* Reset positioning */
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+}
+
+/* Animation reset for RouteDetailsPanel */
+#routeDetailsPanel.modal-animation-reset {
+    /* Reset panel-specific animations */
+    transform: translateX(0) !important;
+    animation: none !important;
+    transition: none !important;
+    
+    /* Reset positioning */
+    right: 0 !important;
+    top: 0 !important;
+    
+    /* Reset visibility */
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* =============================================================================
+   ENHANCED MODAL TRANSITIONS - Jitter-free animations
+   ============================================================================= */
+
+/* Smooth modal show animation */
+.route-details-modal.show {
+    /* Avoid transforms on the container to keep fixed children anchored to viewport */
+    transform: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    
+    /* Smooth transition */
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    
+    /* Prevent layout shifts */
+    contain: layout style !important;
+}
+
+/* Smooth modal hide animation */
+.route-details-modal:not(.show) {
+    /* Avoid transforms on the container to keep fixed children anchored to viewport */
+    transform: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    
+    /* Smooth transition */
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    
+    /* Prevent layout shifts */
+    contain: layout style !important;
+}
+
+/* RouteDetailsPanel smooth transitions */
+#routeDetailsPanel.show {
+    /* Slide in from right */
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    
+    /* Smooth transition */
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    
+    /* Hardware acceleration */
+    will-change: transform, opacity !important;
+}
+
+#routeDetailsPanel:not(.show) {
+    /* Slide out to right */
+    transform: translateX(100%) !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    
+    /* Smooth transition */
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    
+    /* Hardware acceleration */
+    will-change: transform, opacity !important;
+}
+
+/* =============================================================================
+   MEDIA VIEWER ANIMATION FIXES
+   ============================================================================= */
+
+/* Media viewer smooth show animation */
+.media-viewer-modal {
+    /* Initial state */
+    opacity: 0;
+    visibility: hidden;
+    transform: translate3d(0, 0, 0) scale(0.95);
+    
+    /* Smooth transition */
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Hardware acceleration */
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    
+    /* Prevent layout shifts */
+    contain: layout style;
+}
+
+/* Media viewer show state */
+.media-viewer-modal.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translate3d(0, 0, 0) scale(1);
+}
+
+/* Media viewer animation reset */
+.media-viewer-modal.modal-animation-reset {
+    animation: none !important;
+    transition: none !important;
+    transform: translate3d(0, 0, 0) scale(1) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    will-change: auto !important;
+}
+
+/* =============================================================================
+   ANIMATION PERFORMANCE OPTIMIZATIONS
+   ============================================================================= */
+
+/* Hardware acceleration for modal elements */
+.route-details-modal-content,
+#routeDetailsPanel,
+.media-viewer-modal {
+    /* Force GPU layer (do NOT apply on .route-details-modal itself) */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    
+    /* Prevent flickering */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    
+    /* Optimize for animations */
+    perspective: 1000px;
+    -webkit-perspective: 1000px;
+}
+
+/* Hard override: never transform the modal container. Prevents hover-induced drift. */
+.route-details-modal {
+    transform: none !important;
+}
+
+/* Animation completion cleanup */
+.animation-complete {
+    /* Remove will-change after animation completes */
+    will-change: auto !important;
+    
+    /* Reset transform to prevent stacking context issues */
+    transform: translateZ(0) !important;
+}
+
+/* =============================================================================
+   MODAL STATE TRANSITION CLASSES
+   ============================================================================= */
+
+/* Modal opening state */
+.modal-opening {
+    /* Prevent interaction during opening */
+    pointer-events: none;
+    
+    /* Optimize for animation */
+    will-change: transform, opacity;
+    
+    /* Ensure proper layering */
+    z-index: 10000;
+}
+
+/* Modal closing state */
+.modal-closing {
+    /* Prevent interaction during closing */
+    pointer-events: none;
+    
+    /* Optimize for animation */
+    will-change: transform, opacity;
+}
+
+/* Modal stable state */
+.modal-stable {
+    /* Allow interaction */
+    pointer-events: auto;
+    
+    /* Reset will-change */
+    will-change: auto;
+    
+    /* Ensure proper layering */
+    z-index: 10000;
+}
+
+/* =============================================================================
+   JITTER PREVENTION UTILITIES
+   ============================================================================= */
+
+/* Prevent layout shifts during modal operations */
+.prevent-layout-shift {
+    /* Lock dimensions */
+    contain: size layout;
+    
+    /* Prevent overflow changes */
+    overflow: hidden;
+    
+    /* Stable positioning */
+    position: relative;
+}
+
+/* Prevent transform jitter */
+.prevent-transform-jitter {
+    /* Use transform3d for consistency */
+    transform: translate3d(0, 0, 0);
+    
+    /* Prevent subpixel rendering issues */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    
+    /* Force integer positioning */
+    will-change: transform;
+}
+
+/* Prevent opacity jitter */
+.prevent-opacity-jitter {
+    /* Ensure opacity is handled by GPU */
+    will-change: opacity;
+    
+    /* Prevent flickering */
+    backface-visibility: hidden;
+}
+
+/* =============================================================================
+   MODAL BACKDROP FIXES
+   ============================================================================= */
+
+/* Stable modal backdrop */
+.modal-backdrop {
+    /* Prevent jitter during show/hide */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    
+    /* Smooth transitions */
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Proper layering */
+    z-index: 9999;
+    
+    /* Prevent layout shifts */
+    contain: layout style;
+}
+
+/* Backdrop animation reset */
+.modal-backdrop.modal-animation-reset {
+    animation: none !important;
+    transition: none !important;
+    opacity: 0.5 !important;
+    will-change: auto !important;
+}
+
+/* =============================================================================
+   MOBILE OPTIMIZATIONS
+   ============================================================================= */
+
+/* Mobile-specific animation optimizations */
+@media (max-width: 768px) {
+    .route-details-modal,
+    #routeDetailsPanel,
+    .media-viewer-modal {
+        /* Reduce animation complexity on mobile */
+        transition-duration: 0.2s !important;
+        
+        /* Optimize for touch */
+        touch-action: manipulation;
+        
+        /* Reduce GPU usage */
+        will-change: transform;
+    }
+    
+    /* Disable complex animations on low-end devices */
+    @media (max-resolution: 150dpi) {
+        .route-details-modal,
+        #routeDetailsPanel,
+        .media-viewer-modal {
+            transition: opacity 0.2s ease !important;
+            transform: translateZ(0) !important;
+        }
+    }
+}
+
+/* =============================================================================
+   ACCESSIBILITY AND REDUCED MOTION
+   ============================================================================= */
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .route-details-modal,
+    #routeDetailsPanel,
+    .media-viewer-modal,
+    .modal-backdrop {
+        /* Disable animations */
+        animation: none !important;
+        transition: none !important;
+        
+        /* Instant state changes */
+        will-change: auto !important;
+    }
+    
+    /* Provide instant feedback */
+    .route-details-modal.show,
+    #routeDetailsPanel.show,
+    .media-viewer-modal.show {
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: translateZ(0) !important;
+    }
+    
+    .route-details-modal:not(.show),
+    #routeDetailsPanel:not(.show),
+    .media-viewer-modal:not(.show) {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        transform: translateZ(0) !important;
+    }
+}
+
+/* =============================================================================
+   DEBUG AND DEVELOPMENT UTILITIES
+   ============================================================================= */
+
+/* Debug animation states (enable via JS) */
+.debug-animations .route-details-modal,
+.debug-animations #routeDetailsPanel,
+.debug-animations .media-viewer-modal {
+    /* Visual indicators for animation states */
+    outline: 2px solid rgba(255, 0, 0, 0.5);
+    outline-offset: -2px;
+}
+
+.debug-animations .modal-opening {
+    outline-color: rgba(255, 165, 0, 0.8);
+}
+
+.debug-animations .modal-closing {
+    outline-color: rgba(255, 0, 0, 0.8);
+}
+
+.debug-animations .modal-stable {
+    outline-color: rgba(0, 255, 0, 0.8);
+}
+
+/* Performance monitoring markers */
+.performance-monitor::before {
+    content: '🎭';
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 99999;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 2px 4px;
+    font-size: 12px;
+    border-radius: 0 0 0 4px;
+}

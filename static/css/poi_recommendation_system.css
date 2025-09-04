@@ -10104,6 +10104,11 @@ Detail Modal Styles */
     border: none;
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    /* Isolate layout/paint to prevent hover-induced shifts */
+    contain: layout paint;
+    /* Create stable GPU layer */
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 .poi-modal-header {
@@ -10440,6 +10445,21 @@ Detail Modal Styles */
         width: 60px;
         height: 45px;
     }
+}
+
+/* Stabilize POI modal scrolling and width to prevent jitter */
+#poiDetailModal .modal-body {
+    /* Always show vertical scrollbar to avoid content width changes */
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+    scrollbar-gutter: stable both-edges;
+    overscroll-behavior: contain;
+}
+
+#poiDetailModal .modal-dialog {
+    /* Create its own stacking/transform context */
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 /* Loading Animation for Media */

@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task 5: Modal Hover Stability Test</title>
+    
+    <!-- External Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Project CSS -->
+    <link rel="stylesheet" href="static/css/design-tokens.css">
+    <link rel="stylesheet" href="static/css/layout-system.css">
+    <link rel="stylesheet" href="static/css/components.css">
+    <link rel="stylesheet" href="static/css/route-details-modal.css">
+    <link rel="stylesheet" href="static/css/poi-hover-stability-fix.css">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            padding: 20px;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .test-section {
+            margin-bottom: 32px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .test-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-success { background: #10b981; }
+        .status-warning { background: #f59e0b; }
+        .status-error { background: #ef4444; }
+        
+        .test-results {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+        
+        .mock-map {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(45deg, #e2e8f0 25%, transparent 25%), 
+                        linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, #e2e8f0 75%), 
+                        linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-weight: 600;
+            border: 2px dashed #cbd5e0;
+        }
+        
+        .mock-poi {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background: #3b82f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .mock-poi:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1><i class="fas fa-vial"></i> Task 5: Modal Hover Stability Test</h1>
+            <p>Testing LeafletModalEventManager, ModalHoverIsolation, and integration system</p>
+        </div>
+        
+        <!-- Component Status Section -->
+        <div class="test-section">
+            <h3><i class="fas fa-heartbeat"></i> Component Status</h3>
+            <div id="componentStatus">
+                <div id="leafletManagerStatus">
+                    <span class="status-indicator status-warning"></span>
+                    LeafletModalEventManager: Loading...
+                </div>
+                <div id="hoverIsolationStatus">
+                    <span class="status-indicator status-warning"></span>
+                    ModalHoverIsolation: Loading...
+                </div>
+                <div id="integrationStatus">
+                    <span class="status-indicator status-warning"></span>
+                    ModalHoverStabilityIntegration: Loading...
+                </div>
+            </div>
+        </div>
+        
+        <!-- Test Controls Section -->
+        <div class="test-section">
+            <h3><i class="fas fa-play-circle"></i> Test Controls</h3>
+            <button class="test-button" onclick="testLeafletEventManager()">
+                <i class="fas fa-map"></i> Test Leaflet Event Manager
+            </button>
+            <button class="test-button" onclick="testHoverIsolation()">
+                <i class="fas fa-mouse-pointer"></i> Test Hover Isolation
+            </button>
+            <button class="test-button" onclick="testModalIntegration()">
+                <i class="fas fa-window-restore"></i> Test Modal Integration
+            </button>
+            <button class="test-button" onclick="testDebouncing()">
+                <i class="fas fa-clock"></i> Test Debouncing
+            </button>
+            <button class="test-button" onclick="testCleanup()">
+                <i class="fas fa-broom"></i> Test Cleanup
+            </button>
+            <button class="test-button" onclick="clearResults()">
+                <i class="fas fa-trash"></i> Clear Results
+            </button>
+        </div>
+        
+        <!-- Mock Modal Section -->
+        <div class="test-section">
+            <h3><i class="fas fa-window-maximize"></i> Mock Modal Test Area</h3>
+            <div style="position: relative;">
+                <div class="mock-map" id="mockMap">
+                    Mock Map Container
+                    <div class="mock-poi" style="top: 50px; left: 100px;" data-poi-id="1">
+                        <i class="fas fa-mountain"></i>
+                    </div>
+                    <div class="mock-poi" style="top: 80px; left: 200px;" data-poi-id="2">
+                        <i class="fas fa-tree"></i>
+                    </div>
+                    <div class="mock-poi" style="top: 120px; left: 150px;" data-poi-id="3">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Test Results Section -->
+        <div class="test-section">
+            <h3><i class="fas fa-clipboard-list"></i> Test Results</h3>
+            <div class="test-results" id="testResults">
+                Test results will appear here...
+            </div>
+        </div>
+    </div>
+    
+    <!-- External Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Project Scripts -->
+    <script src="static/js/leaflet-modal-event-manager.js"></script>
+    <script src="static/js/modal-hover-isolation.js"></script>
+    <script src="static/js/modal-hover-stability-integration.js"></script>
+    
+    <script>
+        // Test utilities
+        let testResults = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            testResults.push(entry);
+            updateResults();
+            
+            // Also log to console
+            console.log(entry);
+        }
+        
+        function updateResults() {
+            const resultsEl = document.getElementById('testResults');
+            resultsEl.innerHTML = testResults.join('\n');
+            resultsEl.scrollTop = resultsEl.scrollHeight;
+        }
+        
+        function clearResults() {
+            testResults = [];
+            updateResults();
+        }
+        
+        function updateComponentStatus() {
+            // Check LeafletModalEventManager
+            const leafletStatus = document.getElementById('leafletManagerStatus');
+            if (typeof LeafletModalEventManager !== 'undefined') {
+                leafletStatus.innerHTML = '<span class="status-indicator status-success"></span>LeafletModalEventManager: Available';
+            } else {
+                leafletStatus.innerHTML = '<span class="status-indicator status-error"></span>LeafletModalEventManager: Not Available';
+            }
+            
+            // Check ModalHoverIsolation
+            const hoverStatus = document.getElementById('hoverIsolationStatus');
+            if (typeof ModalHoverIsolation !== 'undefined') {
+                hoverStatus.innerHTML = '<span class="status-indicator status-success"></span>ModalHoverIsolation: Available';
+            } else {
+                hoverStatus.innerHTML = '<span class="status-indicator status-error"></span>ModalHoverIsolation: Not Available';
+            }
+            
+            // Check ModalHoverStabilityIntegration
+            const integrationStatus = document.getElementById('integrationStatus');
+            if (typeof ModalHoverStabilityIntegration !== 'undefined') {
+                integrationStatus.innerHTML = '<span class="status-indicator status-success"></span>ModalHoverStabilityIntegration: Available';
+            } else {
+                integrationStatus.innerHTML = '<span class="status-indicator status-error"></span>ModalHoverStabilityIntegration: Not Available';
+            }
+        }
+        
+        // Test functions
+        function testLeafletEventManager() {
+            log('Testing LeafletModalEventManager...', 'info');
+            
+            try {
+                if (typeof LeafletModalEventManager === 'undefined') {
+                    throw new Error('LeafletModalEventManager not available');
+                }
+                
+                const manager = new LeafletModalEventManager({
+                    enableDebugLogging: true,
+                    debounceDelay: 100
+                });
+                
+                log('✓ LeafletModalEventManager instance created successfully', 'success');
+                
+                // Test event buffer state
+                const state = manager.getEventBufferState();
+                log(`✓ Event buffer state: ${JSON.stringify(state)}`, 'info');
+                
+                // Test cleanup
+                manager.cleanup();
+                log('✓ LeafletModalEventManager cleanup completed', 'success');
+                
+            } catch (error) {
+                log(`✗ LeafletModalEventManager test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        function testHoverIsolation() {
+            log('Testing ModalHoverIsolation...', 'info');
+            
+            try {
+                if (typeof ModalHoverIsolation === 'undefined') {
+                    throw new Error('ModalHoverIsolation not available');
+                }
+                
+                const isolation = new ModalHoverIsolation({
+                    enableDebugLogging: true,
+                    debounceDelay: 100
+                });
+                
+                log('✓ ModalHoverIsolation instance created successfully', 'success');
+                
+                // Create mock modal element
+                const mockModal = document.createElement('div');
+                mockModal.id = 'testModal';
+                mockModal.className = 'route-details-modal';
+                document.body.appendChild(mockModal);
+                
+                // Test isolation
+                const result = isolation.isolateEvents(mockModal);
+                log(`✓ Event isolation result: ${result}`, 'info');
+                
+                // Test state
+                const state = isolation.getIsolationState();
+                log(`✓ Isolation state: ${JSON.stringify(state)}`, 'info');
+                
+                // Test restoration
+                isolation.restoreEvents();
+                log('✓ Events restored successfully', 'success');
+                
+                // Cleanup
+                document.body.removeChild(mockModal);
+                isolation.destroy();
+                log('✓ ModalHoverIsolation cleanup completed', 'success');
+                
+            } catch (error) {
+                log(`✗ ModalHoverIsolation test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        function testModalIntegration() {
+            log('Testing ModalHoverStabilityIntegration...', 'info');
+            
+            try {
+                if (typeof ModalHoverStabilityIntegration === 'undefined') {
+                    throw new Error('ModalHoverStabilityIntegration not available');
+                }
+                
+                const integration = new ModalHoverStabilityIntegration({
+                    enableDebugLogging: true,
+                    autoInitialize: false
+                });
+                
+                log('✓ ModalHoverStabilityIntegration instance created successfully', 'success');
+                
+                // Test initialization
+                integration.initialize();
+                log('✓ Integration initialized successfully', 'success');
+                
+                // Test system state
+                const state = integration.getSystemState();
+                log(`✓ System state: ${JSON.stringify(state)}`, 'info');
+                
+                // Test cleanup
+                integration.cleanup();
+                log('✓ Integration cleanup completed', 'success');
+                
+            } catch (error) {
+                log(`✗ ModalHoverStabilityIntegration test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        function testDebouncing() {
+            log('Testing debouncing functionality...', 'info');
+            
+            try {
+                const manager = new LeafletModalEventManager({
+                    enableDebugLogging: true,
+                    debounceDelay: 200
+                });
+                
+                let eventCount = 0;
+                const testHandler = () => { eventCount++; };
+                
+                // Simulate rapid events
+                const debouncedHandler = manager.createDebouncedHandler('test', testHandler);
+                
+                // Fire multiple events rapidly
+                for (let i = 0; i < 10; i++) {
+                    debouncedHandler({ type: 'test', target: {} });
+                }
+                
+                // Check that only one event was processed after delay
+                setTimeout(() => {
+                    if (eventCount <= 1) {
+                        log('✓ Debouncing working correctly', 'success');
+                    } else {
+                        log(`✗ Debouncing failed: ${eventCount} events processed`, 'error');
+                    }
+                    
+                    manager.cleanup();
+                }, 300);
+                
+            } catch (error) {
+                log(`✗ Debouncing test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        function testCleanup() {
+            log('Testing cleanup mechanisms...', 'info');
+            
+            try {
+                // Test LeafletModalEventManager cleanup
+                const manager = new LeafletModalEventManager({
+                    enableDebugLogging: true
+                });
+                
+                manager.cleanup();
+                const managerState = manager.getEventBufferState();
+                
+                if (!managerState.isActive) {
+                    log('✓ LeafletModalEventManager cleanup successful', 'success');
+                } else {
+                    log('✗ LeafletModalEventManager cleanup failed', 'error');
+                }
+                
+                // Test ModalHoverIsolation cleanup
+                const isolation = new ModalHoverIsolation({
+                    enableDebugLogging: true
+                });
+                
+                isolation.destroy();
+                const isolationState = isolation.getIsolationState();
+                
+                if (!isolationState.isIsolated) {
+                    log('✓ ModalHoverIsolation cleanup successful', 'success');
+                } else {
+                    log('✗ ModalHoverIsolation cleanup failed', 'error');
+                }
+                
+                log('✓ All cleanup tests completed', 'success');
+                
+            } catch (error) {
+                log(`✗ Cleanup test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Initialize tests when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Task 5 Modal Hover Stability Test initialized', 'info');
+            updateComponentStatus();
+            
+            // Test global integration instance
+            if (typeof window.modalHoverStabilityIntegration !== 'undefined') {
+                log('✓ Global integration instance available', 'success');
+                const state = window.modalHoverStabilityIntegration.getSystemState();
+                log(`Global integration state: ${JSON.stringify(state)}`, 'info');
+            } else {
+                log('⚠ Global integration instance not available', 'warning');
+            }
+        });
+        
+        // Add hover event listeners to mock POIs for visual testing
+        document.addEventListener('DOMContentLoaded', () => {
+            const mockPois = document.querySelectorAll('.mock-poi');
+            mockPois.forEach(poi => {
+                poi.addEventListener('mouseenter', () => {
+                    log(`Mock POI ${poi.dataset.poiId} hovered`, 'info');
+                });
+                
+                poi.addEventListener('mouseleave', () => {
+                    log(`Mock POI ${poi.dataset.poiId} left`, 'info');
+                });
+                
+                poi.addEventListener('click', () => {
+                    log(`Mock POI ${poi.dataset.poiId} clicked`, 'info');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

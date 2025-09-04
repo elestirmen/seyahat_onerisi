@@ -15,10 +15,10 @@
     /* Limit transitions to avoid unintended layout animations (prevents jitter) */
     transition: opacity 0.3s cubic-bezier(0.4, 0.0, 0.2, 1),
                 visibility 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-    /* Prevent modal jitter during interactions */
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
+    /* Keep container free of transforms to preserve fixed child anchoring */
     will-change: opacity, visibility;
+    /* Isolate paint without affecting fixed-position layout */
+    contain: paint;
 }
 
 .route-details-modal.show {
@@ -47,6 +47,8 @@
     /* Prevent content jitter during interactions */
     transform-style: preserve-3d;
     -webkit-transform-style: preserve-3d;
+    /* Isolate layout/paint to prevent hover-induced shifts */
+    contain: layout paint;
 }
 
 .route-details-modal.show .route-details-modal-content {
@@ -56,7 +58,8 @@
 /* Desktop styles */
 @media (min-width: 769px) {
     .route-details-modal-content {
-        position: relative;
+        /* Fix content to viewport for robust centering */
+        position: fixed;
         bottom: auto;
         left: 50%;
         right: auto;
@@ -66,6 +69,9 @@
         max-height: 90vh;
         border-radius: 16px;
         width: 90%;
+        margin: 0;
+        /* Ensure it sits above overlay */
+        z-index: 10000;
     }
 
     .route-details-modal.show .route-details-modal-content {
@@ -237,7 +243,10 @@
 /* Tab Content */
 .route-details-modal-body {
     flex: 1;
-    overflow-y: auto;
+    /* Always reserve vertical scrollbar space to avoid width jumps */
+    overflow-y: scroll;
+    /* Prevent horizontal scrollbar caused by hover scale */
+    overflow-x: hidden;
     background: white;
     /* Keep vertical scrollbar space reserved to avoid width jumps on hover */
     scrollbar-gutter: stable both-edges;
@@ -247,12 +256,16 @@
     /* Smooth scrolling for mobile */
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
+    /* Prevent scroll chaining affecting page */
+    overscroll-behavior: contain;
 }
 
 .route-details-tab-content {
     display: none;
     padding: 20px;
     animation: fadeInUp 0.3s ease;
+    /* Prevent horizontal scrollbar on hover scale */
+    overflow-x: hidden;
 }
 
 .route-details-tab-content.active {
@@ -901,6 +914,29 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.media-viewer-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.media-viewer-tool {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+}
+.media-viewer-tool:hover { background: rgba(255,255,255,0.2); transform: scale(1.06); }
+
 .media-viewer-info {
     display: flex;
     align-items: center;
@@ -1130,7 +1166,7 @@
 
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
-    .media-viewer-content {
+.media-viewer-content {
         max-width: 100vw;
         max-height: 100vh;
         border-radius: 0;
@@ -1322,10 +1358,11 @@
     cursor: pointer;
 }
 
+/* Neutralize hover transform inside modal to avoid composite jitter */
 .route-poi-item:hover {
     background: #e2e8f0;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .route-poi-icon {
@@ -1427,6 +1464,19 @@
     color: #6b7280;
 }
 
+/* Auto-hide controls when inactive */
+.media-viewer-modal.controls-hidden .media-viewer-header,
+.media-viewer-modal.controls-hidden .media-nav-btn,
+.media-viewer-modal.controls-hidden .media-viewer-footer {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+/* Image zoom/pan cursors */
+.media-viewer-body img { cursor: zoom-in; }
+
+
 .media-nav-btn:hover:not(:disabled) {
     background: #f3f4f6;
     border-color: #9ca3af;
@@ -1501,9 +1551,10 @@
     transform: translateZ(0);
 }
 
+/* Neutralize heavy hover transforms to prevent layout/composite shifts */
 .route-media-item:hover {
-    transform: translateY(-6px) scale(1.02);
-    box-shadow: 0 16px 40px rgba(102, 126, 234, 0.2);
+    transform: translateZ(0);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.16);
     border-color: #667eea;
 }
 
@@ -1521,7 +1572,7 @@
 
 .route-media-item:hover img,
 .route-media-item:hover video {
-    transform: scale(1.05);
+    transform: none;
 }
 
 /* Loading state for media items */
@@ -1612,7 +1663,7 @@
 .route-media-item:hover .route-media-type-icon {
     background: rgba(0, 0, 0, 0.9);
     border-color: rgba(255, 255, 255, 0.4);
-    transform: scale(1.1);
+    transform: none;
 }
 
 .route-media-play-btn {
@@ -1639,7 +1690,7 @@
 
 .route-media-item:hover .route-media-play-btn {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.1);
+    transform: translate(-50%, -50%);
 }
 
 .route-media-empty {

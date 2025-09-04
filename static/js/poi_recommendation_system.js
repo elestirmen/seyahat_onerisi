@@ -12973,6 +12973,9 @@ function updatePOIModalContent(poi) {
 
 // Load POI modal media
 async function loadPOIModalMedia(poiId) {
+    // Reset gallery state for fresh load
+    poiThumbnailsInitialized = false;
+    poiMediaElementCache.clear();
     try {
         // Log removed for cleaner console
         
@@ -13005,146 +13008,219 @@ async function loadPOIModalMedia(poiId) {
     }
 }
 
-// Display media gallery
+// Optimized POI media gallery state
+let poiThumbnailsInitialized = false;
+const poiMediaElementCache = new Map(); // key: index or path -> DOM element
+
+// Display media gallery (optimized: build thumbs once, reuse elements)
 function displayMediaGallery() {
     if (currentMediaItems.length === 0) {
         showNoMediaPlaceholder();
         return;
     }
-    
-    // Display main media
+
+    // Display or swap main media
     displayMainMedia(currentMediaIndex);
-    
-    // Display thumbnails
-    displayMediaThumbnails();
-    
+
+    // Build thumbnails only once per gallery open
+    if (!poiThumbnailsInitialized) {
+        buildPOIMediaThumbnailsOnce();
+        poiThumbnailsInitialized = true;
+    } else {
+        // Only update active state if already built
+        updateActivePOIThumbnail();
+    }
+
     // Update navigation buttons
     updateMediaNavigation();
+
+    // Preload neighbors for snappy navigation
+    preloadAdjacentPOIMedia();
 }
 
 // Display main media
+function getOrCreatePOIMediaElement(mediaItem, index) {
+    const mediaPath = mediaItem.path || mediaItem.url;
+    const key = `${mediaItem.type || getMediaTypeFromPath(mediaPath)}|/${mediaPath}`;
+    if (poiMediaElementCache.has(key)) return poiMediaElementCache.get(key);
+
+    const mediaType = mediaItem.type || getMediaTypeFromPath(mediaPath);
+    let el;
+    switch (mediaType) {
+        case 'image': {
+            const img = new Image();
+            img.src = `/${mediaPath}`;
+            img.alt = mediaItem.caption || 'POI Görseli';
+            img.decoding = 'async';
+            img.loading = 'eager';
+            img.style.cursor = 'zoom-in';
+            img.addEventListener('click', () => openMediaFullscreen(index));
+            el = img;
+            break;
+        }
+        case 'video': {
+            const video = document.createElement('video');
+            video.controls = true;
+            video.preload = 'metadata';
+            video.style.maxWidth = '100%';
+            video.style.maxHeight = '100%';
+            const s1 = document.createElement('source'); s1.src = `/${mediaPath}`; s1.type = 'video/mp4';
+            const s2 = document.createElement('source'); s2.src = `/${mediaPath}`; s2.type = 'video/webm';
+            video.appendChild(s1); video.appendChild(s2);
+            el = video;
+            break;
+        }
+        case 'audio': {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'audio-player-container';
+            wrapper.style.textAlign = 'center';
+            wrapper.style.color = 'white';
+            wrapper.innerHTML = `
+                <i class="fas fa-music fa-4x mb-3"></i>
+                <h5>${mediaItem.caption || 'Ses Dosyası'}</h5>
+            `;
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.preload = 'metadata';
+            audio.style.width = '100%';
+            audio.style.maxWidth = '400px';
+            const a1 = document.createElement('source'); a1.src = `/${mediaPath}`; a1.type = 'audio/mpeg';
+            const a2 = document.createElement('source'); a2.src = `/${mediaPath}`; a2.type = 'audio/wav';
+            audio.appendChild(a1); audio.appendChild(a2);
+            wrapper.appendChild(audio);
+            el = wrapper;
+            break;
+        }
+        case 'model_3d': {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'model-3d-container';
+            wrapper.style.textAlign = 'center';
+            wrapper.style.color = 'white';
+            wrapper.innerHTML = `
+                <i class="fas fa-cube fa-4x mb-3"></i>
+                <h5>${mediaItem.caption || '3D Model'}</h5>
+                <p>3D model görüntüleyici yükleniyor...</p>
+            `;
+            const mv = document.createElement('model-viewer');
+            mv.setAttribute('src', `/${mediaPath}`);
+            mv.setAttribute('alt', '3D Model');
+            mv.setAttribute('auto-rotate', '');
+            mv.setAttribute('camera-controls', '');
+            mv.style.width = '100%';
+            mv.style.height = '300px';
+            wrapper.appendChild(mv);
+            el = wrapper;
+            break;
+        }
+        default: {
+            const div = document.createElement('div');
+            div.className = 'unknown-media';
+            div.style.textAlign = 'center';
+            div.style.color = 'white';
+            div.innerHTML = `
+                <i class="fas fa-file fa-4x mb-3"></i>
+                <h5>${mediaItem.caption || 'Medya Dosyası'}</h5>
+                <p>Bu medya türü desteklenmiyor.</p>
+            `;
+            el = div;
+        }
+    }
+    poiMediaElementCache.set(key, el);
+    return el;
+}
+
 function displayMainMedia(index) {
     const mainContainer = document.getElementById('mediaGalleryMain');
     const mediaItem = currentMediaItems[index];
-    
+
     if (!mediaItem) {
         showNoMediaPlaceholder();
         return;
     }
-    
-    const mediaPath = mediaItem.path || mediaItem.url;
-    const mediaType = mediaItem.type || getMediaTypeFromPath(mediaPath);
-    
-    let mediaHTML = '';
-    
-    switch (mediaType) {
-        case 'image':
-            mediaHTML = `
-                <img src="/${mediaPath}" 
-                     alt="${mediaItem.caption || 'POI Görseli'}" 
-                     onclick="openMediaFullscreen(${index})"
-                     style="cursor: zoom-in;">
-            `;
-            break;
-            
-        case 'video':
-            mediaHTML = `
-                <video controls style="max-width: 100%; max-height: 100%;">
-                    <source src="/${mediaPath}" type="video/mp4">
-                    <source src="/${mediaPath}" type="video/webm">
-                    Tarayıcınız video oynatmayı desteklemiyor.
-                </video>
-            `;
-            break;
-            
-        case 'audio':
-            mediaHTML = `
-                <div class="audio-player-container" style="text-align: center; color: white;">
-                    <i class="fas fa-music fa-4x mb-3"></i>
-                    <h5>${mediaItem.caption || 'Ses Dosyası'}</h5>
-                    <audio controls style="width: 100%; max-width: 400px;">
-                        <source src="/${mediaPath}" type="audio/mpeg">
-                        <source src="/${mediaPath}" type="audio/wav">
-                        Tarayıcınız ses oynatmayı desteklemiyor.
-                    </audio>
-                </div>
-            `;
-            break;
-            
-        case 'model_3d':
-            mediaHTML = `
-                <div class="model-3d-container" style="text-align: center; color: white;">
-                    <i class="fas fa-cube fa-4x mb-3"></i>
-                    <h5>${mediaItem.caption || '3D Model'}</h5>
-                    <p>3D model görüntüleyici yükleniyor...</p>
-                    <model-viewer src="/${mediaPath}" 
-                                  alt="3D Model" 
-                                  auto-rotate 
-                                  camera-controls
-                                  style="width: 100%; height: 300px;">
-                    </model-viewer>
-                </div>
-            `;
-            break;
-            
-        default:
-            mediaHTML = `
-                <div class="unknown-media" style="text-align: center; color: white;">
-                    <i class="fas fa-file fa-4x mb-3"></i>
-                    <h5>${mediaItem.caption || 'Medya Dosyası'}</h5>
-                    <p>Bu medya türü desteklenmiyor.</p>
-                </div>
-            `;
-    }
-    
-    mainContainer.innerHTML = mediaHTML;
+
+    const element = getOrCreatePOIMediaElement(mediaItem, index);
+
+    // Swap content without rebuilding siblings
+    mainContainer.innerHTML = '';
+    mainContainer.appendChild(element);
 }
 
 // Display media thumbnails
-function displayMediaThumbnails() {
+function buildPOIMediaThumbnailsOnce() {
     const thumbnailsContainer = document.getElementById('mediaGalleryThumbnails');
-    
+
     if (currentMediaItems.length <= 1) {
         thumbnailsContainer.style.display = 'none';
         return;
     }
-    
+
     thumbnailsContainer.style.display = 'flex';
-    
-    const thumbnailsHTML = currentMediaItems.map((mediaItem, index) => {
+    thumbnailsContainer.innerHTML = '';
+
+    currentMediaItems.forEach((mediaItem, index) => {
         const mediaPath = mediaItem.thumbnail_path || mediaItem.path || mediaItem.url;
         const mediaType = mediaItem.type || getMediaTypeFromPath(mediaPath);
-        const isActive = index === currentMediaIndex;
-        
-        let thumbnailContent = '';
-        
+        const thumb = document.createElement('div');
+        thumb.className = 'media-thumbnail' + (index === currentMediaIndex ? ' active' : '');
+        thumb.dataset.index = String(index);
+        thumb.addEventListener('click', () => selectMedia(index));
+
         if (mediaType === 'image') {
-            thumbnailContent = `<img src="/${mediaPath}" alt="Thumbnail ${index + 1}">`;
+            const img = document.createElement('img');
+            // Use lazy loader
+            img.dataset.src = `/${mediaPath}`;
+            img.alt = `Thumbnail ${index + 1}`;
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            img.classList.add('lazy-image');
+            thumb.appendChild(img);
         } else {
-            const iconMap = {
-                'video': 'fas fa-play',
-                'audio': 'fas fa-music',
-                'model_3d': 'fas fa-cube'
-            };
+            const iconMap = { video: 'fas fa-play', audio: 'fas fa-music', model_3d: 'fas fa-cube' };
             const icon = iconMap[mediaType] || 'fas fa-file';
-            thumbnailContent = `<div class="media-thumbnail-icon"><i class="${icon}"></i></div>`;
+            const placeholder = document.createElement('div');
+            placeholder.className = 'media-thumbnail-icon';
+            placeholder.innerHTML = `<i class="${icon}"></i>`;
+            thumb.appendChild(placeholder);
         }
-        
-        return `
-            <div class="media-thumbnail ${isActive ? 'active' : ''}" 
-                 onclick="selectMedia(${index})">
-                ${thumbnailContent}
-            </div>
-        `;
-    }).join('');
-    
-    thumbnailsContainer.innerHTML = thumbnailsHTML;
+
+        thumbnailsContainer.appendChild(thumb);
+    });
+
+    // Observe lazy images if loader is present
+    if (window.lazyLoader && typeof window.lazyLoader.observeLazyImages === 'function') {
+        window.lazyLoader.observeLazyImages();
+    }
+}
+
+function updateActivePOIThumbnail() {
+    const container = document.getElementById('mediaGalleryThumbnails');
+    if (!container) return;
+    const prev = container.querySelector('.media-thumbnail.active');
+    if (prev) prev.classList.remove('active');
+    const next = container.querySelector(`.media-thumbnail[data-index="${currentMediaIndex}"]`);
+    if (next) next.classList.add('active');
+}
+
+function preloadAdjacentPOIMedia() {
+    if (currentMediaItems.length <= 1) return;
+    const preload = (i) => {
+        if (i < 0 || i >= currentMediaItems.length) return;
+        const item = currentMediaItems[i];
+        const type = item.type || getMediaTypeFromPath(item.path || item.url);
+        if (type !== 'image') return; // preload images only
+        // Create off-DOM image to warm cache
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = `/${item.path || item.url}`;
+    };
+    preload(currentMediaIndex + 1);
+    preload(currentMediaIndex - 1);
 }
 
 // Update media navigation
 function updateMediaNavigation() {
-    const prevBtn = document.getElementById('mediaPrevBtn');
-    const nextBtn = document.getElementById('mediaNextBtn');
+    const prevBtn = document.querySelector('#poiDetailModal #mediaPrevBtn');
+    const nextBtn = document.querySelector('#poiDetailModal #mediaNextBtn');
     
     prevBtn.disabled = currentMediaIndex === 0;
     nextBtn.disabled = currentMediaIndex === currentMediaItems.length - 1;
@@ -13163,8 +13239,9 @@ function selectMedia(index) {
     if (index >= 0 && index < currentMediaItems.length) {
         currentMediaIndex = index;
         displayMainMedia(index);
-        displayMediaThumbnails();
+        updateActivePOIThumbnail();
         updateMediaNavigation();
+        preloadAdjacentPOIMedia();
     }
 }
 
@@ -13279,9 +13356,11 @@ function getMediaTypeFromPath(path) {
 
 // Setup POI modal event listeners
 function setupPOIModalEventListeners() {
-    // Media navigation
-    document.getElementById('mediaPrevBtn').onclick = previousMedia;
-    document.getElementById('mediaNextBtn').onclick = nextMedia;
+    // Media navigation (scoped to POI modal to avoid ID conflicts)
+    const prevBtn = document.querySelector('#poiDetailModal #mediaPrevBtn');
+    const nextBtn = document.querySelector('#poiDetailModal #mediaNextBtn');
+    if (prevBtn) prevBtn.onclick = previousMedia;
+    if (nextBtn) nextBtn.onclick = nextMedia;
     
     // Action buttons
     document.getElementById('showOnMapBtn').onclick = () => {
@@ -13423,6 +13502,10 @@ function closePOIDetailModal() {
         // Restore body scroll
         document.body.classList.remove('modal-open');
     }
+
+    // Reset POI media gallery state/caches
+    poiThumbnailsInitialized = false;
+    poiMediaElementCache.clear();
 }
 
 // Add close button event listener when DOM is ready

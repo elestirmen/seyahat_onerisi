@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modal Jitter Fix - Task 1 Test</title>
+    
+    <!-- Include the modal CSS files -->
+    <link rel="stylesheet" href="static/css/route-details-modal.css">
+    <link rel="stylesheet" href="static/css/modal-hover-stability-fix.css">
+    <link rel="stylesheet" href="static/css/modal-jitter-fix-animations.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f7fa;
+            line-height: 1.6;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+        
+        .test-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-description {
+            color: #4a5568;
+            margin-bottom: 20px;
+        }
+        
+        .test-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 8px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .test-button.danger {
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+        }
+        
+        .test-button.success {
+            background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .status-pass {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .status-fail {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .status-testing {
+            background: #fef5e7;
+            color: #744210;
+        }
+        
+        .log-output {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        
+        .requirements-list {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .requirements-list ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .requirements-list li {
+            margin-bottom: 8px;
+        }
+        
+        /* Mock RouteDetailsPanel for testing */
+        #routeDetailsPanel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: white;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        #routeDetailsPanel.show {
+            transform: translateX(-400px);
+        }
+        
+        .route-header h3 {
+            margin: 0 0 20px 0;
+            color: #2d3748;
+        }
+        
+        .mock-content {
+            padding: 20px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .close-panel-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #e53e3e;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Modal Jitter Fix - Task 1 Implementation Test</h1>
+        <p>This test verifies that the immediate jitter issues in existing modals have been fixed.</p>
+        
+        <div class="test-section">
+            <div class="test-title">
+                <i class="fas fa-clipboard-check"></i>
+                Task 1: Fix Immediate Jitter Issues
+                <span class="status-indicator status-testing" id="task1Status">Testing</span>
+            </div>
+            
+            <div class="requirements-list">
+                <strong>Requirements Being Tested:</strong>
+                <ul>
+                    <li><strong>1.1:</strong> Modal state should be completely cleaned before opening new modals</li>
+                    <li><strong>1.2:</strong> All event listeners should be removed when modals are closed</li>
+                    <li><strong>3.1:</strong> CSS animation state should be reset for modal transitions</li>
+                    <li><strong>3.2:</strong> Animation cleanup should be performed when modals are closed</li>
+                </ul>
+            </div>
+            
+            <div class="test-description">
+                <strong>Test Scenario:</strong> Open and close modals multiple times to verify that jitter is eliminated and event listeners are properly cleaned up.
+            </div>
+            
+            <button class="test-button" onclick="testRouteDetailsPanel()">
+                <i class="fas fa-map"></i>
+                Test RouteDetailsPanel
+            </button>
+            
+            <button class="test-button" onclick="testRouteDetailsModal()">
+                <i class="fas fa-window-maximize"></i>
+                Test RouteDetailsModal
+            </button>
+            
+            <button class="test-button" onclick="testMultipleModalOpens()">
+                <i class="fas fa-sync-alt"></i>
+                Test Multiple Opens
+            </button>
+            
+            <button class="test-button danger" onclick="testEventListenerCleanup()">
+                <i class="fas fa-broom"></i>
+                Test Event Cleanup
+            </button>
+            
+            <button class="test-button success" onclick="runAllTests()">
+                <i class="fas fa-play"></i>
+                Run All Tests
+            </button>
+            
+            <div class="log-output" id="testLog">
+                <div>🚀 Modal Jitter Fix Test Suite Ready</div>
+                <div>📋 Click any test button to begin testing...</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">
+                <i class="fas fa-chart-line"></i>
+                Performance Monitoring
+            </div>
+            
+            <div class="test-description">
+                Monitor modal performance and jitter metrics during testing.
+            </div>
+            
+            <button class="test-button" onclick="startPerformanceMonitoring()">
+                <i class="fas fa-tachometer-alt"></i>
+                Start Monitoring
+            </button>
+            
+            <button class="test-button" onclick="stopPerformanceMonitoring()">
+                <i class="fas fa-stop"></i>
+                Stop Monitoring
+            </button>
+            
+            <div class="log-output" id="performanceLog">
+                <div>📊 Performance monitoring ready...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mock RouteDetailsPanel -->
+    <div id="routeDetailsPanel">
+        <button class="close-panel-btn" onclick="closeRouteDetailsPanel()">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="route-header">
+            <h3>Rota Detayları</h3>
+        </div>
+        <div class="mock-content">
+            <p>Mock route details content for testing modal jitter fixes.</p>
+            <p>Distance: 5.2 km</p>
+            <p>Duration: 1.5 hours</p>
+            <p>Stops: 3</p>
+        </div>
+    </div>
+    
+    <!-- Include the modal jitter fix JavaScript -->
+    <script src="static/js/modal-jitter-fix.js"></script>
+    
+    <script>
+        // Test logging utility
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${icon} ${message}`;
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function performanceLog(message) {
+            const logElement = document.getElementById('performanceLog');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] 📊 ${message}`;
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // Mock RouteDetailsPanel for testing
+        let mockRouteDetailsPanel = {
+            panel: document.getElementById('routeDetailsPanel'),
+            isVisible: false,
+            boundKeydownHandler: null,
+            boundClickOutsideHandler: null,
+            
+            show: function(routeData) {
+                log('Opening RouteDetailsPanel...');
+                
+                // Test: Check if modal jitter fix is cleaning up properly
+                if (window.modalJitterFix && window.modalJitterFix.activeModals.size > 0) {
+                    log('Previous modals detected, testing cleanup...', 'warning');
+                }
+                
+                this.panel.classList.add('show');
+                this.isVisible = true;
+                
+                // Add event listeners (these should be cleaned up properly)
+                this.boundKeydownHandler = this.handleKeydown.bind(this);
+                this.boundClickOutsideHandler = this.handleClickOutside.bind(this);
+                
+                document.addEventListener('keydown', this.boundKeydownHandler);
+                document.addEventListener('click', this.boundClickOutsideHandler);
+                
+                log('RouteDetailsPanel opened successfully', 'success');
+            },
+            
+            hide: function() {
+                log('Closing RouteDetailsPanel...');
+                
+                this.panel.classList.remove('show');
+                this.isVisible = false;
+                
+                // Clean up event listeners
+                if (this.boundKeydownHandler) {
+                    document.removeEventListener('keydown', this.boundKeydownHandler);
+                    this.boundKeydownHandler = null;
+                }
+                if (this.boundClickOutsideHandler) {
+                    document.removeEventListener('click', this.boundClickOutsideHandler);
+                    this.boundClickOutsideHandler = null;
+                }
+                
+                log('RouteDetailsPanel closed successfully', 'success');
+            },
+            
+            handleKeydown: function(event) {
+                if (event.key === 'Escape' && this.isVisible) {
+                    this.hide();
+                }
+            },
+            
+            handleClickOutside: function(event) {
+                if (this.isVisible && !this.panel.contains(event.target)) {
+                    this.hide();
+                }
+            }
+        };
+        
+        // Test functions
+        function testRouteDetailsPanel() {
+            log('🧪 Testing RouteDetailsPanel jitter fix...');
+            
+            if (mockRouteDetailsPanel.isVisible) {
+                mockRouteDetailsPanel.hide();
+                setTimeout(() => {
+                    mockRouteDetailsPanel.show({ name: 'Test Route' });
+                }, 100);
+            } else {
+                mockRouteDetailsPanel.show({ name: 'Test Route' });
+            }
+        }
+        
+        function closeRouteDetailsPanel() {
+            mockRouteDetailsPanel.hide();
+        }
+        
+        function testRouteDetailsModal() {
+            log('🧪 Testing RouteDetailsModal jitter fix...');
+            
+            // Test if RouteDetailsModal exists
+            if (typeof window.RouteDetailsModal !== 'undefined') {
+                const modal = window.RouteDetailsModal.getInstance();
+                if (modal.isVisible) {
+                    modal.hide();
+                    setTimeout(() => {
+                        modal.show({ name: 'Test Route Modal' });
+                    }, 100);
+                } else {
+                    modal.show({ name: 'Test Route Modal' });
+                }
+            } else {
+                log('RouteDetailsModal not available in test environment', 'warning');
+            }
+        }
+        
+        function testMultipleModalOpens() {
+            log('🧪 Testing multiple modal opens for jitter...');
+            
+            let openCount = 0;
+            const maxOpens = 5;
+            
+            function openNext() {
+                if (openCount >= maxOpens) {
+                    log(`Completed ${maxOpens} modal open/close cycles`, 'success');
+                    return;
+                }
+                
+                openCount++;
+                log(`Modal open cycle ${openCount}/${maxOpens}`);
+                
+                mockRouteDetailsPanel.show({ name: `Test Route ${openCount}` });
+                
+                setTimeout(() => {
+                    mockRouteDetailsPanel.hide();
+                    setTimeout(openNext, 200);
+                }, 500);
+            }
+            
+            openNext();
+        }
+        
+        function testEventListenerCleanup() {
+            log('🧪 Testing event listener cleanup...');
+            
+            // Count event listeners before
+            const beforeCount = getEventListenerCount();
+            log(`Event listeners before test: ${beforeCount}`);
+            
+            // Open and close modal multiple times
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    mockRouteDetailsPanel.show({ name: `Cleanup Test ${i + 1}` });
+                    setTimeout(() => {
+                        mockRouteDetailsPanel.hide();
+                        
+                        if (i === 2) {
+                            // Check event listeners after
+                            setTimeout(() => {
+                                const afterCount = getEventListenerCount();
+                                log(`Event listeners after test: ${afterCount}`);
+                                
+                                if (afterCount <= beforeCount + 1) { // Allow for test listener
+                                    log('Event listener cleanup test PASSED', 'success');
+                                } else {
+                                    log('Event listener cleanup test FAILED - memory leak detected', 'error');
+                                }
+                            }, 100);
+                        }
+                    }, 300);
+                }, i * 800);
+            }
+        }
+        
+        function getEventListenerCount() {
+            // This is a simplified count - in real testing you'd use more sophisticated methods
+            let count = 0;
+            
+            // Check if modal jitter fix is tracking listeners
+            if (window.modalJitterFix && window.modalJitterFix.eventListeners) {
+                window.modalJitterFix.eventListeners.forEach((listeners) => {
+                    count += listeners.length;
+                });
+            }
+            
+            return count;
+        }
+        
+        let performanceMonitor = null;
+        
+        function startPerformanceMonitoring() {
+            performanceLog('Starting performance monitoring...');
+            
+            performanceMonitor = setInterval(() => {
+                const activeModals = window.modalJitterFix ? window.modalJitterFix.activeModals.size : 0;
+                const trackedListeners = window.modalJitterFix ? window.modalJitterFix.eventListeners.size : 0;
+                
+                performanceLog(`Active modals: ${activeModals}, Tracked listeners: ${trackedListeners}`);
+                
+                // Check for memory usage (simplified)
+                if (performance.memory) {
+                    const memUsed = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
+                    performanceLog(`Memory usage: ${memUsed} MB`);
+                }
+            }, 2000);
+        }
+        
+        function stopPerformanceMonitoring() {
+            if (performanceMonitor) {
+                clearInterval(performanceMonitor);
+                performanceMonitor = null;
+                performanceLog('Performance monitoring stopped');
+            }
+        }
+        
+        function runAllTests() {
+            log('🚀 Running all modal jitter fix tests...');
+            
+            const tests = [
+                () => testRouteDetailsPanel(),
+                () => new Promise(resolve => setTimeout(() => { testMultipleModalOpens(); resolve(); }, 1000)),
+                () => new Promise(resolve => setTimeout(() => { testEventListenerCleanup(); resolve(); }, 3000)),
+            ];
+            
+            let currentTest = 0;
+            
+            function runNext() {
+                if (currentTest >= tests.length) {
+                    log('🎉 All tests completed!', 'success');
+                    document.getElementById('task1Status').textContent = 'Completed';
+                    document.getElementById('task1Status').className = 'status-indicator status-pass';
+                    return;
+                }
+                
+                tests[currentTest]();
+                currentTest++;
+                setTimeout(runNext, 5000);
+            }
+            
+            runNext();
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🔧 Modal Jitter Fix Test Suite Initialized');
+            
+            // Check if modal jitter fix is loaded
+            if (window.modalJitterFix) {
+                log('✅ Modal jitter fix system detected', 'success');
+            } else {
+                log('❌ Modal jitter fix system not found', 'error');
+            }
+            
+            // Check if cleanup functions are available
+            if (window.closeAllActiveModals) {
+                log('✅ Global cleanup functions available', 'success');
+            } else {
+                log('⚠️ Global cleanup functions not found', 'warning');
+            }
+        });
+    </script>
+</body>
+</html>

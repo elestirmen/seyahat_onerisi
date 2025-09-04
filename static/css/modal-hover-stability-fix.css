@@ -1,0 +1,362 @@
+/* Modal Hover Stability Fix - CSS Transform Optimization and Containment */
+
+/* =============================================================================
+   TASK 1: CSS Transform Optimization and Containment
+   - Replace problematic scale transforms with stable alternatives
+   - Add CSS containment properties to prevent layout propagation  
+   - Implement hardware acceleration layers for smooth animations
+   ============================================================================= */
+
+/* CSS Containment for Modal Container - Prevents layout propagation */
+.route-details-modal-content {
+    /* Containment to prevent layout shifts from propagating to parent elements */
+    contain: layout style paint;
+    /* Isolation to create new stacking context */
+    isolation: isolate;
+    /* Hardware acceleration */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Map Container Stabilization - Prevent size changes during hover */
+.route-map-container {
+    /* Size and layout containment to lock dimensions */
+    contain: size layout;
+    /* Isolation to prevent interference */
+    isolation: isolate;
+    /* Hardware acceleration */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: auto; /* Only set when needed */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Leaflet Map Hover Stability */
+#routeModalMap {
+    /* Lock map container dimensions during interactions */
+    contain: size layout;
+    isolation: isolate;
+    /* Hardware acceleration for smooth rendering */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* =============================================================================
+   STABLE HOVER TRANSFORMS - Replace problematic scale effects
+   ============================================================================= */
+
+/* Fix 1: Modal Close Button - Replace scale with stable alternatives */
+.route-details-modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    /* REMOVED: transform: translateY(-50%) scale(1.1); */
+    /* STABLE ALTERNATIVE: Use only translateY and box-shadow */
+    transform: translateY(-50%) translateZ(0);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    /* Add subtle glow effect instead of scale */
+    filter: brightness(1.1);
+}
+
+/* Fix 2: Media Viewer Close Button - Replace scale with stable effect */
+.media-viewer-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    /* REMOVED: transform: scale(1.1); */
+    /* STABLE ALTERNATIVE: Use translateZ and box-shadow */
+    transform: translateZ(0);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3),
+                0 4px 12px rgba(0, 0, 0, 0.2);
+    filter: brightness(1.1);
+}
+
+/* Fix 3: Media Navigation Buttons - Replace scale with stable effect */
+.media-nav-btn:hover {
+    background: rgba(0, 0, 0, 0.9);
+    /* REMOVED: transform: translateY(-50%) scale(1.1); */
+    /* STABLE ALTERNATIVE: Use only translateY with box-shadow */
+    transform: translateY(-50%) translateZ(0);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    filter: brightness(1.1);
+}
+
+/* Fix 4: Media Thumbnails - Replace scale with stable effect */
+.media-thumbnail:hover {
+    opacity: 0.8;
+    /* REMOVED: transform: scale(1.05); */
+    /* STABLE ALTERNATIVE: Use translateZ with box-shadow */
+    transform: translateZ(0);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.4),
+                0 4px 12px rgba(102, 126, 234, 0.2);
+    filter: brightness(1.05);
+}
+
+/* Fix 5: Route Media Items - Replace problematic transform combination */
+.route-media-item:hover {
+    /* REMOVED: transform: translateY(-6px) scale(1.02); */
+    /* STABLE ALTERNATIVE: Use only translateY with enhanced shadow */
+    transform: translateY(-4px) translateZ(0);
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.15),
+                0 0 0 1px rgba(102, 126, 234, 0.1);
+    border-color: #667eea;
+}
+
+/* Fix 6: Route Media Item Active State */
+.route-media-item:active {
+    /* REMOVED: transform: translateY(-2px) scale(1.01); */
+    /* STABLE ALTERNATIVE: Use only translateY */
+    transform: translateY(-2px) translateZ(0);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.2);
+}
+
+/* Fix 7: Route Media Images/Videos - Replace scale with stable effect */
+.route-media-item:hover img,
+.route-media-item:hover video {
+    /* REMOVED: transform: scale(1.05); */
+    /* STABLE ALTERNATIVE: Use filter for zoom effect */
+    transform: translateZ(0);
+    filter: brightness(1.05) contrast(1.02);
+}
+
+/* Fix 8: Route Media Play Button - Replace scale with stable effect */
+.route-media-item:hover .route-media-play-btn {
+    opacity: 1;
+    /* REMOVED: transform: translate(-50%, -50%) scale(1.1); */
+    /* STABLE ALTERNATIVE: Use only translate with box-shadow */
+    transform: translate(-50%, -50%) translateZ(0);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    filter: brightness(1.1);
+}
+
+/* =============================================================================
+   HARDWARE ACCELERATION LAYER - Optimize performance
+   ============================================================================= */
+
+/* Base hardware acceleration for hover-sensitive elements */
+.hover-optimized,
+.route-details-modal-close,
+.media-viewer-close,
+.media-nav-btn,
+.media-thumbnail,
+.route-media-item,
+.route-media-play-btn {
+    /* Force GPU acceleration */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    /* Prevent flickering */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    /* Optimize for animations */
+    will-change: transform, opacity, filter;
+}
+
+/* Remove will-change after animations complete (managed by JS) */
+.hover-optimized.animation-complete,
+.route-details-modal-close.animation-complete,
+.media-viewer-close.animation-complete,
+.media-nav-btn.animation-complete,
+.media-thumbnail.animation-complete,
+.route-media-item.animation-complete,
+.route-media-play-btn.animation-complete {
+    will-change: auto;
+}
+
+/* =============================================================================
+   SCROLLBAR STABILITY - Prevent content shifts
+   ============================================================================= */
+
+/* Modal body scrollbar stability */
+.route-details-modal-body {
+    /* Reserve space for scrollbars to prevent layout shifts */
+    scrollbar-gutter: stable both-edges;
+    /* Prevent horizontal shifts */
+    overflow-x: hidden;
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
+    /* Containment for scroll area */
+    contain: layout style;
+}
+
+/* Tab content scrollbar stability */
+.route-details-tab-content {
+    /* Prevent layout shifts in tab content */
+    contain: layout style;
+    /* Ensure stable dimensions */
+    min-height: 0;
+}
+
+/* =============================================================================
+   ELEVATION CHART CONTAINER STABILITY
+   ============================================================================= */
+
+/* Elevation chart hover stability */
+.elevation-chart-container {
+    /* Lock container dimensions */
+    contain: size layout;
+    /* Hardware acceleration */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    /* Prevent interference */
+    isolation: isolate;
+}
+
+#modalElevationChart {
+    /* Stable chart rendering */
+    contain: layout style;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    /* Prevent canvas shifts */
+    position: relative !important;
+    display: block !important;
+}
+
+/* =============================================================================
+   MOBILE TOUCH OPTIMIZATIONS - Disable hover on touch devices
+   ============================================================================= */
+
+/* Disable hover effects on touch devices */
+@media (hover: none) and (pointer: coarse) {
+    .route-details-modal-close:hover,
+    .media-viewer-close:hover,
+    .media-nav-btn:hover,
+    .media-thumbnail:hover,
+    .route-media-item:hover {
+        /* Reset to base state */
+        transform: translateZ(0);
+        box-shadow: none;
+        filter: none;
+        background: inherit;
+        border-color: inherit;
+        opacity: inherit;
+    }
+    
+    /* Add touch-specific active states */
+    .route-details-modal-close:active {
+        transform: translateY(-50%) translateZ(0) scale(0.95);
+        opacity: 0.8;
+    }
+    
+    .media-viewer-close:active,
+    .media-nav-btn:active {
+        transform: translateZ(0) scale(0.95);
+        opacity: 0.8;
+    }
+    
+    .route-media-item:active {
+        transform: translateY(-1px) translateZ(0);
+        opacity: 0.9;
+    }
+}
+
+/* =============================================================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================================================= */
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .route-details-modal-close,
+    .media-viewer-close,
+    .media-nav-btn,
+    .media-thumbnail,
+    .route-media-item,
+    .route-media-play-btn {
+        /* Disable animations for accessibility */
+        transition: none !important;
+        will-change: auto !important;
+    }
+    
+    /* Provide subtle feedback without animation */
+    .route-details-modal-close:hover,
+    .media-viewer-close:hover,
+    .media-nav-btn:hover {
+        opacity: 0.8;
+        transform: translateZ(0);
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .route-details-modal-close:hover,
+    .media-viewer-close:hover,
+    .media-nav-btn:hover {
+        /* Enhanced contrast for accessibility */
+        border: 2px solid currentColor;
+        box-shadow: none;
+        filter: none;
+    }
+}
+
+/* =============================================================================
+   BROWSER COMPATIBILITY AND FALLBACKS
+   ============================================================================= */
+
+/* Webkit browsers */
+@supports (-webkit-transform: translateZ(0)) {
+    .hover-optimized,
+    .route-details-modal-content,
+    .route-map-container {
+        -webkit-transform: translateZ(0);
+        -webkit-backface-visibility: hidden;
+    }
+}
+
+/* Firefox */
+@supports (-moz-transform: translateZ(0)) {
+    .hover-optimized,
+    .route-details-modal-content,
+    .route-map-container {
+        -moz-transform: translateZ(0);
+        -moz-backface-visibility: hidden;
+    }
+}
+
+/* Fallback for browsers without 3D transform support */
+@supports not (transform: translateZ(0)) {
+    .route-details-modal-close:hover,
+    .media-viewer-close:hover,
+    .media-nav-btn:hover,
+    .media-thumbnail:hover,
+    .route-media-item:hover {
+        /* Use 2D transforms and opacity as fallback */
+        transform: none;
+        opacity: 0.9;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* Fallback for browsers without CSS containment */
+@supports not (contain: layout) {
+    .route-details-modal-content,
+    .route-map-container,
+    .elevation-chart-container {
+        /* Use overflow hidden as fallback */
+        overflow: hidden;
+        position: relative;
+    }
+}
+
+/* =============================================================================
+   DEBUGGING AND DEVELOPMENT HELPERS
+   ============================================================================= */
+
+/* Debug mode - shows containment boundaries (enable via JS) */
+.debug-containment .route-details-modal-content,
+.debug-containment .route-map-container,
+.debug-containment .elevation-chart-container {
+    outline: 2px dashed rgba(255, 0, 0, 0.5);
+    outline-offset: -2px;
+}
+
+.debug-containment .hover-optimized {
+    outline: 1px solid rgba(0, 255, 0, 0.5);
+    outline-offset: -1px;
+}
+
+/* Performance monitoring class (managed by JS) */
+.performance-monitoring {
+    /* Marker for performance measurement */
+    --performance-marker: 'hover-stability-active';
+}

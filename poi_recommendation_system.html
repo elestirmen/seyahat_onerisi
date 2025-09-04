@@ -29,6 +29,8 @@
     <link rel="stylesheet" href="static/css/route-details-modal.css">
     <!-- POI Hover Stability Fix CSS -->
     <link rel="stylesheet" href="static/css/poi-hover-stability-fix.css">
+    <!-- Modal Jitter Fix CSS -->
+    <link rel="stylesheet" href="static/css/modal-jitter-fix-animations.css">
 
     <!-- Centralized POI Category Configuration -->
     <script src="static/js/poi-categories.js"></script>
@@ -122,7 +124,7 @@
             border: none;
             border-radius: 12px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.2s ease, transform 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -179,13 +181,13 @@
             z-index: 10099 !important;
         }
 
-        /* Force modal visibility when show class is present */
-        .modal.show {
+        /* Force POI modal visibility when show class is present */
+        #poiDetailModal.modal.show {
             display: block !important;
         }
 
-        /* Ensure modal is above everything */
-        .modal {
+        /* Ensure only POI modal covers the viewport */
+        #poiDetailModal.modal {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
@@ -242,7 +244,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s ease;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease, border-color 0.2s ease, color 0.2s ease;
             backdrop-filter: blur(10px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             color: #2d3748;
@@ -308,7 +310,7 @@
                 border-radius: 16px;
                 padding: 20px;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-                transition: all 0.3s ease;
+                transition: box-shadow 0.3s ease, transform 0.2s ease, border-color 0.2s ease, background-color 0.3s ease;
             }
 
             .preference-item:active {
@@ -446,7 +448,7 @@
                 border: 2px solid #e2e8f0;
                 border-radius: 12px;
                 cursor: pointer;
-                transition: all 0.3s ease;
+                transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -525,7 +527,7 @@
                 box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
                 border: 1px solid #e2e8f0;
                 background: #ffffff;
-                transition: all 0.3s ease;
+                transition: box-shadow 0.3s ease, transform 0.2s ease, border-color 0.2s ease;
                 touch-action: manipulation;
             }
 
@@ -597,7 +599,7 @@
                 background: transparent;
                 color: #718096;
                 cursor: pointer;
-                transition: all 0.3s ease;
+                transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -683,7 +685,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.3s ease;
+                transition: background-color 0.3s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
             }
 
             .mobile-filter-close:hover {
@@ -708,7 +710,7 @@
                 font-size: 1rem;
                 font-weight: 600;
                 cursor: pointer;
-                transition: all 0.3s ease;
+                transition: background-color 0.3s ease, box-shadow 0.2s ease, transform 0.2s ease;
                 margin-bottom: 20px;
                 touch-action: manipulation;
             }
@@ -739,7 +741,7 @@
                 font-size: 0.85rem;
                 font-weight: 600;
                 cursor: pointer;
-                transition: all 0.3s ease;
+                transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
                 display: flex;
                 align-items: center;
                 gap: 6px;
@@ -855,7 +857,7 @@
 
             .route-card {
                 margin-bottom: 20px;
-                transition: all 0.3s ease;
+                transition: box-shadow 0.3s ease, transform 0.2s ease, border-color 0.2s ease;
             }
 
             .route-card:hover {
@@ -893,6 +895,8 @@
     <script src="static/js/hover-event-manager.js" defer></script>
     <script src="static/js/event-delegation-manager.js" defer></script>
     <script src="static/js/poi-hover-integration.js" defer></script>
+    <!-- Central Modal State Manager (for robust modal lifecycle) -->
+    <script src="static/js/modal-state-manager.js" defer></script>
 </head>
 
 <body>
@@ -1999,6 +2003,8 @@
     <script src="static/js/map-layer-control.js"></script>
     <!-- Route Details Modal -->
     <script src="static/js/route-details-modal.js"></script>
+    <!-- Modal Jitter Fix (patches modal behaviors, must load after modal code) -->
+    <script src="static/js/modal-jitter-fix.js"></script>
     <script src="static/js/poi_recommendation_system.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 

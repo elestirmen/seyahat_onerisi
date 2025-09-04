@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POI Hover Stability - Comprehensive Integration Test</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- POI Hover Stability CSS -->
+    <link rel="stylesheet" href="static/css/poi-hover-stability-fix.css">
+    <link rel="stylesheet" href="static/css/route-details-modal.css">
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+        }
+        
+        .test-header h1 {
+            color: #007bff;
+            margin: 0 0 10px 0;
+        }
+        
+        .test-header p {
+            color: #666;
+            margin: 0;
+        }
+        
+        .test-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .test-section h3 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 16px;
+        }
+        
+        .map-container {
+            height: 400px;
+            width: 100%;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 2px solid #dee2e6;
+            margin-bottom: 20px;
+        }
+        
+        .poi-test-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .test-btn {
+            padding: 8px 16px;
+            border: 1px solid #007bff;
+            background: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .test-btn:hover {
+            background: #0056b3;
+        }
+        
+        .test-btn.secondary {
+            background: #6c757d;
+            border-color: #6c757d;
+        }
+        
+        .test-btn.secondary:hover {
+            background: #545b62;
+        }
+        
+        .poi-markers-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .test-poi-marker {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        
+        .test-poi-marker:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+        }
+        
+        .poi-marker-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #007bff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 8px;
+            /* Hover stability optimizations */
+            will-change: transform, opacity;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        
+        .poi-marker-circle:hover {
+            transform: translateZ(0) scale(1.1);
+            opacity: 0.9;
+        }
+        
+        .poi-marker-label {
+            font-size: 12px;
+            text-align: center;
+            color: #495057;
+        }
+        
+        .modal-test-section {
+            grid-column: 1 / -1;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .performance-indicators {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .performance-indicator {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+        }
+        
+        .performance-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        
+        .performance-label {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-indicator.pass {
+            background: #28a745;
+        }
+        
+        .status-indicator.fail {
+            background: #dc3545;
+        }
+        
+        .status-indicator.warning {
+            background: #ffc107;
+        }
+        
+        .test-log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-entry.error {
+            color: #dc3545;
+        }
+        
+        .log-entry.success {
+            color: #28a745;
+        }
+        
+        .log-entry.info {
+            color: #007bff;
+        }
+        
+        @media (max-width: 768px) {
+            .test-sections {
+                grid-template-columns: 1fr;
+            }
+            
+            .poi-test-controls {
+                justify-content: center;
+            }
+            
+            .poi-markers-container {
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+                gap: 10px;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>POI Hover Stability - Comprehensive Integration Test</h1>
+            <p>Testing hover stability, performance, and cross-browser compatibility for POI markers and route modals</p>
+        </div>
+        
+        <div class="poi-test-controls">
+            <button class="test-btn" onclick="runComprehensiveTests()">Run All Tests</button>
+            <button class="test-btn" onclick="openValidator()">🔍 Open Validator</button>
+            <button class="test-btn secondary" onclick="testHoverStability()">Test Hover Stability</button>
+            <button class="test-btn secondary" onclick="testPerformance()">Test Performance</button>
+            <button class="test-btn secondary" onclick="testModalStability()">Test Modal Stability</button>
+            <button class="test-btn secondary" onclick="simulateRouteModal()">Open Route Modal</button>
+            <button class="test-btn secondary" onclick="clearTestResults()">Clear Results</button>
+        </div>
+        
+        <div class="test-sections">
+            <div class="test-section">
+                <h3>POI Marker Hover Test</h3>
+                <div class="poi-markers-container" id="poi-markers-container">
+                    <!-- POI markers will be generated here -->
+                </div>
+            </div>
+            
+            <div class="test-section">
+                <h3>Interactive Map Test</h3>
+                <div class="map-container" id="test-map"></div>
+            </div>
+            
+            <div class="test-section modal-test-section">
+                <h3>Route Modal Hover Stability Test</h3>
+                <p>This section tests hover stability within route modals, including Leaflet map interactions, POI markers, and elevation charts.</p>
+                <div class="poi-test-controls">
+                    <button class="test-btn" onclick="openTestRouteModal()">Open Test Route Modal</button>
+                    <button class="test-btn secondary" onclick="testModalHoverEvents()">Test Modal Events</button>
+                    <button class="test-btn secondary" onclick="testModalCleanup()">Test Modal Cleanup</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="performance-indicators" id="performance-indicators">
+            <div class="performance-indicator">
+                <div class="performance-value" id="hover-response-time">--</div>
+                <div class="performance-label">Avg Hover Response (ms)</div>
+            </div>
+            <div class="performance-indicator">
+                <div class="performance-value" id="frame-rate">--</div>
+                <div class="performance-label">Frame Rate (FPS)</div>
+            </div>
+            <div class="performance-indicator">
+                <div class="performance-value" id="memory-usage">--</div>
+                <div class="performance-label">Memory Usage (MB)</div>
+            </div>
+            <div class="performance-indicator">
+                <div class="performance-value" id="test-status">Ready</div>
+                <div class="performance-label">Test Status</div>
+            </div>
+        </div>
+        
+        <div class="test-log" id="test-log">
+            <div class="log-entry info">Test suite initialized. Ready to run comprehensive hover stability tests.</div>
+        </div>
+    </div>
+    
+    <!-- Route Modal Template -->
+    <div class="route-details-modal" id="test-route-modal" style="display: none;">
+        <div class="route-details-modal-content">
+            <div class="modal-header">
+                <h3>Test Route Modal - Hover Stability Test</h3>
+                <button class="modal-close" onclick="closeTestRouteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-map-container">
+                    <div id="modal-test-map" style="height: 300px; width: 100%;"></div>
+                </div>
+                <div class="modal-poi-list">
+                    <h4>POIs in this route:</h4>
+                    <div class="modal-poi-items" id="modal-poi-items">
+                        <!-- Modal POI items will be generated here -->
+                    </div>
+                </div>
+                <div class="modal-elevation-chart">
+                    <h4>Elevation Profile:</h4>
+                    <canvas id="modal-elevation-canvas" width="400" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- POI Hover Stability Components -->
+    <script src="static/js/hover-event-manager.js"></script>
+    <script src="static/js/modal-hover-isolation.js"></script>
+    <script src="static/js/leaflet-modal-event-manager.js"></script>
+    <script src="static/js/modal-hover-stability-integration.js"></script>
+    <script src="static/js/hover-stability-performance-benchmark.js"></script>
+    <script src="static/js/poi-hover-stability-integration-test.js"></script>
+    <script src="static/js/comprehensive-hover-stability-validator.js"></script>
+    
+    <script>
+        // Global test variables
+        let testMap = null;
+        let modalTestMap = null;
+        let testResults = [];
+        let performanceMetrics = {};
+        let hoverEventManager = null;
+        let modalEventIsolator = null;
+        
+        // Initialize test environment
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTestEnvironment();
+            generateTestPOIMarkers();
+            initializeTestMap();
+            setupEventListeners();
+            logMessage('Test environment initialized successfully', 'success');
+        });
+        
+        function initializeTestEnvironment() {
+            // Initialize hover event manager
+            if (typeof HoverEventManager !== 'undefined') {
+                hoverEventManager = new HoverEventManager({
+                    debounceDelay: 100,
+                    enablePerformanceMonitoring: true
+                });
+                logMessage('HoverEventManager initialized', 'success');
+            } else {
+                logMessage('HoverEventManager not available', 'error');
+            }
+            
+            // Initialize modal event isolator
+            if (typeof ModalEventIsolator !== 'undefined') {
+                modalEventIsolator = new ModalEventIsolator(document.getElementById('test-route-modal'));
+                logMessage('ModalEventIsolator initialized', 'success');
+            } else {
+                logMessage('ModalEventIsolator not available', 'error');
+            }
+            
+            // Update performance indicators
+            updatePerformanceIndicators();
+        }
+        
+        function generateTestPOIMarkers() {
+            const container = document.getElementById('poi-markers-container');
+            const poiTypes = [
+                { name: 'Restaurant', icon: '🍽️', color: '#e74c3c' },
+                { name: 'Hotel', icon: '🏨', color: '#3498db' },
+                { name: 'Museum', icon: '🏛️', color: '#9b59b6' },
+                { name: 'Park', icon: '🌳', color: '#27ae60' },
+                { name: 'Beach', icon: '🏖️', color: '#f39c12' },
+                { name: 'Mountain', icon: '⛰️', color: '#8b4513' },
+                { name: 'Shopping', icon: '🛍️', color: '#e91e63' },
+                { name: 'Gas Station', icon: '⛽', color: '#607d8b' }
+            ];
+            
+            container.innerHTML = '';
+            
+            poiTypes.forEach((poi, index) => {
+                const markerElement = document.createElement('div');
+                markerElement.className = 'test-poi-marker';
+                markerElement.innerHTML = `
+                    <div class="poi-marker-circle" style="background-color: ${poi.color}" data-poi-id="${index}">
+                        ${poi.icon}
+                    </div>
+                    <div class="poi-marker-label">${poi.name}</div>
+                `;
+                
+                // Add hover event listeners for testing
+                const circle = markerElement.querySelector('.poi-marker-circle');
+                
+                circle.addEventListener('mouseenter', function(e) {
+                    handlePOIHover(e, poi, true);
+                });
+                
+                circle.addEventListener('mouseleave', function(e) {
+                    handlePOIHover(e, poi, false);
+                });
+                
+                circle.addEventListener('click', function(e) {
+                    handlePOIClick(e, poi);
+                });
+                
+                container.appendChild(markerElement);
+            });
+            
+            logMessage(`Generated ${poiTypes.length} test POI markers`, 'info');
+        }
+        
+        function initializeTestMap() {
+            // Initialize main test map
+            testMap = L.map('test-map').setView([38.7223, 35.4854], 10); // Cappadocia coordinates
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(testMap);
+            
+            // Add test POI markers to map
+            const testPOIs = [
+                { lat: 38.7223, lng: 35.4854, name: 'Göreme', type: 'tourist' },
+                { lat: 38.6431, lng: 34.8287, name: 'Avanos', type: 'cultural' },
+                { lat: 38.6939, lng: 34.8547, name: 'Zelve', type: 'historical' },
+                { lat: 38.7651, lng: 34.8458, name: 'Üçhisar', type: 'viewpoint' }
+            ];
+            
+            testPOIs.forEach((poi, index) => {
+                const marker = L.circleMarker([poi.lat, poi.lng], {
+                    radius: 8,
+                    fillColor: '#007bff',
+                    color: '#0056b3',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(testMap);
+                
+                marker.bindPopup(`<strong>${poi.name}</strong><br>Type: ${poi.type}`);
+                
+                // Add hover events for testing
+                marker.on('mouseover', function(e) {
+                    logMessage(`Map marker hover: ${poi.name}`, 'info');
+                    this.setStyle({ radius: 12, fillOpacity: 1 });
+                });
+                
+                marker.on('mouseout', function(e) {
+                    this.setStyle({ radius: 8, fillOpacity: 0.8 });
+                });
+            });
+            
+            logMessage('Test map initialized with POI markers', 'success');
+        }
+        
+        function handlePOIHover(event, poi, isEntering) {
+            const action = isEntering ? 'entered' : 'left';
+            logMessage(`POI hover ${action}: ${poi.name}`, 'info');
+            
+            // Record hover performance
+            if (isEntering) {
+                const startTime = performance.now();
+                requestAnimationFrame(() => {
+                    const endTime = performance.now();
+                    const responseTime = endTime - startTime;
+                    updateHoverResponseTime(responseTime);
+                });
+            }
+        }
+        
+        function handlePOIClick(event, poi) {
+            logMessage(`POI clicked: ${poi.name}`, 'success');
+            
+            // Test click reliability during hover
+            const circle = event.target;
+            const originalBackground = circle.style.backgroundColor;
+            circle.style.backgroundColor = '#28a745';
+            
+            setTimeout(() => {
+                circle.style.backgroundColor = originalBackground;
+            }, 200);
+        }
+        
+        function setupEventListeners() {
+            // Monitor performance
+            let frameCount = 0;
+            let lastTime = performance.now();
+            
+            function countFrames() {
+                frameCount++;
+                const currentTime = performance.now();
+                
+                if (currentTime - lastTime >= 1000) {
+                    const fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+                    updateFrameRate(fps);
+                    frameCount = 0;
+                    lastTime = currentTime;
+                }
+                
+                requestAnimationFrame(countFrames);
+            }
+            
+            requestAnimationFrame(countFrames);
+            
+            // Monitor memory usage
+            if (performance.memory) {
+                setInterval(() => {
+                    const memoryUsage = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
+                    updateMemoryUsage(memoryUsage);
+                }, 2000);
+            }
+        }
+        
+        function openTestRouteModal() {
+            const modal = document.getElementById('test-route-modal');
+            modal.style.display = 'block';
+            
+            // Initialize modal map
+            setTimeout(() => {
+                if (!modalTestMap) {
+                    modalTestMap = L.map('modal-test-map').setView([38.7223, 35.4854], 12);
+                    
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(modalTestMap);
+                    
+                    // Add test route and POIs
+                    const routeCoords = [
+                        [38.7223, 35.4854],
+                        [38.7300, 35.4900],
+                        [38.7350, 35.4950],
+                        [38.7400, 35.5000]
+                    ];
+                    
+                    L.polyline(routeCoords, { color: '#007bff', weight: 4 }).addTo(modalTestMap);
+                    
+                    routeCoords.forEach((coord, index) => {
+                        const marker = L.circleMarker(coord, {
+                            radius: 6,
+                            fillColor: '#e74c3c',
+                            color: '#c0392b',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(modalTestMap);
+                        
+                        marker.bindPopup(`Route Point ${index + 1}`);
+                        
+                        // Test modal hover events
+                        marker.on('mouseover', function(e) {
+                            logMessage(`Modal marker hover: Point ${index + 1}`, 'info');
+                            this.setStyle({ radius: 10 });
+                        });
+                        
+                        marker.on('mouseout', function(e) {
+                            this.setStyle({ radius: 6 });
+                        });
+                    });
+                }
+                
+                modalTestMap.invalidateSize();
+                
+                // Generate modal POI items
+                generateModalPOIItems();
+                
+                // Draw test elevation chart
+                drawTestElevationChart();
+                
+                logMessage('Route modal opened with test content', 'success');
+                
+                // Activate modal event isolation
+                if (modalEventIsolator) {
+                    modalEventIsolator.isolateEvents();
+                    logMessage('Modal event isolation activated', 'success');
+                }
+                
+            }, 100);
+        }
+        
+        function closeTestRouteModal() {
+            const modal = document.getElementById('test-route-modal');
+            modal.style.display = 'none';
+            
+            // Restore main page events
+            if (modalEventIsolator) {
+                modalEventIsolator.restoreEvents();
+                logMessage('Modal event isolation deactivated', 'success');
+            }
+            
+            logMessage('Route modal closed', 'info');
+        }
+        
+        function generateModalPOIItems() {
+            const container = document.getElementById('modal-poi-items');
+            const modalPOIs = [
+                { name: 'Fairy Chimneys Viewpoint', type: 'Viewpoint', distance: '0.2 km' },
+                { name: 'Cave Restaurant', type: 'Restaurant', distance: '0.5 km' },
+                { name: 'Pottery Workshop', type: 'Cultural', distance: '0.8 km' },
+                { name: 'Balloon Launch Site', type: 'Activity', distance: '1.2 km' }
+            ];
+            
+            container.innerHTML = '';
+            
+            modalPOIs.forEach((poi, index) => {
+                const poiElement = document.createElement('div');
+                poiElement.className = 'modal-poi-item';
+                poiElement.style.cssText = `
+                    padding: 10px;
+                    margin: 5px 0;
+                    background: #f8f9fa;
+                    border-radius: 4px;
+                    border: 1px solid #dee2e6;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                `;
+                
+                poiElement.innerHTML = `
+                    <strong>${poi.name}</strong><br>
+                    <small>Type: ${poi.type} | Distance: ${poi.distance}</small>
+                `;
+                
+                // Add hover events for modal POI testing
+                poiElement.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#e9ecef';
+                    this.style.transform = 'translateX(5px)';
+                    logMessage(`Modal POI hover: ${poi.name}`, 'info');
+                });
+                
+                poiElement.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '#f8f9fa';
+                    this.style.transform = 'translateX(0)';
+                });
+                
+                poiElement.addEventListener('click', function() {
+                    logMessage(`Modal POI clicked: ${poi.name}`, 'success');
+                });
+                
+                container.appendChild(poiElement);
+            });
+        }
+        
+        function drawTestElevationChart() {
+            const canvas = document.getElementById('modal-elevation-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Generate test elevation data
+            const elevationData = [1200, 1250, 1180, 1300, 1350, 1280, 1400, 1320, 1380, 1450];
+            const maxElevation = Math.max(...elevationData);
+            const minElevation = Math.min(...elevationData);
+            const elevationRange = maxElevation - minElevation;
+            
+            // Draw elevation profile
+            ctx.strokeStyle = '#007bff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            elevationData.forEach((elevation, index) => {
+                const x = (index / (elevationData.length - 1)) * canvas.width;
+                const y = canvas.height - ((elevation - minElevation) / elevationRange) * canvas.height;
+                
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            
+            ctx.stroke();
+            
+            // Add hover interaction for elevation chart
+            canvas.addEventListener('mousemove', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const dataIndex = Math.round((x / canvas.width) * (elevationData.length - 1));
+                
+                if (dataIndex >= 0 && dataIndex < elevationData.length) {
+                    const elevation = elevationData[dataIndex];
+                    logMessage(`Elevation chart hover: ${elevation}m at point ${dataIndex + 1}`, 'info');
+                }
+            });
+        }
+        
+        // Test functions
+        function runComprehensiveTests() {
+            logMessage('Starting comprehensive test suite...', 'info');
+            updateTestStatus('Running Tests');
+            
+            // Use the integrated test suite
+            if (window.poiHoverStabilityTest) {
+                window.poiHoverStabilityTest.runAllTests();
+            } else {
+                logMessage('Integrated test suite not available, running basic tests', 'error');
+                runBasicTests();
+            }
+        }
+        
+        function runBasicTests() {
+            testHoverStability();
+            setTimeout(() => testPerformance(), 1000);
+            setTimeout(() => testModalStability(), 2000);
+        }
+        
+        function testHoverStability() {
+            logMessage('Testing hover stability...', 'info');
+            
+            const markers = document.querySelectorAll('.poi-marker-circle');
+            let testCount = 0;
+            let successCount = 0;
+            
+            markers.forEach((marker, index) => {
+                setTimeout(() => {
+                    const rect = marker.getBoundingClientRect();
+                    const initialPosition = { x: rect.left, y: rect.top };
+                    
+                    // Simulate hover
+                    const hoverEvent = new MouseEvent('mouseenter', {
+                        clientX: rect.left + rect.width / 2,
+                        clientY: rect.top + rect.height / 2,
+                        bubbles: true
+                    });
+                    
+                    marker.dispatchEvent(hoverEvent);
+                    
+                    setTimeout(() => {
+                        const newRect = marker.getBoundingClientRect();
+                        const positionDiff = Math.abs(newRect.left - initialPosition.x) + Math.abs(newRect.top - initialPosition.y);
+                        
+                        testCount++;
+                        if (positionDiff <= 2) { // 2px tolerance
+                            successCount++;
+                        }
+                        
+                        // Simulate mouse leave
+                        const leaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+                        marker.dispatchEvent(leaveEvent);
+                        
+                        if (testCount === markers.length) {
+                            const successRate = ((successCount / testCount) * 100).toFixed(1);
+                            logMessage(`Hover stability test completed: ${successCount}/${testCount} markers stable (${successRate}%)`, 
+                                successRate >= 90 ? 'success' : 'error');
+                        }
+                    }, 100);
+                }, index * 200);
+            });
+        }
+        
+        function testPerformance() {
+            logMessage('Testing performance...', 'info');
+            
+            const startTime = performance.now();
+            let operationCount = 0;
+            const maxOperations = 100;
+            
+            const performOperation = () => {
+                const markers = document.querySelectorAll('.poi-marker-circle');
+                markers.forEach(marker => {
+                    const rect = marker.getBoundingClientRect();
+                    const style = window.getComputedStyle(marker);
+                });
+                
+                operationCount++;
+                
+                if (operationCount < maxOperations) {
+                    requestAnimationFrame(performOperation);
+                } else {
+                    const endTime = performance.now();
+                    const totalTime = endTime - startTime;
+                    const avgTime = (totalTime / maxOperations).toFixed(2);
+                    
+                    logMessage(`Performance test completed: ${avgTime}ms average per operation`, 
+                        avgTime <= 1 ? 'success' : 'error');
+                }
+            };
+            
+            performOperation();
+        }
+        
+        function testModalStability() {
+            logMessage('Testing modal stability...', 'info');
+            
+            // Open modal for testing
+            openTestRouteModal();
+            
+            setTimeout(() => {
+                const modalElements = document.querySelectorAll('#test-route-modal .modal-poi-item');
+                let modalTestCount = 0;
+                let modalSuccessCount = 0;
+                
+                modalElements.forEach((element, index) => {
+                    setTimeout(() => {
+                        const rect = element.getBoundingClientRect();
+                        const initialPosition = { x: rect.left, y: rect.top };
+                        
+                        // Simulate hover
+                        const hoverEvent = new MouseEvent('mouseenter', { bubbles: true });
+                        element.dispatchEvent(hoverEvent);
+                        
+                        setTimeout(() => {
+                            const newRect = element.getBoundingClientRect();
+                            const positionDiff = Math.abs(newRect.left - initialPosition.x) + Math.abs(newRect.top - initialPosition.y);
+                            
+                            modalTestCount++;
+                            if (positionDiff <= 5) { // 5px tolerance for modal elements
+                                modalSuccessCount++;
+                            }
+                            
+                            const leaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+                            element.dispatchEvent(leaveEvent);
+                            
+                            if (modalTestCount === modalElements.length) {
+                                const successRate = ((modalSuccessCount / modalTestCount) * 100).toFixed(1);
+                                logMessage(`Modal stability test completed: ${modalSuccessCount}/${modalTestCount} elements stable (${successRate}%)`, 
+                                    successRate >= 90 ? 'success' : 'error');
+                                
+                                // Close modal after test
+                                setTimeout(() => closeTestRouteModal(), 1000);
+                            }
+                        }, 100);
+                    }, index * 150);
+                });
+            }, 500);
+        }
+        
+        function simulateRouteModal() {
+            openTestRouteModal();
+        }
+        
+        function testModalHoverEvents() {
+            logMessage('Testing modal hover events...', 'info');
+            
+            if (document.getElementById('test-route-modal').style.display === 'none') {
+                openTestRouteModal();
+                setTimeout(() => testModalHoverEvents(), 500);
+                return;
+            }
+            
+            const modalPOIs = document.querySelectorAll('#test-route-modal .modal-poi-item');
+            modalPOIs.forEach((poi, index) => {
+                setTimeout(() => {
+                    const hoverEvent = new MouseEvent('mouseenter', { bubbles: true });
+                    poi.dispatchEvent(hoverEvent);
+                    
+                    setTimeout(() => {
+                        const leaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+                        poi.dispatchEvent(leaveEvent);
+                    }, 100);
+                }, index * 200);
+            });
+            
+            logMessage('Modal hover events test completed', 'success');
+        }
+        
+        function testModalCleanup() {
+            logMessage('Testing modal cleanup...', 'info');
+            
+            // Open and close modal multiple times to test cleanup
+            let cycles = 0;
+            const maxCycles = 3;
+            
+            const cycleModal = () => {
+                openTestRouteModal();
+                
+                setTimeout(() => {
+                    closeTestRouteModal();
+                    cycles++;
+                    
+                    if (cycles < maxCycles) {
+                        setTimeout(cycleModal, 500);
+                    } else {
+                        logMessage(`Modal cleanup test completed: ${maxCycles} open/close cycles`, 'success');
+                    }
+                }, 1000);
+            };
+            
+            cycleModal();
+        }
+        
+        function clearTestResults() {
+            const logContainer = document.getElementById('test-log');
+            logContainer.innerHTML = '<div class="log-entry info">Test results cleared. Ready for new tests.</div>';
+            
+            // Reset performance indicators
+            document.getElementById('hover-response-time').textContent = '--';
+            document.getElementById('frame-rate').textContent = '--';
+            document.getElementById('memory-usage').textContent = '--';
+            document.getElementById('test-status').textContent = 'Ready';
+            
+            testResults = [];
+            performanceMetrics = {};
+            
+            // Clear integrated test suite results if available
+            if (window.poiHoverStabilityTest) {
+                window.poiHoverStabilityTest.clearResults();
+            }
+        }
+        
+        // Utility functions
+        function logMessage(message, type = 'info') {
+            const logContainer = document.getElementById('test-log');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function updatePerformanceIndicators() {
+            if (performance.memory) {
+                const memoryUsage = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
+                updateMemoryUsage(memoryUsage);
+            }
+        }
+        
+        function updateHoverResponseTime(time) {
+            document.getElementById('hover-response-time').textContent = time.toFixed(1);
+        }
+        
+        function updateFrameRate(fps) {
+            document.getElementById('frame-rate').textContent = fps;
+        }
+        
+        function updateMemoryUsage(mb) {
+            document.getElementById('memory-usage').textContent = mb;
+        }
+        
+        function updateTestStatus(status) {
+            document.getElementById('test-status').textContent = status;
+        }
+        
+        function openValidator() {
+            // The validator is automatically initialized, just show a message
+            logMessage('Comprehensive validator is available in the overlay', 'info');
+            
+            // If validator exists, make sure it's visible
+            const validatorElement = document.getElementById('hover-stability-validator');
+            if (validatorElement) {
+                validatorElement.style.display = 'flex';
+                logMessage('Validator opened successfully', 'success');
+            } else {
+                logMessage('Validator not found - initializing...', 'warning');
+                // Try to initialize validator
+                if (window.ComprehensiveHoverStabilityValidator) {
+                    new ComprehensiveHoverStabilityValidator();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

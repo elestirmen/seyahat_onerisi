@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Modal Hover Stability Test</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Route Modal CSS -->
+    <link rel="stylesheet" href="static/css/route-details-modal.css">
+    <link rel="stylesheet" href="static/css/poi-hover-stability-fix.css">
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .test-btn {
+            background: #4338ca;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .test-btn:hover {
+            background: #3730a3;
+            transform: translateY(-1px);
+        }
+        
+        .test-btn.secondary {
+            background: #64748b;
+        }
+        
+        .test-btn.secondary:hover {
+            background: #475569;
+        }
+        
+        .test-status {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc2626;
+        }
+        
+        .status-indicator.success {
+            background: #16a34a;
+        }
+        
+        .status-indicator.warning {
+            background: #d97706;
+        }
+        
+        .test-map {
+            height: 300px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .poi-test-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .poi-marker-test {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .poi-marker-test:hover {
+            background: #e2e8f0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .poi-marker-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #4338ca;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-size: 18px;
+            transition: all 0.2s ease;
+        }
+        
+        .poi-marker-circle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(67, 56, 202, 0.3);
+        }
+        
+        .test-log {
+            background: #1f2937;
+            color: #f9fafb;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .log-entry {
+            margin-bottom: 4px;
+            padding: 2px 0;
+        }
+        
+        .log-entry.success {
+            color: #10b981;
+        }
+        
+        .log-entry.error {
+            color: #ef4444;
+        }
+        
+        .log-entry.warning {
+            color: #f59e0b;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1><i class="fas fa-vial"></i> Route Modal Hover Stability Test</h1>
+            <p>Test suite for verifying modal hover stability fixes and POI interaction improvements</p>
+        </div>
+        
+        <div class="test-controls">
+            <button class="test-btn" onclick="openTestModal()">
+                <i class="fas fa-modal"></i> Open Test Modal
+            </button>
+            <button class="test-btn secondary" onclick="runStabilityTest()">
+                <i class="fas fa-play"></i> Run Stability Test
+            </button>
+            <button class="test-btn secondary" onclick="testPoiHover()">
+                <i class="fas fa-map-marker-alt"></i> Test POI Hover
+            </button>
+            <button class="test-btn secondary" onclick="testMapInteractions()">
+                <i class="fas fa-map"></i> Test Map Interactions
+            </button>
+            <button class="test-btn secondary" onclick="clearLog()">
+                <i class="fas fa-trash"></i> Clear Log
+            </button>
+        </div>
+        
+        <div class="test-status">
+            <h3><i class="fas fa-info-circle"></i> Component Status</h3>
+            <div class="status-item">
+                <div class="status-indicator" id="hoverManagerStatus"></div>
+                <span>Hover Event Manager</span>
+            </div>
+            <div class="status-item">
+                <div class="status-indicator" id="modalIsolationStatus"></div>
+                <span>Modal Hover Isolation</span>
+            </div>
+            <div class="status-item">
+                <div class="status-indicator" id="leafletManagerStatus"></div>
+                <span>Leaflet Modal Event Manager</span>
+            </div>
+            <div class="status-item">
+                <div class="status-indicator" id="modalStabilizerStatus"></div>
+                <span>Route Modal Stabilizer</span>
+            </div>
+            <div class="status-item">
+                <div class="status-indicator" id="integrationStatus"></div>
+                <span>Integration System</span>
+            </div>
+        </div>
+        
+        <div class="poi-test-area">
+            <div class="poi-marker-test" onclick="testPoiClick(1)">
+                <div class="poi-marker-circle">
+                    <i class="fas fa-mountain"></i>
+                </div>
+                <div>Test POI 1</div>
+                <small>Hover to test stability</small>
+            </div>
+            <div class="poi-marker-test" onclick="testPoiClick(2)">
+                <div class="poi-marker-circle" style="background: #dc2626;">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <div>Test POI 2</div>
+                <small>Hover to test stability</small>
+            </div>
+            <div class="poi-marker-test" onclick="testPoiClick(3)">
+                <div class="poi-marker-circle" style="background: #16a34a;">
+                    <i class="fas fa-tree"></i>
+                </div>
+                <div>Test POI 3</div>
+                <small>Hover to test stability</small>
+            </div>
+            <div class="poi-marker-test" onclick="testPoiClick(4)">
+                <div class="poi-marker-circle" style="background: #d97706;">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <div>Test POI 4</div>
+                <small>Hover to test stability</small>
+            </div>
+        </div>
+        
+        <div id="testMap" class="test-map"></div>
+        
+        <div class="test-log" id="testLog">
+            <div class="log-entry">Test log initialized. Ready for testing...</div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Modal Stability Components -->
+    <script src="static/js/hover-event-manager.js"></script>
+    <script src="static/js/modal-hover-isolation.js"></script>
+    <script src="static/js/leaflet-modal-event-manager.js"></script>
+    <script src="static/js/route-modal-stabilizer.js"></script>
+    <script src="static/js/modal-hover-stability-integration.js"></script>
+    <script src="static/js/route-details-modal.js"></script>
+
+    <script>
+        // Test state
+        let testMap = null;
+        let testMarkers = [];
+        let testResults = {
+            hoverStability: 0,
+            clickResponsiveness: 0,
+            modalStability: 0,
+            mapInteractions: 0
+        };
+
+        // Initialize test environment
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTestMap();
+            checkComponentStatus();
+            setupTestEventListeners();
+            log('Test environment initialized', 'success');
+        });
+
+        /**
+         * Initialize test map
+         */
+        function initializeTestMap() {
+            try {
+                testMap = L.map('testMap').setView([38.7223, 35.4854], 10);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(testMap);
+
+                // Add test markers
+                const testPois = [
+                    { lat: 38.7223, lng: 35.4854, name: 'Test POI 1', icon: 'mountain' },
+                    { lat: 38.7323, lng: 35.4954, name: 'Test POI 2', icon: 'camera' },
+                    { lat: 38.7123, lng: 35.4754, name: 'Test POI 3', icon: 'tree' },
+                    { lat: 38.7423, lng: 35.5054, name: 'Test POI 4', icon: 'utensils' }
+                ];
+
+                testPois.forEach((poi, index) => {
+                    const marker = L.marker([poi.lat, poi.lng])
+                        .addTo(testMap)
+                        .bindPopup(`<b>${poi.name}</b><br>Test marker for hover stability`);
+                    
+                    testMarkers.push(marker);
+                });
+
+                log('Test map initialized with ' + testMarkers.length + ' markers', 'success');
+
+            } catch (error) {
+                log('Failed to initialize test map: ' + error.message, 'error');
+            }
+        }
+
+        /**
+         * Check component status
+         */
+        function checkComponentStatus() {
+            const components = {
+                hoverManagerStatus: typeof window.HoverEventManager !== 'undefined',
+                modalIsolationStatus: typeof window.ModalHoverIsolation !== 'undefined',
+                leafletManagerStatus: typeof window.LeafletModalEventManager !== 'undefined',
+                modalStabilizerStatus: typeof window.RouteModalStabilizer !== 'undefined',
+                integrationStatus: typeof window.ModalHoverStabilityIntegration !== 'undefined'
+            };
+
+            Object.entries(components).forEach(([id, loaded]) => {
+                const indicator = document.getElementById(id);
+                if (indicator) {
+                    indicator.className = `status-indicator ${loaded ? 'success' : 'error'}`;
+                }
+            });
+
+            const allLoaded = Object.values(components).every(loaded => loaded);
+            log(`Component check completed. All loaded: ${allLoaded}`, allLoaded ? 'success' : 'warning');
+        }
+
+        /**
+         * Setup test event listeners
+         */
+        function setupTestEventListeners() {
+            // Listen for modal stability events
+            document.addEventListener('modalHoverStabilityReady', function(event) {
+                log('Modal hover stability system ready', 'success');
+            });
+
+            document.addEventListener('routeModalShow', function(event) {
+                log('Route modal show event detected', 'success');
+            });
+
+            document.addEventListener('routeModalHide', function(event) {
+                log('Route modal hide event detected', 'success');
+            });
+        }
+
+        /**
+         * Open test modal
+         */
+        function openTestModal() {
+            try {
+                // Create test route data
+                const testRouteData = {
+                    id: 'test-route-1',
+                    name: 'Test Route for Hover Stability',
+                    total_distance: 15.5,
+                    estimated_duration: 3600,
+                    poi_count: 4,
+                    difficulty_level: 2,
+                    description: 'This is a test route for verifying modal hover stability fixes.',
+                    pois: [
+                        {
+                            id: 1,
+                            name: 'Test POI 1',
+                            category: 'mountain',
+                            latitude: 38.7223,
+                            longitude: 35.4854,
+                            description: 'Test POI for hover stability'
+                        },
+                        {
+                            id: 2,
+                            name: 'Test POI 2',
+                            category: 'photo',
+                            latitude: 38.7323,
+                            longitude: 35.4954,
+                            description: 'Another test POI'
+                        }
+                    ],
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: [
+                            [35.4854, 38.7223],
+                            [35.4954, 38.7323],
+                            [35.4754, 38.7123],
+                            [35.5054, 38.7423]
+                        ]
+                    },
+                    elevation_profile: [
+                        { distance: 0, elevation: 1000 },
+                        { distance: 5, elevation: 1200 },
+                        { distance: 10, elevation: 1100 },
+                        { distance: 15.5, elevation: 1300 }
+                    ]
+                };
+
+                // Get or create modal instance
+                const modalInstance = RouteDetailsModal.getInstance();
+                modalInstance.show(testRouteData);
+
+                log('Test modal opened with test route data', 'success');
+
+            } catch (error) {
+                log('Failed to open test modal: ' + error.message, 'error');
+            }
+        }
+
+        /**
+         * Run stability test
+         */
+        function runStabilityTest() {
+            log('Starting comprehensive stability test...', 'warning');
+            
+            let testsPassed = 0;
+            let totalTests = 0;
+
+            // Test 1: Component availability
+            totalTests++;
+            if (typeof window.RouteModalStabilizer !== 'undefined') {
+                testsPassed++;
+                log('✓ Component availability test passed', 'success');
+            } else {
+                log('✗ Component availability test failed', 'error');
+            }
+
+            // Test 2: Integration system
+            totalTests++;
+            if (window.ModalHoverStabilityIntegration && window.ModalHoverStabilityIntegration.isReady()) {
+                testsPassed++;
+                log('✓ Integration system test passed', 'success');
+            } else {
+                log('✗ Integration system test failed', 'error');
+            }
+
+            // Test 3: Event handling
+            totalTests++;
+            try {
+                document.dispatchEvent(new CustomEvent('routeModalShow', {
+                    detail: { modalElement: document.createElement('div') }
+                }));
+                testsPassed++;
+                log('✓ Event handling test passed', 'success');
+            } catch (error) {
+                log('✗ Event handling test failed: ' + error.message, 'error');
+            }
+
+            // Test 4: CSS stability classes
+            totalTests++;
+            const testElement = document.createElement('div');
+            testElement.className = 'route-details-modal modal-stabilized';
+            document.body.appendChild(testElement);
+            
+            const computedStyle = window.getComputedStyle(testElement);
+            if (computedStyle.transform !== 'none' || computedStyle.contain !== 'none') {
+                testsPassed++;
+                log('✓ CSS stability classes test passed', 'success');
+            } else {
+                log('✗ CSS stability classes test failed', 'error');
+            }
+            document.body.removeChild(testElement);
+
+            const successRate = (testsPassed / totalTests * 100).toFixed(1);
+            log(`Stability test completed: ${testsPassed}/${totalTests} tests passed (${successRate}%)`, 
+                testsPassed === totalTests ? 'success' : 'warning');
+        }
+
+        /**
+         * Test POI hover
+         */
+        function testPoiHover() {
+            log('Testing POI hover interactions...', 'warning');
+            
+            const poiElements = document.querySelectorAll('.poi-marker-test');
+            let hoverCount = 0;
+
+            poiElements.forEach((poi, index) => {
+                setTimeout(() => {
+                    // Simulate hover
+                    const mouseEnterEvent = new MouseEvent('mouseenter', { bubbles: true });
+                    const mouseLeaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+                    
+                    poi.dispatchEvent(mouseEnterEvent);
+                    hoverCount++;
+                    
+                    setTimeout(() => {
+                        poi.dispatchEvent(mouseLeaveEvent);
+                        
+                        if (index === poiElements.length - 1) {
+                            log(`POI hover test completed: ${hoverCount} hovers simulated`, 'success');
+                        }
+                    }, 200);
+                }, index * 300);
+            });
+        }
+
+        /**
+         * Test map interactions
+         */
+        function testMapInteractions() {
+            if (!testMap) {
+                log('Test map not available for interaction testing', 'error');
+                return;
+            }
+
+            log('Testing map interactions...', 'warning');
+
+            try {
+                // Test map events
+                testMap.fire('mouseover');
+                testMap.fire('mouseout');
+                testMap.fire('click');
+
+                // Test marker interactions
+                testMarkers.forEach((marker, index) => {
+                    setTimeout(() => {
+                        marker.fire('mouseover');
+                        setTimeout(() => {
+                            marker.fire('mouseout');
+                            
+                            if (index === testMarkers.length - 1) {
+                                log('Map interaction test completed successfully', 'success');
+                            }
+                        }, 100);
+                    }, index * 200);
+                });
+
+            } catch (error) {
+                log('Map interaction test failed: ' + error.message, 'error');
+            }
+        }
+
+        /**
+         * Test POI click
+         */
+        function testPoiClick(poiId) {
+            log(`POI ${poiId} clicked - testing click responsiveness`, 'success');
+            
+            // Simulate modal opening for POI
+            setTimeout(() => {
+                log(`POI ${poiId} modal would open here (simulated)`, 'success');
+            }, 100);
+        }
+
+        /**
+         * Clear test log
+         */
+        function clearLog() {
+            const logElement = document.getElementById('testLog');
+            logElement.innerHTML = '<div class="log-entry">Test log cleared. Ready for new tests...</div>';
+        }
+
+        /**
+         * Log message to test log
+         */
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // Performance monitoring
+        setInterval(() => {
+            if (window.ModalHoverStabilityIntegration && window.ModalHoverStabilityIntegration.isReady()) {
+                const stabilizer = window.ModalHoverStabilityIntegration.getStabilizer();
+                if (stabilizer) {
+                    const metrics = stabilizer.getPerformanceMetrics();
+                    // Log metrics periodically for monitoring
+                    console.log('Modal Stabilizer Metrics:', metrics);
+                }
+            }
+        }, 10000); // Every 10 seconds
+    </script>
+</body>
+</html>

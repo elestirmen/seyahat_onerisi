@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="static/css/poi_recommendation_system.css">
     <!-- Route Details Modal CSS -->
     <link rel="stylesheet" href="static/css/route-details-modal.css">
+    <!-- Modal Jitter Fix CSS -->
+    <link rel="stylesheet" href="static/css/modal-jitter-fix-animations.css">
 
     <style>
         /* Media location markers - enhanced styling */
@@ -66,6 +68,9 @@
     <!-- Performance Optimizations -->
     <link rel="stylesheet" href="static/css/performance-optimizations.css">
     <script src="static/js/performance-optimizations.js" defer></script>
+    
+    <!-- Central Modal State Manager (for robust modal lifecycle) -->
+    <script src="static/js/modal-state-manager.js" defer></script>
 </head>
 
 <body>
@@ -598,6 +603,8 @@
     </script>
     <!-- Route Details Modal -->
     <script src="static/js/route-details-modal.js"></script>
+    <!-- Modal Jitter Fix (patches modal behaviors, must load after modal code) -->
+    <script src="static/js/modal-jitter-fix.js"></script>
     <script src="static/js/poi_recommendation_system.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 </body>
