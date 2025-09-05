@@ -13253,9 +13253,17 @@ function buildPOIMediaThumbnailsOnce() {
         thumbnailsContainer.appendChild(thumb);
     });
 
-    // Observe lazy images if loader is present
-    if (window.lazyLoader && typeof window.lazyLoader.observeLazyImages === 'function') {
-        window.lazyLoader.observeLazyImages();
+    // Observe lazy images using the correct loader
+    if (window.loadingManager && typeof window.loadingManager.observeLazyImages === 'function') {
+        window.loadingManager.observeLazyImages();
+    } else if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
+        window.lazyLoader.setupImageLazyLoading();
+    } else {
+        // Ultimate fallback: set src immediately
+        thumbnailsContainer.querySelectorAll('img[data-src]').forEach(img => {
+            img.src = img.dataset.src;
+            delete img.dataset.src;
+        });
     }
 }
 
