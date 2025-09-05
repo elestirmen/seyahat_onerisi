@@ -164,6 +164,106 @@
                   </div>
                 </div>
               </div>
+
+              <div class="preference-item" data-category="macera">
+                <div class="preference-header">
+                  <div class="preference-icon"><i class="fas fa-mountain"></i></div>
+                  <div class="preference-info">
+                    <span class="preference-title">Macera</span>
+                    <span class="preference-value" id="macera-value">İlgilenmiyorum</span>
+                  </div>
+                </div>
+                <div class="preference-slider-container">
+                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="macera">
+                  <div class="slider-track-labels">
+                    <span class="track-label">İlgim yok</span>
+                    <span class="track-label">Az ilgim var</span>
+                    <span class="track-label">İlgim var</span>
+                    <span class="track-label">Çok ilgim var</span>
+                    <span class="track-label">Kesinlikle</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="preference-item" data-category="rahatlatici">
+                <div class="preference-header">
+                  <div class="preference-icon"><i class="fas fa-spa"></i></div>
+                  <div class="preference-info">
+                    <span class="preference-title">Rahatlatıcı</span>
+                    <span class="preference-value" id="rahatlatici-value">İlgilenmiyorum</span>
+                  </div>
+                </div>
+                <div class="preference-slider-container">
+                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="rahatlatici">
+                  <div class="slider-track-labels">
+                    <span class="track-label">İlgim yok</span>
+                    <span class="track-label">Az ilgim var</span>
+                    <span class="track-label">İlgim var</span>
+                    <span class="track-label">Çok ilgim var</span>
+                    <span class="track-label">Kesinlikle</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="preference-item" data-category="spor">
+                <div class="preference-header">
+                  <div class="preference-icon"><i class="fas fa-running"></i></div>
+                  <div class="preference-info">
+                    <span class="preference-title">Spor</span>
+                    <span class="preference-value" id="spor-value">İlgilenmiyorum</span>
+                  </div>
+                </div>
+                <div class="preference-slider-container">
+                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="spor">
+                  <div class="slider-track-labels">
+                    <span class="track-label">İlgim yok</span>
+                    <span class="track-label">Az ilgim var</span>
+                    <span class="track-label">İlgim var</span>
+                    <span class="track-label">Çok ilgim var</span>
+                    <span class="track-label">Kesinlikle</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="preference-item" data-category="alisveris">
+                <div class="preference-header">
+                  <div class="preference-icon"><i class="fas fa-shopping-bag"></i></div>
+                  <div class="preference-info">
+                    <span class="preference-title">Alışveriş</span>
+                    <span class="preference-value" id="alisveris-value">İlgilenmiyorum</span>
+                  </div>
+                </div>
+                <div class="preference-slider-container">
+                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="alisveris">
+                  <div class="slider-track-labels">
+                    <span class="track-label">İlgim yok</span>
+                    <span class="track-label">Az ilgim var</span>
+                    <span class="track-label">İlgim var</span>
+                    <span class="track-label">Çok ilgim var</span>
+                    <span class="track-label">Kesinlikle</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="preference-item" data-category="gece_hayati">
+                <div class="preference-header">
+                  <div class="preference-icon"><i class="fas fa-moon"></i></div>
+                  <div class="preference-info">
+                    <span class="preference-title">Gece Hayatı</span>
+                    <span class="preference-value" id="gece_hayati-value">İlgilenmiyorum</span>
+                  </div>
+                </div>
+                <div class="preference-slider-container">
+                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="gece_hayati">
+                  <div class="slider-track-labels">
+                    <span class="track-label">İlgim yok</span>
+                    <span class="track-label">Az ilgim var</span>
+                    <span class="track-label">İlgim var</span>
+                    <span class="track-label">Çok ilgim var</span>
+                    <span class="track-label">Kesinlikle</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -179,86 +279,36 @@
           </div>
         </div>
 
-        <!-- Gelişmiş filtreler, yükleme ve liste/harita bölümleri -->
-        <div class="route-filters-enhanced">
-          <div class="filters-content" id="filtersContent">
-            <div class="filters-header">
-              <h3 class="filters-title"><i class="fas fa-sliders-h"></i> Filtreler</h3>
-              <button class="filters-toggle-btn" id="filtersToggleBtn"><i class="fas fa-chevron-down"></i></button>
-            </div>
-            <div class="filter-chips-container">
-              <div class="filter-chip-group">
-                <label class="filter-chip-label">Rota Tipi</label>
-                <div class="filter-chips" id="routeTypeChips">
-                  <button class="filter-chip active" data-value=""><i class="fas fa-globe"></i><span>Tümü</span></button>
-                  <button class="filter-chip" data-value="walking"><i class="fas fa-walking"></i><span>Yürüyüş</span></button>
-                  <button class="filter-chip" data-value="hiking"><i class="fas fa-hiking"></i><span>Doğa</span></button>
-                  <button class="filter-chip" data-value="cycling"><i class="fas fa-bicycle"></i><span>Bisiklet</span></button>
-                  <button class="filter-chip" data-value="driving"><i class="fas fa-car"></i><span>Araç</span></button>
-                </div>
-              </div>
-              <div class="filter-chip-group">
-                <label class="filter-chip-label">Zorluk</label>
-                <div class="filter-chips" id="difficultyChips">
-                  <button class="filter-chip active" data-value=""><i class="fas fa-star"></i><span>Tümü</span></button>
-                  <button class="filter-chip" data-value="1"><i class="fas fa-leaf"></i><span>Kolay</span></button>
-                  <button class="filter-chip" data-value="2"><i class="fas fa-mountain"></i><span>Orta</span></button>
-                  <button class="filter-chip" data-value="3"><i class="fas fa-fire"></i><span>Zor</span></button>
-                  <button class="filter-chip" data-value="4"><i class="fas fa-bolt"></i><span>Çok Zor</span></button>
-                  <button class="filter-chip" data-value="5"><i class="fas fa-crown"></i><span>Uzman</span></button>
-                </div>
-              </div>
-              <div class="filter-chip-group">
-                <label class="filter-chip-label">Süre</label>
-                <div class="filter-chips" id="durationChips">
-                  <button class="filter-chip active" data-value=""><i class="fas fa-clock"></i><span>Tümü</span></button>
-                  <button class="filter-chip" data-value="0-60"><i class="fas fa-hourglass-start"></i><span>&lt; 1 saat</span></button>
-                  <button class="filter-chip" data-value="60-180"><i class="fas fa-hourglass-half"></i><span>1-3 saat</span></button>
-                  <button class="filter-chip" data-value="180-360"><i class="fas fa-hourglass-end"></i><span>3-6 saat</span></button>
-                  <button class="filter-chip" data-value="360-999"><i class="fas fa-calendar-day"></i><span>6+ saat</span></button>
-                </div>
-              </div>
-              <div class="filter-chip-group">
-                <label class="filter-chip-label">Favoriler</label>
-                <div class="filter-chips" id="favoriteChips">
-                  <button class="filter-chip active" data-value=""><i class="fas fa-list"></i><span>Tümü</span></button>
-                  <button class="filter-chip" data-value="favorites"><i class="fas fa-star"></i><span>Favoriler</span></button>
-                </div>
-              </div>
-            </div>
-            <div class="filters-actions">
-              <button class="filter-clear-btn" id="clearFiltersBtn"><i class="fas fa-times"></i><span>Temizle</span></button>
-              <button class="filter-apply-btn" id="applyFiltersBtn"><i class="fas fa-check"></i><span>Uygula</span></button>
-            </div>
+        <!-- Öneri butonu ve sonuçlar bölümü -->
+        <button class="recommend-btn" id="recommendBtn">
+          <i class="fas fa-magic btn-icon"></i>
+          <span class="btn-text">Önerilerimi Getir</span>
+        </button>
+
+        <div class="results-section" id="resultsSection">
+          <h2 class="section-title"><i class="fas fa-star"></i> Size Özel Öneriler</h2>
+
+          <div id="loadingIndicator" class="loading">
+            <div class="loading__spinner"></div>
+            <p class="loading__text">Öneriler hazırlanıyor...</p>
           </div>
-        </div>
 
-        <div id="routesLoadingIndicator" class="loading">
-          <div class="loading__spinner"></div>
-          <p class="loading__text">Hazır rotalar yükleniyor...</p>
-        </div>
+          <div id="recommendationResults"></div>
 
-        <div class="mobile-view-toggle">
-          <div class="view-toggle-buttons">
-            <button class="view-toggle-btn active" data-view="list" id="listViewBtn"><i class="fas fa-list"></i><span>Liste</span></button>
-            <button class="view-toggle-btn" data-view="map" id="mapViewBtn"><i class="fas fa-map"></i><span>Harita</span></button>
-            <button class="view-toggle-btn back-to-list-btn" id="backToListBtn"><i class="fas fa-arrow-left"></i><span>Listeye Dön</span></button>
-          </div>
-        </div>
-
-        <div class="routes-map-container">
-          <div id="mapContainer" class="map-container-enhanced">
-            <div class="mobile-map-fab" aria-hidden="false">
-              <button class="fab-button" id="dynamicMapFullscreenBtn" title="Tam Ekran"><i class="fas fa-expand"></i></button>
+          <div id="mapSection" style="display: none; margin-top: 30px;">
+            <h3 class="section-title"><i class="fas fa-map-marked-alt"></i> Öneriler Haritası</h3>
+            <p style="color: #666; font-size: 1rem; margin-bottom: 20px; text-align: center; line-height: 1.6;">Önerilen yerleri harita üzerinde görün ve detaylarına ulaşın. Marker'lara tıklayarak daha fazla bilgi alabilirsiniz.</p>
+            <div id="mapContainer" class="map-container-enhanced">
+              <div class="mobile-map-fab" aria-hidden="false"><button class="fab-button" id="dynamicMapFullscreenBtn" title="Tam Ekran"><i class="fas fa-expand"></i></button></div>
             </div>
+            <div id="elevationChartContainer" class="elevation-chart-hidden"></div>
           </div>
-          <div id="elevationChartContainer" class="elevation-chart-hidden"></div>
-        </div>
 
-        <div id="routeSection" style="display: none; margin-top: 30px;">
-          <h3 class="section-title"><i class="fas fa-route"></i> Rota Planlayıcı</h3>
-          <div style="background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3);">
-            <div id="routeContainer"><p style="text-align: center; color: #666; font-style: italic;">Rota oluşturmak için POI'leri seçin</p></div>
+          <div id="routeSection" style="display: none; margin-top: 30px;">
+            <h3 class="section-title"><i class="fas fa-route"></i> Rota Planlayıcı</h3>
+            <div style="background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3);">
+              <div id="routeContainer"><p style="text-align: center; color: #666; font-style: italic;">Rota oluşturmak için POI'leri seçin</p></div>
+            </div>
           </div>
         </div>
       </div>
@@ -423,4 +473,3 @@
   <script src="assets/js/personal_routes.js"></script>
 </body>
 </html>
-
