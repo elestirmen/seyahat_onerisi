@@ -6776,6 +6776,7 @@ function createRouteCard(route) {
                         <span>Medya yükleniyor...</span>
                     </div>
                 </div>
+                <div class="route-mini-map mini-map-overlay" id="mini-map-${route.id}" aria-label="Rota önizleme haritası"></div>
             </div>
             <div class="route-card-header">
                 <h3 class="route-card-title">${route.name || 'İsimsiz Rota'}</h3>
@@ -6806,7 +6807,6 @@ function createRouteCard(route) {
                     <div class="difficulty-stars">${difficultyStars}</div>
                 </div>
             </div>
-            <div class="route-mini-map" id="mini-map-${route.id}"></div>
         </div>
     `;
 }
@@ -7189,59 +7189,74 @@ window.refreshAllRouteMedia = async function() {
     }
 };
 
-function renderRouteMiniMaps(routes) {
-    routes.forEach(async route => {
-
-        const container = document.getElementById(`mini-map-${route.id}`);
-        if (!container) return;
-
-        let geometry = route.geometry;
-
-        // Fetch geometry from API if not already present
-        if (!geometry) {
-            try {
+function renderRouteMiniMapFor(container, route) {
+    (async () => {
+        try {
+            let geometry = route.geometry;
+            if (!geometry) {
                 const response = await fetch(`${apiBase}/routes/${route.id}/geometry`);
                 if (!response.ok) return;
                 const data = await response.json();
                 geometry = data && data.geometry;
-            } catch (error) {
-                console.error(`Failed to load geometry for route ${route.id}:`, error);
-                return;
             }
-        }
-
-
-        // Parse geometry if provided as string
-        if (typeof geometry === 'string') {
-            try {
-                geometry = JSON.parse(geometry);
-            } catch {
-                return;
+            if (!geometry) return;
+            if (typeof geometry === 'string') {
+                try { geometry = JSON.parse(geometry); } catch { return; }
             }
+            const coords = geometry.coordinates || (geometry.geometry && geometry.geometry.coordinates);
+            if (!coords || coords.length === 0) return;
+
+            const latlngs = coords.map(c => [c[1], c[0]]);
+            const map = L.map(container, {
+                attributionControl: false,
+                dragging: false,
+                zoomControl: false,
+                scrollWheelZoom: false,
+                doubleClickZoom: false,
+                boxZoom: false,
+                keyboard: false,
+                touchZoom: false
+            });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+            const line = L.polyline(latlngs, { interactive: false, color: '#4B5563', weight: 3 }).addTo(map);
+            map.fitBounds(line.getBounds());
+        } catch (e) {
+            // Silent fail for mini map
         }
+    })();
+}
 
-        const coords = geometry.coordinates || (geometry.geometry && geometry.geometry.coordinates);
-        if (!coords || coords.length === 0) return;
+function renderRouteMiniMaps(routes) {
+    const supportsIO = 'IntersectionObserver' in window;
+    let observer = null;
+    if (supportsIO && !window.__miniMapObserver) {
+        window.__miniMapObserver = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const el = entry.target;
+                    const routeId = el.getAttribute('data-route-id');
+                    const datasetRouteId = el.dataset.routeId;
+                    const id = datasetRouteId || routeId;
+                    const route = (window.predefinedRoutes || []).find(r => String(r.id) === String(id));
+                    if (route) {
+                        renderRouteMiniMapFor(el, route);
+                        obs.unobserve(el);
+                    }
+                }
+            });
+        }, { rootMargin: '200px 0px' });
+    }
+    observer = window.__miniMapObserver || null;
 
-        const latlngs = coords.map(c => [c[1], c[0]]);
-
-        const map = L.map(container, {
-            attributionControl: false,
-            dragging: false,
-            zoomControl: false,
-            scrollWheelZoom: false,
-            doubleClickZoom: false,
-            boxZoom: false,
-            keyboard: false,
-            touchZoom: false
-        });
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18
-        }).addTo(map);
-
-        const line = L.polyline(latlngs, { interactive: false }).addTo(map);
-        map.fitBounds(line.getBounds());
+    routes.forEach(route => {
+        const container = document.getElementById(`mini-map-${route.id}`);
+        if (!container) return;
+        container.dataset.routeId = route.id;
+        if (observer) {
+            observer.observe(container);
+        } else {
+            renderRouteMiniMapFor(container, route);
+        }
     });
 }
 

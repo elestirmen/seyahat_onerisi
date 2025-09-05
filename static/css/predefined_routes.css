@@ -3,3 +3,30 @@
 
 /* Page-local overrides or additions can go below if needed */
 
+/* Mini map overlay inside route card image */
+.route-card-image .mini-map-overlay {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 96px;
+  height: 96px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  z-index: 3;
+}
+
+.route-card-image .mini-map-overlay .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+@media (max-width: 600px) {
+  .route-card-image .mini-map-overlay {
+    width: 80px;
+    height: 80px;
+    right: 8px;
+    bottom: 8px;
+  }
+}
