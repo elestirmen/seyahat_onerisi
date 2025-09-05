@@ -6759,6 +6759,7 @@ function createRouteCard(route) {
     const distance = ensureRouteDistance(route).toFixed(1);
     const placeholderImage = ROUTE_PLACEHOLDER_400x200;
     const imageUrl = route.preview_image || placeholderImage;
+    const rid = route.id || route._id;
     
     console.log('🏷️ Creating route card:', {
         name: route.name,
@@ -6767,20 +6768,21 @@ function createRouteCard(route) {
     });
 
     return `
-        <div class="route-card" data-route-id="${route.id}">
+        <div class="route-card" data-route-id="${rid}">
             <div class="route-card-image">
                 <img src="${imageUrl}" alt="${route.name || 'Rota görseli'}" data-placeholder="${placeholderImage}" onerror="handleImageError(event)" class="route-card-main-image" loading="lazy">
-                <div class="route-card-media-overlay" id="route-media-overlay-${route.id}">
+                <div class="route-card-media-overlay" id="route-media-overlay-${rid}" style="display:none;">
                     <div class="route-card-media-loading">
                         <i class="fas fa-spinner fa-spin"></i>
                         <span>Medya yükleniyor...</span>
                     </div>
                 </div>
+                <div class="route-mini-map mini-map-overlay" id="mini-map-${rid}" aria-label="Rota önizleme haritası"></div>
             </div>
             <div class="route-card-header">
                 <h3 class="route-card-title">${route.name || 'İsimsiz Rota'}</h3>
                 <div class="route-card-actions">
-                    <button class="route-media-refresh-btn" onclick="refreshRouteMedia(${route.id})" title="Medyayı yenile" aria-label="Medyayı yenile">
+                    <button class="route-media-refresh-btn" onclick="refreshRouteMedia(${rid})" title="Medyayı yenile" aria-label="Medyayı yenile">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                     <button class="favorite-btn" data-route-id="${route.id}" aria-label="Favorilere ekle">
@@ -6806,15 +6808,19 @@ function createRouteCard(route) {
                     <div class="difficulty-stars">${difficultyStars}</div>
                 </div>
             </div>
-            <div class="route-mini-map" id="mini-map-${route.id}"></div>
         </div>
     `;
 }
 
 // Load route media for display in route cards
 async function loadRouteMediaForCard(route) {
-    if (!route || !route.id) {
+    const rid = route && (route.id || route._id);
+    if (!route || !rid) {
         console.warn('loadRouteMediaForCard: Invalid route data');
+        // Show fallback immediately to avoid indefinite overlay
+        if (route) {
+            showRouteCardFallback(route.id || route._id);
+        }
         return;
     }
 
@@ -6822,16 +6828,16 @@ async function loadRouteMediaForCard(route) {
     
     // Set a timeout to prevent indefinite loading
     const timeoutId = setTimeout(() => {
-        console.warn(`Media loading timeout for route ${route.id}, showing fallback`);
+        console.warn(`Media loading timeout for route ${rid}, showing fallback`);
         if (MEDIA_CONFIG.useFallbackContent) {
-            showRouteCardFallback(route.id);
+            showRouteCardFallback(rid);
         } else if (MEDIA_CONFIG.showPlaceholderImages) {
-            showRouteCardPlaceholder(route.id);
+            showRouteCardPlaceholder(rid);
         }
     }, MEDIA_CONFIG.fallbackTimeout);
     
     try {
-        const response = await fetch(`${apiBase}/admin/routes/${route.id}/media`, {
+        let response = await fetch(`${apiBase}/admin/routes/${rid}/media`, {
             credentials: 'include'
         });
         
@@ -6839,11 +6845,19 @@ async function loadRouteMediaForCard(route) {
         clearTimeout(timeoutId);
         
         if (!response.ok) {
-            console.warn(`Failed to load media for route ${route.id}:`, response.status);
+            // Try public endpoint if admin requires auth
+            if (response.status === 401 || response.status === 403) {
+                try {
+                    response = await fetch(`${apiBase}/routes/${rid}/media`);
+                } catch (e) { /* ignore */ }
+            }
+        }
+        if (!response.ok) {
+            console.warn(`Failed to load media for route ${rid}:`, response.status);
             if (MEDIA_CONFIG.useFallbackContent) {
-                showRouteCardFallback(route.id);
+                showRouteCardFallback(rid);
             } else if (MEDIA_CONFIG.showPlaceholderImages) {
-                showRouteCardPlaceholder(route.id);
+                showRouteCardPlaceholder(rid);
             }
             return;
         }
@@ -6877,32 +6891,32 @@ async function loadRouteMediaForCard(route) {
             ) || mediaFiles[0];
 
             if (primaryImage) {
-                updateRouteCardImage(route.id, primaryImage);
+                updateRouteCardImage(rid, primaryImage);
             } else {
                 // No suitable image found, show fallback
                 if (MEDIA_CONFIG.useFallbackContent) {
-                    showRouteCardFallback(route.id);
+                    showRouteCardFallback(rid);
                 } else if (MEDIA_CONFIG.showPlaceholderImages) {
-                    showRouteCardPlaceholder(route.id);
+                    showRouteCardPlaceholder(rid);
                 }
             }
         } else {
             // No media files at all, show fallback
             // Log removed for cleaner console
             if (MEDIA_CONFIG.useFallbackContent) {
-                showRouteCardFallback(route.id);
+                showRouteCardFallback(rid);
             } else if (MEDIA_CONFIG.showPlaceholderImages) {
-                showRouteCardPlaceholder(route.id);
+                showRouteCardPlaceholder(rid);
             }
         }
     } catch (error) {
         // Clear the timeout since we got an error
         clearTimeout(timeoutId);
-        console.error(`Error loading media for route ${route.id}:`, error);
+        console.error(`Error loading media for route ${rid}:`, error);
         if (MEDIA_CONFIG.useFallbackContent) {
-            showRouteCardFallback(route.id);
+            showRouteCardFallback(rid);
         } else if (MEDIA_CONFIG.showPlaceholderImages) {
-            showRouteCardPlaceholder(route.id);
+            showRouteCardPlaceholder(rid);
         }
     }
 }
@@ -6931,8 +6945,13 @@ function updateRouteCardImage(routeId, mediaFile) {
         return;
     }
 
-        // Update the main image
-    mainImage.src = `/${imagePath}`;
+    // Resolve to absolute or relative URL correctly
+    let resolvedSrc = imagePath;
+    if (!/^https?:\/\//i.test(resolvedSrc)) {
+        resolvedSrc = resolvedSrc.startsWith('/') ? resolvedSrc : `/${resolvedSrc}`;
+    }
+    // Update the main image
+    mainImage.src = resolvedSrc;
     mainImage.alt = mediaFile.caption || `Rota görseli - ${mediaFile.filename || ''}`;
     
     // Show the main image
@@ -6971,7 +6990,7 @@ function showRouteCardFallback(routeId) {
     mediaOverlay.style.display = 'none';
     
     // Create fallback content based on route type
-    const route = predefinedRoutes.find(r => r.id === routeId);
+    const route = predefinedRoutes.find(r => String(r.id || r._id) === String(routeId));
     if (route) {
         const fallbackContent = createRouteFallbackContent(route);
         mainImage.style.display = 'none';
@@ -7184,59 +7203,107 @@ window.refreshAllRouteMedia = async function() {
     }
 };
 
+function renderRouteMiniMapFor(container, route) {
+    (async () => {
+        try {
+            if (container.__miniMapInitialized) return;
+            // Ensure container is visible for Leaflet sizing
+            container.style.display = 'block';
+            container.style.visibility = 'visible';
+            let geometry = route.geometry;
+            if (!geometry) {
+                try {
+                    const rid = route.id || route._id;
+                    const response = await fetch(`${apiBase}/routes/${rid}/geometry`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        geometry = data && data.geometry;
+                    }
+                } catch (_) {
+                    // ignore; fallback below
+                }
+            }
+            if (!geometry) {
+                // Fallback mini preview content if geometry missing
+                container.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#eef2ff 0%,#e2e8f0 100%);color:#334155;font-weight:600;font-size:.8rem;border:1px solid rgba(0,0,0,0.1)"><i class='fas fa-route' style='margin-right:6px;'></i>Önizleme</div>`;
+                return;
+            }
+            if (typeof geometry === 'string') {
+                try { geometry = JSON.parse(geometry); } catch { return; }
+            }
+            const coords = geometry.coordinates || (geometry.geometry && geometry.geometry.coordinates);
+            if (!coords || coords.length === 0) {
+                container.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#eef2ff 0%,#e2e8f0 100%);color:#334155;font-weight:600;font-size:.8rem;border:1px solid rgba(0,0,0,0.1)"><i class='fas fa-route' style='margin-right:6px;'></i>Önizleme</div>`;
+                return;
+            }
+
+            const latlngs = coords.map(c => [c[1], c[0]]);
+            const map = L.map(container, {
+                attributionControl: false,
+                dragging: false,
+                zoomControl: false,
+                scrollWheelZoom: false,
+                doubleClickZoom: false,
+                boxZoom: false,
+                keyboard: false,
+                touchZoom: false
+            });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+            const line = L.polyline(latlngs, { interactive: false, color: '#4B5563', weight: 3 }).addTo(map);
+            map.fitBounds(line.getBounds());
+            // Fix sizing issues in overlays
+            setTimeout(() => { try { map.invalidateSize(); } catch(e){} }, 50);
+            setTimeout(() => { try { map.invalidateSize(); } catch(e){} }, 250);
+            container.__miniMapInitialized = true;
+        } catch (e) {
+            // Silent fail for mini map
+            container.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#eef2ff 0%,#e2e8f0 100%);color:#334155;font-weight:600;font-size:.8rem;border:1px solid rgba(0,0,0,0.1)"><i class='fas fa-route' style='margin-right:6px;'></i>Önizleme</div>`;
+        }
+    })();
+}
+
 function renderRouteMiniMaps(routes) {
-    routes.forEach(async route => {
+    const supportsIO = 'IntersectionObserver' in window;
+    let observer = null;
+    if (supportsIO && !window.__miniMapObserver) {
+        window.__miniMapObserver = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const el = entry.target;
+                    const id = el.dataset.routeId || el.getAttribute('data-route-id');
+                    const route = (window.predefinedRoutes || []).find(r => String(r.id || r._id) === String(id));
+                    if (route) {
+                        renderRouteMiniMapFor(el, route);
+                        obs.unobserve(el);
+                    }
+                }
+            });
+        }, { rootMargin: '200px 0px' });
+    }
+    observer = window.__miniMapObserver || null;
 
-        const container = document.getElementById(`mini-map-${route.id}`);
+    // Eagerly render first 10 mini-maps for immediate feedback
+    const eager = routes.slice(0, 10);
+    eager.forEach(route => {
+        const rid = route.id || route._id;
+        const container = document.getElementById(`mini-map-${rid}`);
         if (!container) return;
+        container.dataset.routeId = rid;
+        renderRouteMiniMapFor(container, route);
+    });
 
-        let geometry = route.geometry;
-
-        // Fetch geometry from API if not already present
-        if (!geometry) {
-            try {
-                const response = await fetch(`${apiBase}/routes/${route.id}/geometry`);
-                if (!response.ok) return;
-                const data = await response.json();
-                geometry = data && data.geometry;
-            } catch (error) {
-                console.error(`Failed to load geometry for route ${route.id}:`, error);
-                return;
-            }
+    // Lazily render the rest using IntersectionObserver when available
+    const rest = routes.slice(10);
+    rest.forEach(route => {
+        const rid = route.id || route._id;
+        const container = document.getElementById(`mini-map-${rid}`);
+        if (!container) return;
+        container.dataset.routeId = rid;
+        if (observer) {
+            observer.observe(container);
+        } else {
+            renderRouteMiniMapFor(container, route);
         }
-
-
-        // Parse geometry if provided as string
-        if (typeof geometry === 'string') {
-            try {
-                geometry = JSON.parse(geometry);
-            } catch {
-                return;
-            }
-        }
-
-        const coords = geometry.coordinates || (geometry.geometry && geometry.geometry.coordinates);
-        if (!coords || coords.length === 0) return;
-
-        const latlngs = coords.map(c => [c[1], c[0]]);
-
-        const map = L.map(container, {
-            attributionControl: false,
-            dragging: false,
-            zoomControl: false,
-            scrollWheelZoom: false,
-            doubleClickZoom: false,
-            boxZoom: false,
-            keyboard: false,
-            touchZoom: false
-        });
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18
-        }).addTo(map);
-
-        const line = L.polyline(latlngs, { interactive: false }).addTo(map);
-        map.fitBounds(line.getBounds());
     });
 }
 

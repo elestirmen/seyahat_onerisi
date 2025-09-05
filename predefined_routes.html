@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: blob: http://localhost:5560 https://*; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' http://localhost:5560 https://harita.urgup.keenetic.link https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org https://*.tile.openstreetmap.org https://*.opentopomap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://api.open-elevation.com https://router.project-osrm.org;"/>
+  <title>Hazır Rotalar</title>
+  <!-- Base design system CSS -->
+  <link rel="stylesheet" href="static/css/design-tokens.css"/>
+  <link rel="stylesheet" href="static/css/layout-system.css"/>
+  <link rel="stylesheet" href="static/css/components.css"/>
+  <link rel="stylesheet" href="static/css/ux-enhancements.css"/>
+  <!-- Page specific CSS -->
+  <link rel="stylesheet" href="static/css/predefined_routes.css"/>
+  <!-- Shared feature CSS used by this page -->
+  <link rel="stylesheet" href="static/css/route-details-modal.css"/>
+  <link rel="stylesheet" href="static/css/poi-hover-stability-fix.css"/>
+  <link rel="stylesheet" href="static/css/performance-optimizations.css"/>
+  <link rel="stylesheet" href="static/css/modal-jitter-fix-animations.css"/>
+
+  <!-- External dependencies -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+  <!-- Centralized POI Category Configuration -->
+  <script src="static/js/poi-categories.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <!-- Touch/UX/Perf enhancements -->
+  <script src="static/js/touch-optimizations.js"></script>
+  <script src="static/js/loading-performance.js" defer></script>
+  <script src="static/js/ux-enhancement-manager.js" defer></script>
+  <script src="static/js/performance-optimizations.js" defer></script>
+  <script src="static/js/mobile-optimizations.js" defer></script>
+  <!-- Hover Event Management System -->
+  <script src="static/js/hover-event-manager.js" defer></script>
+  <script src="static/js/event-delegation-manager.js" defer></script>
+  <script src="static/js/poi-hover-integration.js" defer></script>
+  <!-- Central Modal State Manager (for robust modal lifecycle) -->
+  <script src="static/js/modal-state-manager.js" defer></script>
+</head>
+<body>
+  <div class="container container-xl">
+    <div class="header">
+      <h1><i class="fas fa-route"></i> Hazır Rotalar</h1>
+      <p>Uzmanlar tarafından hazırlanmış rotaları keşfedin</p>
+    </div>
+
+    <div class="content p-6 md:p-8 lg:p-12">
+      <div class="tab-content active" id="predefinedRoutesContent">
+        <div class="predefined-routes-section">
+          <div class="predefined-routes-header">
+            <div class="section-header-content">
+              <h2 class="section-title"><i class="fas fa-route"></i> Hazır Rotalar</h2>
+              <p class="predefined-routes-description">Uzmanlar tarafından önceden hazırlanmış rotalar arasından seçim yapın. Her rota farklı deneyimler ve zorluk seviyeleri sunar.</p>
+            </div>
+            <div class="route-search">
+              <input type="search" id="routeSearchInput" class="form-control" placeholder="Rota ara...">
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshAllRouteMedia()" title="Tüm rota medyalarını yenile"><i class="fas fa-sync-alt"></i><span>Medyayı Yenile</span></button>
+              <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleMediaDisplayMode()" title="Medya görüntüleme modunu değiştir"><i class="fas fa-toggle-on"></i><span>Özel İçerik</span></button>
+            </div>
+            <div class="routes-quick-stats" id="routesQuickStats">
+              <div class="quick-stat-item"><div class="stat-icon"><i class="fas fa-route"></i></div><div class="stat-content"><span class="stat-number" id="totalRoutesCount">-</span><span class="stat-label">Toplam Rota</span></div></div>
+              <div class="quick-stat-item"><div class="stat-icon"><i class="fas fa-filter"></i></div><div class="stat-content"><span class="stat-number" id="filteredRoutesCount">-</span><span class="stat-label">Filtrelenmiş</span></div></div>
+            </div>
+          </div>
+
+          <button class="filters-open-btn" id="openFiltersBtn" style="display: none;"><i class="fas fa-sliders-h"></i> Filtreleri Aç</button>
+          <div class="mobile-filter-panel" id="mobileFilterPanel">
+            <div class="mobile-filter-handle"><div class="filter-handle-bar"></div></div>
+            <div class="mobile-filter-content">
+              <div class="mobile-filter-header"><h3 class="mobile-filter-title"><i class="fas fa-sliders-h"></i> Filtreler</h3><button class="mobile-filter-close" id="mobileFilterClose"><i class="fas fa-times"></i></button></div>
+              <div class="mobile-filter-body"></div>
+            </div>
+          </div>
+
+          <div class="route-filters-enhanced">
+            <div class="filters-content" id="filtersContent">
+              <div class="filters-header"><h3 class="filters-title"><i class="fas fa-sliders-h"></i> Filtreler</h3><button class="filters-toggle-btn" id="filtersToggleBtn"><i class="fas fa-chevron-down"></i></button></div>
+              <div class="filter-chips-container">
+                <div class="filter-chip-group"><label class="filter-chip-label">Rota Tipi</label><div class="filter-chips" id="routeTypeChips"><button class="filter-chip active" data-value=""><i class="fas fa-globe"></i><span>Tümü</span></button><button class="filter-chip" data-value="walking"><i class="fas fa-walking"></i><span>Yürüyüş</span></button><button class="filter-chip" data-value="hiking"><i class="fas fa-hiking"></i><span>Doğa</span></button><button class="filter-chip" data-value="cycling"><i class="fas fa-bicycle"></i><span>Bisiklet</span></button><button class="filter-chip" data-value="driving"><i class="fas fa-car"></i><span>Araç</span></button></div></div>
+                <div class="filter-chip-group"><label class="filter-chip-label">Zorluk</label><div class="filter-chips" id="difficultyChips"><button class="filter-chip active" data-value=""><i class="fas fa-star"></i><span>Tümü</span></button><button class="filter-chip" data-value="1"><i class="fas fa-leaf"></i><span>Kolay</span></button><button class="filter-chip" data-value="2"><i class="fas fa-mountain"></i><span>Orta</span></button><button class="filter-chip" data-value="3"><i class="fas fa-fire"></i><span>Zor</span></button><button class="filter-chip" data-value="4"><i class="fas fa-bolt"></i><span>Çok Zor</span></button><button class="filter-chip" data-value="5"><i class="fas fa-crown"></i><span>Uzman</span></button></div></div>
+                <div class="filter-chip-group"><label class="filter-chip-label">Süre</label><div class="filter-chips" id="durationChips"><button class="filter-chip active" data-value=""><i class="fas fa-clock"></i><span>Tümü</span></button><button class="filter-chip" data-value="0-60"><i class="fas fa-hourglass-start"></i><span>&lt; 1 saat</span></button><button class="filter-chip" data-value="60-180"><i class="fas fa-hourglass-half"></i><span>1-3 saat</span></button><button class="filter-chip" data-value="180-360"><i class="fas fa-hourglass-end"></i><span>3-6 saat</span></button><button class="filter-chip" data-value="360-999"><i class="fas fa-calendar-day"></i><span>6+ saat</span></button></div></div>
+                <div class="filter-chip-group"><label class="filter-chip-label">Favoriler</label><div class="filter-chips" id="favoriteChips"><button class="filter-chip active" data-value=""><i class="fas fa-list"></i><span>Tümü</span></button><button class="filter-chip" data-value="favorites"><i class="fas fa-star"></i><span>Favoriler</span></button></div></div>
+              </div>
+              <div class="filters-actions"><button class="filter-clear-btn" id="clearFiltersBtn"><i class="fas fa-times"></i><span>Temizle</span></button><button class="filter-apply-btn" id="applyFiltersBtn"><i class="fas fa-check"></i><span>Uygula</span></button></div>
+            </div>
+          </div>
+
+          <div id="routesLoadingIndicator" class="loading"><div class="loading__spinner"></div><p class="loading__text">Hazır rotalar yükleniyor...</p></div>
+
+          <div class="mobile-view-toggle">
+            <div class="view-toggle-buttons">
+              <button class="view-toggle-btn active" data-view="list" id="listViewBtn"><i class="fas fa-list"></i><span>Liste</span></button>
+              <button class="view-toggle-btn" data-view="map" id="mapViewBtn"><i class="fas fa-map"></i><span>Harita</span></button>
+              <button class="view-toggle-btn back-to-list-btn" id="backToListBtn"><i class="fas fa-arrow-left"></i><span>Listeye Dön</span></button>
+            </div>
+          </div>
+
+          <div class="routes-list-and-map">
+            <div id="mapView" class="predefined-map-container">
+              <div id="predefinedRoutesMap" class="predefined-routes-map">
+                <div class="map-loading" id="predefinedMapLoading"><div class="loading__spinner"></div><p class="loading__text">Harita hazırlanıyor...</p></div>
+              </div>
+              <div id="predefinedElevationChartContainer" class="elevation-chart-hidden"></div>
+            </div>
+            <template id="predefinedRouteCardTemplate">
+              <div class="route-card" data-route-id="">
+                <div class="route-image-container"><img class="route-image" src="" alt="Rota önizlemesi" data-placeholder="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='120'><rect width='100%25' height='100%25' fill='%23e5e7eb'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-family='Arial,sans-serif' font-size='14'>Rota</text></svg>" onerror="handleImageError(event)"></div>
+                <div class="route-card-content">
+                  <div class="route-card-header"><h3 class="route-card-title"></h3><p class="route-card-description"></p></div>
+                  <div class="route-card-meta">
+                    <div class="route-meta-item" aria-label="Mesafe"><span class="route-distance">0 km</span></div>
+                    <div class="route-meta-item" aria-label="Süre"><i class="fas fa-clock"></i><span></span></div>
+                    <div class="route-meta-item" aria-label="Durak sayısı"><i class="fas fa-map-marker-alt"></i><span></span></div>
+                    <div class="route-meta-item" aria-label="Zorluk"><i class="fas fa-mountain"></i><div class="difficulty-stars"></div></div>
+                  </div>
+                </div>
+                <div class="route-card-actions">
+                  <button class="route-quick-action favorite" aria-label="Favorilere ekle" title="Favorilere ekle"><i class="fas fa-heart"></i></button>
+                  <button class="route-quick-action navigate" aria-label="Navigasyon" title="Navigasyon"><i class="fas fa-directions"></i></button>
+                  <button class="route-quick-action share" aria-label="Paylaş" title="Paylaş"><i class="fas fa-share-alt"></i></button>
+                </div>
+              </div>
+            </template>
+            <div id="predefinedRoutesList" class="predefined-routes-list" aria-live="polite"></div>
+          </div>
+
+          <div id="noRoutesMessage" class="no-routes-message" style="display: none;"><i class="fas fa-info-circle"></i><p>Seçilen kriterlere uygun rota bulunamadı.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shared overlays and modals used by this page -->
+  <div id="routeContextMenu" class="route-context-menu">
+    <div class="route-context-menu-header">
+      <h3 class="route-context-menu-title"><i class="fas fa-route"></i> <span id="routeContextMenuTitle">Rota Seçenekleri</span></h3>
+      <p class="route-context-menu-subtitle" id="routeContextMenuSubtitle">Rotanız için mevcut işlemler</p>
+    </div>
+    <div class="route-context-stats" id="routeContextStats">
+      <h4><i class="fas fa-chart-bar"></i> Rota Özeti</h4>
+      <div class="route-context-stats-grid">
+        <div class="route-context-stat-item"><span class="icon">📏</span><span class="value" id="contextDistance">-- km</span></div>
+        <div class="route-context-stat-item"><span class="icon">⏱️</span><span class="value" id="contextDuration">-- dk</span></div>
+        <div class="route-context-stat-item"><span class="icon">📍</span><span class="value" id="contextStops">-- durak</span></div>
+        <div class="route-context-stat-item"><span class="icon">🏷️</span><span class="value" id="contextCategories">-- kategori</span></div>
+      </div>
+    </div>
+    <div class="route-context-menu-divider"></div>
+    <h4 class="route-context-menu-group-title">Rota Durakları</h4>
+    <div id="routeContextStops" class="route-context-stops"></div>
+    <div class="route-context-menu-divider"></div>
+    <h4 class="route-context-menu-group-title">Rota İşlemleri</h4>
+    <button class="route-context-menu-item" onclick="RouteContextMenu.showRouteDetails()"><i class="route-context-menu-icon fas fa-info-circle"></i><div class="route-context-menu-text"><div class="main-text">Rota Detayları</div><div class="sub-text">Rota özetini ve durakları görüntüle</div></div><i class="route-context-menu-arrow fas fa-chevron-right"></i></button>
+    <button class="route-context-menu-item success" onclick="RouteContextMenu.optimizeRoute()"><i class="route-context-menu-icon fas fa-magic"></i><div class="route-context-menu-text"><div class="main-text">Rotayı Optimize Et</div><div class="sub-text">Rota sırasını otomatik düzenle</div></div><i class="route-context-menu-arrow fas fa-chevron-right"></i></button>
+    <button class="route-context-menu-item" onclick="RouteContextMenu.focusOnMap()"><i class="route-context-menu-icon fas fa-search-location"></i><div class="route-context-menu-text"><div class="main-text">Haritada Odakla</div><div class="sub-text">Rotayı haritada göster</div></div><i class="route-context-menu-arrow fas fa-chevron-right"></i></button>
+    <button class="route-context-menu-item" onclick="RouteContextMenu.shareRoute()"><i class="route-context-menu-icon fas fa-share-alt"></i><div class="route-context-menu-text"><div class="main-text">Rotayı Paylaş</div><div class="sub-text">Rota linkini paylaş</div></div><i class="route-context-menu-arrow fas fa-chevron-right"></i></button>
+    <div class="route-context-menu-divider"></div>
+    <h4 class="route-context-menu-group-title">Navigasyon</h4>
+    <button class="route-context-menu-item" onclick="RouteContextMenu.openInGoogleMaps()"><i class="route-context-menu-icon fab fa-google"></i><div class="route-context-menu-text"><div class="main-text">Google Maps'te Aç</div><div class="sub-text">Rotayı Google Maps'e aktar</div></div><i class="route-context-menu-arrow fas fa-external-link-alt"></i></button>
+    <button class="route-context-menu-item" onclick="RouteContextMenu.downloadRoute()"><i class="route-context-menu-icon fas fa-download"></i><div class="route-context-menu-text"><div class="main-text">Rotayı İndir</div><div class="sub-text">GPX/GeoJSON olarak indir</div></div><i class="route-context-menu-arrow fas fa-chevron-right"></i></button>
+    <div class="route-context-menu-divider"></div>
+    <h4 class="route-context-menu-group-title">Düzenleme</h4>
+    <button class="route-context-menu-item warning" onclick="RouteContextMenu.editRoute()"><i class="route-context-menu-icon fas fa-edit"></i><div class="route-context-menu-text"><div class="main-text">Rotayı Düzenle</div><div class="sub-text">Durakları düzenle</div></div><i class="route-context-menu-arrow fas fa-chevron-right"></i></button>
+    <button class="route-context-menu-item" onclick="RouteContextMenu.reverseRoute()"><i class="route-context-menu-icon fas fa-exchange-alt"></i><div class="route-context-menu-text"><div class="main-text">Rotayı Ters Çevir</div><div class="sub-text">Başlangıç ve bitişi değiştir</div></div><i class="route-context-menu-arrow fas fa-chevron-right"></i></button>
+    <button class="route-context-menu-item danger" onclick="RouteContextMenu.clearRoute()"><i class="route-context-menu-icon fas fa-trash"></i><div class="route-context-menu-text"><div class="main-text">Rotayı Temizle</div><div class="sub-text">Tüm durakları kaldır ve baştan başla</div></div><i class="route-context-menu-arrow fas fa-chevron-right"></i></button>
+  </div>
+
+  <div id="mediaModal" class="media-modal">
+    <div class="media-modal-content">
+      <div class="media-modal-header"><h3 class="media-modal-title" id="mediaModalTitle">Medya Görüntüleyici</h3><button class="media-modal-close" id="mediaModalClose" aria-label="Kapat"><i class="fas fa-times"></i></button></div>
+      <div class="media-modal-body" id="mediaModalBody"><div class="loading"><div class="loading__spinner"></div><p class="loading__text">Medya yükleniyor...</p></div></div>
+      <button class="media-navigation media-nav-prev media-nav-btn" id="mediaPrevBtn" aria-label="Önceki"><i class="fas fa-chevron-left"></i></button>
+      <button class="media-navigation media-nav-next media-nav-btn" id="mediaNextBtn" aria-label="Sonraki"><i class="fas fa-chevron-right"></i></button>
+      <div class="media-counter" id="mediaCounter" style="display: none;">1 / 1</div>
+      <div class="media-thumbnails" id="mediaThumbnails" style="display: none;"></div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="poiDetailModal" tabindex="-1" aria-labelledby="poiDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <div class="poi-modal-header w-100">
+            <div class="poi-modal-title-section"><h4 class="modal-title" id="poiDetailModalLabel">POI Detayları</h4><div class="poi-modal-category-badge" id="poiModalCategory"></div></div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="modal-body p-0">
+          <div class="poi-media-gallery" id="poiMediaGallery">
+            <div class="media-gallery-container">
+              <div class="media-gallery-main" id="mediaGalleryMain"><div class="no-media-placeholder"><i class="fas fa-image fa-3x text-muted"></i><p class="text-muted mt-2">Bu POI için medya bulunmuyor.</p></div></div>
+              <div class="media-gallery-controls"><button class="media-nav-btn prev-btn" id="mediaPrevBtn"><i class="fas fa-chevron-left"></i></button><button class="media-nav-btn next-btn" id="mediaNextBtn"><i class="fas fa-chevron-right"></i></button></div>
+              <div class="media-gallery-thumbnails" id="mediaGalleryThumbnails"></div>
+            </div>
+          </div>
+          <div class="poi-modal-content">
+            <div class="container-fluid p-4">
+              <div class="row">
+                <div class="col-lg-8">
+                  <div class="poi-description-section mb-4"><h5 class="section-title"><i class="fas fa-info-circle text-primary me-2"></i> Açıklama</h5><div class="poi-description-content" id="poiDescriptionContent"><p class="text-muted">Bu POI için açıklama bulunmuyor.</p></div></div>
+                  <div class="poi-features-section mb-4" id="poiFeaturesSection" style="display: none;"><h5 class="section-title"><i class="fas fa-tags text-success me-2"></i> Özellikler</h5><div class="poi-features-tags" id="poiFeaturesTags"></div></div>
+                  <div class="poi-ratings-section mb-4" id="poiRatingsSection" style="display: none;"><h5 class="section-title"><i class="fas fa-star text-warning me-2"></i> Nitelik Puanları</h5><div class="poi-ratings-grid" id="poiRatingsGrid"></div></div>
+                </div>
+                <div class="col-lg-4">
+                  <div class="poi-quick-info">
+                    <div class="quick-info-card">
+                      <h5 class="section-title"><i class="fas fa-map-marker-alt text-danger me-2"></i> Konum Bilgileri</h5>
+                      <div class="quick-info-item"><span class="info-label">Koordinatlar:</span><span class="info-value" id="poiCoordinates">-</span></div>
+                      <div class="quick-info-item"><span class="info-label">Kategori:</span><span class="info-value" id="poiCategoryInfo">-</span></div>
+                      <div class="quick-info-item" id="poiRecommendationScore" style="display: none;"><span class="info-label">Öneri Puanı:</span><span class="info-value"><span class="badge bg-primary" id="poiScoreBadge">-</span></span></div>
+                    </div>
+                    <div class="poi-actions-card mt-3">
+                      <h5 class="section-title"><i class="fas fa-tools text-info me-2"></i> İşlemler</h5>
+                      <div class="poi-action-buttons">
+                        <button class="btn btn-primary btn-sm w-100 mb-2" id="showOnMapBtn"><i class="fas fa-map-marker-alt me-2"></i> Haritada Göster</button>
+                        <button class="btn btn-success btn-sm w-100 mb-2" id="addToRouteBtn"><i class="fas fa-plus me-2"></i> Rotaya Ekle</button>
+                        <button class="btn btn-info btn-sm w-100 mb-2" id="openInGoogleMapsBtn"><i class="fab fa-google me-2"></i> Google Maps'te Aç</button>
+                        <button class="btn btn-outline-secondary btn-sm w-100" id="sharePoiBtn"><i class="fas fa-share-alt me-2"></i> Paylaş</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="routeDetailsPanel" class="route-details-panel">
+    <div class="route-header"><h3>Rota Detayları</h3><button class="close-btn" onclick="RouteDetailsPanel.hide()">×</button></div>
+    <div class="route-summary">
+      <div class="summary-item"><i class="fas fa-route"></i><span id="routeDistance">-- km</span></div>
+      <div class="summary-item"><i class="fas fa-clock"></i><span id="routeDuration">-- saat</span></div>
+      <div class="summary-item"><i class="fas fa-map-marker-alt"></i><span id="routeStops">-- durak</span></div>
+      <div class="summary-item"><i class="fas fa-walking"></i><span id="routeType">--</span></div>
+    </div>
+    <div class="elevation-section" id="elevationSection"><h4>Yükseklik Profili</h4><div style="height: 120px; position: relative; background: #f8f9fa; border-radius: 8px; overflow: hidden;"><canvas id="elevationChart" width="300" height="120"></canvas></div><div class="elevation-stats"><span id="minElevation">Min: --m</span><span id="maxElevation">Max: --m</span><span id="totalAscent">↗ --m</span><span id="totalDescent">↘ --m</span></div></div>
+    <div class="stops-section"><h4>Duraklar <span class="stops-count" id="stopsCount">0</span></h4><div class="stops-list" id="stopsList"></div></div>
+    <div class="segments-section" id="segmentsSection" style="display: none;"><h4>Rota Segmentleri</h4><div class="segments-list" id="segmentsList"></div></div>
+    <div class="export-section"><button class="export-btn map-view" onclick="RouteDetailsPanel.showInFullscreenMap()" id="showInMapBtn" style="display: none;"><i class="fas fa-map"></i> Haritada Göster</button><button class="export-btn google-maps" onclick="RouteDetailsPanel.exportToGoogleMaps()"><i class="fab fa-google"></i> Google Maps'e Aktar</button></div>
+  </div>
+
+  <!-- External JS deps -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/marslan390/BeautifyMarker/leaflet-beautify-marker-icon.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/marslan390/BeautifyMarker/leaflet-beautify-marker-icon.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@3.0.0/Control.FullScreen.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@3.0.0/Control.FullScreen.css" />
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+
+  <!-- Feature JS -->
+  <script src="static/js/rate-limiter.js"></script>
+  <script src="static/js/elevation-chart.js"></script>
+  <script src="static/js/map-layer-control.js"></script>
+  <script src="static/js/route-details-modal.js"></script>
+
+  <!-- Main app logic (shared) + page wrapper (isolated) -->
+  <script>
+    // Ensure tab state favors predefined flows when script loads
+    window.currentTab = 'predefined-routes';
+  </script>
+  <script src="static/js/poi_recommendation_system.js"></script>
+  <script src="static/js/modal-jitter-fix.js"></script>
+  <script src="static/js/predefined_routes.js"></script>
+</body>
+</html>

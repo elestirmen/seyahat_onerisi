@@ -179,7 +179,9 @@ class UXEnhancementManager {
             // Check if preferences container exists
             const preferencesContainer = document.querySelector('.preferences-section');
             if (!preferencesContainer) {
-                console.warn('Preferences container not found, skipping enhanced preferences');
+                if (window.__UX_DEBUG__) {
+                    console.warn('Preferences container not found, skipping enhanced preferences');
+                }
                 return;
             }
 
@@ -214,7 +216,9 @@ class UXEnhancementManager {
             // Check if media modal exists
             const mediaModal = document.getElementById('mediaModal');
             if (!mediaModal) {
-                console.warn('Media modal not found, skipping enhanced media viewer');
+                if (window.__UX_DEBUG__) {
+                    console.warn('Media modal not found, skipping enhanced media viewer');
+                }
                 return;
             }
 
@@ -235,7 +239,9 @@ class UXEnhancementManager {
             // Wait for map to be available
             const mapContainer = document.getElementById('mapContainer');
             if (!mapContainer) {
-                console.warn('Map container not found, skipping interactive map controller');
+                if (window.__UX_DEBUG__) {
+                    console.warn('Map container not found, skipping interactive map controller');
+                }
                 return;
             }
 
