@@ -26,8 +26,7 @@
 }
 
 /* Animation state reset for modal containers */
-.route-details-modal.modal-animation-reset,
-.route-details-modal-content.modal-animation-reset {
+.route-details-modal.modal-animation-reset {
     /* Reset transform and animation properties */
     transform: translateZ(0) !important;
     animation: none !important;
@@ -37,7 +36,7 @@
     opacity: 1 !important;
     visibility: visible !important;
     
-    /* Reset positioning */
+    /* Reset positioning on the overlay container only */
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -170,18 +169,23 @@
    ============================================================================= */
 
 /* Hardware acceleration for modal elements */
-.route-details-modal-content,
+/* Keep GPU layer on heavy animated surfaces, but avoid overriding
+   transform on .route-details-modal-content to prevent centering drift. */
 #routeDetailsPanel,
 .media-viewer-modal {
-    /* Force GPU layer (do NOT apply on .route-details-modal itself) */
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
-    
-    /* Prevent flickering */
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    
-    /* Optimize for animations */
+    perspective: 1000px;
+    -webkit-perspective: 1000px;
+}
+
+/* For route modal content, only hint without setting transform to avoid conflicts */
+.route-details-modal-content {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
     perspective: 1000px;
     -webkit-perspective: 1000px;
 }

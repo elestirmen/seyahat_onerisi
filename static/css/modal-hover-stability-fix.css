@@ -13,10 +13,8 @@
     contain: layout style paint;
     /* Isolation to create new stacking context */
     isolation: isolate;
-    /* Hardware acceleration */
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-    will-change: transform;
+    /* Avoid forcing GPU transforms to prevent subpixel map drift */
+    will-change: auto;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
 }
@@ -27,9 +25,7 @@
     contain: size layout;
     /* Isolation to prevent interference */
     isolation: isolate;
-    /* Hardware acceleration */
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
+    /* Avoid forcing GPU layer to prevent subpixel jitter */
     will-change: auto; /* Only set when needed */
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
@@ -40,9 +36,7 @@
     /* Lock map container dimensions during interactions */
     contain: size layout;
     isolation: isolate;
-    /* Hardware acceleration for smooth rendering */
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
+    /* Avoid forcing GPU layer to prevent route line jitter */
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
 }

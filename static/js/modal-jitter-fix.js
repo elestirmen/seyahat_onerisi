@@ -592,6 +592,8 @@ function installViewportCompensationHandlers() {
             const anyModal = document.querySelector('#routeDetailsModal.show, .modal.show');
             if (!anyModal) return;
 
+            const isRouteModal = anyModal.id === 'routeDetailsModal' || anyModal.classList.contains('route-details-modal');
+
             // If Bootstrap modal is open, apply body compensation; for route modal, do not toggle body overflow
             const isBootstrapModal = anyModal.classList.contains('modal') && !anyModal.id?.includes('routeDetailsModal');
             if (isBootstrapModal) {
@@ -604,8 +606,13 @@ function installViewportCompensationHandlers() {
                 }
             }
 
-            // Safely refresh layout without toggling visibility classes
-            safeRefreshModalLayout(anyModal);
+            // Safely refresh layout without toggling transform on route modal
+            if (!isRouteModal) {
+                safeRefreshModalLayout(anyModal);
+            } else {
+                // For route modal, avoid transient GPU promotions that can cause subpixel drift
+                safeRefreshModalLayout(anyModal, { willChange: 'opacity' });
+            }
 
             // If RouteDetailsModal is open, trigger a light layout refresh
             try {
@@ -639,11 +646,12 @@ function installViewportCompensationHandlers() {
 /**
  * Safely refresh modal layout/composite state without removing 'show'.
  */
-function safeRefreshModalLayout(modalEl) {
+function safeRefreshModalLayout(modalEl, options = {}) {
     try {
         const content = modalEl.querySelector('.route-details-modal-content') || modalEl.querySelector('.modal-content') || modalEl;
         const prevWillChange = content.style.willChange;
-        content.style.willChange = 'transform, opacity';
+        const wc = options.willChange || 'transform, opacity';
+        content.style.willChange = wc;
         // Force reflow
         void content.offsetHeight;
         // DO NOT override transform; desktop centering uses CSS transform

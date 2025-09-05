@@ -9,7 +9,11 @@ class RouteDetailsModal {
         this.currentRoute = null;
         this.currentTab = 'overview';
         this.mapInstance = null;
+        this.canvasRenderer = null;
         this.isVisible = false;
+        this.hasFittedBounds = false;
+        this.userHasInteracted = false;
+        this._resizeTimer = null;
         this.elevationChart = null;
         this.elevationChartInstance = null;
         this.elevationDataForInteraction = null;
@@ -39,6 +43,9 @@ class RouteDetailsModal {
         this.hide = this.hide.bind(this);
         this.handleKeydown = this.handleKeydown.bind(this);
         this.handleBackdropClick = this.handleBackdropClick.bind(this);
+        this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
+        this.lockMapContainerLayout = this.lockMapContainerLayout.bind(this);
+        this.unlockMapContainerLayout = this.unlockMapContainerLayout.bind(this);
 
         this.init();
     }
@@ -427,6 +434,10 @@ class RouteDetailsModal {
         this.currentRoute = routeData;
         this.updateHeader(routeData);
 
+        // Reset fit/user interaction state for a fresh session
+        this.hasFittedBounds = false;
+        this.userHasInteracted = false;
+
         // Show modal with animation
         this.modal.classList.add('show');
         this.isVisible = true;
@@ -455,8 +466,8 @@ class RouteDetailsModal {
         const isMobile = window.innerWidth <= 768;
         const delay = isMobile ? 500 : 100;
 
-        setTimeout(async () => {
-            await this.loadTabContent(this.currentTab);
+            setTimeout(async () => {
+                await this.loadTabContent(this.currentTab);
 
             // ALWAYS pre-load map content on mobile (critical fix)
             if (isMobile) {
@@ -482,13 +493,15 @@ class RouteDetailsModal {
             }
 
             // Initialize elevation chart if we're on the map tab with additional mobile delay
-            if (this.currentTab === 'map') {
-                const chartDelay = isMobile ? 1200 : 200;
-                setTimeout(() => {
-                    this.initializeElevationChart();
-                }, chartDelay);
-            }
-        }, delay);
+                if (this.currentTab === 'map') {
+                    const chartDelay = isMobile ? 1200 : 200;
+                    setTimeout(() => {
+                        this.initializeElevationChart();
+                    }, chartDelay);
+                    // Lock map container layout to integer px after initial content
+                    setTimeout(() => { this.lockMapContainerLayout(); }, chartDelay + 50);
+                }
+            }, delay);
 
         // Add resize listener for responsive behavior
         this.addResizeListener();
@@ -502,6 +515,10 @@ class RouteDetailsModal {
 
         // Release scroll lock
         ScrollLock.disable();
+
+        // Remove visibility listener and unlock layout
+        try { document.removeEventListener('visibilitychange', this.handleVisibilityChange); } catch (_) {}
+        this.unlockMapContainerLayout();
 
         // Clean up resize listener
         this.removeResizeListener();
@@ -539,6 +556,49 @@ class RouteDetailsModal {
         this.currentElevationPosition = null;
 
         this.currentRoute = null;
+    }
+
+    // Ensure map container uses integer pixel dimensions to avoid sub-pixel drift
+    lockMapContainerLayout() {
+        try {
+            const mapEl = document.getElementById('routeModalMap');
+            const wrapper = mapEl ? mapEl.closest('.route-map-container') : null;
+            if (!mapEl || !wrapper) return;
+            const rect = wrapper.getBoundingClientRect();
+            const w = Math.max(1, Math.round(rect.width));
+            const h = Math.max(1, Math.round(rect.height));
+            wrapper.style.width = w + 'px';
+            wrapper.style.height = h + 'px';
+            mapEl.style.width = w + 'px';
+            mapEl.style.height = h + 'px';
+        } catch (_) { /* noop */ }
+    }
+
+    unlockMapContainerLayout() {
+        try {
+            const mapEl = document.getElementById('routeModalMap');
+            const wrapper = mapEl ? mapEl.closest('.route-map-container') : null;
+            if (wrapper) {
+                wrapper.style.width = '';
+                wrapper.style.height = '';
+            }
+            if (mapEl) {
+                mapEl.style.width = '';
+                mapEl.style.height = '';
+            }
+        } catch (_) { /* noop */ }
+    }
+
+    handleVisibilityChange() {
+        if (document.hidden) return;
+        if (!(this.isVisible && this.currentTab === 'map' && this.mapInstance)) return;
+        // On tab return, lock container to integer px and only invalidate size.
+        this.lockMapContainerLayout();
+        try { this.mapInstance.invalidateSize(); } catch (_) {}
+        // Do not refit unless initial fit missing
+        if (!this.hasFittedBounds && !this.userHasInteracted) {
+            this.fitMapToRoute(true);
+        }
     }
 
     updateHeader(routeData) {
@@ -651,15 +711,19 @@ class RouteDetailsModal {
                 if (this.mapInstance) {
                     console.log('🗺️ Invalidating map size after tab switch');
                     this.mapInstance.invalidateSize();
-                    this.fitMapToRoute();
+                    if (!this.hasFittedBounds && !this.userHasInteracted) {
+                        this.fitMapToRoute(true);
+                    }
 
                     // Additional mobile-specific map refresh
                     if (isMobile) {
                         setTimeout(() => {
                             this.mapInstance.invalidateSize();
-                            this.fitMapToRoute();
+                            if (!this.hasFittedBounds && !this.userHasInteracted) {
+                                this.fitMapToRoute(true);
+                            }
                         }, 200);
-                    }
+                }
                 }
 
                 // Initialize elevation chart if elevation container exists but chart doesn't
@@ -838,18 +902,24 @@ class RouteDetailsModal {
                 // Container dimensions logged (removed for cleaner console)
 
                 this.mapInstance.invalidateSize();
-                this.fitMapToRoute();
+                if (!this.hasFittedBounds && !this.userHasInteracted) {
+                    this.fitMapToRoute(true);
+                }
 
                 // Force additional resize on mobile with multiple attempts
                 if (isMobile) {
                     setTimeout(() => {
                         this.mapInstance.invalidateSize();
-                        // Second invalidateSize (log removed)
+                        if (!this.hasFittedBounds && !this.userHasInteracted) {
+                            this.fitMapToRoute(true);
+                        }
                     }, 300);
 
                     setTimeout(() => {
                         this.mapInstance.invalidateSize();
-                        // Third invalidateSize (log removed)
+                        if (!this.hasFittedBounds && !this.userHasInteracted) {
+                            this.fitMapToRoute(true);
+                        }
                     }, 600);
                 }
             }, delay);
@@ -892,7 +962,14 @@ class RouteDetailsModal {
             this.mapInstance = L.map('routeModalMap', {
                 preferCanvas: true,
                 zoomControl: true,
-                attributionControl: true
+                attributionControl: true,
+                // Stabilize rendering to avoid visible lateral shifts
+                zoomAnimation: false,
+                fadeAnimation: false,
+                updateWhenZooming: false,
+                updateWhenIdle: true,
+                inertia: false,
+                scrollWheelZoom: 'center'
             }).setView([38.6431, 34.8286], 10);
 
             console.log('✅ Map instance created successfully');
@@ -905,6 +982,11 @@ class RouteDetailsModal {
 
             // Initialize base layers
             this.initializeBaseLayers();
+
+            // Track user interaction to avoid auto-fit after user moves map
+            try {
+                this.mapInstance.on('dragstart zoomstart', () => { this.userHasInteracted = true; });
+            } catch (_) { /* noop */ }
 
             // Wait for map to be ready, then display route with mobile-specific delays
             const mapDelay = isMobile ? 800 : 200;
@@ -931,7 +1013,7 @@ class RouteDetailsModal {
                         }, (i + 1) * 200);
                     }
                 } else {
-                    this.fitMapToRoute();
+                    this.fitMapToRoute(true);
                 }
 
                 // Initialize elevation chart with mobile delay
@@ -1311,10 +1393,19 @@ class RouteDetailsModal {
 
                 if (geometry.coordinates) {
                     const coordinates = geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                    // Ensure a dedicated canvas renderer to avoid SVG flicker/jitter
+                    if (!this.canvasRenderer) {
+                        try { this.canvasRenderer = L.canvas(); } catch (_) { this.canvasRenderer = null; }
+                    }
+
                     const routeLine = L.polyline(coordinates, {
                         color: '#4338ca',
                         weight: 4,
-                        opacity: 0.8
+                        opacity: 0.8,
+                        interactive: false, // avoid hover-induced repaints on the route line
+                        lineCap: 'round',
+                        lineJoin: 'round',
+                        renderer: this.canvasRenderer || undefined
                     }).addTo(this.mapInstance);
 
                     console.log('✅ Route geometry added successfully');
@@ -1393,10 +1484,10 @@ class RouteDetailsModal {
             // Load and display media markers for the route
             await this.loadRouteMediaMarkers();
 
-            // Fit map to show all markers with a delay to ensure everything is rendered
+            // Fit map once after marker creation to initial bounds
             setTimeout(() => {
                 console.log('🎯 Fitting map to route after marker creation');
-                this.fitMapToRoute();
+                this.fitMapToRoute(true);
             }, 100);
 
         } catch (error) {
@@ -1746,8 +1837,16 @@ class RouteDetailsModal {
         }
     }
 
-    fitMapToRoute() {
-        console.log('🔄 Fitting map to route');
+    fitMapToRoute(force = false) {
+        // Avoid repeated refits or overriding user intention
+        if (this.userHasInteracted && !force) {
+            return;
+        }
+        if (this.hasFittedBounds && !force) {
+            return;
+        }
+
+        console.log('🔄 Fitting map to route', { force, hasFittedBounds: this.hasFittedBounds, userHasInteracted: this.userHasInteracted });
 
         if (!this.mapInstance) {
             console.error('❌ No map instance available');
@@ -1791,17 +1890,21 @@ class RouteDetailsModal {
                         maxZoom: 16 // Prevent zooming too close
                     });
                     console.log('✅ Map fitted to route successfully');
+                    this.hasFittedBounds = true;
                 } else {
                     console.warn('⚠️ Invalid bounds, using default view');
                     this.mapInstance.setView([38.6431, 34.8286], 12);
+                    this.hasFittedBounds = true;
                 }
             } catch (error) {
                 console.error('❌ Error fitting bounds:', error);
                 this.mapInstance.setView([38.6431, 34.8286], 12);
+                this.hasFittedBounds = true;
             }
         } else {
             console.warn('⚠️ No markers or polylines found to fit to, using default view');
             this.mapInstance.setView([38.6431, 34.8286], 12);
+            this.hasFittedBounds = true;
         }
     }
 
@@ -3964,27 +4067,35 @@ class RouteDetailsModal {
         console.log('🗺️ Initializing base layers for modal map');
 
         // Define available base layers (same as main map)
+        const commonTileOpts = {
+            maxZoom: 19,
+            updateWhenZooming: false,
+            updateWhenIdle: true,
+            keepBuffer: 3,
+            crossOrigin: true
+        };
         const baseLayers = {
             "🗺️ OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
-                maxZoom: 19,
-                maxNativeZoom: 19
+                maxNativeZoom: 19,
+                ...commonTileOpts
             }),
             "🛰️ Uydu Görüntüsü": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: '© Esri, Maxar, Earthstar Geographics',
-                maxZoom: 19
+                ...commonTileOpts
             }),
             "🏔️ Topografik": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenTopoMap (CC-BY-SA)',
-                maxZoom: 17
+                maxZoom: 17,
+                ...commonTileOpts
             }),
             "🎨 CartoDB Positron": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '© OpenStreetMap © CartoDB',
-                maxZoom: 19
+                ...commonTileOpts
             }),
             "🌙 CartoDB Dark": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '© OpenStreetMap © CartoDB',
-                maxZoom: 19
+                ...commonTileOpts
             })
         };
 
@@ -4005,41 +4116,40 @@ class RouteDetailsModal {
         }
 
         this.resizeListener = () => {
-            if (this.mapInstance && this.isVisible && this.currentTab === 'map') {
-                console.log('🔄 Window resized, invalidating map size');
-                const isMobile = window.innerWidth <= 768;
-                const delay = isMobile ? 300 : 100;
+            if (!(this.mapInstance && this.isVisible && this.currentTab === 'map')) return;
 
-                setTimeout(() => {
-                    this.mapInstance.invalidateSize();
-                    this.fitMapToRoute();
+            const isMobile = window.innerWidth <= 768;
+            const delay = isMobile ? 250 : 80;
 
-                    // Force elevation chart refresh on mobile
-                    if (isMobile && this.elevationChartInstance) {
-                        setTimeout(() => {
-                            this.elevationChartInstance.resize();
-                        }, 200);
-                    }
-                }, delay);
-            }
+            clearTimeout(this._resizeTimer);
+            this._resizeTimer = setTimeout(() => {
+                // Only invalidate size; do NOT refit unless initial fit hasn't happened
+                try { this.mapInstance.invalidateSize(); } catch (_) { /* noop */ }
+
+                if (!this.hasFittedBounds && !this.userHasInteracted) {
+                    this.fitMapToRoute(true);
+                }
+
+                if (isMobile && this.elevationChartInstance) {
+                    try { this.elevationChartInstance.resize(); } catch (_) { /* noop */ }
+                }
+            }, delay);
         };
 
         // Handle orientation changes on mobile devices
         this.orientationListener = () => {
             console.log('📱 Orientation changed, refreshing map and chart');
             setTimeout(() => {
-                if (this.mapInstance && this.isVisible && this.currentTab === 'map') {
-                    this.mapInstance.invalidateSize();
-                    this.fitMapToRoute();
+                if (!(this.mapInstance && this.isVisible && this.currentTab === 'map')) return;
 
-                    // Refresh elevation chart after orientation change
-                    if (this.elevationChartInstance) {
-                        setTimeout(() => {
-                            this.elevationChartInstance.resize();
-                        }, 300);
-                    }
+                try { this.mapInstance.invalidateSize(); } catch (_) { /* noop */ }
+                if (!this.userHasInteracted) {
+                    this.fitMapToRoute(true);
                 }
-            }, 500); // Longer delay for orientation change
+                if (this.elevationChartInstance) {
+                    try { this.elevationChartInstance.resize(); } catch (_) { /* noop */ }
+                }
+            }, 500);
         };
 
         window.addEventListener('resize', this.resizeListener);
@@ -4241,6 +4351,8 @@ window.showRouteDetails = async function (routeIdOrData) {
 
             const data = await response.json();
             routeData = data.route || data;
+        // Listen tab visibility to re-stabilize layout when returning from another tab
+        try { document.addEventListener('visibilitychange', this.handleVisibilityChange); } catch (_) {}
             console.log('✅ Route data fetched successfully:', routeData.name);
         }
         // If it's already an object, use it directly

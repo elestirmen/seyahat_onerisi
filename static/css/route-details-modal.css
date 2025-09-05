@@ -19,6 +19,10 @@
     will-change: opacity, visibility;
     /* Isolate paint without affecting fixed-position layout */
     contain: paint;
+    /* Layout used for robust centering on desktop without transforms */
+    display: flex;
+    align-items: flex-end; /* mobile default: bottom sheet */
+    justify-content: center;
 }
 
 .route-details-modal.show {
@@ -57,25 +61,30 @@
 
 /* Desktop styles */
 @media (min-width: 769px) {
+    /* On desktop, center the modal using flexbox to avoid transform-based centering. */
+    .route-details-modal {
+        align-items: center; /* center vertically */
+    }
+
     .route-details-modal-content {
-        /* Fix content to viewport for robust centering */
-        position: fixed;
+        position: relative; /* participate in flex layout */
         bottom: auto;
-        left: 50%;
+        left: auto;
         right: auto;
-        top: 50%;
-        transform: translate(-50%, -50%) scale(0.9);
+        top: auto;
+        /* Do not rely on transform for centering on desktop */
+        transform: none;
         max-width: 800px;
         max-height: 90vh;
         border-radius: 16px;
         width: 90%;
         margin: 0;
-        /* Ensure it sits above overlay */
         z-index: 10000;
     }
 
     .route-details-modal.show .route-details-modal-content {
-        transform: translate(-50%, -50%) scale(1);
+        /* No transform animation on desktop to prevent hover-induced drift */
+        transform: none;
     }
 }
 
@@ -440,9 +449,6 @@
     overflow: hidden;
     border: 1px solid #e2e8f0;
     margin-bottom: 24px;
-    /* Force hardware acceleration */
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
     /* Ensure proper sizing */
     width: 100%;
     min-height: 350px;
@@ -492,7 +498,8 @@
 .route-map-control-btn:hover {
     background: #f3f4f6;
     border-color: #9ca3af;
-    transform: translateY(-1px);
+    /* Prevent container re-rasterization that may cause map subpixel drift */
+    transform: none;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -504,6 +511,25 @@
 /* Elevation Profile in Map Tab */
 #routeModalElevationContainer {
     margin-top: 8px;
+}
+
+/* Route line rendering stability inside modal (Leaflet SVG/Canvas) */
+.route-details-modal .leaflet-overlay-pane svg {
+    shape-rendering: geometricPrecision;
+}
+
+.route-details-modal .leaflet-overlay-pane path {
+    vector-effect: non-scaling-stroke;
+    transition: none !important; /* prevent hover-induced repaint transitions */
+}
+
+/* Avoid GPU promotion on map container to prevent subpixel jitter */
+.route-details-modal .route-map-container,
+.route-details-modal #routeModalMap {
+    transform: none !important;
+    will-change: auto !important;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 /* Elevation Chart Styles - Mobile Optimized */
