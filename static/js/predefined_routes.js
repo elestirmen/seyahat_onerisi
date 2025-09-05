@@ -17,9 +17,30 @@
 
     // In split-page mode, there are no tabs; proactively load routes
     document.addEventListener('DOMContentLoaded', function(){
-      if (typeof loadPredefinedRoutes === 'function') {
-        try { loadPredefinedRoutes(); } catch (e) { console.error('loadPredefinedRoutes failed:', e); }
+      try {
+        if (typeof initializePredefinedRoutes === 'function') {
+          initializePredefinedRoutes();
+        }
+      } catch (e) {
+        console.error('initializePredefinedRoutes failed:', e);
       }
+
+      (async () => {
+        try {
+          if (typeof loadPredefinedRoutes === 'function') {
+            await loadPredefinedRoutes();
+          }
+        } catch (e) {
+          console.error('loadPredefinedRoutes failed:', e);
+        }
+        try {
+          if (typeof initializePredefinedMap === 'function') {
+            await initializePredefinedMap();
+          }
+        } catch (e) {
+          console.error('initializePredefinedMap failed:', e);
+        }
+      })();
     });
   } catch (err) {
     console.error('predefined_routes bootstrap error:', err);
