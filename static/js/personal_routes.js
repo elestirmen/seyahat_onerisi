@@ -18,4 +18,3 @@
     console.error('personal_routes bootstrap error:', err);
   }
 })();
-
