@@ -6771,7 +6771,7 @@ function createRouteCard(route) {
         <div class="route-card" data-route-id="${rid}">
             <div class="route-card-image">
                 <img src="${imageUrl}" alt="${route.name || 'Rota görseli'}" data-placeholder="${placeholderImage}" onerror="handleImageError(event)" class="route-card-main-image" loading="lazy">
-                <div class="route-card-media-overlay" id="route-media-overlay-${rid}">
+                <div class="route-card-media-overlay" id="route-media-overlay-${rid}" style="display:none;">
                     <div class="route-card-media-loading">
                         <i class="fas fa-spinner fa-spin"></i>
                         <span>Medya yükleniyor...</span>
@@ -7206,19 +7206,36 @@ window.refreshAllRouteMedia = async function() {
 function renderRouteMiniMapFor(container, route) {
     (async () => {
         try {
+            if (container.__miniMapInitialized) return;
+            // Ensure container is visible for Leaflet sizing
+            container.style.display = 'block';
+            container.style.visibility = 'visible';
             let geometry = route.geometry;
             if (!geometry) {
-                const response = await fetch(`${apiBase}/routes/${route.id}/geometry`);
-                if (!response.ok) return;
-                const data = await response.json();
-                geometry = data && data.geometry;
+                try {
+                    const rid = route.id || route._id;
+                    const response = await fetch(`${apiBase}/routes/${rid}/geometry`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        geometry = data && data.geometry;
+                    }
+                } catch (_) {
+                    // ignore; fallback below
+                }
             }
-            if (!geometry) return;
+            if (!geometry) {
+                // Fallback mini preview content if geometry missing
+                container.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#eef2ff 0%,#e2e8f0 100%);color:#334155;font-weight:600;font-size:.8rem;border:1px solid rgba(0,0,0,0.1)"><i class='fas fa-route' style='margin-right:6px;'></i>Önizleme</div>`;
+                return;
+            }
             if (typeof geometry === 'string') {
                 try { geometry = JSON.parse(geometry); } catch { return; }
             }
             const coords = geometry.coordinates || (geometry.geometry && geometry.geometry.coordinates);
-            if (!coords || coords.length === 0) return;
+            if (!coords || coords.length === 0) {
+                container.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#eef2ff 0%,#e2e8f0 100%);color:#334155;font-weight:600;font-size:.8rem;border:1px solid rgba(0,0,0,0.1)"><i class='fas fa-route' style='margin-right:6px;'></i>Önizleme</div>`;
+                return;
+            }
 
             const latlngs = coords.map(c => [c[1], c[0]]);
             const map = L.map(container, {
@@ -7234,8 +7251,13 @@ function renderRouteMiniMapFor(container, route) {
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
             const line = L.polyline(latlngs, { interactive: false, color: '#4B5563', weight: 3 }).addTo(map);
             map.fitBounds(line.getBounds());
+            // Fix sizing issues in overlays
+            setTimeout(() => { try { map.invalidateSize(); } catch(e){} }, 50);
+            setTimeout(() => { try { map.invalidateSize(); } catch(e){} }, 250);
+            container.__miniMapInitialized = true;
         } catch (e) {
             // Silent fail for mini map
+            container.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#eef2ff 0%,#e2e8f0 100%);color:#334155;font-weight:600;font-size:.8rem;border:1px solid rgba(0,0,0,0.1)"><i class='fas fa-route' style='margin-right:6px;'></i>Önizleme</div>`;
         }
     })();
 }
@@ -7248,9 +7270,7 @@ function renderRouteMiniMaps(routes) {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const el = entry.target;
-                    const routeId = el.getAttribute('data-route-id');
-                    const datasetRouteId = el.dataset.routeId;
-                    const id = datasetRouteId || routeId;
+                    const id = el.dataset.routeId || el.getAttribute('data-route-id');
                     const route = (window.predefinedRoutes || []).find(r => String(r.id || r._id) === String(id));
                     if (route) {
                         renderRouteMiniMapFor(el, route);
@@ -7262,10 +7282,23 @@ function renderRouteMiniMaps(routes) {
     }
     observer = window.__miniMapObserver || null;
 
-    routes.forEach(route => {
-        const container = document.getElementById(`mini-map-${route.id}`);
+    // Eagerly render first 10 mini-maps for immediate feedback
+    const eager = routes.slice(0, 10);
+    eager.forEach(route => {
+        const rid = route.id || route._id;
+        const container = document.getElementById(`mini-map-${rid}`);
         if (!container) return;
-        container.dataset.routeId = route.id;
+        container.dataset.routeId = rid;
+        renderRouteMiniMapFor(container, route);
+    });
+
+    // Lazily render the rest using IntersectionObserver when available
+    const rest = routes.slice(10);
+    rest.forEach(route => {
+        const rid = route.id || route._id;
+        const container = document.getElementById(`mini-map-${rid}`);
+        if (!container) return;
+        container.dataset.routeId = rid;
         if (observer) {
             observer.observe(container);
         } else {
