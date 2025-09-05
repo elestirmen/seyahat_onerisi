@@ -1,5 +1,6 @@
--kategoriler verisi poi_recommended_system.html'dekiler ile poi_manager_enhanced'da aynı olsun. ( simge vs falan.) daha doğrusu aynı yerden kontol edilebilsinler.
--bir de poiler için 'ki rotalar için de olabilir' medyalarda sonorakimedyaya geçince hepsi tekrar yükleniyor sanırım. Burada bir optimizasyon ihtiyacı var gibi.
+-kategoriler verisi poi_recommended_system.html'dekiler ile poi_manager_enhanced'da aynı olsun. ( simge vs falan.) daha doğrusu aynı yerden kontol edilebilsinler. poi_manager_enhanced'dekini referans al ve recomended kısmını değiştşr.
+
+
 
 -dil modeli ile yazılı giriş yapılabilisin. örneğin pide yapılan yer var mı ürgüpte dendiği zaman buna uygun yerler gelsin.
 
