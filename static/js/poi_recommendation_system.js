@@ -6931,8 +6931,13 @@ function updateRouteCardImage(routeId, mediaFile) {
         return;
     }
 
-        // Update the main image
-    mainImage.src = `/${imagePath}`;
+    // Resolve to absolute or relative URL correctly
+    let resolvedSrc = imagePath;
+    if (!/^https?:\/\//i.test(resolvedSrc)) {
+        resolvedSrc = resolvedSrc.startsWith('/') ? resolvedSrc : `/${resolvedSrc}`;
+    }
+    // Update the main image
+    mainImage.src = resolvedSrc;
     mainImage.alt = mediaFile.caption || `Rota görseli - ${mediaFile.filename || ''}`;
     
     // Show the main image
