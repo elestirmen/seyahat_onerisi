@@ -6759,6 +6759,7 @@ function createRouteCard(route) {
     const distance = ensureRouteDistance(route).toFixed(1);
     const placeholderImage = ROUTE_PLACEHOLDER_400x200;
     const imageUrl = route.preview_image || placeholderImage;
+    const rid = route.id || route._id;
     
     console.log('🏷️ Creating route card:', {
         name: route.name,
@@ -6767,21 +6768,21 @@ function createRouteCard(route) {
     });
 
     return `
-        <div class="route-card" data-route-id="${route.id}">
+        <div class="route-card" data-route-id="${rid}">
             <div class="route-card-image">
                 <img src="${imageUrl}" alt="${route.name || 'Rota görseli'}" data-placeholder="${placeholderImage}" onerror="handleImageError(event)" class="route-card-main-image" loading="lazy">
-                <div class="route-card-media-overlay" id="route-media-overlay-${route.id}">
+                <div class="route-card-media-overlay" id="route-media-overlay-${rid}">
                     <div class="route-card-media-loading">
                         <i class="fas fa-spinner fa-spin"></i>
                         <span>Medya yükleniyor...</span>
                     </div>
                 </div>
-                <div class="route-mini-map mini-map-overlay" id="mini-map-${route.id}" aria-label="Rota önizleme haritası"></div>
+                <div class="route-mini-map mini-map-overlay" id="mini-map-${rid}" aria-label="Rota önizleme haritası"></div>
             </div>
             <div class="route-card-header">
                 <h3 class="route-card-title">${route.name || 'İsimsiz Rota'}</h3>
                 <div class="route-card-actions">
-                    <button class="route-media-refresh-btn" onclick="refreshRouteMedia(${route.id})" title="Medyayı yenile" aria-label="Medyayı yenile">
+                    <button class="route-media-refresh-btn" onclick="refreshRouteMedia(${rid})" title="Medyayı yenile" aria-label="Medyayı yenile">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                     <button class="favorite-btn" data-route-id="${route.id}" aria-label="Favorilere ekle">
@@ -6813,8 +6814,13 @@ function createRouteCard(route) {
 
 // Load route media for display in route cards
 async function loadRouteMediaForCard(route) {
-    if (!route || !route.id) {
+    const rid = route && (route.id || route._id);
+    if (!route || !rid) {
         console.warn('loadRouteMediaForCard: Invalid route data');
+        // Show fallback immediately to avoid indefinite overlay
+        if (route) {
+            showRouteCardFallback(route.id || route._id);
+        }
         return;
     }
 
@@ -6822,16 +6828,16 @@ async function loadRouteMediaForCard(route) {
     
     // Set a timeout to prevent indefinite loading
     const timeoutId = setTimeout(() => {
-        console.warn(`Media loading timeout for route ${route.id}, showing fallback`);
+        console.warn(`Media loading timeout for route ${rid}, showing fallback`);
         if (MEDIA_CONFIG.useFallbackContent) {
-            showRouteCardFallback(route.id);
+            showRouteCardFallback(rid);
         } else if (MEDIA_CONFIG.showPlaceholderImages) {
-            showRouteCardPlaceholder(route.id);
+            showRouteCardPlaceholder(rid);
         }
     }, MEDIA_CONFIG.fallbackTimeout);
     
     try {
-        const response = await fetch(`${apiBase}/admin/routes/${route.id}/media`, {
+        let response = await fetch(`${apiBase}/admin/routes/${rid}/media`, {
             credentials: 'include'
         });
         
@@ -6839,11 +6845,19 @@ async function loadRouteMediaForCard(route) {
         clearTimeout(timeoutId);
         
         if (!response.ok) {
-            console.warn(`Failed to load media for route ${route.id}:`, response.status);
+            // Try public endpoint if admin requires auth
+            if (response.status === 401 || response.status === 403) {
+                try {
+                    response = await fetch(`${apiBase}/routes/${rid}/media`);
+                } catch (e) { /* ignore */ }
+            }
+        }
+        if (!response.ok) {
+            console.warn(`Failed to load media for route ${rid}:`, response.status);
             if (MEDIA_CONFIG.useFallbackContent) {
-                showRouteCardFallback(route.id);
+                showRouteCardFallback(rid);
             } else if (MEDIA_CONFIG.showPlaceholderImages) {
-                showRouteCardPlaceholder(route.id);
+                showRouteCardPlaceholder(rid);
             }
             return;
         }
@@ -6877,32 +6891,32 @@ async function loadRouteMediaForCard(route) {
             ) || mediaFiles[0];
 
             if (primaryImage) {
-                updateRouteCardImage(route.id, primaryImage);
+                updateRouteCardImage(rid, primaryImage);
             } else {
                 // No suitable image found, show fallback
                 if (MEDIA_CONFIG.useFallbackContent) {
-                    showRouteCardFallback(route.id);
+                    showRouteCardFallback(rid);
                 } else if (MEDIA_CONFIG.showPlaceholderImages) {
-                    showRouteCardPlaceholder(route.id);
+                    showRouteCardPlaceholder(rid);
                 }
             }
         } else {
             // No media files at all, show fallback
             // Log removed for cleaner console
             if (MEDIA_CONFIG.useFallbackContent) {
-                showRouteCardFallback(route.id);
+                showRouteCardFallback(rid);
             } else if (MEDIA_CONFIG.showPlaceholderImages) {
-                showRouteCardPlaceholder(route.id);
+                showRouteCardPlaceholder(rid);
             }
         }
     } catch (error) {
         // Clear the timeout since we got an error
         clearTimeout(timeoutId);
-        console.error(`Error loading media for route ${route.id}:`, error);
+        console.error(`Error loading media for route ${rid}:`, error);
         if (MEDIA_CONFIG.useFallbackContent) {
-            showRouteCardFallback(route.id);
+            showRouteCardFallback(rid);
         } else if (MEDIA_CONFIG.showPlaceholderImages) {
-            showRouteCardPlaceholder(route.id);
+            showRouteCardPlaceholder(rid);
         }
     }
 }
@@ -6976,7 +6990,7 @@ function showRouteCardFallback(routeId) {
     mediaOverlay.style.display = 'none';
     
     // Create fallback content based on route type
-    const route = predefinedRoutes.find(r => r.id === routeId);
+    const route = predefinedRoutes.find(r => String(r.id || r._id) === String(routeId));
     if (route) {
         const fallbackContent = createRouteFallbackContent(route);
         mainImage.style.display = 'none';
@@ -7237,7 +7251,7 @@ function renderRouteMiniMaps(routes) {
                     const routeId = el.getAttribute('data-route-id');
                     const datasetRouteId = el.dataset.routeId;
                     const id = datasetRouteId || routeId;
-                    const route = (window.predefinedRoutes || []).find(r => String(r.id) === String(id));
+                    const route = (window.predefinedRoutes || []).find(r => String(r.id || r._id) === String(id));
                     if (route) {
                         renderRouteMiniMapFor(el, route);
                         obs.unobserve(el);
