@@ -147,9 +147,6 @@ class TouchOptimizer {
         
         // Enhance map gestures for mobile
         this.enhanceMapGestures();
-        
-        // Add touch-friendly legend toggle
-        this.addTouchLegendToggle();
     }
 
     addTouchZoomControls() {
@@ -263,42 +260,7 @@ class TouchOptimizer {
         }
     }
 
-    addTouchLegendToggle() {
-        // Create touch-friendly legend toggle
-        const legendToggle = L.control({ position: 'bottomleft' });
-        
-        legendToggle.onAdd = function(map) {
-            const container = L.DomUtil.create('div', 'map-legend-toggle');
-            container.innerHTML = '<i class="fas fa-list"></i><span>Lejant</span>';
-            container.setAttribute('role', 'button');
-            container.setAttribute('aria-label', 'Harita lejantını aç/kapat');
-            container.setAttribute('tabindex', '0');
-
-            L.DomEvent.on(container, 'click', function(e) {
-                L.DomEvent.stopPropagation(e);
-                // Toggle legend visibility (implement based on your legend system)
-                const legend = document.querySelector('.map-legend');
-                if (legend) {
-                    legend.classList.toggle('show');
-                }
-                // Add haptic feedback
-                if (navigator.vibrate) navigator.vibrate(10);
-            });
-
-            // Keyboard support
-            L.DomEvent.on(container, 'keydown', function(e) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    container.click();
-                }
-            });
-
-            L.DomEvent.disableClickPropagation(container);
-            return container;
-        };
-
-        legendToggle.addTo(map);
-    }
+    // Legend toggle kaldırıldı - kullanıcı isteği üzerine
 
     addTouchFeedback() {
         // Add visual feedback for touch interactions

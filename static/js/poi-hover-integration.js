@@ -171,6 +171,14 @@ class POIHoverIntegration {
                 return false;
             }
 
+            // Check if device is touch-only (no hover support)
+            const isTouchDevice = 'ontouchstart' in window && !window.matchMedia('(hover: hover)').matches;
+            if (isTouchDevice) {
+                // For touch devices, disable hover effects and use touch-only interactions
+                this.options.enableHoverEffects = false;
+                this.log('Touch device detected, disabling hover effects');
+            }
+
             const markerId = this.getMarkerId(marker);
             const element = this.getMarkerElement(marker);
 

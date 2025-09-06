@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobil Rota Kartları Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .test-container {
+            max-width: 480px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        /* Mobil Rota Kartları - Liste Düzeni */
+        .predefined-routes-list {
+            gap: 16px;
+            padding: 0 8px;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+        .route-card {
+            border-radius: 16px;
+            /* Mobile list layout with media */
+            display: block !important;
+            max-height: none !important;
+            min-height: 280px !important;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Enhanced image display in mobile list */
+        .route-card-image {
+            display: block !important;
+            height: 180px !important;
+            width: 100% !important;
+            overflow: hidden;
+            border-radius: 16px 16px 0 0 !important;
+            background-color: #f3f4f6;
+            position: relative;
+        }
+
+        .route-card-image img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        .route-card-content {
+            flex: 1 !important;
+            padding: 16px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            overflow: hidden;
+        }
+
+        .route-card-header {
+            padding: 0 !important;
+            margin-bottom: 8px;
+        }
+
+        .route-card-title {
+            font-size: 1.1rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 8px !important;
+            padding-right: 0 !important;
+            line-height: 1.3 !important;
+            margin: 0 0 8px 0;
+        }
+
+        .route-card-description {
+            font-size: 0.9rem !important;
+            line-height: 1.5 !important;
+            color: #666;
+            margin: 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Mobile Route Card Meta - Enhanced Design */
+        .route-card-meta {
+            padding: 0;
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            align-items: start;
+        }
+
+        .route-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border-radius: 8px;
+            background: rgba(59, 130, 246, 0.08);
+            color: #2563eb;
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            min-width: 0;
+            white-space: nowrap;
+            justify-content: flex-start;
+        }
+
+        .route-meta-item:first-child {
+            font-weight: 600;
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            border-color: rgba(102, 126, 234, 0.2);
+        }
+
+        /* Mobile Quick Actions - List Layout */
+        .route-card-actions {
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            padding: 12px 16px !important;
+            background: rgba(248, 249, 250, 0.9);
+            border-top: 1px solid #e9ecef;
+            margin-top: auto;
+            order: 2;
+        }
+
+        .route-quick-action {
+            width: 40px !important;
+            height: 40px !important;
+            border-radius: 8px !important;
+            font-size: 14px !important;
+            margin: 0 !important;
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid #e9ecef !important;
+            transition: all 0.2s ease !important;
+            touch-action: manipulation !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .route-quick-action:hover {
+            background: rgba(59, 130, 246, 0.1) !important;
+            transform: scale(1.05) !important;
+        }
+
+        .route-quick-action:active {
+            transform: scale(0.95) !important;
+        }
+
+        /* Placeholder image */
+        .placeholder-image {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .test-info {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .test-info h3 {
+            margin: 0 0 8px 0;
+            color: #1976d2;
+        }
+
+        .test-info p {
+            margin: 0;
+            color: #424242;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-info">
+            <h3><i class="fas fa-mobile-alt"></i> Mobil Rota Kartları Test</h3>
+            <p>Bu sayfa yeni mobil rota kartı düzenini test etmek için oluşturulmuştur.</p>
+        </div>
+
+        <div class="predefined-routes-list">
+            <!-- Test Route Card 1 -->
+            <div class="route-card" data-route-id="test1">
+                <div class="route-card-image">
+                    <div class="placeholder-image">
+                        <i class="fas fa-mountain fa-2x"></i>
+                    </div>
+                </div>
+                <div class="route-card-content">
+                    <div class="route-card-header">
+                        <h3 class="route-card-title">Uludağ Zirvesi Yürüyüşü</h3>
+                        <p class="route-card-description">Uludağ'ın en yüksek zirvelerine çıkan zorlu bir yürüyüş rotası. Muhteşem manzaralar ve temiz hava eşliğinde unutulmaz bir deneyim.</p>
+                    </div>
+                    <div class="route-card-meta">
+                        <div class="route-meta-item" aria-label="Mesafe"><i class="fas fa-route"></i><span class="route-distance">12.5 km</span></div>
+                        <div class="route-meta-item" aria-label="Süre"><i class="fas fa-clock"></i><span class="route-duration">6 saat</span></div>
+                        <div class="route-meta-item" aria-label="Durak sayısı"><i class="fas fa-map-marker-alt"></i><span class="route-stops">8 durak</span></div>
+                        <div class="route-meta-item" aria-label="Zorluk"><i class="fas fa-mountain"></i><span class="route-difficulty">Zor</span></div>
+                    </div>
+                </div>
+                <div class="route-card-actions">
+                    <button class="route-quick-action favorite" aria-label="Favorilere ekle" title="Favorilere ekle">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                    <button class="route-quick-action navigate" aria-label="Navigasyon" title="Navigasyon">
+                        <i class="fas fa-directions"></i>
+                    </button>
+                    <button class="route-quick-action share" aria-label="Paylaş" title="Paylaş">
+                        <i class="fas fa-share-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Test Route Card 2 -->
+            <div class="route-card" data-route-id="test2">
+                <div class="route-card-image">
+                    <div class="placeholder-image">
+                        <i class="fas fa-tree fa-2x"></i>
+                    </div>
+                </div>
+                <div class="route-card-content">
+                    <div class="route-card-header">
+                        <h3 class="route-card-title">Göreme Vadisi Bisiklet Turu</h3>
+                        <p class="route-card-description">Peri bacaları arasında geçen keyifli bir bisiklet rotası. Tarih ve doğa severler için mükemmel bir seçim.</p>
+                    </div>
+                    <div class="route-card-meta">
+                        <div class="route-meta-item" aria-label="Mesafe"><i class="fas fa-route"></i><span class="route-distance">8.2 km</span></div>
+                        <div class="route-meta-item" aria-label="Süre"><i class="fas fa-clock"></i><span class="route-duration">2.5 saat</span></div>
+                        <div class="route-meta-item" aria-label="Durak sayısı"><i class="fas fa-map-marker-alt"></i><span class="route-stops">5 durak</span></div>
+                        <div class="route-meta-item" aria-label="Zorluk"><i class="fas fa-mountain"></i><span class="route-difficulty">Orta</span></div>
+                    </div>
+                </div>
+                <div class="route-card-actions">
+                    <button class="route-quick-action favorite" aria-label="Favorilere ekle" title="Favorilere ekle">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                    <button class="route-quick-action navigate" aria-label="Navigasyon" title="Navigasyon">
+                        <i class="fas fa-directions"></i>
+                    </button>
+                    <button class="route-quick-action share" aria-label="Paylaş" title="Paylaş">
+                        <i class="fas fa-share-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Test Route Card 3 -->
+            <div class="route-card" data-route-id="test3">
+                <div class="route-card-image">
+                    <div class="placeholder-image">
+                        <i class="fas fa-water fa-2x"></i>
+                    </div>
+                </div>
+                <div class="route-card-content">
+                    <div class="route-card-header">
+                        <h3 class="route-card-title">Sapanca Gölü Yürüyüş Yolu</h3>
+                        <p class="route-card-description">Göl kenarında huzurlu bir yürüyüş. Piknik alanları ve dinlenme noktalarıyla dolu keyifli bir rota.</p>
+                    </div>
+                    <div class="route-card-meta">
+                        <div class="route-meta-item" aria-label="Mesafe"><i class="fas fa-route"></i><span class="route-distance">5.8 km</span></div>
+                        <div class="route-meta-item" aria-label="Süre"><i class="fas fa-clock"></i><span class="route-duration">2 saat</span></div>
+                        <div class="route-meta-item" aria-label="Durak sayısı"><i class="fas fa-map-marker-alt"></i><span class="route-stops">4 durak</span></div>
+                        <div class="route-meta-item" aria-label="Zorluk"><i class="fas fa-mountain"></i><span class="route-difficulty">Kolay</span></div>
+                    </div>
+                </div>
+                <div class="route-card-actions">
+                    <button class="route-quick-action favorite" aria-label="Favorilere ekle" title="Favorilere ekle">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                    <button class="route-quick-action navigate" aria-label="Navigasyon" title="Navigasyon">
+                        <i class="fas fa-directions"></i>
+                    </button>
+                    <button class="route-quick-action share" aria-label="Paylaş" title="Paylaş">
+                        <i class="fas fa-share-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 p-3 bg-light rounded">
+            <h5><i class="fas fa-info-circle"></i> Test Bilgileri</h5>
+            <ul class="mb-0 small">
+                <li>📱 Liste düzeni aktif</li>
+                <li>🖼️ Büyük resimler (180px yükseklik)</li>
+                <li>📊 İyileştirilmiş meta bilgileri</li>
+                <li>🔘 Alt kısımda aksiyon butonları</li>
+                <li>📏 Daha iyi spacing ve typography</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

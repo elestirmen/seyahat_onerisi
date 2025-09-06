@@ -3535,8 +3535,10 @@ class RouteDetailsModal {
         this.currentMediaList = this.buildCurrentMediaList();
 
         // Ensure lazy loader observes new thumbnails
-        if (window.lazyLoader && typeof window.lazyLoader.observeLazyImages === 'function') {
-            window.lazyLoader.observeLazyImages();
+        if (window.loadingManager && typeof window.loadingManager.observeLazyImages === 'function') {
+            window.loadingManager.observeLazyImages();
+        } else if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
+            window.lazyLoader.setupImageLazyLoading();
         }
         // Auto-hide controls on inactivity and enable swipe navigation
         this.setupAutoHideControls(viewerModal);

@@ -6782,14 +6782,11 @@ function createRouteCard(route) {
             <div class="route-card-header">
                 <h3 class="route-card-title">${route.name || 'İsimsiz Rota'}</h3>
                 <div class="route-card-actions">
-                    <button class="route-media-refresh-btn" onclick="refreshRouteMedia(${rid})" title="Medyayı yenile" aria-label="Medyayı yenile">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
                     <button class="favorite-btn" data-route-id="${route.id}" aria-label="Favorilere ekle">
                         <i class="fas fa-star"></i>
                     </button>
                 </div>
-                <p class="route-card-description">${route.description || 'Açıklama bulunmuyor.'}</p>
+                <p class="route-card-description">${(route.description && route.description.trim() !== '') ? route.description : 'Bu rota için özel bir açıklama bulunmuyor. Ancak bölgenin en güzel manzaralarını, tarihi ve kültürel zenginliklerini keşfetme fırsatı sunan eşsiz bir deneyim sizi bekliyor. Doğanın kalbinde unutulmaz anılar biriktirmeye hazır mısınız?'}</p>
             </div>
             <div class="route-card-meta">
                 <div class="route-meta-item" aria-label="Mesafe: ${distance} km">
@@ -11369,17 +11366,80 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayResults(data) {
         const resultsSection = document.getElementById('resultsSection');
         const loadingIndicator = document.getElementById('loadingIndicator');
-        
+
         if (loadingIndicator) {
             loadingIndicator.style.display = 'none';
         }
-        
+
         if (resultsSection) {
             resultsSection.style.display = 'block';
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-        
-        showNotification(`✅ ${data.recommendations ? data.recommendations.length : 0} öneri bulundu!`, 'success');
+
+        // Handle recommendation data and display on map
+        let recommendations = [];
+        if (data && data.recommendations && Array.isArray(data.recommendations)) {
+            recommendations = data.recommendations;
+        } else if (data && Array.isArray(data)) {
+            recommendations = data;
+        }
+
+        if (recommendations.length > 0) {
+            // Show map section
+            const mapSection = document.getElementById('mapSection');
+            if (mapSection) {
+                mapSection.style.display = 'block';
+            }
+
+            // Show results section with recommendation header
+            const recommendationResults = document.getElementById('recommendationResults');
+            if (recommendationResults) {
+                recommendationResults.innerHTML = `
+                    <div class="exploration-header">
+                        <h3><i class="fas fa-magic"></i> Kişisel Öneriler</h3>
+                        <p><strong>${recommendations.length} özel öneri</strong> bulundu ve haritada gösteriliyor. Tercihlerinize uygun yerleri keşfedebilirsiniz.</p>
+                        <div class="exploration-stats">
+                            <span class="stat-item"><i class="fas fa-star"></i> ${recommendations.length} Öneri</span>
+                            <span class="stat-item"><i class="fas fa-user"></i> Size Özel</span>
+                            <span class="stat-item"><i class="fas fa-mouse-pointer"></i> Tıklayarak Keşfedin</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Initialize map and show recommendations (exactly like free exploration)
+            setTimeout(async () => {
+                try {
+                    // Initialize main map (independent of recommendations)
+                    if (typeof window.initializeMainMap === 'function' || typeof initializeMainMap === 'function') {
+                        await (window.initializeMainMap || initializeMainMap)();
+                    }
+
+                    // Update map with recommendations (same as free exploration)
+                    if (typeof window.updateMapWithPOIs === 'function' || typeof updateMapWithPOIs === 'function') {
+                        (window.updateMapWithPOIs || updateMapWithPOIs)(recommendations);
+                    }
+
+                    // Focus the map section (same as free exploration)
+                    if (typeof window.switchToDynamicMapView === 'function' || typeof switchToDynamicMapView === 'function') {
+                        (window.switchToDynamicMapView || switchToDynamicMapView)();
+                    } else {
+                        setTimeout(() => {
+                            if (mapSection) {
+                                mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }, 200);
+                    }
+
+                } catch (error) {
+                    console.error('Error displaying recommendations on map:', error);
+                }
+            }, 500);
+
+            showNotification(`✅ ${recommendations.length} öneri bulundu ve haritada gösteriliyor!`, 'success');
+        } else {
+            showNotification('❌ Uygun öneri bulunamadı. Lütfen tercihlerinizi değiştirin.', 'warning');
+        }
     }
     
     function showNotification(message, type = 'info') {
@@ -12135,32 +12195,144 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function toggle(force) {
             const entering = force !== undefined ? force : !container.classList.contains('fullscreen');
+            const isMobile = window.innerWidth <= 768;
+
             if (entering) {
                 prevScrollY = window.scrollY || window.pageYOffset || 0;
-                document.body.style.overflow = 'hidden';
+
+                // Mobile-specific optimizations
+                if (isMobile) {
+                    // Use more aggressive overflow hiding for mobile
+                    document.body.style.overflow = 'hidden';
+                    document.body.style.position = 'fixed';
+                    document.body.style.width = '100%';
+                    document.body.style.top = `-${prevScrollY}px`;
+
+                    // Add viewport meta tag update for mobile
+                    const viewport = document.querySelector('meta[name="viewport"]');
+                    if (viewport) {
+                        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+                    }
+                } else {
+                    document.body.style.overflow = 'hidden';
+                }
+
                 container.classList.add('fullscreen');
+
                 // Hide route planner section to avoid overlaying text
                 if (routeSection) {
                     previousRouteSectionDisplay = routeSection.style.display;
                     routeSection.style.display = 'none';
                 }
-                // Resize Leaflet map after layout change
-                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 50);
-                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 250);
+
+                // Hide POI search bar if visible
+                const poiSearchBar = document.getElementById('poiSearchBar');
+                if (poiSearchBar) {
+                    poiSearchBar.style.display = 'none';
+                }
+
+                // Create fullscreen exit button for mobile
+                if (isMobile) {
+                    const exitBtn = document.createElement('button');
+                    exitBtn.id = 'fullscreenExitBtn';
+                    exitBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    exitBtn.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        z-index: 10000;
+                        background: rgba(0, 0, 0, 0.7);
+                        color: white;
+                        border: none;
+                        border-radius: 50%;
+                        width: 50px;
+                        height: 50px;
+                        font-size: 18px;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        backdrop-filter: blur(10px);
+                        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                        transition: all 0.2s ease;
+                    `;
+                    exitBtn.title = 'Tam Ekrandan Çık';
+                    exitBtn.addEventListener('click', () => toggle(false));
+                    document.body.appendChild(exitBtn);
+                }
+
+                // Resize Leaflet map after layout change with multiple attempts
+                const invalidateMap = () => {
+                    if (typeof map !== 'undefined' && map) {
+                        map.invalidateSize();
+                    } else if (typeof dynamicMap !== 'undefined' && dynamicMap) {
+                        dynamicMap.invalidateSize();
+                    }
+                };
+
+                setTimeout(invalidateMap, 50);
+                setTimeout(invalidateMap, 150);
+                setTimeout(invalidateMap, 300);
+                setTimeout(invalidateMap, 500);
+
                 const icon = btn.querySelector('i');
                 if (icon && icon.classList.contains('fa-expand')) {
                     icon.classList.remove('fa-expand');
                     icon.classList.add('fa-compress');
                 }
                 document.addEventListener('keydown', escHandler);
+
+                // Add haptic feedback for mobile
+                if (isMobile && navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+
             } else {
+                // Exit fullscreen
                 container.classList.remove('fullscreen');
-                document.body.style.overflow = '';
+
+                // Mobile-specific cleanup
+                if (isMobile) {
+                    document.body.style.overflow = '';
+                    document.body.style.position = '';
+                    document.body.style.width = '';
+                    document.body.style.top = '';
+
+                    // Restore viewport meta tag
+                    const viewport = document.querySelector('meta[name="viewport"]');
+                    if (viewport) {
+                        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+                    }
+                } else {
+                    document.body.style.overflow = '';
+                }
+
                 // Restore route planner section
                 if (routeSection) {
                     routeSection.style.display = previousRouteSectionDisplay || '';
                 }
-                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 50);
+
+                // Restore POI search bar
+                const poiSearchBar = document.getElementById('poiSearchBar');
+                if (poiSearchBar) {
+                    poiSearchBar.style.display = '';
+                }
+
+                // Remove fullscreen exit button
+                const exitBtn = document.getElementById('fullscreenExitBtn');
+                if (exitBtn) {
+                    exitBtn.remove();
+                }
+
+                // Resize map back to normal
+                setTimeout(() => {
+                    if (typeof map !== 'undefined' && map) {
+                        map.invalidateSize();
+                    } else if (typeof dynamicMap !== 'undefined' && dynamicMap) {
+                        dynamicMap.invalidateSize();
+                    }
+                }, 50);
+
                 const icon = btn.querySelector('i');
                 if (icon && icon.classList.contains('fa-compress')) {
                     icon.classList.remove('fa-compress');
@@ -12559,12 +12731,23 @@ function switchToDynamicMapView() {
 
 // Create a simple search UI to filter POI markers on the map
 function ensurePOISearchBar(allPOIs = []) {
-    const container = document.getElementById('mapContainer');
-    if (!container) return;
+    // Check if mobile device
+    const isMobile = window.innerWidth <= 768;
 
-    // Ensure container is positioned for overlay
-    if (getComputedStyle(container).position === 'static') {
-        container.style.position = 'relative';
+    let container;
+    if (isMobile) {
+        // On mobile, place search bar outside map container to avoid overlap
+        container = document.getElementById('mapSection');
+        if (!container) return;
+    } else {
+        // On desktop, place inside map container
+        container = document.getElementById('mapContainer');
+        if (!container) return;
+
+        // Ensure container is positioned for overlay
+        if (getComputedStyle(container).position === 'static') {
+            container.style.position = 'relative';
+        }
     }
 
     // If exists, just show
@@ -12572,12 +12755,25 @@ function ensurePOISearchBar(allPOIs = []) {
     if (!bar) {
         bar = document.createElement('div');
         bar.id = 'poiSearchBar';
-        bar.style.cssText = `
-            position: absolute; top: 12px; left: 12px; right: auto; z-index: 1100;
-            background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0; border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;
-            padding: 8px 10px; backdrop-filter: blur(6px);
-        `;
+
+        if (isMobile) {
+            // Mobile: Place above map section
+            bar.style.cssText = `
+                position: relative; margin-bottom: 10px; z-index: 100;
+                background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0; border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;
+                padding: 8px 10px; backdrop-filter: blur(6px); width: 100%; max-width: 100%;
+            `;
+        } else {
+            // Desktop: Place inside map as overlay
+            bar.style.cssText = `
+                position: absolute; top: 12px; left: 12px; right: auto; z-index: 9999;
+                background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0; border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;
+                padding: 8px 10px; backdrop-filter: blur(6px);
+            `;
+        }
+
         bar.innerHTML = `
             <i class="fas fa-search" style="color:#64748b"></i>
             <input id="poiSearchInput" type="text" placeholder="POI ara..." style="
@@ -12593,17 +12789,15 @@ function ensurePOISearchBar(allPOIs = []) {
         input.addEventListener('input', handler);
         clearBtn.addEventListener('click', () => { input.value = ''; handler(); });
 
-        // Mobile-friendly sizing: stretch across map with margins
+        // Mobile-friendly sizing
         const applyResponsiveSearchBar = () => {
             const isMobile = window.innerWidth <= 768;
             if (isMobile) {
-                bar.style.left = '12px';
-                bar.style.right = '12px';
-                bar.style.maxWidth = 'unset';
+                // Mobile: Already configured for full width above map
                 input.style.width = '100%';
                 input.style.maxWidth = '100%';
             } else {
-                bar.style.right = 'auto';
+                // Desktop: Overlay mode
                 input.style.width = '240px';
                 input.style.maxWidth = '60vw';
             }
@@ -12617,12 +12811,21 @@ function ensurePOISearchBar(allPOIs = []) {
         if (input) {
             const isMobile = window.innerWidth <= 768;
             if (isMobile) {
-                bar.style.left = '12px';
-                bar.style.right = '12px';
+                // Mobile: Ensure it's positioned correctly above map
+                bar.style.position = 'relative';
+                bar.style.marginBottom = '10px';
+                bar.style.zIndex = '100';
+                bar.style.width = '100%';
+                bar.style.maxWidth = '100%';
                 input.style.width = '100%';
                 input.style.maxWidth = '100%';
             } else {
+                // Desktop: Overlay mode
+                bar.style.position = 'absolute';
+                bar.style.top = '12px';
+                bar.style.left = '12px';
                 bar.style.right = 'auto';
+                bar.style.zIndex = '9999';
                 input.style.width = '240px';
                 input.style.maxWidth = '60vw';
             }
@@ -13253,9 +13456,17 @@ function buildPOIMediaThumbnailsOnce() {
         thumbnailsContainer.appendChild(thumb);
     });
 
-    // Observe lazy images if loader is present
-    if (window.lazyLoader && typeof window.lazyLoader.observeLazyImages === 'function') {
-        window.lazyLoader.observeLazyImages();
+    // Observe lazy images using the correct loader
+    if (window.loadingManager && typeof window.loadingManager.observeLazyImages === 'function') {
+        window.loadingManager.observeLazyImages();
+    } else if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
+        window.lazyLoader.setupImageLazyLoading();
+    } else {
+        // Ultimate fallback: set src immediately
+        thumbnailsContainer.querySelectorAll('img[data-src]').forEach(img => {
+            img.src = img.dataset.src;
+            delete img.dataset.src;
+        });
     }
 }
 

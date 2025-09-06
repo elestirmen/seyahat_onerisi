@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile POI Clicking Test</title>
+    <link rel="stylesheet" href="static/css/poi_recommendation_system.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-poi {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+        .test-results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .instructions {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Mobile POI Clicking Test</h1>
+
+        <div class="instructions">
+            <h3>Test Instructions:</h3>
+            <p>1. Open this page on a mobile device or resize browser to mobile width (&lt; 768px)</p>
+            <p>2. Try clicking/tapping on the POI markers below</p>
+            <p>3. Each successful click should show in the results area</p>
+            <p>4. POI markers should be at least 44px in size on mobile</p>
+        </div>
+
+        <div>
+            <h3>Test POI Markers:</h3>
+            <div class="test-poi" data-id="poi-1">1</div>
+            <div class="test-poi" data-id="poi-2">2</div>
+            <div class="test-poi" data-id="poi-3">3</div>
+            <div class="test-poi" data-id="poi-4">4</div>
+            <div class="test-poi" data-id="poi-5">5</div>
+        </div>
+
+        <div class="test-results" id="testResults">
+            <h4>Click Results:</h4>
+            <div id="resultsList">No clicks recorded yet</div>
+        </div>
+
+        <div class="test-results">
+            <h4>Device Info:</h4>
+            <div id="deviceInfo"></div>
+        </div>
+    </div>
+
+    <script>
+        // Update device info
+        function updateDeviceInfo() {
+            const info = document.getElementById('deviceInfo');
+            const isMobile = window.innerWidth <= 768;
+            const isTouch = 'ontouchstart' in window;
+            const hasHover = window.matchMedia('(hover: hover)').matches;
+
+            info.innerHTML = `
+                Screen Width: ${window.innerWidth}px<br>
+                Screen Height: ${window.innerHeight}px<br>
+                Is Mobile (≤768px): ${isMobile ? 'Yes' : 'No'}<br>
+                Touch Support: ${isTouch ? 'Yes' : 'No'}<br>
+                Hover Support: ${hasHover ? 'Yes' : 'No'}<br>
+                User Agent: ${navigator.userAgent}
+            `;
+        }
+
+        // Test POI clicking
+        function setupPOIClicking() {
+            const pois = document.querySelectorAll('.test-poi');
+            const resultsList = document.getElementById('resultsList');
+            let clickCount = 0;
+
+            pois.forEach(poi => {
+                poi.addEventListener('click', function(e) {
+                    clickCount++;
+                    const timestamp = new Date().toLocaleTimeString();
+                    const poiId = this.dataset.id;
+
+                    resultsList.innerHTML += `<br>${timestamp}: POI ${poiId} clicked (${clickCount})`;
+
+                    // Visual feedback
+                    this.style.transform = 'scale(1.1)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 150);
+
+                    console.log(`POI ${poiId} clicked on ${navigator.platform}`);
+                });
+
+                // Add touch feedback for mobile
+                poi.addEventListener('touchstart', function(e) {
+                    this.style.backgroundColor = '#0056b3';
+                }, { passive: true });
+
+                poi.addEventListener('touchend', function(e) {
+                    this.style.backgroundColor = '';
+                }, { passive: true });
+            });
+        }
+
+        // Initialize test
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDeviceInfo();
+            setupPOIClicking();
+
+            // Update device info on resize
+            window.addEventListener('resize', updateDeviceInfo);
+        });
+    </script>
+</body>
+</html>
