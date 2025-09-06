@@ -6782,14 +6782,11 @@ function createRouteCard(route) {
             <div class="route-card-header">
                 <h3 class="route-card-title">${route.name || 'İsimsiz Rota'}</h3>
                 <div class="route-card-actions">
-                    <button class="route-media-refresh-btn" onclick="refreshRouteMedia(${rid})" title="Medyayı yenile" aria-label="Medyayı yenile">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
                     <button class="favorite-btn" data-route-id="${route.id}" aria-label="Favorilere ekle">
                         <i class="fas fa-star"></i>
                     </button>
                 </div>
-                <p class="route-card-description">${route.description || 'Açıklama bulunmuyor.'}</p>
+                <p class="route-card-description">${(route.description && route.description.trim() !== '') ? route.description : 'Bu rota için özel bir açıklama bulunmuyor. Ancak bölgenin en güzel manzaralarını, tarihi ve kültürel zenginliklerini keşfetme fırsatı sunan eşsiz bir deneyim sizi bekliyor. Doğanın kalbinde unutulmaz anılar biriktirmeye hazır mısınız?'}</p>
             </div>
             <div class="route-card-meta">
                 <div class="route-meta-item" aria-label="Mesafe: ${distance} km">

@@ -2631,31 +2631,43 @@
                 border-radius: 10px;
             }
 
-            /* FORCE MOBILE LIST LAYOUT - HIGHEST PRIORITY */
-            @media screen and (max-width: 768px) {
+            /* FORCE MOBILE LIST LAYOUT - REAL DEVICES */
+            @media screen and (max-width: 768px), (max-device-width: 768px) {
                 .predefined-routes-list {
                     gap: 16px !important;
                     padding: 0 8px !important;
                     display: flex !important;
                     flex-direction: column !important;
+                    width: 100% !important;
+                    box-sizing: border-box !important;
                 }
 
                 .predefined-routes-list .route-card {
                     border-radius: 16px !important;
                     display: block !important;
                     max-height: none !important;
-                    min-height: 280px !important;
+                    min-height: 420px !important;
                     background: white !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
                     overflow: hidden !important;
                     position: relative !important;
                     width: 100% !important;
                     margin: 0 !important;
+                    box-sizing: border-box !important;
+                }
+
+                /* Force override any conflicting styles */
+                .predefined-routes-list .route-card.grid,
+                .predefined-routes-list .route-card.grid-item,
+                .predefined-routes-list .route-card.item {
+                    display: block !important;
+                    width: 100% !important;
+                    margin: 0 !important;
                 }
             }
 
             /* Enhanced image display in mobile list */
-            @media screen and (max-width: 768px) {
+            @media screen and (max-width: 768px), (max-device-width: 768px) {
                 .predefined-routes-list .route-card .route-card-image {
                     display: block !important;
                     height: 180px !important;
@@ -2677,8 +2689,27 @@
 
                 /* Enhanced header for mobile list */
                 .predefined-routes-list .route-card .route-card-header {
-                    padding: 16px !important;
+                    padding: 24px 16px 16px 16px !important;
                     display: block !important;
+                }
+
+                .predefined-routes-list .route-card .route-card-title {
+                    font-size: 1.1rem !important;
+                    font-weight: 600 !important;
+                    margin-bottom: 8px !important;
+                    line-height: 1.3 !important;
+                }
+
+                .predefined-routes-list .route-card .route-card-description {
+                    font-size: 0.9rem !important;
+                    line-height: 1.5 !important;
+                    color: #666 !important;
+                    margin: 0 0 20px 0 !important;
+                    display: -webkit-box !important;
+                    -webkit-line-clamp: 5 !important;
+                    -webkit-box-orient: vertical !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
                 }
             }
 
@@ -2766,14 +2797,15 @@
                 transform: scale(0.95) !important;
             }
 
-            .favorite-btn {
+            .favorite-btn,
+            .route-media-refresh-btn {
                 display: none !important; /* Hide in mobile to save space */
             }
 
             /* Mobile Route Card Meta - Enhanced Design */
-            @media screen and (max-width: 768px) {
+            @media screen and (max-width: 768px), (max-device-width: 768px) {
                 .predefined-routes-list .route-card .route-card-meta {
-                    padding: 0 16px 16px 16px !important;
+                    padding: 0 16px 20px 16px !important;
                     margin-top: 0 !important;
                     display: grid !important;
                     grid-template-columns: 1fr 1fr !important;
@@ -2795,7 +2827,33 @@
                     min-width: 0 !important;
                     white-space: nowrap !important;
                     justify-content: flex-start !important;
+                    box-sizing: border-box !important;
                 }
+
+                /* Force icon visibility */
+                .predefined-routes-list .route-card .route-meta-item i,
+                .predefined-routes-list .route-card .route-meta-item .fas,
+                .predefined-routes-list .route-card .route-meta-item .far,
+                .predefined-routes-list .route-card .route-meta-item .fab {
+                    display: inline-block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    font-size: 0.8rem !important;
+                    width: auto !important;
+                    height: auto !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    color: inherit !important;
+                    font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
+                    font-weight: 900 !important;
+                    -webkit-font-smoothing: antialiased !important;
+                    -moz-osx-font-smoothing: grayscale !important;
+                }
+
+                /* Specific icon fixes */
+                .predefined-routes-list .route-card .route-meta-item i.fas.fa-clock:before { content: "\f017" !important; }
+                .predefined-routes-list .route-card .route-meta-item i.fas.fa-map-marker-alt:before { content: "\f3c5" !important; }
+                .predefined-routes-list .route-card .route-meta-item i.fas.fa-mountain:before { content: "\f6fc" !important; }
 
                 .predefined-routes-list .route-card .route-card-actions {
                     display: flex !important;
