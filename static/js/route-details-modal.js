@@ -623,6 +623,8 @@ class RouteDetailsModal {
 
         console.log('🔄 Switching to tab:', tabName);
 
+        const prevTab = this.currentTab;
+
         // Update tab buttons
         document.querySelectorAll('.route-details-tab').forEach(tab => {
             const isActive = tab.dataset.tab === tabName;
@@ -656,6 +658,33 @@ class RouteDetailsModal {
             content.setAttribute('aria-hidden', isActive ? 'false' : 'true');
         });
 
+        // If leaving map tab on mobile, aggressively clear any forced inline styles
+        if (isMobile && prevTab === 'map' && tabName !== 'map') {
+            try {
+                const mapTab = document.querySelector('.route-details-tab-content[data-tab="map"]');
+                const mapContainer = document.getElementById('routeModalMap');
+                const mapSection = mapContainer ? mapContainer.closest('.route-map-container') : null;
+
+                if (mapTab) {
+                    // Clear previously injected inline styles that forced visibility
+                    mapTab.style.cssText = '';
+                    // Ensure it's hidden immediately to prevent overlap
+                    mapTab.style.display = 'none';
+                    mapTab.style.visibility = 'hidden';
+                }
+                if (mapSection) {
+                    mapSection.style.cssText = '';
+                }
+                if (mapContainer) {
+                    mapContainer.style.cssText = '';
+                    // Also disable interactions while hidden
+                    mapContainer.style.pointerEvents = 'none';
+                }
+                // Unlock any locked layout
+                this.unlockMapContainerLayout();
+            } catch (_) { /* noop */ }
+        }
+
         this.currentTab = tabName;
 
         // Scroll content to top when switching tabs for better UX
@@ -685,6 +714,9 @@ class RouteDetailsModal {
                     visibility: visible !important;
                     position: relative !important;
                 `;
+
+                // Re-enable interactions now that it's visible
+                mapContainer.style.pointerEvents = 'auto';
 
                 // Force multiple reflows
                 mapContainer.offsetHeight;
