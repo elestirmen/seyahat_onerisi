@@ -12622,12 +12622,23 @@ function switchToDynamicMapView() {
 
 // Create a simple search UI to filter POI markers on the map
 function ensurePOISearchBar(allPOIs = []) {
-    const container = document.getElementById('mapContainer');
-    if (!container) return;
+    // Check if mobile device
+    const isMobile = window.innerWidth <= 768;
 
-    // Ensure container is positioned for overlay
-    if (getComputedStyle(container).position === 'static') {
-        container.style.position = 'relative';
+    let container;
+    if (isMobile) {
+        // On mobile, place search bar outside map container to avoid overlap
+        container = document.getElementById('mapSection');
+        if (!container) return;
+    } else {
+        // On desktop, place inside map container
+        container = document.getElementById('mapContainer');
+        if (!container) return;
+
+        // Ensure container is positioned for overlay
+        if (getComputedStyle(container).position === 'static') {
+            container.style.position = 'relative';
+        }
     }
 
     // If exists, just show
@@ -12635,12 +12646,25 @@ function ensurePOISearchBar(allPOIs = []) {
     if (!bar) {
         bar = document.createElement('div');
         bar.id = 'poiSearchBar';
-        bar.style.cssText = `
-            position: absolute; top: 12px; left: 12px; right: auto; z-index: 1200;
-            background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0; border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;
-            padding: 8px 10px; backdrop-filter: blur(6px);
-        `;
+
+        if (isMobile) {
+            // Mobile: Place above map section
+            bar.style.cssText = `
+                position: relative; margin-bottom: 10px; z-index: 100;
+                background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0; border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;
+                padding: 8px 10px; backdrop-filter: blur(6px); width: 100%; max-width: 100%;
+            `;
+        } else {
+            // Desktop: Place inside map as overlay
+            bar.style.cssText = `
+                position: absolute; top: 12px; left: 12px; right: auto; z-index: 9999;
+                background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0; border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;
+                padding: 8px 10px; backdrop-filter: blur(6px);
+            `;
+        }
+
         bar.innerHTML = `
             <i class="fas fa-search" style="color:#64748b"></i>
             <input id="poiSearchInput" type="text" placeholder="POI ara..." style="
@@ -12656,17 +12680,15 @@ function ensurePOISearchBar(allPOIs = []) {
         input.addEventListener('input', handler);
         clearBtn.addEventListener('click', () => { input.value = ''; handler(); });
 
-        // Mobile-friendly sizing: stretch across map with margins
+        // Mobile-friendly sizing
         const applyResponsiveSearchBar = () => {
             const isMobile = window.innerWidth <= 768;
             if (isMobile) {
-                bar.style.left = '12px';
-                bar.style.right = '12px';
-                bar.style.maxWidth = 'unset';
+                // Mobile: Already configured for full width above map
                 input.style.width = '100%';
                 input.style.maxWidth = '100%';
             } else {
-                bar.style.right = 'auto';
+                // Desktop: Overlay mode
                 input.style.width = '240px';
                 input.style.maxWidth = '60vw';
             }
@@ -12680,12 +12702,21 @@ function ensurePOISearchBar(allPOIs = []) {
         if (input) {
             const isMobile = window.innerWidth <= 768;
             if (isMobile) {
-                bar.style.left = '12px';
-                bar.style.right = '12px';
+                // Mobile: Ensure it's positioned correctly above map
+                bar.style.position = 'relative';
+                bar.style.marginBottom = '10px';
+                bar.style.zIndex = '100';
+                bar.style.width = '100%';
+                bar.style.maxWidth = '100%';
                 input.style.width = '100%';
                 input.style.maxWidth = '100%';
             } else {
+                // Desktop: Overlay mode
+                bar.style.position = 'absolute';
+                bar.style.top = '12px';
+                bar.style.left = '12px';
                 bar.style.right = 'auto';
+                bar.style.zIndex = '9999';
                 input.style.width = '240px';
                 input.style.maxWidth = '60vw';
             }
