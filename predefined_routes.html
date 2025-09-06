@@ -55,12 +55,10 @@
           <div class="predefined-routes-header">
             <div class="section-header-content">
               <h2 class="section-title"><i class="fas fa-route"></i> Hazır Rotalar</h2>
-              <p class="predefined-routes-description">Uzmanlar tarafından önceden hazırlanmış rotalar arasından seçim yapın. Her rota farklı deneyimler ve zorluk seviyeleri sunar.</p>
+              <p class="predefined-routes-description">Uzmanlar tarafından hazırlanmış rotalar. Farklı deneyimler ve zorluk seviyeleri.</p>
             </div>
             <div class="route-search">
               <input type="search" id="routeSearchInput" class="form-control" placeholder="Rota ara...">
-              <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshAllRouteMedia()" title="Tüm rota medyalarını yenile"><i class="fas fa-sync-alt"></i><span>Medyayı Yenile</span></button>
-              <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleMediaDisplayMode()" title="Medya görüntüleme modunu değiştir"><i class="fas fa-toggle-on"></i><span>Özel İçerik</span></button>
             </div>
             <div class="routes-quick-stats" id="routesQuickStats">
               <div class="quick-stat-item"><div class="stat-icon"><i class="fas fa-route"></i></div><div class="stat-content"><span class="stat-number" id="totalRoutesCount">-</span><span class="stat-label">Toplam Rota</span></div></div>
@@ -92,13 +90,6 @@
 
           <div id="routesLoadingIndicator" class="loading"><div class="loading__spinner"></div><p class="loading__text">Hazır rotalar yükleniyor...</p></div>
 
-          <div class="mobile-view-toggle">
-            <div class="view-toggle-buttons">
-              <button class="view-toggle-btn active" data-view="list" id="listViewBtn"><i class="fas fa-list"></i><span>Liste</span></button>
-              <button class="view-toggle-btn" data-view="map" id="mapViewBtn"><i class="fas fa-map"></i><span>Harita</span></button>
-              <button class="view-toggle-btn back-to-list-btn" id="backToListBtn"><i class="fas fa-arrow-left"></i><span>Listeye Dön</span></button>
-            </div>
-          </div>
 
           <div class="routes-list-and-map">
             <div id="mapView" class="predefined-map-container">
@@ -111,12 +102,18 @@
               <div class="route-card" data-route-id="">
                 <div class="route-image-container"><img class="route-image" src="" alt="Rota önizlemesi" data-placeholder="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='120'><rect width='100%25' height='100%25' fill='%23e5e7eb'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-family='Arial,sans-serif' font-size='14'>Rota</text></svg>" onerror="handleImageError(event)"></div>
                 <div class="route-card-content">
-                  <div class="route-card-header"><h3 class="route-card-title"></h3><p class="route-card-description"></p></div>
+                  <div class="route-card-header">
+                    <h3 class="route-card-title"></h3>
+                    <p class="route-card-description"></p>
+                  </div>
                   <div class="route-card-meta">
-                    <div class="route-meta-item" aria-label="Mesafe"><span class="route-distance">0 km</span></div>
-                    <div class="route-meta-item" aria-label="Süre"><i class="fas fa-clock"></i><span></span></div>
-                    <div class="route-meta-item" aria-label="Durak sayısı"><i class="fas fa-map-marker-alt"></i><span></span></div>
-                    <div class="route-meta-item" aria-label="Zorluk"><i class="fas fa-mountain"></i><div class="difficulty-stars"></div></div>
+                    <div class="route-meta-item" aria-label="Mesafe"><i class="fas fa-route"></i><span class="route-distance">0 km</span></div>
+                    <div class="route-meta-item" aria-label="Süre"><i class="fas fa-clock"></i><span class="route-duration">0 dk</span></div>
+                    <div class="route-meta-item" aria-label="Durak sayısı"><i class="fas fa-map-marker-alt"></i><span class="route-stops">0 durak</span></div>
+                    <div class="route-meta-item" aria-label="Zorluk"><i class="fas fa-mountain"></i><span class="route-difficulty">Kolay</span></div>
+                  </div>
+                  <div class="route-card-features" style="display: none;">
+                    <div class="route-feature-tags"></div>
                   </div>
                 </div>
                 <div class="route-card-actions">

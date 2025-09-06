@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobil Rota Kartları - Son Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .test-container {
+            max-width: 480px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        /* Mobil Rota Kartları - Liste Düzeni */
+        .predefined-routes-list {
+            gap: 16px !important;
+            padding: 0 8px !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+        .predefined-routes-list .route-card {
+            border-radius: 16px !important;
+            /* Mobile list layout with media */
+            display: block !important;
+            max-height: none !important;
+            min-height: 280px !important;
+            background: white !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+            overflow: hidden !important;
+            position: relative !important;
+        }
+
+        /* Enhanced image display in mobile list */
+        .predefined-routes-list .route-card .route-card-image {
+            display: block !important;
+            height: 180px !important;
+            width: 100% !important;
+            overflow: hidden !important;
+            border-radius: 16px 16px 0 0 !important;
+            background-color: #f3f4f6 !important;
+            position: relative !important;
+        }
+
+        .predefined-routes-list .route-card .route-card-image img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        /* Enhanced header for mobile list */
+        .predefined-routes-list .route-card .route-card-header {
+            padding: 16px !important;
+            display: block !important;
+        }
+
+        .predefined-routes-list .route-card .route-card-title {
+            font-size: 1.1rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 8px !important;
+            line-height: 1.3 !important;
+        }
+
+        .predefined-routes-list .route-card .route-card-description {
+            font-size: 0.9rem !important;
+            line-height: 1.5 !important;
+            color: #666 !important;
+            margin: 0 0 12px 0 !important;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Mobile Route Card Meta - Enhanced Design */
+        .predefined-routes-list .route-card .route-card-meta {
+            padding: 0 16px 16px 16px !important;
+            margin-top: 0 !important;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 8px !important;
+            align-items: start !important;
+        }
+
+        .predefined-routes-list .route-card .route-meta-item {
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            padding: 6px 10px !important;
+            font-size: 0.85rem !important;
+            font-weight: 500 !important;
+            border-radius: 8px !important;
+            background: rgba(59, 130, 246, 0.08) !important;
+            color: #2563eb !important;
+            border: 1px solid rgba(59, 130, 246, 0.15) !important;
+            min-width: 0 !important;
+            white-space: nowrap !important;
+            justify-content: flex-start !important;
+        }
+
+        .predefined-routes-list .route-card .route-card-actions {
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: flex-end !important;
+            align-items: center !important;
+            gap: 8px !important;
+            margin-bottom: 8px !important;
+        }
+
+        /* Placeholder image */
+        .placeholder-image {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .test-info {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .test-info h3 {
+            margin: 0 0 8px 0;
+            color: #1976d2;
+        }
+
+        .test-info p {
+            margin: 0;
+            color: #424242;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-info">
+            <h3><i class="fas fa-mobile-alt"></i> Mobil Rota Kartları - Son Test</h3>
+            <p>Bu sayfa yeni mobil rota kartı düzenini test etmek için oluşturulmuştur. Ana uygulamadakiyle aynı CSS kuralları kullanılmaktadır.</p>
+        </div>
+
+        <div class="predefined-routes-list">
+            <!-- Test Route Card 1 -->
+            <div class="route-card" data-route-id="test1">
+                <div class="route-card-image">
+                    <div class="placeholder-image">
+                        <i class="fas fa-mountain fa-2x"></i>
+                    </div>
+                </div>
+                <div class="route-card-header">
+                    <h3 class="route-card-title">Uludağ Zirvesi Yürüyüşü</h3>
+                    <div class="route-card-actions">
+                        <button class="route-media-refresh-btn" onclick="refreshRouteMedia(1)" title="Medyayı yenile" aria-label="Medyayı yenile">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="favorite-btn" data-route-id="1" aria-label="Favorilere ekle">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </div>
+                    <p class="route-card-description">Uludağ'ın en yüksek zirvelerine çıkan zorlu bir yürüyüş rotası. Muhteşem manzaralar ve temiz hava eşliğinde unutulmaz bir deneyim.</p>
+                </div>
+                <div class="route-card-meta">
+                    <div class="route-meta-item" aria-label="Mesafe: 12.5 km">
+                        <span class="route-distance">12.5 km</span>
+                    </div>
+                    <div class="route-meta-item" aria-label="Süre: 6 saat">
+                        <i class="fas fa-clock" aria-hidden="true"></i>
+                        <span>6 saat</span>
+                    </div>
+                    <div class="route-meta-item" aria-label="Durak sayısı: 8">
+                        <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+                        <span>8 durak</span>
+                    </div>
+                    <div class="route-meta-item route-difficulty" aria-label="Zorluk seviyesi: 4">
+                        <i class="fas fa-mountain" aria-hidden="true"></i>
+                        <div class="difficulty-stars">★★★★☆</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Route Card 2 -->
+            <div class="route-card" data-route-id="test2">
+                <div class="route-card-image">
+                    <div class="placeholder-image">
+                        <i class="fas fa-tree fa-2x"></i>
+                    </div>
+                </div>
+                <div class="route-card-header">
+                    <h3 class="route-card-title">Göreme Vadisi Bisiklet Turu</h3>
+                    <div class="route-card-actions">
+                        <button class="route-media-refresh-btn" onclick="refreshRouteMedia(2)" title="Medyayı yenile" aria-label="Medyayı yenile">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="favorite-btn" data-route-id="2" aria-label="Favorilere ekle">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </div>
+                    <p class="route-card-description">Peri bacaları arasında geçen keyifli bir bisiklet rotası. Tarih ve doğa severler için mükemmel bir seçim.</p>
+                </div>
+                <div class="route-card-meta">
+                    <div class="route-meta-item" aria-label="Mesafe: 8.2 km">
+                        <span class="route-distance">8.2 km</span>
+                    </div>
+                    <div class="route-meta-item" aria-label="Süre: 2.5 saat">
+                        <i class="fas fa-clock" aria-hidden="true"></i>
+                        <span>2.5 saat</span>
+                    </div>
+                    <div class="route-meta-item" aria-label="Durak sayısı: 5">
+                        <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+                        <span>5 durak</span>
+                    </div>
+                    <div class="route-meta-item route-difficulty" aria-label="Zorluk seviyesi: 2">
+                        <i class="fas fa-mountain" aria-hidden="true"></i>
+                        <div class="difficulty-stars">★★☆☆☆</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 p-3 bg-light rounded">
+            <h5><i class="fas fa-info-circle"></i> Ana Uygulama Testi</h5>
+            <p class="mb-2">Şimdi ana uygulamada test edin:</p>
+            <ol class="mb-0 small">
+                <li>Ana sayfaya gidin: <code>http://localhost:5560/predefined_routes.html</code></li>
+                <li>Mobil görünüm aktifleştirin (F12 → Toggle device toolbar)</li>
+                <li>Cache'i temizleyin (Ctrl + Shift + R)</li>
+                <li>Rota kartlarının liste şeklinde göründüğünü kontrol edin</li>
+            </ol>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
