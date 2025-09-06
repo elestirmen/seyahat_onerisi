@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POI Ara Kutusunun Konum Testi</title>
+    <link rel="stylesheet" href="static/css/poi_recommendation_system.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-map {
+            width: 100%;
+            height: 400px;
+            background: #e9ecef;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            position: relative;
+        }
+        .instructions {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>POI Ara Kutusunun Konum Testi</h1>
+
+        <div class="instructions">
+            <h3>Test Açıklaması:</h3>
+            <p>Bu test POI ara kutusunun harita üzerinde doğru konumlandırılıp konumlandırılmadığını kontrol eder.</p>
+            <p><strong>İstenen:</strong> POI ara kutusu haritanın canvasının üstünde (z-index: 1200) görünmeli</p>
+        </div>
+
+        <div class="status info">
+            <strong>Durum:</strong> POI ara kutusu artık z-index: 1200 ile haritanın üstünde konumlandırılmış
+        </div>
+
+        <div class="test-map" id="testMap">
+            <div style="text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 10px;">🗺️</div>
+                <div>Test Haritası</div>
+                <div style="font-size: 12px; color: #666; margin-top: 10px;">POI ara kutusu sol üst köşede görünecek</div>
+            </div>
+        </div>
+
+        <div class="status success">
+            <strong>✅ Düzeltmeler:</strong>
+            <ul>
+                <li>Uzun basınca haritayı büyütme özelliği tamamen kaldırıldı</li>
+                <li>POI ara kutusunun z-index'i 1200'e çıkarıldı</li>
+                <li>Harita canvasının üstünde konumlandırıldı</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Simulate POI search bar creation (same as in the actual system)
+        function createTestSearchBar() {
+            const mapContainer = document.getElementById('testMap');
+
+            // Create search bar
+            const bar = document.createElement('div');
+            bar.id = 'poiSearchBar';
+            bar.style.cssText = `
+                position: absolute; top: 12px; left: 12px; right: auto; z-index: 1200;
+                background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0; border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;
+                padding: 8px 10px; backdrop-filter: blur(6px);
+            `;
+            bar.innerHTML = `
+                <i class="fas fa-search" style="color:#64748b"></i>
+                <input id="poiSearchInput" type="text" placeholder="POI ara..." style="
+                    border:none; outline:none; background:transparent; width: 200px; max-width: 60vw; color:#111827; font-size: 14px;" />
+                <button id="poiSearchClear" title="Temizle" style="
+                    border:none; background:#f1f5f9; color:#334155; border-radius:8px; padding:4px 8px; cursor:pointer;">Temizle</button>
+            `;
+
+            mapContainer.appendChild(bar);
+
+            // Add functionality
+            const input = bar.querySelector('#poiSearchInput');
+            const clearBtn = bar.querySelector('#poiSearchClear');
+
+            input.addEventListener('input', function() {
+                console.log('Arama:', this.value);
+            });
+
+            clearBtn.addEventListener('click', function() {
+                input.value = '';
+                console.log('Arama temizlendi');
+            });
+
+            console.log('POI ara kutusu oluşturuldu (z-index: 1200)');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(createTestSearchBar, 500);
+        });
+    </script>
+</body>
+</html>

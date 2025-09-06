@@ -11369,17 +11369,80 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayResults(data) {
         const resultsSection = document.getElementById('resultsSection');
         const loadingIndicator = document.getElementById('loadingIndicator');
-        
+
         if (loadingIndicator) {
             loadingIndicator.style.display = 'none';
         }
-        
+
         if (resultsSection) {
             resultsSection.style.display = 'block';
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-        
-        showNotification(`✅ ${data.recommendations ? data.recommendations.length : 0} öneri bulundu!`, 'success');
+
+        // Handle recommendation data and display on map
+        let recommendations = [];
+        if (data && data.recommendations && Array.isArray(data.recommendations)) {
+            recommendations = data.recommendations;
+        } else if (data && Array.isArray(data)) {
+            recommendations = data;
+        }
+
+        if (recommendations.length > 0) {
+            // Show map section
+            const mapSection = document.getElementById('mapSection');
+            if (mapSection) {
+                mapSection.style.display = 'block';
+            }
+
+            // Show results section with recommendation header
+            const recommendationResults = document.getElementById('recommendationResults');
+            if (recommendationResults) {
+                recommendationResults.innerHTML = `
+                    <div class="exploration-header">
+                        <h3><i class="fas fa-magic"></i> Kişisel Öneriler</h3>
+                        <p><strong>${recommendations.length} özel öneri</strong> bulundu ve haritada gösteriliyor. Tercihlerinize uygun yerleri keşfedebilirsiniz.</p>
+                        <div class="exploration-stats">
+                            <span class="stat-item"><i class="fas fa-star"></i> ${recommendations.length} Öneri</span>
+                            <span class="stat-item"><i class="fas fa-user"></i> Size Özel</span>
+                            <span class="stat-item"><i class="fas fa-mouse-pointer"></i> Tıklayarak Keşfedin</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Initialize map and show recommendations (exactly like free exploration)
+            setTimeout(async () => {
+                try {
+                    // Initialize main map (independent of recommendations)
+                    if (typeof window.initializeMainMap === 'function' || typeof initializeMainMap === 'function') {
+                        await (window.initializeMainMap || initializeMainMap)();
+                    }
+
+                    // Update map with recommendations (same as free exploration)
+                    if (typeof window.updateMapWithPOIs === 'function' || typeof updateMapWithPOIs === 'function') {
+                        (window.updateMapWithPOIs || updateMapWithPOIs)(recommendations);
+                    }
+
+                    // Focus the map section (same as free exploration)
+                    if (typeof window.switchToDynamicMapView === 'function' || typeof switchToDynamicMapView === 'function') {
+                        (window.switchToDynamicMapView || switchToDynamicMapView)();
+                    } else {
+                        setTimeout(() => {
+                            if (mapSection) {
+                                mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }, 200);
+                    }
+
+                } catch (error) {
+                    console.error('Error displaying recommendations on map:', error);
+                }
+            }, 500);
+
+            showNotification(`✅ ${recommendations.length} öneri bulundu ve haritada gösteriliyor!`, 'success');
+        } else {
+            showNotification('❌ Uygun öneri bulunamadı. Lütfen tercihlerinizi değiştirin.', 'warning');
+        }
     }
     
     function showNotification(message, type = 'info') {
@@ -12573,7 +12636,7 @@ function ensurePOISearchBar(allPOIs = []) {
         bar = document.createElement('div');
         bar.id = 'poiSearchBar';
         bar.style.cssText = `
-            position: absolute; top: 12px; left: 12px; right: auto; z-index: 1100;
+            position: absolute; top: 12px; left: 12px; right: auto; z-index: 1200;
             background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0; border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;
             padding: 8px 10px; backdrop-filter: blur(6px);

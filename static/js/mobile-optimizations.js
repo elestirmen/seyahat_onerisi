@@ -703,22 +703,35 @@ class MobileOptimizations {
      */
     initializePOIMarker(marker) {
         if (marker.dataset.mobileInitialized) return;
-        
+
         // Add touch-friendly hover alternatives
         if (this.isTouch) {
             marker.addEventListener('touchstart', (event) => {
+                // Prevent default to avoid scrolling conflicts
+                event.preventDefault();
                 // Show hover state on touch
                 marker.classList.add('touch-hover');
-            }, { passive: true });
-            
+                // Add visual feedback
+                this.addTouchFeedback(marker);
+            }, { passive: false });
+
             marker.addEventListener('touchend', (event) => {
                 // Remove hover state after delay
                 setTimeout(() => {
                     marker.classList.remove('touch-hover');
-                }, 1000);
+                    this.removeTouchFeedback(marker);
+                }, 150);
             }, { passive: true });
+
+            // Prevent context menu on long press
+            marker.addEventListener('contextmenu', (event) => {
+                event.preventDefault();
+            });
         }
-        
+
+        // Ensure proper z-index for mobile
+        marker.style.zIndex = '999';
+
         marker.dataset.mobileInitialized = 'true';
     }
 
@@ -1249,6 +1262,28 @@ class MobileOptimizations {
     handleSwipeLeft() {
         // Navigate to next route or action
         // Log removed for cleaner console
+    }
+
+    /**
+     * Handle swipe gesture (main handler that determines direction)
+     */
+    handleSwipe(event, startPos, endPos) {
+        const deltaX = endPos.x - startPos.x;
+        const deltaY = endPos.y - startPos.y;
+
+        // Determine if this is a horizontal or vertical swipe
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            // Horizontal swipe
+            if (deltaX > 50) {
+                this.handleSwipeRight();
+            } else if (deltaX < -50) {
+                this.handleSwipeLeft();
+            }
+        } else {
+            // Vertical swipe - could be used for other actions
+            // For now, just log it
+            console.log('Vertical swipe detected');
+        }
     }
 
     setupQuickActions() {
