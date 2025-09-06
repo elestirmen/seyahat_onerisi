@@ -12198,32 +12198,144 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function toggle(force) {
             const entering = force !== undefined ? force : !container.classList.contains('fullscreen');
+            const isMobile = window.innerWidth <= 768;
+
             if (entering) {
                 prevScrollY = window.scrollY || window.pageYOffset || 0;
-                document.body.style.overflow = 'hidden';
+
+                // Mobile-specific optimizations
+                if (isMobile) {
+                    // Use more aggressive overflow hiding for mobile
+                    document.body.style.overflow = 'hidden';
+                    document.body.style.position = 'fixed';
+                    document.body.style.width = '100%';
+                    document.body.style.top = `-${prevScrollY}px`;
+
+                    // Add viewport meta tag update for mobile
+                    const viewport = document.querySelector('meta[name="viewport"]');
+                    if (viewport) {
+                        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+                    }
+                } else {
+                    document.body.style.overflow = 'hidden';
+                }
+
                 container.classList.add('fullscreen');
+
                 // Hide route planner section to avoid overlaying text
                 if (routeSection) {
                     previousRouteSectionDisplay = routeSection.style.display;
                     routeSection.style.display = 'none';
                 }
-                // Resize Leaflet map after layout change
-                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 50);
-                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 250);
+
+                // Hide POI search bar if visible
+                const poiSearchBar = document.getElementById('poiSearchBar');
+                if (poiSearchBar) {
+                    poiSearchBar.style.display = 'none';
+                }
+
+                // Create fullscreen exit button for mobile
+                if (isMobile) {
+                    const exitBtn = document.createElement('button');
+                    exitBtn.id = 'fullscreenExitBtn';
+                    exitBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    exitBtn.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        z-index: 10000;
+                        background: rgba(0, 0, 0, 0.7);
+                        color: white;
+                        border: none;
+                        border-radius: 50%;
+                        width: 50px;
+                        height: 50px;
+                        font-size: 18px;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        backdrop-filter: blur(10px);
+                        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                        transition: all 0.2s ease;
+                    `;
+                    exitBtn.title = 'Tam Ekrandan Çık';
+                    exitBtn.addEventListener('click', () => toggle(false));
+                    document.body.appendChild(exitBtn);
+                }
+
+                // Resize Leaflet map after layout change with multiple attempts
+                const invalidateMap = () => {
+                    if (typeof map !== 'undefined' && map) {
+                        map.invalidateSize();
+                    } else if (typeof dynamicMap !== 'undefined' && dynamicMap) {
+                        dynamicMap.invalidateSize();
+                    }
+                };
+
+                setTimeout(invalidateMap, 50);
+                setTimeout(invalidateMap, 150);
+                setTimeout(invalidateMap, 300);
+                setTimeout(invalidateMap, 500);
+
                 const icon = btn.querySelector('i');
                 if (icon && icon.classList.contains('fa-expand')) {
                     icon.classList.remove('fa-expand');
                     icon.classList.add('fa-compress');
                 }
                 document.addEventListener('keydown', escHandler);
+
+                // Add haptic feedback for mobile
+                if (isMobile && navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+
             } else {
+                // Exit fullscreen
                 container.classList.remove('fullscreen');
-                document.body.style.overflow = '';
+
+                // Mobile-specific cleanup
+                if (isMobile) {
+                    document.body.style.overflow = '';
+                    document.body.style.position = '';
+                    document.body.style.width = '';
+                    document.body.style.top = '';
+
+                    // Restore viewport meta tag
+                    const viewport = document.querySelector('meta[name="viewport"]');
+                    if (viewport) {
+                        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+                    }
+                } else {
+                    document.body.style.overflow = '';
+                }
+
                 // Restore route planner section
                 if (routeSection) {
                     routeSection.style.display = previousRouteSectionDisplay || '';
                 }
-                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 50);
+
+                // Restore POI search bar
+                const poiSearchBar = document.getElementById('poiSearchBar');
+                if (poiSearchBar) {
+                    poiSearchBar.style.display = '';
+                }
+
+                // Remove fullscreen exit button
+                const exitBtn = document.getElementById('fullscreenExitBtn');
+                if (exitBtn) {
+                    exitBtn.remove();
+                }
+
+                // Resize map back to normal
+                setTimeout(() => {
+                    if (typeof map !== 'undefined' && map) {
+                        map.invalidateSize();
+                    } else if (typeof dynamicMap !== 'undefined' && dynamicMap) {
+                        dynamicMap.invalidateSize();
+                    }
+                }, 50);
+
                 const icon = btn.querySelector('i');
                 if (icon && icon.classList.contains('fa-compress')) {
                     icon.classList.remove('fa-compress');

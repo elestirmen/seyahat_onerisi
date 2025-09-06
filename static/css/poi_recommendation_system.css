@@ -7159,6 +7159,69 @@ ute Preview Map Styles */
     background: #ffffff;
 }
 
+/* Mobile-specific fullscreen improvements */
+@media (max-width: 768px) {
+    #mapContainer.fullscreen {
+        /* Use more reliable height calculation for mobile */
+        height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        /* Ensure proper viewport coverage on mobile */
+        min-height: 100vh;
+        /* Prevent any potential scrolling issues */
+        overflow: hidden;
+    }
+
+    /* Hide mobile UI elements in fullscreen */
+    #mapContainer.fullscreen .mobile-map-fab {
+        display: none;
+    }
+
+    /* Ensure map canvas fills container properly on mobile */
+    #mapContainer.fullscreen .leaflet-container {
+        height: 100% !important;
+        width: 100% !important;
+    }
+
+    /* Fullscreen exit button styling for mobile */
+    #fullscreenExitBtn {
+        position: fixed !important;
+        top: 20px !important;
+        right: 20px !important;
+        z-index: 10000 !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        border-radius: 50% !important;
+        width: 50px !important;
+        height: 50px !important;
+        font-size: 18px !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        backdrop-filter: blur(10px) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+        transition: all 0.2s ease !important;
+        touch-action: manipulation !important;
+    }
+
+    #fullscreenExitBtn:hover {
+        background: rgba(0, 0, 0, 0.9) !important;
+        transform: scale(1.1) !important;
+        border-color: rgba(255, 255, 255, 0.5) !important;
+    }
+
+    #fullscreenExitBtn:active {
+        transform: scale(0.95) !important;
+    }
+
+    /* Safe area adjustments for devices with notches */
+    @supports (padding-top: env(safe-area-inset-top)) {
+        #fullscreenExitBtn {
+            top: calc(20px + env(safe-area-inset-top)) !important;
+        }
+    }
+}
+
 /* Mobile-First Map Container Optimization */
 @media (max-width: 480px) {
     /* Small Mobile - Enhanced Map Visibility */
