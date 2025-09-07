@@ -2145,6 +2145,7 @@
                     if (response.ok) {
                         const data = await response.json();
                         console.log('API Response:', data); // Debug log
+                        console.log('Search term:', this.currentFilters.search); // Debug search term
 
                         // Handle different API response formats
                         this.pois = [];
@@ -2358,12 +2359,29 @@
                                 </div>
                             </div>
                         ` : ''}
-                        ${poi.tags && Array.isArray(poi.tags) && poi.tags.length > 0 ? `
-                            <div class="poi-item-tags">
-                                ${poi.tags.slice(0, 3).map(tag => `<span class="poi-tag">${tag}</span>`).join('')}
-                                ${poi.tags.length > 3 ? `<span class="poi-tag">+${poi.tags.length - 3}</span>` : ''}
-                            </div>
-                        ` : ''}
+                        ${(() => {
+                            // Handle tags - could be array or string from API
+                            let tagsArray = [];
+                            if (poi.tags) {
+                                if (Array.isArray(poi.tags)) {
+                                    tagsArray = poi.tags;
+                                } else if (typeof poi.tags === 'string') {
+                                    tagsArray = poi.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                                } else {
+                                    tagsArray = [String(poi.tags)];
+                                }
+                            }
+
+                            if (tagsArray.length > 0) {
+                                return `
+                                    <div class="poi-item-tags">
+                                        ${tagsArray.slice(0, 3).map(tag => `<span class="poi-tag">${tag}</span>`).join('')}
+                                        ${tagsArray.length > 3 ? `<span class="poi-tag">+${tagsArray.length - 3}</span>` : ''}
+                                    </div>
+                                `;
+                            }
+                            return '';
+                        })()}
                     </div>
                 `;
 
@@ -2761,9 +2779,21 @@
                 const tagsSection = document.getElementById('poiTagsSection');
                 const tagsContainer = document.getElementById('poiTagsContainer');
 
-                if (poi.tags && poi.tags.length > 0) {
+                // Handle tags - could be array or string from API
+                let tagsArray = [];
+                if (poi.tags) {
+                    if (Array.isArray(poi.tags)) {
+                        tagsArray = poi.tags;
+                    } else if (typeof poi.tags === 'string') {
+                        tagsArray = poi.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                    } else {
+                        tagsArray = [String(poi.tags)];
+                    }
+                }
+
+                if (tagsArray.length > 0) {
                     tagsSection.style.display = 'block';
-                    tagsContainer.innerHTML = poi.tags.map(tag =>
+                    tagsContainer.innerHTML = tagsArray.map(tag =>
                         `<span class="poi-tag-large">${tag}</span>`
                     ).join('');
                 } else {
@@ -2877,7 +2907,19 @@
                 document.getElementById('editLatitude').value = poi.latitude || '';
                 document.getElementById('editLongitude').value = poi.longitude || '';
                 document.getElementById('editDescription').value = poi.description || '';
-                document.getElementById('editTags').value = poi.tags ? poi.tags.join(', ') : '';
+
+                // Handle tags - could be array or string from API
+                let tagsValue = '';
+                if (poi.tags) {
+                    if (Array.isArray(poi.tags)) {
+                        tagsValue = poi.tags.join(', ');
+                    } else if (typeof poi.tags === 'string') {
+                        tagsValue = poi.tags;
+                    } else {
+                        tagsValue = String(poi.tags);
+                    }
+                }
+                document.getElementById('editTags').value = tagsValue;
 
                 // Ensure categories are loaded
                 if (!this.categories || this.categories.length === 0) {

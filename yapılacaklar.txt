@@ -1,2 +1,3 @@
 -dil modeli ile yazılı giriş yapılabilisin. örneğin pide yapılan yer var mı ürgüpte dendiği zaman buna uygun yerler gelsin.
 
+-poi için arama yapıldığında sadece poi isimleri için değil etiketlerde de arasın.

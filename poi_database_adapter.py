@@ -143,10 +143,11 @@ class PostgreSQLPOIDatabase(POIDatabase):
             raise RuntimeError("Veritabanı bağlantısı yok")
             
         query = """
-            SELECT 
+            SELECT
                 p.*,
                 ST_Y(location::geometry) as lat,
                 ST_X(location::geometry) as lon,
+                p.attributes,
                 array_agg(
                     json_build_object(
                         'id', pi.id,
@@ -173,7 +174,14 @@ class PostgreSQLPOIDatabase(POIDatabase):
             result['coordinates'] = (result['latitude'], result['longitude'])
             # UI JSON formatında `_id` alanı bekleniyor
             result['_id'] = result['id']
-            
+
+            # Attributes içindeki tags'i ana seviyeye çıkar
+            if result.get('attributes') and isinstance(result['attributes'], dict):
+                if 'tags' in result['attributes']:
+                    result['tags'] = result['attributes']['tags']
+                # Diğer attributes alanlarını da çıkarabiliriz
+                result.update(result['attributes'])
+
             # Ratingleri yeni tablodan oku
             ratings = self.get_poi_ratings(poi_id)
             # Default ratings ile merge et ama sadece mevcut rating'leri göster
@@ -421,7 +429,8 @@ class PostgreSQLPOIDatabase(POIDatabase):
                 category,
                 ST_Y(location::geometry) as latitude,
                 ST_X(location::geometry) as longitude,
-                description
+                description,
+                attributes
             FROM pois
             WHERE is_active = true
         """
@@ -447,6 +456,13 @@ class PostgreSQLPOIDatabase(POIDatabase):
                 "longitude": row["longitude"],
                 "description": row["description"],
             }
+
+            # Attributes içindeki tags'i ana seviyeye çıkar
+            if row.get('attributes') and isinstance(row['attributes'], dict):
+                if 'tags' in row['attributes']:
+                    poi_data['tags'] = row['attributes']['tags']
+                # Diğer attributes alanlarını da çıkarabiliriz
+                poi_data.update(row['attributes'])
             
             # Rating sistemini ayrı sorgu ile al
             poi_ratings = self.get_poi_ratings(row["id"])

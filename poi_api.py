@@ -1476,6 +1476,7 @@ def list_pois():
         # Arama filtresi uygula
         if search_query:
             search_results = {}
+            print(f"🔍 JSON Arama terimi: '{search_query}' - Mode: JSON_FALLBACK")
             for cat, pois in filtered_data.items():
                 matched_pois = []
                 for poi in pois:
@@ -1485,11 +1486,13 @@ def list_pois():
                         poi.get('description', ''),
                         ', '.join(poi.get('tags', []))
                     ]
-                    
+
+                    print(f"POI: {poi.get('name', '')}, Tags: {poi.get('tags', [])}")
+
                     # Herhangi bir alanda eşleşme var mı kontrol et
                     if any(fuzzy_search_match(search_query, field) for field in search_fields):
                         matched_pois.append(poi)
-                
+
                 if matched_pois:
                     search_results[cat] = matched_pois
             
@@ -1543,24 +1546,27 @@ def perform_database_search(db, search_query, category_filter=None):
     """
     # PostgreSQL için Türkçe karakter destekli arama sorgusu
     base_query = """
-        SELECT 
+        SELECT
             id as _id,
-            name, 
-            category, 
-            ST_Y(location::geometry) as latitude, 
-            ST_X(location::geometry) as longitude, 
-            description
+            name,
+            category,
+            ST_Y(location::geometry) as latitude,
+            ST_X(location::geometry) as longitude,
+            description,
+            attributes
         FROM pois
         WHERE is_active = true
         AND (
-            LOWER(TRANSLATE(name, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+            LOWER(TRANSLATE(name, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
             LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
-            OR LOWER(TRANSLATE(COALESCE(description, ''), 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu')) 
+            OR LOWER(TRANSLATE(COALESCE(description, ''), 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
+            LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
+            OR LOWER(TRANSLATE(COALESCE(jsonb_extract_path_text(attributes, 'tags'), ''), 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
             LIKE LOWER(TRANSLATE(%s, 'çÇğĞıİöÖşŞüÜ', 'ccggiiooSSuu'))
         )
     """
     
-    params = [f'%{search_query}%', f'%{search_query}%']
+    params = [f'%{search_query}%', f'%{search_query}%', f'%{search_query}%']
     
     if category_filter:
         base_query += " AND category = %s"
@@ -1571,14 +1577,40 @@ def perform_database_search(db, search_query, category_filter=None):
     with db.conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(base_query, params)
         results = cur.fetchall()
-    
+
+    # Debug: Arama sonuçlarını göster
+    print(f"🔍 Arama terimi: '{search_query}', Sonuç sayısı: {len(results)} - Mode: DATABASE")
+    for i, row in enumerate(results):
+        attributes = row.get('attributes')
+        tags = None
+        if attributes:
+            if isinstance(attributes, dict):
+                tags = attributes.get('tags', 'No tags key')
+            else:
+                tags = f'Attributes not dict: {type(attributes)} - {attributes}'
+        else:
+            tags = 'No attributes field'
+
+        print(f"POI {i+1}: {row['name']}, Attributes: {attributes}, Tags: {tags}")
+
     # Sonuçları kategorilere göre grupla
     search_results = {}
     for row in results:
         category = row['category']
         if category not in search_results:
             search_results[category] = []
-        search_results[category].append(dict(row))
+
+        # POI objesini dict'e çevir ve attributes içindeki tags'i çıkar
+        poi_dict = dict(row)
+
+        # Attributes içindeki tags'i ana seviyeye çıkar
+        if poi_dict.get('attributes') and isinstance(poi_dict['attributes'], dict):
+            if 'tags' in poi_dict['attributes']:
+                poi_dict['tags'] = poi_dict['attributes']['tags']
+            # Diğer attributes alanlarını da çıkarabiliriz
+            poi_dict.update(poi_dict['attributes'])
+
+        search_results[category].append(poi_dict)
     
     return search_results
 

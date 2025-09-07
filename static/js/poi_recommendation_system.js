@@ -12673,6 +12673,7 @@ function updateMapWithPOIs(allPOIs) {
             marker.poiName = poi.name || '';
             marker.poiNameLower = (poi.name || '').toLowerCase();
             marker.poiCategory = poi.category || '';
+            marker.poiTags = Array.isArray(poi.tags) ? poi.tags.join(' ').toLowerCase() : (poi.tags || '').toLowerCase();
             marker.poiData = poi;
             markers.push(marker);
 
@@ -12848,16 +12849,24 @@ function ensurePOISearchBar(allPOIs = []) {
     }
 }
 
-// Filter current markers by query (name/category)
+// Filter current markers by query (name/category/tags)
 function filterPOIMarkers(query) {
     const q = (query || '').trim().toLowerCase();
     if (!markers || !Array.isArray(markers)) return;
+
+    console.log(`🔍 Harita arama: "${q}"`);
 
     markers.forEach(marker => {
         try {
             const name = marker.poiNameLower || '';
             const cat = (marker.poiCategory || '').toLowerCase();
-            const match = !q || name.includes(q) || cat.includes(q);
+            const tags = marker.poiTags || '';
+            const match = !q || name.includes(q) || cat.includes(q) || tags.includes(q);
+
+            // Debug: Arama eşleşmelerini göster
+            if (q && match) {
+                console.log(`✅ POI eşleşti: "${marker.poiName}" - Tags: "${tags}" - Query: "${q}"`);
+            }
             const inCluster = poiCluster && poiCluster.hasLayer && poiCluster.hasLayer(marker);
             if (match && !inCluster) {
                 poiCluster ? poiCluster.addLayer(marker) : marker.addTo(map);
