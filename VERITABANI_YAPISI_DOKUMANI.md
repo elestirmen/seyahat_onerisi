@@ -1,8 +1,8 @@
-# POI Seyahat Öneri Sistemi - Veritabanı Yapısı Dokümantasyonu
+# Ürgüp Seyahat Öneri Sistemi - Veritabanı Yapısı Dokümantasyonu
 
 ## Genel Bakış
 
-Bu dokuman, POI (Point of Interest) Seyahat Öneri Sistemi'nin PostgreSQL/PostGIS veritabanı yapısını detaylı olarak açıklamaktadır. Sistem, coğrafi konumlar, rotalar, puanlama sistemi ve medya yönetimi için optimize edilmiş bir veritabanı şeması kullanmaktadır.
+Bu dokuman, Ürgüp Seyahat Öneri Sistemi'nin PostgreSQL/PostGIS veritabanı yapısını detaylı olarak açıklamaktadır. Sistem, coğrafi konumlar, rotalar, puanlama sistemi ve medya yönetimi için optimize edilmiş bir veritabanı şeması kullanmaktadır.
 
 ## Veritabanı Teknolojileri
 

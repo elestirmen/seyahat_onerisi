@@ -1,10 +1,10 @@
-# 🗺️ Kapadokya POI Sistemi - Seyahat Öneri Platformu
+# 🗺️ Ürgüp Seyahat Öneri Sistemi
 
 [![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![Flask](https://img.shields.io/badge/Flask-2.3.3-green.svg)](https://flask.palletsprojects.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Kapadokya bölgesi için geliştirilmiş, Points of Interest (POI) yönetimi, rota planlama ve seyahat önerileri sunan kapsamlı bir web platformudur. Bu sistem, turistlerin Kapadokya'yı keşfetmesine yardımcı olmak için tasarlanmıştır.
+Ürgüp bölgesi için geliştirilmiş, Points of Interest (POI) yönetimi, rota planlama ve seyahat önerileri sunan kapsamlı bir web platformudur. Bu sistem, turistlerin Ürgüp'ü keşfetmesine yardımcı olmak için tasarlanmıştır.
 
 ## 🌟 Özellikler
 
@@ -35,6 +35,7 @@ Kapadokya bölgesi için geliştirilmiş, Points of Interest (POI) yönetimi, ro
 - **İşletim Sistemi**: Linux, macOS, Windows
 - **RAM**: Minimum 4GB (önerilen 8GB+)
 - **Disk**: Minimum 2GB boş alan
+- **Sunucu**: PostgreSQL + PostGIS (önerilen)
 
 ### Otomatik Kurulum (Önerilen)
 
@@ -90,28 +91,30 @@ python wsgi.py
 ## 📁 Proje Yapısı
 
 ```
-kapadokya-poi-sistemi/
-├── 📁 src/                    # Ana kaynak kodları
-│   └── 📁 utils/             # Yardımcı fonksiyonlar
-├── 📁 static/                 # Statik dosyalar (CSS, JS)
-├── 📁 poi_media/             # POI medya dosyaları
-├── 📁 poi_images/            # POI görselleri
-├── 📁 tests/                 # Test dosyaları
-├── 📁 scripts/               # Yardımcı scriptler
-├── 📁 temp_uploads/          # Geçici yüklemeler
-├── 📁 poi_env/               # POI ortam dosyaları
-├── 📁 perf/                  # Performans testleri
-├── 🐍 poi_api.py             # Ana Flask uygulaması
-├── 🐍 route_service.py       # Rota servis katmanı
-├── 🐍 poi_database_adapter.py # Veritabanı adaptörü
-├── 🐍 poi_media_manager.py   # Medya yönetimi
-├── 🐍 route_file_parser.py   # Rota dosya işleyici
-├── 🐍 category_route_planner.py # Ana rota planlayıcı
-├── 🐍 wsgi.py                # WSGI giriş noktası
+seyahat-onerisi-sistemi/
 ├── 📋 requirements.txt        # Python bağımlılıkları
-├── 📋 openapi.yaml           # API dokümantasyonu
-├── 🚀 install.sh             # Otomatik kurulum scripti
-└── 📖 README.md              # Bu dosya
+├── 🐍 poi_api.py             # Ana Flask uygulaması ve REST API
+├── 🐍 category_route_planner.py # Akıllı rota planlama algoritması
+├── 🐍 poi_database_adapter.py # Veritabanı adaptörü
+├── 🐍 route_service.py       # Rota servis katmanı
+├── 🐍 route_file_parser.py   # GPX/KML dosya işleyici
+├── 🐍 poi_media_manager.py   # Medya yönetim sistemi
+├── 🐍 elevation_service.py   # Yükseklik servisleri
+├── 🐍 auth_middleware.py     # Kimlik doğrulama sistemi
+├── 📁 static/                # Statik dosyalar
+│   ├── 📁 css/              # Stil dosyaları
+│   ├── 📁 js/               # JavaScript dosyaları
+│   └── 📁 poi-tabs/         # POI sekmeleri
+├── 📁 poi_media/            # POI medya dosyaları
+├── 📁 poi_images/           # POI görselleri
+├── 📁 temp_uploads/         # Geçici yüklemeler
+├── 📁 tests/                # Test dosyaları
+├── 📁 scripts/              # Yardımcı scriptler
+├── 📁 perf/                 # Performans testleri
+├── 📁 .qoder/               # Geliştirme görevleri
+├── 📁 .kiro/                # Teknik spesifikasyonlar
+├── 📁 SAFE_DELETE/          # Yedekleme arşivi
+└── 📖 README.md             # Bu dosya
 ```
 
 ## 🔧 Yapılandırma
@@ -137,7 +140,7 @@ SECRET_KEY=your_secret_key
 
 # Sunucu Yapılandırması
 HOST=0.0.0.0
-PORT=5000
+PORT=5505
 
 # Cache Yapılandırması
 CACHE_TYPE=simple
@@ -209,7 +212,7 @@ python category_route_planner.py --max-budget 500
 python poi_api.py
 
 # Tarayıcıda aç
-http://localhost:5505/poi_manager_ui.html
+http://localhost:5505/poi_recommendation_system.html
 ```
 
 #### API Endpoints
@@ -269,17 +272,12 @@ python -m pytest perf/
 
 ## 📊 API Dokümantasyonu
 
-### Swagger UI
-```bash
-# API dokümantasyonunu görüntüle
-http://localhost:5505/swagger-ui
-```
+### API Dokümantasyonu
+API dokümantasyonu sistem içinde entegre edilmiştir ve aşağıdaki endpoint'lerden erişilebilir:
 
-### OpenAPI Spec
-```bash
-# OpenAPI spesifikasyonu
-http://localhost:5505/openapi.yaml
-```
+- **API Ana Sayfa**: `http://localhost:5505/api/pois` (temel API testi)
+- **Swagger/OpenAPI**: Sistem içinde otomatik olarak oluşturulur
+- **Detaylı Dokümantasyon**: `PROJE_DOKUMANTASYONU.md` dosyasında
 
 ## 🔒 Güvenlik
 
@@ -310,11 +308,11 @@ FLASK_DEBUG=True python poi_api.py
 python wsgi.py
 
 # Gunicorn ile
-gunicorn -w 4 -b 0.0.0.0:5000 wsgi:application
+gunicorn -w 4 -b 0.0.0.0:5505 wsgi:application
 
 # Docker ile
-docker build -t kapadokya-poi .
-docker run -p 5000:5000 kapadokya-poi
+docker build -t urgup-seyahat-onerisi .
+docker run -p 5505:5505 urgup-seyahat-onerisi
 ```
 
 ### Docker Kurulumu
@@ -371,7 +369,7 @@ pip install -r requirements.txt
 netstat -tulpn | grep :5000
 
 # Farklı port kullan
-python poi_api.py --port 5001
+python poi_api.py --port 5506
 ```
 
 ### Log Dosyaları
@@ -454,9 +452,9 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICE
 
 ## 📞 İletişim
 
-- **E-posta**: support@kapadokya-poi.com
-- **GitHub**: [Proje Sayfası](https://github.com/username/kapadokya-poi-sistemi)
-- **Dokümantasyon**: [Wiki](https://github.com/username/kapadokya-poi-sistemi/wiki)
+- **E-posta**: support@urgup-seyahat.com
+- **GitHub**: [Proje Sayfası](https://github.com/username/urgup-seyahat-onerisi)
+- **Dokümantasyon**: [Wiki](https://github.com/username/urgup-seyahat-onerisi/wiki)
 
 ---
 
