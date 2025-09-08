@@ -10197,10 +10197,22 @@ async function getRecommendations() {
         // Log removed for cleaner console
         // Log removed for cleaner console
         
+        // Determine best available location to improve recommendations
+        let reqLocation = null;
+        try {
+            if (startLocation && typeof startLocation.latitude === 'number' && typeof startLocation.longitude === 'number') {
+                reqLocation = { latitude: startLocation.latitude, longitude: startLocation.longitude };
+            } else if (userLocation && typeof userLocation.latitude === 'number' && typeof userLocation.longitude === 'number') {
+                reqLocation = { latitude: userLocation.latitude, longitude: userLocation.longitude };
+            }
+        } catch (e) {
+            // ignore
+        }
+
         const response = await fetch(`${apiBase}/recommendations`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ preferences })
+            body: JSON.stringify({ preferences, location: reqLocation })
         });
         
         // Log removed for cleaner console

@@ -3743,120 +3743,220 @@ def create_smart_route():
 # POI Recommendation System endpoint
 @app.route('/api/recommendations', methods=['POST'])
 def get_recommendations():
-    """Get POI recommendations based on user preferences"""
+    """Get POI recommendations based on user preferences and optional location.
+
+    Improvements over previous version:
+      - Normalized preference vector (relative importance) instead of simple averaging
+      - Proximity weighting when location is provided (smooth distance decay)
+      - Overall quality factor (average rating across categories)
+      - Small category-based bonus mapping POI main category to sliders
+    """
     try:
-        print(f"📥 Request method: {request.method}")
-        print(f"📥 Request content type: {request.content_type}")
-        print(f"📥 Request data: {request.data}")
-        
-        data = request.get_json()
-        print(f"📥 Parsed JSON data: {data}")
-        
-        if not data:
-            print("❌ No JSON data received")
-            return jsonify({'error': 'No JSON data provided'}), 400
-            
-        preferences = data.get('preferences', {})
-        print(f"📊 Preferences: {preferences}")
-        print(f"📊 Preferences type: {type(preferences)}")
-        print(f"📊 Preferences keys: {list(preferences.keys()) if preferences else 'None'}")
-        
-        if not preferences:
-            print("❌ No preferences provided")
-            return jsonify({'error': 'No preferences provided'}), 400
-        
-        # Check if all preferences are 0 (user wants general recommendations)
-        all_zero = all(value == 0 for value in preferences.values())
-        if all_zero:
-            # For all-zero preferences, we'll still provide recommendations
-            # but with a more general scoring approach
-            print("ℹ️ All preferences are 0, providing general recommendations")
-        
-        # Get all POIs with their ratings
+        data = request.get_json(silent=True) or {}
+
+        preferences = data.get('preferences')
+        location = data.get('location')  # {'latitude': float, 'longitude': float}
+        limit = int(data.get('limit') or 20)
+
+        if preferences is None:
+            return jsonify({'error': 'Missing preferences in request body'}), 400
+
+        # Normalize preference keys to match known rating fields
+        rating_fields = [
+            'tarihi', 'sanat_kultur', 'doga', 'eglence',
+            'alisveris', 'spor', 'macera', 'rahatlatici',
+            'yemek', 'gece_hayati'
+        ]
+
+        # Prepare normalized preference weights (relative weights sum to 1)
+        pref_values = {k: max(0, int(preferences.get(k, 0))) for k in rating_fields}
+        pref_sum = sum(pref_values.values())
+        if pref_sum > 0:
+            pref_weights = {k: (v / pref_sum) for k, v in pref_values.items()}
+        else:
+            pref_weights = {k: 0.0 for k in rating_fields}
+
+        all_zero = pref_sum == 0
+
+        # Optional: parse location
+        user_lat = None
+        user_lng = None
+        if isinstance(location, dict):
+            try:
+                user_lat = float(location.get('latitude'))
+                user_lng = float(location.get('longitude'))
+            except Exception:
+                user_lat = None
+                user_lng = None
+
+        # Get all POIs with ratings
         db = get_db()
         if JSON_FALLBACK:
-            # JSON fallback mode
             with open('poi_data.json', 'r', encoding='utf-8') as f:
                 poi_data = json.load(f)
             pois = poi_data.get('pois', [])
         else:
-            # Database mode
             with db.conn.cursor() as cursor:
-                # Get POIs with their ratings pivoted
-                cursor.execute("""
-                    SELECT p.id, p.name, p.category, 
-                           ST_Y(p.location::geometry) as latitude,
-                           ST_X(p.location::geometry) as longitude,
-                           p.description, '' as tags,
-                           MAX(CASE WHEN r.category = 'tarihi' THEN r.rating END) as tarihi,
-                           MAX(CASE WHEN r.category = 'sanat_kultur' THEN r.rating END) as sanat_kultur,
-                           MAX(CASE WHEN r.category = 'doga' THEN r.rating END) as doga,
-                           MAX(CASE WHEN r.category = 'eglence' THEN r.rating END) as eglence,
-                           MAX(CASE WHEN r.category = 'alisveris' THEN r.rating END) as alisveris,
-                           MAX(CASE WHEN r.category = 'spor' THEN r.rating END) as spor,
-                           MAX(CASE WHEN r.category = 'macera' THEN r.rating END) as macera,
-                           MAX(CASE WHEN r.category = 'rahatlatici' THEN r.rating END) as rahatlatici,
-                           MAX(CASE WHEN r.category = 'yemek' THEN r.rating END) as yemek,
-                           MAX(CASE WHEN r.category = 'gece_hayati' THEN r.rating END) as gece_hayati
+                cursor.execute(
+                    """
+                    SELECT p.id, p.name, p.category,
+                           ST_Y(p.location::geometry) AS latitude,
+                           ST_X(p.location::geometry) AS longitude,
+                           p.description, '' AS tags,
+                           MAX(CASE WHEN r.category = 'tarihi' THEN r.rating END) AS tarihi,
+                           MAX(CASE WHEN r.category = 'sanat_kultur' THEN r.rating END) AS sanat_kultur,
+                           MAX(CASE WHEN r.category = 'doga' THEN r.rating END) AS doga,
+                           MAX(CASE WHEN r.category = 'eglence' THEN r.rating END) AS eglence,
+                           MAX(CASE WHEN r.category = 'alisveris' THEN r.rating END) AS alisveris,
+                           MAX(CASE WHEN r.category = 'spor' THEN r.rating END) AS spor,
+                           MAX(CASE WHEN r.category = 'macera' THEN r.rating END) AS macera,
+                           MAX(CASE WHEN r.category = 'rahatlatici' THEN r.rating END) AS rahatlatici,
+                           MAX(CASE WHEN r.category = 'yemek' THEN r.rating END) AS yemek,
+                           MAX(CASE WHEN r.category = 'gece_hayati' THEN r.rating END) AS gece_hayati
                     FROM pois p
                     LEFT JOIN poi_ratings r ON p.id = r.poi_id
                     WHERE p.location IS NOT NULL
                     GROUP BY p.id, p.name, p.category, p.location, p.description
-                """)
-                pois = [dict(zip([col[0] for col in cursor.description], row)) 
-                       for row in cursor.fetchall()]
+                    """
+                )
+                pois = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
             db.disconnect()
-        
-        # Calculate recommendation scores
-        recommendations = []
-        for poi in pois:
-            score = 0
-            rating_count = 0
-            
-            # Calculate score based on user preferences and POI ratings
-            rating_fields = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 
-                           'alisveris', 'spor', 'macera', 'rahatlatici', 
-                           'yemek', 'gece_hayati']
-            
-            # Check if all preferences are zero (general recommendations)
-            all_prefs_zero = all(preferences.get(field, 0) == 0 for field in rating_fields)
-            
-            if all_prefs_zero:
-                # For general recommendations, use POI's average rating
-                total_rating = 0
-                rating_count = 0
-                for field in rating_fields:
-                    poi_rating = poi.get(field, 0) if poi.get(field) is not None else 0
-                    if poi_rating > 0:
-                        total_rating += poi_rating
-                        rating_count += 1
-                
-                if rating_count > 0:
-                    final_score = (total_rating / rating_count)
-                else:
-                    final_score = 30  # Base score for POIs without ratings
+
+        # Compute global field means for missing-rate imputation
+        field_sums = {k: 0.0 for k in rating_fields}
+        field_counts = {k: 0 for k in rating_fields}
+        for p in pois:
+            for f in rating_fields:
+                v = p.get(f)
+                if v is not None and isinstance(v, (int, float)) and v > 0:
+                    field_sums[f] += float(v)
+                    field_counts[f] += 1
+        field_means = {}
+        for f in rating_fields:
+            if field_counts[f] > 0:
+                field_means[f] = field_sums[f] / field_counts[f]
             else:
-                # Use preference-based scoring
-                for field in rating_fields:
-                    user_pref = preferences.get(field, 0)
-                    poi_rating = poi.get(field, 0) if poi.get(field) is not None else 0
-                    
-                    if user_pref > 0 and poi_rating > 0:
-                        # Normalize both values to 0-1 range and calculate weighted score
-                        normalized_pref = user_pref / 100.0
-                        normalized_rating = poi_rating / 100.0
-                        score += normalized_pref * normalized_rating
-                        rating_count += 1
-                
-                if score > 0 and rating_count > 0:
-                    # Average the score
-                    final_score = (score / rating_count) * 100
+                field_means[f] = 50.0  # neutral prior when no data
+
+        # Helper: haversine distance in km
+        def haversine_km(lat1, lon1, lat2, lon2):
+            R = 6371.0
+            phi1, phi2 = math.radians(lat1), math.radians(lat2)
+            dphi = math.radians(lat2 - lat1)
+            dlambda = math.radians(lon2 - lon1)
+            a = math.sin(dphi / 2.0) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2.0) ** 2
+            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+            return R * c
+
+        # Category mapping for bonus (maps POI category -> related preference sliders)
+        category_mapping = {
+            'doga_macera': ['doga', 'macera', 'spor'],
+            'gastronomik': ['yemek'],
+            'kulturel': ['tarihi', 'sanat_kultur'],
+            'sanatsal': ['sanat_kultur'],
+            'konaklama': ['rahatlatici'],
+            # Extended mappings observed in dataset
+            'kulturel_miras': ['tarihi', 'sanat_kultur'],
+            'dogal_miras': ['doga'],
+            'macera_spor': ['macera', 'spor'],
+            'konaklama_hizmet': ['rahatlatici'],
+            'gastronomi': ['yemek'],
+            'seyir_noktalari': ['doga'],
+            'yasayan_kultur': ['tarihi', 'sanat_kultur'],
+            'dogal_guzellilk': ['doga'],
+            'yemek_icecek': ['yemek'],
+            'alisveris_el_sanatlari': ['alisveris'],
+            'eglence_aktivite': ['eglence', 'spor'],
+            'ulasilabilirlik': []
+        }
+
+        # Weights
+        if user_lat is not None and user_lng is not None:
+            w_pref, w_dist, w_quality = 0.6, 0.3, 0.1
+        else:
+            w_pref, w_dist, w_quality = 0.8, 0.0, 0.2
+
+        D0_KM = 3.0  # distance softness parameter for proximity score
+
+        def proximity_score_km(d_km: float) -> float:
+            # Smoothly decays: 0km->1.0, 3km->~0.5, 6km->~0.2
+            return 1.0 / (1.0 + (max(0.0, d_km) / D0_KM) ** 2)
+
+        # Identify strong user interests for soft gating/boosting
+        strong_dims = [k for k, v in pref_values.items() if v >= 75]
+
+        recommendations = []
+
+        for poi in pois:
+            # Preference score (0..1) using normalized weights
+            pref_score = 0.0
+            for field in rating_fields:
+                weight = pref_weights.get(field, 0.0)
+                rating = poi.get(field)
+                if rating is None or rating == 0:
+                    rating = field_means.get(field, 50.0)
+                r = float(rating) / 100.0
+                pref_score += weight * r
+
+            # Quality score (0..1) average across available ratings
+            total = 0.0
+            cnt = 0
+            for field in rating_fields:
+                rating = poi.get(field)
+                if rating is None or rating == 0:
+                    rating = field_means.get(field, 50.0)
+                total += float(rating) / 100.0
+                cnt += 1
+            quality_score = (total / cnt) if cnt > 0 else 0.5  # neutral baseline when unknown
+
+            # Distance score if location available
+            dist_km = None
+            dist_score = 0.0
+            if user_lat is not None and user_lng is not None:
+                try:
+                    dist_km = haversine_km(user_lat, user_lng, float(poi['latitude']), float(poi['longitude']))
+                    dist_score = proximity_score_km(dist_km)
+                except Exception:
+                    dist_km = None
+                    dist_score = 0.0
+
+            # Category bonus (0..0.15)
+            bonus = 0.0
+            related = category_mapping.get(str(poi.get('category') or '').lower(), [])
+            for cat in related:
+                pref_val = pref_values.get(cat, 0)
+                if pref_val > 50:
+                    bonus += (pref_val - 50) * 0.003  # up to 0.15 if 100
+            bonus = min(0.15, bonus)
+
+            # Relevance boost based on strong dimensions (soft gating)
+            boost = 1.0
+            if strong_dims:
+                # Any strong dimension rated reasonably by POI?
+                matches = 0
+                for d in strong_dims:
+                    r = poi.get(d)
+                    r = (float(r) if r is not None else field_means.get(d, 50.0))
+                    if r >= 60.0:
+                        matches += 1
+                if matches >= 1:
+                    boost = 1.12  # small positive boost
                 else:
-                    final_score = 0  # No matching preferences
-            
-            # Include POI if it has a score > 0
+                    boost = 0.85  # penalize weak matches
+
+            # If all preferences are zero, rely more on distance and quality
+            if all_zero:
+                base = (w_dist * dist_score) + (w_quality * quality_score)
+                final_norm = min(1.0, max(0.0, boost * base + bonus))
+            else:
+                base = (w_pref * pref_score) + (w_dist * dist_score) + (w_quality * quality_score)
+                final_norm = min(1.0, max(0.0, boost * base + bonus))
+
+            final_score = round(final_norm * 100.0, 2)
+
+            # Keep recommendations with a non-trivial score
             if final_score > 0:
-                recommendations.append({
+                rec = {
                     'id': poi['id'],
                     'name': poi['name'],
                     'category': poi['category'],
@@ -3864,22 +3964,70 @@ def get_recommendations():
                     'longitude': poi['longitude'],
                     'description': poi.get('description', ''),
                     'tags': poi.get('tags', ''),
-                    'score': round(final_score, 2),
-                    'ratings': {field: poi.get(field, 0) for field in rating_fields}
-                })
-        
-        # Sort by score (highest first) and limit to top 20
+                    'score': final_score,
+                    'ratings': {field: poi.get(field, 0) for field in rating_fields},
+                }
+                if dist_km is not None:
+                    rec['distance_km'] = round(dist_km, 2)
+                # Optional detailed components (useful for debugging/tuning)
+                rec['components'] = {
+                    'preference': round(pref_score * 100.0, 2),
+                    'distance': round(dist_score * 100.0, 2),
+                    'quality': round(quality_score * 100.0, 2),
+                    'bonus': round(bonus * 100.0, 2),
+                }
+                recommendations.append(rec)
+
+        # Sort by score
         recommendations.sort(key=lambda x: x['score'], reverse=True)
-        recommendations = recommendations[:20]
-        
+
+        # Diversify results by category and location proximity
+        def inter_km(a, b):
+            return haversine_km(float(a['latitude']), float(a['longitude']), float(b['latitude']), float(b['longitude']))
+
+        diversified = []
+        cat_counts: Dict[str, int] = {}
+        cat_cap = max(3, int(limit * 0.4))
+        min_sep_km = 0.2  # 200 meters
+
+        for rec in recommendations:
+            cat = str(rec.get('category') or '').lower()
+            if cat_counts.get(cat, 0) >= cat_cap:
+                continue
+            too_close = False
+            for chosen in diversified:
+                if str(chosen.get('category') or '').lower() == cat:
+                    if inter_km(rec, chosen) < min_sep_km:
+                        too_close = True
+                        break
+            if too_close:
+                continue
+            diversified.append(rec)
+            cat_counts[cat] = cat_counts.get(cat, 0) + 1
+            if len(diversified) >= limit:
+                break
+
+        # If diversification under-filled the list, top-up with remaining
+        if len(diversified) < limit:
+            seen_ids = {d['id'] for d in diversified}
+            for rec in recommendations:
+                if rec['id'] in seen_ids:
+                    continue
+                diversified.append(rec)
+                if len(diversified) >= limit:
+                    break
+
+        recommendations = diversified[:max(1, limit)]
+
         return jsonify({
             'recommendations': recommendations,
             'total': len(recommendations),
-            'preferences_used': preferences
+            'preferences_used': pref_values,
+            'location_used': {'latitude': user_lat, 'longitude': user_lng} if (user_lat is not None and user_lng is not None) else None
         })
-        
+
     except Exception as e:
-        print(f"Recommendation error: {str(e)}")
+        logger.exception("Recommendation error")
         return jsonify({'error': f'Recommendation error: {str(e)}'}), 500
 
 
