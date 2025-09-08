@@ -2184,7 +2184,7 @@ function loadCurrentMedia() {
 
     // Load media content
     setTimeout(() => {
-        const mediaPath = mediaItem.path.startsWith('/') ? mediaItem.path : `/${mediaItem.path}`;
+        const mediaPath = mediaItem.path.startsWith('/') ? mediaItem.path : `/poi_media/${mediaItem.path}`;
         let content = '';
 
         if (mediaItem.type === 'image') {
@@ -2668,7 +2668,7 @@ function preloadAdjacentMedia() {
 function preloadMediaItem(mediaItem) {
     if (!mediaItem) return;
 
-    const mediaPath = mediaItem.path.startsWith("/") ? mediaItem.path : `/${mediaItem.path}`;
+    const mediaPath = mediaItem.path.startsWith("/") ? mediaItem.path : `/poi_media/${mediaItem.path}`;
 
     if (mediaItem.type === 'image') {
         const img = new Image();
@@ -13608,7 +13608,7 @@ function createRobustImageElement(mediaItem, index) {
         if (mediaItem.fallbackPaths && mediaItem.fallbackPaths.length > 0) {
             const nextPath = mediaItem.fallbackPaths.shift();
             console.warn(`🔄 Trying fallback path: ${nextPath}`);
-            img.src = nextPath;
+            img.src = nextPath.startsWith('/') ? nextPath : `/poi_media/${nextPath}`;
         } else {
             // Show error placeholder
             const errorDiv = createErrorPlaceholder('Görsel yüklenemedi', mediaItem.title);
@@ -13619,7 +13619,8 @@ function createRobustImageElement(mediaItem, index) {
     img.addEventListener('click', () => openMediaFullscreen(index));
     
     // Start loading
-    img.src = mediaItem.path;
+    const mediaPath = mediaItem.path;
+    img.src = mediaPath.startsWith('/') ? mediaPath : `/poi_media/${mediaPath}`;
     
     return wrapper;
 }
@@ -13636,10 +13637,11 @@ function createRobustVideoElement(mediaItem, index) {
     video.style.borderRadius = '8px';
     
     // Add multiple source formats
+    const mediaPath = mediaItem.path.startsWith('/') ? mediaItem.path : `/poi_media/${mediaItem.path}`;
     const sources = [
-        { src: mediaItem.path, type: 'video/mp4' },
-        { src: mediaItem.path, type: 'video/webm' },
-        { src: mediaItem.path, type: 'video/ogg' }
+        { src: mediaPath, type: 'video/mp4' },
+        { src: mediaPath, type: 'video/webm' },
+        { src: mediaPath, type: 'video/ogg' }
     ];
     
     sources.forEach(source => {
@@ -13684,10 +13686,11 @@ function createRobustAudioElement(mediaItem, index) {
     audio.style.width = '100%';
     audio.style.maxWidth = '400px';
     
+    const mediaPath = mediaItem.path.startsWith('/') ? mediaItem.path : `/poi_media/${mediaItem.path}`;
     const sources = [
-        { src: mediaItem.path, type: 'audio/mpeg' },
-        { src: mediaItem.path, type: 'audio/wav' },
-        { src: mediaItem.path, type: 'audio/ogg' }
+        { src: mediaPath, type: 'audio/mpeg' },
+        { src: mediaPath, type: 'audio/wav' },
+        { src: mediaPath, type: 'audio/ogg' }
     ];
     
     sources.forEach(source => {
@@ -13727,7 +13730,8 @@ function createRobust3DModelElement(mediaItem, index) {
     
     if (typeof window.customElements !== 'undefined' && window.customElements.get('model-viewer')) {
         const mv = document.createElement('model-viewer');
-        mv.setAttribute('src', mediaItem.path);
+        const mediaPath = mediaItem.path.startsWith('/') ? mediaItem.path : `/poi_media/${mediaItem.path}`;
+        mv.setAttribute('src', mediaPath);
         mv.setAttribute('alt', '3D Model');
         mv.setAttribute('auto-rotate', '');
         mv.setAttribute('camera-controls', '');
@@ -13918,7 +13922,8 @@ function preloadAdjacentPOIMedia() {
         // Create off-DOM image to warm cache
         const img = new Image();
         img.decoding = 'async';
-        img.src = `/${item.path || item.url}`;
+        const mediaPath = item.path || item.url;
+        img.src = mediaPath.startsWith('/') ? mediaPath : `/poi_media/${mediaPath}`;
     };
     preload(currentMediaIndex + 1);
     preload(currentMediaIndex - 1);
@@ -14000,11 +14005,15 @@ function openMediaFullscreen(index) {
         // Mobile: Open in separate lightbox modal (works well on mobile)
         try {
             showMediaModal(
-                currentMediaItems.map(item => ({
-                    type: item.type || getMediaTypeFromPath(item.path || item.url),
-                    path: item.path || item.url,
-                    title: item.caption || item.title || ''
-                })),
+                currentMediaItems.map(item => {
+                    const mediaPath = item.path || item.url;
+                    const finalPath = mediaPath.startsWith('/') ? mediaPath : `/poi_media/${mediaPath}`;
+                    return {
+                        type: item.type || getMediaTypeFromPath(mediaPath),
+                        path: finalPath,
+                        title: item.caption || item.title || ''
+                    };
+                }),
                 index,
                 (typeof currentPOIData !== 'undefined' && currentPOIData && currentPOIData.name) ? currentPOIData.name : null
             );
@@ -14192,10 +14201,11 @@ function createInModalMediaContent(mediaItem, index) {
     `;
     
     const mediaType = mediaItem.type || getMediaTypeFromPath(mediaItem.path);
-    
+
     if (mediaType === 'image') {
         const img = document.createElement('img');
-        img.src = mediaItem.path;
+        const mediaPath = mediaItem.path;
+        img.src = mediaPath.startsWith('/') ? mediaPath : `/poi_media/${mediaPath}`;
         img.alt = mediaItem.title || 'POI Görseli';
         img.style.cssText = `
             max-width: 100%;
