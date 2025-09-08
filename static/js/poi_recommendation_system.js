@@ -13250,40 +13250,208 @@ function updatePOIModalContent(poi) {
     }
 }
 
-// Load POI modal media
+// Load POI modal media with robust error handling and fallbacks
 async function loadPOIModalMedia(poiId) {
     // Reset gallery state for fresh load
     poiThumbnailsInitialized = false;
     poiMediaElementCache.clear();
+    
     try {
-        // Log removed for cleaner console
+        console.log(`🔍 Loading media for POI ${poiId}...`);
         
         const response = await fetch(`${apiBase}/poi/${poiId}/media`);
         if (!response.ok) {
-            // Log removed for cleaner console
+            console.warn(`⚠️ Media API returned ${response.status}: ${response.statusText}`);
             showNoMediaPlaceholder();
             return;
         }
         
         const mediaData = await response.json();
-        const mediaItems = Array.isArray(mediaData) ? mediaData : (mediaData.media || []);
+        console.log('📦 Raw media data received:', mediaData);
         
-        if (mediaItems.length === 0) {
+        // Handle different API response formats with validation
+        let mediaItems = [];
+        
+        if (Array.isArray(mediaData)) {
+            mediaItems = mediaData;
+        } else if (mediaData.media && Array.isArray(mediaData.media)) {
+            mediaItems = mediaData.media;
+        } else if (mediaData.images || mediaData.videos || mediaData.audio || mediaData.models) {
+            // Legacy grouped format - flatten all types
+            mediaItems = [
+                ...(mediaData.images || []).map(item => ({ ...item, type: 'image' })),
+                ...(mediaData.videos || []).map(item => ({ ...item, type: 'video' })),
+                ...(mediaData.audio || []).map(item => ({ ...item, type: 'audio' })),
+                ...(mediaData.models || []).map(item => ({ ...item, type: 'model_3d' }))
+            ];
+        }
+        
+        // Validate and normalize media items
+        const validatedItems = await validateAndNormalizeMediaItems(mediaItems, poiId);
+        
+        if (validatedItems.length === 0) {
+            console.warn('⚠️ No valid media items found after validation');
             showNoMediaPlaceholder();
             return;
         }
         
-        currentMediaItems = mediaItems;
+        currentMediaItems = validatedItems;
         currentMediaIndex = 0;
+        
+        console.log(`✅ Successfully loaded ${validatedItems.length} media items`);
         
         // Display media gallery
         displayMediaGallery();
         
-        // Log removed for cleaner console
-        
     } catch (error) {
         console.error('❌ Error loading media:', error);
-        showNoMediaPlaceholder();
+        showMediaLoadError(`Medya yüklenirken hata: ${error.message}`, true);
+    }
+}
+
+// Media validation and normalization system
+async function validateAndNormalizeMediaItems(mediaItems, poiId) {
+    if (!Array.isArray(mediaItems)) {
+        console.warn('❌ Media items is not an array:', mediaItems);
+        return [];
+    }
+    
+    const validItems = [];
+    const pathValidationPromises = [];
+    
+    for (let i = 0; i < mediaItems.length; i++) {
+        const item = mediaItems[i];
+        
+        // Basic validation
+        if (!item || typeof item !== 'object') {
+            console.warn(`⚠️ Invalid media item at index ${i}:`, item);
+            continue;
+        }
+        
+        // Normalize the item
+        const normalizedItem = await normalizeMediaItem(item, poiId, i);
+        if (normalizedItem) {
+            // Validate file existence asynchronously
+            pathValidationPromises.push(
+                validateMediaPath(normalizedItem).then(isValid => ({
+                    item: normalizedItem,
+                    isValid,
+                    index: i
+                }))
+            );
+        }
+    }
+    
+    // Wait for all path validations
+    const validationResults = await Promise.all(pathValidationPromises);
+    
+    for (const result of validationResults) {
+        if (result.isValid) {
+            validItems.push(result.item);
+        } else {
+            console.warn(`⚠️ Media file not accessible for item ${result.index}:`, result.item.path);
+            // Add with fallback placeholder
+            validItems.push({
+                ...result.item,
+                hasError: true,
+                fallbackPath: '/static/images/media-placeholder.png'
+            });
+        }
+    }
+    
+    console.log(`📊 Media validation complete: ${validItems.length} valid items from ${mediaItems.length} total`);
+    return validItems;
+}
+
+async function normalizeMediaItem(item, poiId, index) {
+    try {
+        // Extract path from various possible fields
+        let path = item.path || item.url || item.filename || item.file_path || item.original_path;
+        
+        if (!path) {
+            console.warn(`⚠️ No path found for media item ${index}:`, item);
+            return null;
+        }
+        
+        // Clean and normalize path
+        path = path.trim();
+        
+        // Handle different path formats
+        const normalizedPaths = generatePathVariants(path, poiId);
+        
+        // Determine media type
+        const type = item.type || item.media_type || getMediaTypeFromPath(path);
+        
+        return {
+            type,
+            path: normalizedPaths.primary,
+            fallbackPaths: normalizedPaths.alternatives,
+            title: item.title || item.caption || item.description || item.alt_text || `${type} ${index + 1}`,
+            caption: item.caption || item.description || '',
+            originalItem: item
+        };
+    } catch (error) {
+        console.warn(`⚠️ Error normalizing media item ${index}:`, error);
+        return null;
+    }
+}
+
+function generatePathVariants(originalPath, poiId) {
+    const variants = [];
+    
+    // Remove leading slashes for consistency
+    const cleanPath = originalPath.replace(/^\/+/, '');
+    
+    // Primary path strategies
+    const primaryCandidates = [
+        `/${cleanPath}`,                           // Original path with single leading slash
+        `/poi_media/${cleanPath}`,                 // New media directory
+        `/poi_images/${cleanPath}`,                // Legacy images directory
+        `/uploads/${cleanPath}`,                   // Generic uploads
+        `/static/poi_media/${cleanPath}`,          // Static media
+        `poi_media/${cleanPath}`,                  // Relative path
+    ];
+    
+    // If we have POI ID, add POI-specific paths
+    if (poiId) {
+        primaryCandidates.push(
+            `/poi_media/poi_${poiId}/${cleanPath}`,
+            `/poi_images/poi_${poiId}/${cleanPath}`
+        );
+    }
+    
+    return {
+        primary: primaryCandidates[0],
+        alternatives: primaryCandidates.slice(1)
+    };
+}
+
+async function validateMediaPath(normalizedItem) {
+    // Quick validation using a head request
+    try {
+        const response = await fetch(normalizedItem.path, { method: 'HEAD' });
+        if (response.ok) {
+            return true;
+        }
+        
+        // Try alternative paths
+        for (const altPath of normalizedItem.fallbackPaths || []) {
+            try {
+                const altResponse = await fetch(altPath, { method: 'HEAD' });
+                if (altResponse.ok) {
+                    // Update the primary path to the working one
+                    normalizedItem.path = altPath;
+                    return true;
+                }
+            } catch (e) {
+                // Continue to next alternative
+            }
+        }
+        
+        return false;
+    } catch (error) {
+        console.warn('⚠️ Path validation failed:', error);
+        return false;
     }
 }
 
@@ -13317,95 +13485,312 @@ function displayMediaGallery() {
     preloadAdjacentPOIMedia();
 }
 
-// Display main media
+// Display main media with robust error handling
 function getOrCreatePOIMediaElement(mediaItem, index) {
     const mediaPath = mediaItem.path || mediaItem.url;
-    const key = `${mediaItem.type || getMediaTypeFromPath(mediaPath)}|/${mediaPath}`;
-    if (poiMediaElementCache.has(key)) return poiMediaElementCache.get(key);
+    const key = `${mediaItem.type || getMediaTypeFromPath(mediaPath)}|${mediaPath}`;
+    
+    if (poiMediaElementCache.has(key)) {
+        return poiMediaElementCache.get(key);
+    }
 
     const mediaType = mediaItem.type || getMediaTypeFromPath(mediaPath);
     let el;
+    
+    // Check if this item has known errors and show fallback
+    if (mediaItem.hasError && mediaItem.fallbackPath) {
+        el = createFallbackMediaElement(mediaItem, index);
+        poiMediaElementCache.set(key, el);
+        return el;
+    }
+    
     switch (mediaType) {
         case 'image': {
-            const img = new Image();
-            img.src = `/${mediaPath}`;
-            img.alt = mediaItem.caption || 'POI Görseli';
-            img.decoding = 'async';
-            img.loading = 'eager';
-            img.style.cursor = 'zoom-in';
-            img.addEventListener('click', () => openMediaFullscreen(index));
-            el = img;
+            el = createRobustImageElement(mediaItem, index);
             break;
         }
         case 'video': {
-            const video = document.createElement('video');
-            video.controls = true;
-            video.preload = 'metadata';
-            video.style.maxWidth = '100%';
-            video.style.maxHeight = '100%';
-            const s1 = document.createElement('source'); s1.src = `/${mediaPath}`; s1.type = 'video/mp4';
-            const s2 = document.createElement('source'); s2.src = `/${mediaPath}`; s2.type = 'video/webm';
-            video.appendChild(s1); video.appendChild(s2);
-            el = video;
+            el = createRobustVideoElement(mediaItem, index);
             break;
         }
         case 'audio': {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'audio-player-container';
-            wrapper.style.textAlign = 'center';
-            wrapper.style.color = 'white';
-            wrapper.innerHTML = `
-                <i class="fas fa-music fa-4x mb-3"></i>
-                <h5>${mediaItem.caption || 'Ses Dosyası'}</h5>
-            `;
-            const audio = document.createElement('audio');
-            audio.controls = true;
-            audio.preload = 'metadata';
-            audio.style.width = '100%';
-            audio.style.maxWidth = '400px';
-            const a1 = document.createElement('source'); a1.src = `/${mediaPath}`; a1.type = 'audio/mpeg';
-            const a2 = document.createElement('source'); a2.src = `/${mediaPath}`; a2.type = 'audio/wav';
-            audio.appendChild(a1); audio.appendChild(a2);
-            wrapper.appendChild(audio);
-            el = wrapper;
+            el = createRobustAudioElement(mediaItem, index);
             break;
         }
         case 'model_3d': {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'model-3d-container';
-            wrapper.style.textAlign = 'center';
-            wrapper.style.color = 'white';
-            wrapper.innerHTML = `
-                <i class="fas fa-cube fa-4x mb-3"></i>
-                <h5>${mediaItem.caption || '3D Model'}</h5>
-                <p>3D model görüntüleyici yükleniyor...</p>
-            `;
-            const mv = document.createElement('model-viewer');
-            mv.setAttribute('src', `/${mediaPath}`);
-            mv.setAttribute('alt', '3D Model');
-            mv.setAttribute('auto-rotate', '');
-            mv.setAttribute('camera-controls', '');
-            mv.style.width = '100%';
-            mv.style.height = '300px';
-            wrapper.appendChild(mv);
-            el = wrapper;
+            el = createRobust3DModelElement(mediaItem, index);
             break;
         }
         default: {
-            const div = document.createElement('div');
-            div.className = 'unknown-media';
-            div.style.textAlign = 'center';
-            div.style.color = 'white';
-            div.innerHTML = `
-                <i class="fas fa-file fa-4x mb-3"></i>
-                <h5>${mediaItem.caption || 'Medya Dosyası'}</h5>
-                <p>Bu medya türü desteklenmiyor.</p>
-            `;
-            el = div;
+            el = createUnknownMediaElement(mediaItem, index);
         }
     }
+    
     poiMediaElementCache.set(key, el);
     return el;
+}
+
+function createRobustImageElement(mediaItem, index) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'media-image-wrapper';
+    wrapper.style.position = 'relative';
+    
+    const img = new Image();
+    img.alt = mediaItem.caption || mediaItem.title || 'POI Görseli';
+    img.decoding = 'async';
+    img.loading = 'eager';
+    img.style.cursor = 'zoom-in';
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '100%';
+    img.style.transition = 'opacity 0.3s ease';
+    
+    // Loading placeholder
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'media-loading-placeholder';
+    loadingDiv.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; background: #f8f9fa; border-radius: 8px;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Yükleniyor...</span>
+            </div>
+            <p class="mt-2 text-muted">Görsel yükleniyor...</p>
+        </div>
+    `;
+    
+    wrapper.appendChild(loadingDiv);
+    
+    img.onload = () => {
+        img.style.opacity = '1';
+        loadingDiv.remove();
+        wrapper.appendChild(img);
+        console.log(`✅ Image loaded successfully: ${mediaItem.path}`);
+    };
+    
+    img.onerror = () => {
+        console.warn(`❌ Image load failed: ${mediaItem.path}`);
+        loadingDiv.remove();
+        
+        // Try fallback paths if available
+        if (mediaItem.fallbackPaths && mediaItem.fallbackPaths.length > 0) {
+            const nextPath = mediaItem.fallbackPaths.shift();
+            console.log(`🔄 Trying fallback path: ${nextPath}`);
+            img.src = nextPath;
+        } else {
+            // Show error placeholder
+            const errorDiv = createErrorPlaceholder('Görsel yüklenemedi', mediaItem.title);
+            wrapper.appendChild(errorDiv);
+        }
+    };
+    
+    img.addEventListener('click', () => openMediaFullscreen(index));
+    
+    // Start loading
+    img.src = mediaItem.path;
+    
+    return wrapper;
+}
+
+function createRobustVideoElement(mediaItem, index) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'media-video-wrapper';
+    
+    const video = document.createElement('video');
+    video.controls = true;
+    video.preload = 'metadata';
+    video.style.maxWidth = '100%';
+    video.style.maxHeight = '100%';
+    video.style.borderRadius = '8px';
+    
+    // Add multiple source formats
+    const sources = [
+        { src: mediaItem.path, type: 'video/mp4' },
+        { src: mediaItem.path, type: 'video/webm' },
+        { src: mediaItem.path, type: 'video/ogg' }
+    ];
+    
+    sources.forEach(source => {
+        const sourceEl = document.createElement('source');
+        sourceEl.src = source.src;
+        sourceEl.type = source.type;
+        video.appendChild(sourceEl);
+    });
+    
+    video.addEventListener('error', () => {
+        console.warn(`❌ Video load failed: ${mediaItem.path}`);
+        const errorDiv = createErrorPlaceholder('Video yüklenemedi', mediaItem.title);
+        wrapper.innerHTML = '';
+        wrapper.appendChild(errorDiv);
+    });
+    
+    video.addEventListener('loadeddata', () => {
+        console.log(`✅ Video loaded successfully: ${mediaItem.path}`);
+    });
+    
+    wrapper.appendChild(video);
+    return wrapper;
+}
+
+function createRobustAudioElement(mediaItem, index) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'audio-player-container';
+    wrapper.style.textAlign = 'center';
+    wrapper.style.padding = '20px';
+    wrapper.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    wrapper.style.borderRadius = '8px';
+    wrapper.style.color = 'white';
+    
+    wrapper.innerHTML = `
+        <i class="fas fa-music fa-4x mb-3" style="color: rgba(255,255,255,0.9);"></i>
+        <h5 style="margin-bottom: 16px;">${mediaItem.title || 'Ses Dosyası'}</h5>
+    `;
+    
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.preload = 'metadata';
+    audio.style.width = '100%';
+    audio.style.maxWidth = '400px';
+    
+    const sources = [
+        { src: mediaItem.path, type: 'audio/mpeg' },
+        { src: mediaItem.path, type: 'audio/wav' },
+        { src: mediaItem.path, type: 'audio/ogg' }
+    ];
+    
+    sources.forEach(source => {
+        const sourceEl = document.createElement('source');
+        sourceEl.src = source.src;
+        sourceEl.type = source.type;
+        audio.appendChild(sourceEl);
+    });
+    
+    audio.addEventListener('error', () => {
+        console.warn(`❌ Audio load failed: ${mediaItem.path}`);
+        const errorText = document.createElement('p');
+        errorText.textContent = 'Ses dosyası yüklenemedi';
+        errorText.style.color = '#ffcccb';
+        errorText.style.marginTop = '16px';
+        wrapper.appendChild(errorText);
+    });
+    
+    wrapper.appendChild(audio);
+    return wrapper;
+}
+
+function createRobust3DModelElement(mediaItem, index) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'model-3d-container';
+    wrapper.style.textAlign = 'center';
+    wrapper.style.background = '#1a1a1a';
+    wrapper.style.borderRadius = '8px';
+    wrapper.style.padding = '20px';
+    wrapper.style.color = 'white';
+    
+    wrapper.innerHTML = `
+        <i class="fas fa-cube fa-4x mb-3" style="color: #00d4aa;"></i>
+        <h5>${mediaItem.title || '3D Model'}</h5>
+        <p>3D model yükleniyor...</p>
+    `;
+    
+    if (typeof window.customElements !== 'undefined' && window.customElements.get('model-viewer')) {
+        const mv = document.createElement('model-viewer');
+        mv.setAttribute('src', mediaItem.path);
+        mv.setAttribute('alt', '3D Model');
+        mv.setAttribute('auto-rotate', '');
+        mv.setAttribute('camera-controls', '');
+        mv.style.width = '100%';
+        mv.style.height = '300px';
+        mv.style.borderRadius = '8px';
+        
+        mv.addEventListener('error', () => {
+            console.warn(`❌ 3D Model load failed: ${mediaItem.path}`);
+            wrapper.innerHTML = `
+                <i class="fas fa-exclamation-triangle fa-3x mb-3" style="color: #ff6b6b;"></i>
+                <h5>3D Model Yüklenemedi</h5>
+                <p>Model dosyası bulunamadı veya desteklenmiyor.</p>
+            `;
+        });
+        
+        wrapper.appendChild(mv);
+    } else {
+        wrapper.innerHTML += '<p><em>3D model görüntüleyici yüklenemedi</em></p>';
+    }
+    
+    return wrapper;
+}
+
+function createUnknownMediaElement(mediaItem, index) {
+    const div = document.createElement('div');
+    div.className = 'unknown-media';
+    div.style.textAlign = 'center';
+    div.style.padding = '40px';
+    div.style.background = '#f8f9fa';
+    div.style.borderRadius = '8px';
+    div.style.color = '#6c757d';
+    
+    div.innerHTML = `
+        <i class="fas fa-file fa-4x mb-3"></i>
+        <h5>${mediaItem.title || 'Medya Dosyası'}</h5>
+        <p>Bu medya türü desteklenmiyor.</p>
+        <small>Dosya: ${mediaItem.path}</small>
+    `;
+    
+    return div;
+}
+
+function createFallbackMediaElement(mediaItem, index) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'media-fallback';
+    wrapper.style.textAlign = 'center';
+    wrapper.style.padding = '30px';
+    wrapper.style.background = 'linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%)';
+    wrapper.style.borderRadius = '8px';
+    wrapper.style.color = '#2d3436';
+    
+    wrapper.innerHTML = `
+        <i class="fas fa-exclamation-circle fa-3x mb-3" style="color: #e17055;"></i>
+        <h5>Medya Yüklenemedi</h5>
+        <p>${mediaItem.title || 'Bu medya dosyası'} şu anda erişilebilir değil.</p>
+        <button class="btn btn-outline-dark btn-sm mt-2" onclick="retryMediaLoad(${index})">
+            <i class="fas fa-redo"></i> Tekrar Dene
+        </button>
+    `;
+    
+    return wrapper;
+}
+
+function createErrorPlaceholder(message, title) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'media-error-placeholder';
+    errorDiv.style.display = 'flex';
+    errorDiv.style.flexDirection = 'column';
+    errorDiv.style.alignItems = 'center';
+    errorDiv.style.justifyContent = 'center';
+    errorDiv.style.height = '200px';
+    errorDiv.style.background = '#f8d7da';
+    errorDiv.style.border = '1px solid #f5c6cb';
+    errorDiv.style.borderRadius = '8px';
+    errorDiv.style.color = '#721c24';
+    
+    errorDiv.innerHTML = `
+        <i class="fas fa-exclamation-triangle fa-3x mb-2"></i>
+        <h6>${message}</h6>
+        ${title ? `<small>${title}</small>` : ''}
+    `;
+    
+    return errorDiv;
+}
+
+// Retry media loading
+function retryMediaLoad(index) {
+    if (index >= 0 && index < currentMediaItems.length) {
+        // Clear cache for this item
+        const mediaItem = currentMediaItems[index];
+        const mediaPath = mediaItem.path || mediaItem.url;
+        const key = `${mediaItem.type || getMediaTypeFromPath(mediaPath)}|${mediaPath}`;
+        poiMediaElementCache.delete(key);
+        
+        // Reload the media
+        selectMedia(index);
+    }
 }
 
 function displayMainMedia(index) {
@@ -13506,8 +13891,30 @@ function preloadAdjacentPOIMedia() {
 
 // Update media navigation
 function updateMediaNavigation() {
-    const prevBtn = document.querySelector('#poiDetailModal #mediaPrevBtn');
-    const nextBtn = document.querySelector('#poiDetailModal #mediaNextBtn');
+    // Determine which page we're on and use appropriate selectors
+    const isPersonalRoutes = window.location.pathname.includes('personal_routes') || window.currentTab === 'dynamic-routes';
+    const isPredefinedRoutes = window.location.pathname.includes('predefined_routes') || window.currentTab === 'predefined-routes';
+    
+    let prevBtn, nextBtn;
+    
+    if (isPersonalRoutes) {
+        prevBtn = document.querySelector('#poiDetailModal #poiMediaPrevBtn');
+        nextBtn = document.querySelector('#poiDetailModal #poiMediaNextBtn');
+    } else if (isPredefinedRoutes) {
+        prevBtn = document.querySelector('#poiDetailModal #predefinedMediaPrevBtn');
+        nextBtn = document.querySelector('#poiDetailModal #predefinedMediaNextBtn');
+    } else {
+        // Fallback - try both and use whichever exists
+        prevBtn = document.querySelector('#poiDetailModal #poiMediaPrevBtn') || 
+                  document.querySelector('#poiDetailModal #predefinedMediaPrevBtn');
+        nextBtn = document.querySelector('#poiDetailModal #poiMediaNextBtn') || 
+                  document.querySelector('#poiDetailModal #predefinedMediaNextBtn');
+    }
+    
+    if (!prevBtn || !nextBtn) {
+        console.warn('⚠️ Media navigation buttons not found for current page context');
+        return;
+    }
     
     prevBtn.disabled = currentMediaIndex === 0;
     nextBtn.disabled = currentMediaIndex === currentMediaItems.length - 1;
@@ -13548,37 +13955,357 @@ function nextMedia() {
 
 // Open media in fullscreen
 function openMediaFullscreen(index) {
+    // Desktop: Create in-modal overlay for better UX (no modal-over-modal)
+    // Mobile: Keep current behavior as it works well
+    if (!Array.isArray(currentMediaItems) || index < 0 || index >= currentMediaItems.length) return;
+    
+    const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window;
+    
+    if (isMobile) {
+        // Mobile: Open in separate lightbox modal (works well on mobile)
+        try {
+            showMediaModal(
+                currentMediaItems.map(item => ({
+                    type: item.type || getMediaTypeFromPath(item.path || item.url),
+                    path: item.path || item.url,
+                    title: item.caption || item.title || ''
+                })),
+                index,
+                (typeof currentPOIData !== 'undefined' && currentPOIData && currentPOIData.name) ? currentPOIData.name : null
+            );
+        } catch (e) {
+            console.warn('Mobile lightbox fallback failed:', e);
+        }
+    } else {
+        // Desktop: Create in-modal overlay for better UX
+        createInModalMediaOverlay(index);
+    }
+}
+
+// Create in-modal media overlay for desktop (no modal-over-modal)
+function createInModalMediaOverlay(index) {
     const mediaItem = currentMediaItems[index];
     if (!mediaItem) return;
     
-    const mediaPath = mediaItem.path || mediaItem.url;
-    const mediaType = mediaItem.type || getMediaTypeFromPath(mediaPath);
+    // Get the POI modal container
+    const poiModal = document.getElementById('poiDetailModal');
+    if (!poiModal) return;
     
-    if (mediaType !== 'image') return; // Only images for now
+    // Remove any existing overlay
+    const existingOverlay = poiModal.querySelector('.in-modal-media-overlay');
+    if (existingOverlay) {
+        existingOverlay.remove();
+    }
     
-    const fullscreenDiv = document.createElement('div');
-    fullscreenDiv.className = 'media-fullscreen';
-    fullscreenDiv.innerHTML = `
-        <img src="/${mediaPath}" alt="${mediaItem.caption || 'POI Görseli'}">
-        <button class="fullscreen-close" onclick="closeMediaFullscreen()">
-            <i class="fas fa-times"></i>
-        </button>
+    // Create overlay within the POI modal
+    const overlay = document.createElement('div');
+    overlay.className = 'in-modal-media-overlay';
+    overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.3s ease;
     `;
     
-    document.body.appendChild(fullscreenDiv);
-    document.body.style.overflow = 'hidden';
+    // Create navigation and controls
+    const navControls = createInModalNavControls(index);
+    overlay.appendChild(navControls);
     
-    // Close on ESC key
-    const handleKeydown = (e) => {
-        if (e.key === 'Escape') {
-            closeMediaFullscreen();
-            document.removeEventListener('keydown', handleKeydown);
-        }
-    };
-    document.addEventListener('keydown', handleKeydown);
+    // Create media content
+    const mediaContent = createInModalMediaContent(mediaItem, index);
+    overlay.appendChild(mediaContent);
+    
+    // Close button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'in-modal-close-btn';
+    closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    closeBtn.style.cssText = `
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        font-size: 18px;
+        cursor: pointer;
+        z-index: 12;
+        transition: all 0.3s ease;
+        color: #333;
+    `;
+    closeBtn.onmouseover = () => closeBtn.style.background = 'rgba(255, 255, 255, 1)';
+    closeBtn.onmouseout = () => closeBtn.style.background = 'rgba(255, 255, 255, 0.9)';
+    closeBtn.onclick = closeInModalOverlay;
+    overlay.appendChild(closeBtn);
+    
+    // Add to POI modal
+    poiModal.appendChild(overlay);
+    
+    // Keyboard navigation
+    setupInModalKeyboardNav();
+    
+    console.log(`🖼️ Opened in-modal overlay for media ${index + 1}/${currentMediaItems.length}`);
 }
 
-// Close media fullscreen
+function createInModalNavControls(currentIndex) {
+    const navContainer = document.createElement('div');
+    navContainer.className = 'in-modal-nav-controls';
+    navContainer.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        transform: translateY(-50%);
+        display: flex;
+        justify-content: space-between;
+        padding: 0 20px;
+        pointer-events: none;
+        z-index: 12;
+    `;
+    
+    // Previous button
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'in-modal-nav-btn prev';
+    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    prevBtn.disabled = currentIndex === 0;
+    prevBtn.style.cssText = `
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        font-size: 20px;
+        cursor: pointer;
+        pointer-events: auto;
+        transition: all 0.3s ease;
+        color: #333;
+        ${currentIndex === 0 ? 'opacity: 0.3; cursor: not-allowed;' : ''}
+    `;
+    if (currentIndex > 0) {
+        prevBtn.onclick = () => navigateInModalMedia(currentIndex - 1);
+        prevBtn.onmouseover = () => prevBtn.style.background = 'rgba(255, 255, 255, 1)';
+        prevBtn.onmouseout = () => prevBtn.style.background = 'rgba(255, 255, 255, 0.9)';
+    }
+    
+    // Next button
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'in-modal-nav-btn next';
+    nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    nextBtn.disabled = currentIndex === currentMediaItems.length - 1;
+    nextBtn.style.cssText = `
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        font-size: 20px;
+        cursor: pointer;
+        pointer-events: auto;
+        transition: all 0.3s ease;
+        color: #333;
+        ${currentIndex === currentMediaItems.length - 1 ? 'opacity: 0.3; cursor: not-allowed;' : ''}
+    `;
+    if (currentIndex < currentMediaItems.length - 1) {
+        nextBtn.onclick = () => navigateInModalMedia(currentIndex + 1);
+        nextBtn.onmouseover = () => nextBtn.style.background = 'rgba(255, 255, 255, 1)';
+        nextBtn.onmouseout = () => nextBtn.style.background = 'rgba(255, 255, 255, 0.9)';
+    }
+    
+    // Counter
+    const counter = document.createElement('div');
+    counter.className = 'in-modal-counter';
+    counter.textContent = `${currentIndex + 1} / ${currentMediaItems.length}`;
+    counter.style.cssText = `
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 500;
+        pointer-events: auto;
+    `;
+    
+    navContainer.appendChild(prevBtn);
+    navContainer.appendChild(nextBtn);
+    navContainer.appendChild(counter);
+    
+    return navContainer;
+}
+
+function createInModalMediaContent(mediaItem, index) {
+    const contentContainer = document.createElement('div');
+    contentContainer.className = 'in-modal-media-content';
+    contentContainer.style.cssText = `
+        max-width: 90%;
+        max-height: 85%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    `;
+    
+    const mediaType = mediaItem.type || getMediaTypeFromPath(mediaItem.path);
+    
+    if (mediaType === 'image') {
+        const img = document.createElement('img');
+        img.src = mediaItem.path;
+        img.alt = mediaItem.title || 'POI Görseli';
+        img.style.cssText = `
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        `;
+        
+        // Add zoom functionality
+        let currentZoom = 1;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let imgPosition = { x: 0, y: 0 };
+        
+        img.style.cursor = 'zoom-in';
+        img.onclick = (e) => {
+            e.stopPropagation();
+            if (currentZoom === 1) {
+                currentZoom = 2;
+                img.style.cursor = 'grab';
+                img.style.transform = `scale(${currentZoom}) translate(${imgPosition.x}px, ${imgPosition.y}px)`;
+            } else {
+                currentZoom = 1;
+                imgPosition = { x: 0, y: 0 };
+                img.style.cursor = 'zoom-in';
+                img.style.transform = 'scale(1) translate(0, 0)';
+            }
+        };
+        
+        // Drag functionality when zoomed
+        img.onmousedown = (e) => {
+            if (currentZoom > 1) {
+                isDragging = true;
+                img.style.cursor = 'grabbing';
+                dragStart = { x: e.clientX - imgPosition.x, y: e.clientY - imgPosition.y };
+                e.preventDefault();
+            }
+        };
+        
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging && currentZoom > 1) {
+                imgPosition = {
+                    x: (e.clientX - dragStart.x) / currentZoom,
+                    y: (e.clientY - dragStart.y) / currentZoom
+                };
+                img.style.transform = `scale(${currentZoom}) translate(${imgPosition.x}px, ${imgPosition.y}px)`;
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                img.style.cursor = currentZoom > 1 ? 'grab' : 'zoom-in';
+            }
+        });
+        
+        contentContainer.appendChild(img);
+    } else {
+        // For non-images, show a message
+        const placeholder = document.createElement('div');
+        placeholder.style.cssText = `
+            text-align: center;
+            color: white;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+        `;
+        placeholder.innerHTML = `
+            <i class="fas fa-expand fa-3x mb-3"></i>
+            <h5>Tam Ekran Görüntüleme</h5>
+            <p>Bu medya türü için tam ekran görüntüleme şu anda sadece görseller için destekleniyor.</p>
+            <small>Medya: ${mediaItem.title || mediaItem.path}</small>
+        `;
+        contentContainer.appendChild(placeholder);
+    }
+    
+    return contentContainer;
+}
+
+function navigateInModalMedia(newIndex) {
+    if (newIndex >= 0 && newIndex < currentMediaItems.length) {
+        createInModalMediaOverlay(newIndex);
+    }
+}
+
+function closeInModalOverlay() {
+    const overlay = document.querySelector('.in-modal-media-overlay');
+    if (overlay) {
+        overlay.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => {
+            overlay.remove();
+            removeInModalKeyboardNav();
+        }, 300);
+    }
+}
+
+let inModalKeyboardHandler = null;
+
+function setupInModalKeyboardNav() {
+    removeInModalKeyboardNav(); // Remove any existing handler
+    
+    inModalKeyboardHandler = (e) => {
+        const overlay = document.querySelector('.in-modal-media-overlay');
+        if (!overlay) return;
+        
+        switch (e.key) {
+            case 'Escape':
+                closeInModalOverlay();
+                break;
+            case 'ArrowLeft':
+                e.preventDefault();
+                const currentIndex = getCurrentInModalIndex();
+                if (currentIndex > 0) navigateInModalMedia(currentIndex - 1);
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                const currentIdx = getCurrentInModalIndex();
+                if (currentIdx < currentMediaItems.length - 1) navigateInModalMedia(currentIdx + 1);
+                break;
+        }
+    };
+    
+    document.addEventListener('keydown', inModalKeyboardHandler);
+}
+
+function removeInModalKeyboardNav() {
+    if (inModalKeyboardHandler) {
+        document.removeEventListener('keydown', inModalKeyboardHandler);
+        inModalKeyboardHandler = null;
+    }
+}
+
+function getCurrentInModalIndex() {
+    const counter = document.querySelector('.in-modal-counter');
+    if (counter) {
+        const text = counter.textContent;
+        const match = text.match(/(\d+) \/ \d+/);
+        return match ? parseInt(match[1]) - 1 : 0;
+    }
+    return 0;
+}
+
+// Close media fullscreen (legacy)
 function closeMediaFullscreen() {
     const fullscreenDiv = document.querySelector('.media-fullscreen');
     if (fullscreenDiv) {
@@ -13587,17 +14314,63 @@ function closeMediaFullscreen() {
     }
 }
 
-// Show no media placeholder
-function showNoMediaPlaceholder() {
+// Show media loading error with retry option
+function showMediaLoadError(message, canRetry = true) {
+    const retryButton = canRetry ? `
+        <button class="btn btn-primary btn-sm mt-3" onclick="location.reload()">
+            <i class="fas fa-redo"></i> Sayfayı Yenile
+        </button>
+    ` : '';
+    
     document.getElementById('mediaGalleryMain').innerHTML = `
-        <div class="no-media-placeholder">
-            <i class="fas fa-image fa-3x text-muted"></i>
-            <p class="text-muted mt-2">Bu POI için medya bulunamadı</p>
+        <div class="media-load-error" style="text-align: center; padding: 40px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; color: #856404;">
+            <i class="fas fa-exclamation-triangle fa-3x mb-3" style="color: #dc3545;"></i>
+            <h5>Medya Yükleme Hatası</h5>
+            <p>${message}</p>
+            ${retryButton}
         </div>
     `;
     document.getElementById('mediaGalleryThumbnails').style.display = 'none';
-    document.getElementById('mediaPrevBtn').style.display = 'none';
-    document.getElementById('mediaNextBtn').style.display = 'none';
+    const prevBtn = document.querySelector('#poiDetailModal #poiMediaPrevBtn');
+    const nextBtn = document.querySelector('#poiDetailModal #poiMediaNextBtn');
+    if (prevBtn) prevBtn.style.display = 'none';
+    if (nextBtn) nextBtn.style.display = 'none';
+}
+
+// Show no media placeholder
+function showNoMediaPlaceholder() {
+    document.getElementById('mediaGalleryMain').innerHTML = `
+        <div class="no-media-placeholder" style="text-align: center; padding: 60px 20px; background: #f8f9fa; border-radius: 8px; color: #6c757d;">
+            <i class="fas fa-image fa-4x mb-4" style="opacity: 0.5;"></i>
+            <h5>Medya Bulunamadı</h5>
+            <p>Bu POI için henüz medya dosyası eklenmemiş.</p>
+            <small class="text-muted">Medya dosyaları yöneticiler tarafından eklenebilir.</small>
+        </div>
+    `;
+    document.getElementById('mediaGalleryThumbnails').style.display = 'none';
+    
+    // Hide navigation buttons based on context
+    const isPersonalRoutes = window.location.pathname.includes('personal_routes') || window.currentTab === 'dynamic-routes';
+    const isPredefinedRoutes = window.location.pathname.includes('predefined_routes') || window.currentTab === 'predefined-routes';
+    
+    let prevBtn, nextBtn;
+    
+    if (isPersonalRoutes) {
+        prevBtn = document.querySelector('#poiDetailModal #poiMediaPrevBtn');
+        nextBtn = document.querySelector('#poiDetailModal #poiMediaNextBtn');
+    } else if (isPredefinedRoutes) {
+        prevBtn = document.querySelector('#poiDetailModal #predefinedMediaPrevBtn');
+        nextBtn = document.querySelector('#poiDetailModal #predefinedMediaNextBtn');
+    } else {
+        // Try both
+        prevBtn = document.querySelector('#poiDetailModal #poiMediaPrevBtn') || 
+                  document.querySelector('#poiDetailModal #predefinedMediaPrevBtn');
+        nextBtn = document.querySelector('#poiDetailModal #poiMediaNextBtn') || 
+                  document.querySelector('#poiDetailModal #predefinedMediaNextBtn');
+    }
+    
+    if (prevBtn) prevBtn.style.display = 'none';
+    if (nextBtn) nextBtn.style.display = 'none';
 }
 
 // Show POI modal error
@@ -13644,8 +14417,26 @@ function getMediaTypeFromPath(path) {
 // Setup POI modal event listeners
 function setupPOIModalEventListeners() {
     // Media navigation (scoped to POI modal to avoid ID conflicts)
-    const prevBtn = document.querySelector('#poiDetailModal #mediaPrevBtn');
-    const nextBtn = document.querySelector('#poiDetailModal #mediaNextBtn');
+    // Determine context and use appropriate selectors
+    const isPersonalRoutes = window.location.pathname.includes('personal_routes') || window.currentTab === 'dynamic-routes';
+    const isPredefinedRoutes = window.location.pathname.includes('predefined_routes') || window.currentTab === 'predefined-routes';
+    
+    let prevBtn, nextBtn;
+    
+    if (isPersonalRoutes) {
+        prevBtn = document.querySelector('#poiDetailModal #poiMediaPrevBtn');
+        nextBtn = document.querySelector('#poiDetailModal #poiMediaNextBtn');
+    } else if (isPredefinedRoutes) {
+        prevBtn = document.querySelector('#poiDetailModal #predefinedMediaPrevBtn');
+        nextBtn = document.querySelector('#poiDetailModal #predefinedMediaNextBtn');
+    } else {
+        // Fallback - try both
+        prevBtn = document.querySelector('#poiDetailModal #poiMediaPrevBtn') || 
+                  document.querySelector('#poiDetailModal #predefinedMediaPrevBtn');
+        nextBtn = document.querySelector('#poiDetailModal #poiMediaNextBtn') || 
+                  document.querySelector('#poiDetailModal #predefinedMediaNextBtn');
+    }
+    
     if (prevBtn) prevBtn.onclick = previousMedia;
     if (nextBtn) nextBtn.onclick = nextMedia;
     

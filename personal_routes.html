@@ -29,6 +29,40 @@
   <script src="static/js/poi-categories.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  
+  <!-- In-modal media overlay animations -->
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    
+    .in-modal-media-overlay {
+      animation: fadeIn 0.3s ease !important;
+    }
+    
+    .in-modal-media-overlay.closing {
+      animation: fadeOut 0.3s ease !important;
+    }
+    
+    /* Zoom cursor states */
+    .zoom-in { cursor: zoom-in !important; }
+    .zoom-out { cursor: zoom-out !important; }
+    .grab { cursor: grab !important; }
+    .grabbing { cursor: grabbing !important; }
+    
+    /* Mobile touch optimizations */
+    @media (max-width: 768px) {
+      .media-image-wrapper img {
+        touch-action: pan-zoom;
+      }
+    }
+  </style>
   <!-- Touch/UX/Perf enhancements -->
   <script src="static/js/touch-optimizations.js"></script>
   <script src="static/js/loading-performance.js" defer></script>
@@ -398,7 +432,7 @@
               <div class="media-gallery-main" id="mediaGalleryMain">
                 <div class="no-media-placeholder"><i class="fas fa-image fa-3x text-muted"></i><p class="text-muted mt-2">Bu POI için medya bulunamadı</p></div>
               </div>
-              <div class="media-gallery-controls"><button class="media-nav-btn prev-btn" id="mediaPrevBtn"><i class="fas fa-chevron-left"></i></button><button class="media-nav-btn next-btn" id="mediaNextBtn"><i class="fas fa-chevron-right"></i></button></div>
+              <div class="media-gallery-controls"><button class="media-nav-btn prev-btn" id="poiMediaPrevBtn"><i class="fas fa-chevron-left"></i></button><button class="media-nav-btn next-btn" id="poiMediaNextBtn"><i class="fas fa-chevron-right"></i></button></div>
               <div class="media-gallery-thumbnails" id="mediaGalleryThumbnails"></div>
             </div>
           </div>
