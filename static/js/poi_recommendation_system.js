@@ -9844,67 +9844,85 @@ const preferenceValues = {
     4: { text: 'Kesinlikle İhtiyacım Var', value: 100 }
 };
 
-// Quick selection presets
+// Quick selection presets (aligned with 6 primary personas)
 const quickPresets = {
-    'nature-lover': {
+    // Doğa & Manzara: çok yüksek doğa, yüksek macera; diğerleri sıfır/aşağı
+    nature: {
         doga: 4,
         macera: 3,
-        rahatlatici: 3,
         spor: 2,
-        yemek: 1,
-        tarihi: 1,
-        sanat_kultur: 1,
-        eglence: 1,
+        rahatlatici: 1,
+        yemek: 0,
+        tarihi: 0,
+        sanat_kultur: 0,
+        eglence: 0,
         alisveris: 0,
         gece_hayati: 0
     },
-    'culture-enthusiast': {
+    // Kültür & Tarih: çok yüksek tarih/sanat; diğerleri düşük/sıfır
+    culture: {
         tarihi: 4,
         sanat_kultur: 4,
-        doga: 2,
-        yemek: 3,
-        macera: 1,
-        rahatlatici: 2,
-        spor: 1,
-        eglence: 2,
-        alisveris: 1,
-        gece_hayati: 1
+        doga: 1,
+        yemek: 1,
+        macera: 0,
+        rahatlatici: 0,
+        spor: 0,
+        eglence: 0,
+        alisveris: 0,
+        gece_hayati: 0
     },
-    'foodie': {
+    // Gastronomi: çok yüksek yemek; gece hayatı ikincil; diğerleri sıfır
+    food: {
         yemek: 4,
-        doga: 2,
-        tarihi: 2,
-        sanat_kultur: 2,
-        macera: 1,
-        rahatlatici: 3,
-        spor: 1,
-        eglence: 3,
-        alisveris: 2,
-        gece_hayati: 3
+        gece_hayati: 2,
+        eglence: 1,
+        doga: 0,
+        tarihi: 0,
+        sanat_kultur: 0,
+        rahatlatici: 0,
+        macera: 0,
+        spor: 0,
+        alisveris: 0
     },
-    'adventure-seeker': {
+    // Dinlenme & Wellness: çok yüksek rahatlatıcı; doğa destek
+    relax: {
+        rahatlatici: 4,
+        doga: 2,
+        yemek: 1,
+        tarihi: 0,
+        sanat_kultur: 0,
+        eglence: 0,
+        macera: 0,
+        spor: 0,
+        alisveris: 0,
+        gece_hayati: 0
+    },
+    // Macera & Spor: çok yüksek macera/spor; doğa destek; diğerleri sıfır
+    adventure: {
         macera: 4,
         spor: 4,
-        doga: 4,
-        yemek: 2,
-        tarihi: 1,
-        sanat_kultur: 1,
-        rahatlatici: 1,
-        eglence: 3,
-        alisveris: 0,
-        gece_hayati: 2
-    },
-    'relaxation': {
-        rahatlatici: 4,
         doga: 3,
-        yemek: 3,
-        tarihi: 2,
-        sanat_kultur: 2,
+        eglence: 0,
+        yemek: 0,
+        gece_hayati: 0,
+        tarihi: 0,
+        sanat_kultur: 0,
+        rahatlatici: 0,
+        alisveris: 0
+    },
+    // Gece Hayatı: çok yüksek gece hayatı/eğlence; yemek ikincil
+    nightlife: {
+        gece_hayati: 4,
+        eglence: 4,
+        yemek: 2,
+        spor: 0,
         macera: 0,
-        spor: 1,
-        eglence: 2,
-        alisveris: 2,
-        gece_hayati: 1
+        doga: 0,
+        tarihi: 0,
+        sanat_kultur: 0,
+        alisveris: 0,
+        rahatlatici: 0
     }
 };
 
@@ -9994,7 +10012,9 @@ function initializeQuickSelection() {
 
 function applyPreset(preset) {
     // Log removed for cleaner console
-    
+    // High-contrast: first reset all preferences to zero
+    resetAllPreferences();
+
     Object.keys(preset).forEach(category => {
         const slider = document.getElementById(category);
         const valueDisplay = document.getElementById(category + '-value');
