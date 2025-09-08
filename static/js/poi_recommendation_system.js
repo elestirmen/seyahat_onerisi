@@ -2007,12 +2007,13 @@ function createMediaGallery(media, poi = {}) {
 
         media.images.slice(0, 3).forEach((image, index) => {
             const imagePath = image.preview_path || image.path || `poi_media/${image.filename}`;
+            const finalImagePath = imagePath.startsWith('/') ? imagePath : `/poi_media/${imagePath}`;
             const mediaItemIndex = allMediaItems.findIndex(item =>
                 item.type === 'image' && item.originalIndex === index
             );
 
             galleryHTML += `
-                        <img src="/${imagePath}"
+                        <img src="${finalImagePath}"
                              style="width: 60px; height: 45px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
                              onclick="showPOIMediaFromCache('${poiCacheKey}', ${mediaItemIndex})"
                              title="${image.description || 'Görsel'}" />
@@ -2317,7 +2318,7 @@ function updateThumbnails() {
         if (item.type === 'image') {
             const thumb = document.createElement('img');
             thumb.className = 'media-thumbnail';
-            thumb.src = item.path.startsWith('/') ? item.path : `/${item.path}`;
+            thumb.src = item.path.startsWith('/') ? item.path : `/poi_media/${item.path}`;
             thumb.alt = item.title || `Görsel ${index + 1}`;
 
             if (index === currentMediaIndex) {
@@ -10606,7 +10607,8 @@ async function displayRecommendations(recommendationData) {
                 if (media.images && media.images.length > 0) {
                     const mainImage = media.images[0];
                     const img = document.createElement('img');
-                    img.dataset.src = `/${mainImage.preview_path || mainImage.path || `poi_media/${mainImage.filename}`}`;
+                    const mainImagePath = mainImage.preview_path || mainImage.path || `poi_media/${mainImage.filename}`;
+                    img.dataset.src = mainImagePath.startsWith('/') ? mainImagePath : `/poi_media/${mainImagePath}`;
                     img.className = 'poi-card__image lazy-image';
                     img.alt = poi.name;
                     img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+';
@@ -10625,7 +10627,7 @@ async function displayRecommendations(recommendationData) {
                     media.images.forEach((image, idx) => {
                         allMediaItems.push({
                             type: 'image',
-                            path: image.preview_path || image.path || `poi_media/${image.filename}`,
+                            path: image.preview_path || image.path || `/poi_media/${image.filename}`,
                             title: image.description || `Görsel ${idx + 1}`,
                             originalIndex: idx
                         });
@@ -10636,7 +10638,7 @@ async function displayRecommendations(recommendationData) {
                     media.videos.forEach((video, idx) => {
                         allMediaItems.push({
                             type: 'video',
-                            path: video.path || `poi_media/${video.filename}`,
+                            path: video.path || `/poi_media/${video.filename}`,
                             title: video.description || `Video ${idx + 1}`,
                             originalIndex: idx
                         });
@@ -10647,7 +10649,7 @@ async function displayRecommendations(recommendationData) {
                     media.audio.forEach((audio, idx) => {
                         allMediaItems.push({
                             type: 'audio',
-                            path: audio.path || `poi_media/${audio.filename}`,
+                            path: audio.path || `/poi_media/${audio.filename}`,
                             title: audio.description || `Ses ${idx + 1}`,
                             originalIndex: idx
                         });
@@ -12995,9 +12997,10 @@ function displayPOICardMedia(mediaItems, previewElement) {
     
     if (firstImage) {
         const imagePath = firstImage.thumbnail_path || firstImage.path;
+        const finalImagePath = imagePath.startsWith('/') ? imagePath : `/poi_media/${imagePath}`;
         previewElement.innerHTML = `
             <div class="poi-card-media-thumb">
-                <img src="/${imagePath}" alt="POI Preview" loading="lazy" 
+                <img src="${finalImagePath}" alt="POI Preview" loading="lazy" 
                      style="width: 100%; height: 60px; object-fit: cover; border-radius: 6px;">
                 ${mediaItems.length > 1 ? `<span class="media-count">+${mediaItems.length - 1}</span>` : ''}
             </div>
@@ -13864,7 +13867,7 @@ function buildPOIMediaThumbnailsOnce() {
         if (mediaType === 'image') {
             const img = document.createElement('img');
             // Use lazy loader
-            img.dataset.src = `/${mediaPath}`;
+            img.dataset.src = mediaPath.startsWith('/') ? mediaPath : `/poi_media/${mediaPath}`;
             img.alt = `Thumbnail ${index + 1}`;
             img.loading = 'lazy';
             img.decoding = 'async';
