@@ -780,9 +780,9 @@ class RouteModalStabilizer {
     log(message, data = null) {
         if (this.options.enableDebugLogging) {
             if (data) {
-                console.log(`[RouteModalStabilizer] ${message}:`, data);
+                console.warn(`[RouteModalStabilizer] ${message}:`, data);
             } else {
-                console.log(`[RouteModalStabilizer] ${message}`);
+                console.warn(`[RouteModalStabilizer] ${message}`);
             }
         }
     }

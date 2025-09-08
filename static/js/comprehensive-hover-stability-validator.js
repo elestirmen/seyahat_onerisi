@@ -28,7 +28,7 @@ class ComprehensiveHoverStabilityValidator {
     }
     
     initializeValidator() {
-        console.log('Initializing Comprehensive Hover Stability Validator...');
+        console.warn('Initializing Comprehensive Hover Stability Validator...');
         this.createValidationUI();
         this.setupValidationEnvironment();
     }
@@ -1445,7 +1445,7 @@ class ComprehensiveHoverStabilityValidator {
             logContent.scrollTop = logContent.scrollHeight;
         }
         
-        console.log(`[VALIDATOR ${type.toUpperCase()}] ${message}`);
+        console.warn(`[VALIDATOR ${type.toUpperCase()}] ${message}`);
     }
     
     generateReport() {

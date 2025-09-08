@@ -616,7 +616,7 @@ class MobileOptimizations {
      */
     startPerformanceMonitoring() {
         // Log initial performance metrics
-        console.log('Mobile Optimizations Performance Monitoring Started');
+        console.warn('Mobile Optimizations Performance Monitoring Started');
         
         // Monitor long tasks
         if ('PerformanceObserver' in window) {
@@ -641,7 +641,7 @@ class MobileOptimizations {
     startMemoryTracking() {
         if ('memory' in performance) {
             this.initialMemory = performance.memory.usedJSHeapSize;
-            console.log('Initial memory usage:', this.formatBytes(this.initialMemory));
+            console.warn('Initial memory usage:', this.formatBytes(this.initialMemory));
         }
     }
 
@@ -691,7 +691,7 @@ class MobileOptimizations {
             }
 
             this.performanceMetrics.lastCleanup = Date.now();
-            console.log('Memory cleanup performed');
+            console.warn('Memory cleanup performed');
 
         } catch (error) {
             console.warn('Error during memory cleanup:', error);
@@ -928,7 +928,7 @@ class MobileOptimizations {
             mobileCSS.rel = 'stylesheet';
             mobileCSS.href = 'static/css/mobile-enhancements.css';
             mobileCSS.onload = () => {
-                console.log('Mobile enhancements CSS loaded');
+                console.warn('Mobile enhancements CSS loaded');
             };
             mobileCSS.onerror = () => {
                 console.warn('Mobile enhancements CSS failed to load');
@@ -1282,7 +1282,7 @@ class MobileOptimizations {
         } else {
             // Vertical swipe - could be used for other actions
             // For now, just log it
-            console.log('Vertical swipe detected');
+            console.warn('Vertical swipe detected');
         }
     }
 

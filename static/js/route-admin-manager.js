@@ -56,7 +56,7 @@ class RouteAdminManager {
      * Initialize the route admin manager
      */
     init() {
-        console.log('🚀 RouteAdminManager initializing...');
+        console.warn('🚀 RouteAdminManager initializing...');
         this.setupEventListeners();
         this.loadRoutes();
         this.loadAvailablePOIs();
@@ -117,13 +117,13 @@ class RouteAdminManager {
         this.showRoutesLoadingState();
 
         try {
-            console.log('📥 Loading routes for admin...');
+            console.warn('📥 Loading routes for admin...');
             const data = await window.apiClient.get('/admin/routes');
 
 
             if (data && Array.isArray(data.routes)) {
                 this.routes = data.routes;
-                console.log(`✅ Loaded ${this.routes.length} routes for admin`);
+                console.warn(`✅ Loaded ${this.routes.length} routes for admin`);
 
                 this.renderRoutesTable();
             } else {
@@ -145,7 +145,7 @@ class RouteAdminManager {
      */
     async loadAvailablePOIs() {
         try {
-            console.log('📥 Loading available POIs...');
+            console.warn('📥 Loading available POIs...');
             const data = await window.apiClient.get('/pois');
 
 
@@ -159,7 +159,7 @@ class RouteAdminManager {
                     this.availablePOIs = [];
                 }
 
-                console.log(`✅ Loaded ${this.availablePOIs.length} available POIs`);
+                console.warn(`✅ Loaded ${this.availablePOIs.length} available POIs`);
                 this.renderPOIsList();
             } else {
                 throw new Error('Failed to load POIs');
@@ -177,12 +177,12 @@ class RouteAdminManager {
      */
     async createRoute(routeData) {
         try {
-            console.log('➕ Creating new route:', routeData);
+            console.warn('➕ Creating new route:', routeData);
             
             const data = await this.apiClient.post(`${this.apiBase}/admin/routes`, routeData);
             
             if (data.success) {
-                console.log('✅ Route created successfully:', data.route);
+                console.warn('✅ Route created successfully:', data.route);
                 this.showNotification('Rota başarıyla oluşturuldu', 'success');
                 
                 // Add to local routes array
@@ -211,12 +211,12 @@ class RouteAdminManager {
      */
     async updateRoute(routeId, routeData) {
         try {
-            console.log('✏️ Updating route:', routeId, routeData);
+            console.warn('✏️ Updating route:', routeId, routeData);
             
             const data = await this.apiClient.put(`${this.apiBase}/admin/routes/${routeId}`, routeData);
             
             if (data.success) {
-                console.log('✅ Route updated successfully:', data.route);
+                console.warn('✅ Route updated successfully:', data.route);
                 this.showNotification('Rota başarıyla güncellendi', 'success');
                 
                 // Update local routes array
@@ -259,12 +259,12 @@ class RouteAdminManager {
         }
 
         try {
-            console.log('🗑️ Deleting route:', routeId);
+            console.warn('🗑️ Deleting route:', routeId);
             
             const data = await this.apiClient.delete(`${this.apiBase}/admin/routes/${routeId}`);
             
             if (data.success) {
-                console.log('✅ Route deleted successfully');
+                console.warn('✅ Route deleted successfully');
                 this.showNotification('Rota başarıyla silindi', 'success');
                 
                 // Remove from local routes array
@@ -287,12 +287,12 @@ class RouteAdminManager {
      */
     async managePOIAssociations(routeId, poiAssociations) {
         try {
-            console.log('🔗 Managing POI associations for route:', routeId, poiAssociations);
+            console.warn('🔗 Managing POI associations for route:', routeId, poiAssociations);
             
             const data = await this.apiClient.post(`${this.apiBase}/admin/routes/${routeId}/pois`, { pois: poiAssociations });
             
             if (data.success) {
-                console.log('✅ POI associations updated successfully');
+                console.warn('✅ POI associations updated successfully');
                 this.showNotification('POI ilişkilendirmeleri güncellendi', 'success');
                 return true;
             } else {
@@ -1116,7 +1116,7 @@ class RouteAdminManager {
         this.renderSelectedPOIs();
         this.isDirty = true;
         
-        console.log('✅ POI added to route:', poi.name);
+        console.warn('✅ POI added to route:', poi.name);
     }
 
     /**
@@ -1127,7 +1127,7 @@ class RouteAdminManager {
         this.renderSelectedPOIs();
         this.isDirty = true;
         
-        console.log('➖ POI removed from route:', poiId);
+        console.warn('➖ POI removed from route:', poiId);
     }
 
     /**
@@ -1157,7 +1157,7 @@ class RouteAdminManager {
         this.renderSelectedPOIs();
         this.isDirty = true;
         
-        console.log('🔄 POIs reordered');
+        console.warn('🔄 POIs reordered');
     }
 
     /**
@@ -1236,7 +1236,7 @@ class RouteAdminManager {
             showNotification(message, type);
         } else {
             // Fallback notification
-            console.log(`${type.toUpperCase()}: ${message}`);
+            console.warn(`${type.toUpperCase()}: ${message}`);
             alert(message);
         }
     }

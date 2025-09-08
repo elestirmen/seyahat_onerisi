@@ -16,7 +16,7 @@ class MobileRouteDetailsEnhancer {
     init() {
         if (window.innerWidth > 768) return;
         
-        console.log('📱 Initializing Mobile Route Details Enhancer');
+        console.warn('📱 Initializing Mobile Route Details Enhancer');
         
         // Wait for route modal to be available
         this.waitForModal();
@@ -37,7 +37,7 @@ class MobileRouteDetailsEnhancer {
     setupMobileEnhancements() {
         if (this.isInitialized) return;
         
-        console.log('🚀 Setting up mobile enhancements');
+        console.warn('🚀 Setting up mobile enhancements');
         
         // Override map tab behavior
         this.overrideMapTabBehavior();
@@ -69,7 +69,7 @@ class MobileRouteDetailsEnhancer {
             e.preventDefault();
             e.stopPropagation();
             
-            console.log('📱 Mobile map tab clicked');
+            console.warn('📱 Mobile map tab clicked');
             
             // Switch to map tab with mobile enhancements
             this.activateMobileMapTab();
@@ -77,7 +77,7 @@ class MobileRouteDetailsEnhancer {
     }
 
     activateMobileMapTab() {
-        console.log('📱 Activating mobile map tab');
+        console.warn('📱 Activating mobile map tab');
         
         // Update tab states
         document.querySelectorAll('.route-details-tab').forEach(tab => {
@@ -135,11 +135,11 @@ class MobileRouteDetailsEnhancer {
     createMobileMapInterface(mapContent) {
         // Check if already created
         if (mapContent.querySelector('.mobile-map-header')) {
-            console.log('📱 Mobile interface already exists');
+            console.warn('📱 Mobile interface already exists');
             return;
         }
 
-        console.log('🏗️ Creating mobile map interface');
+        console.warn('🏗️ Creating mobile map interface');
 
         // Create mobile header
         this.mapHeader = document.createElement('div');
@@ -192,7 +192,7 @@ class MobileRouteDetailsEnhancer {
         // Append bottom panel at the end
         mapContent.appendChild(this.bottomPanel);
 
-        console.log('✅ Mobile interface elements created');
+        console.warn('✅ Mobile interface elements created');
 
         // Setup event listeners
         this.setupMobileEventListeners();
@@ -279,7 +279,7 @@ class MobileRouteDetailsEnhancer {
                 mapContent.appendChild(elevationContainer);
                 elevationContainer.classList.remove('mobile-overlay');
                 
-                console.log('📱 Moved elevation container out of map for scrollability');
+                console.warn('📱 Moved elevation container out of map for scrollability');
             }
             
             // Keep bottom panel hidden since we're using inline elevation
@@ -604,7 +604,7 @@ class MobileRouteDetailsEnhancer {
     }
 
     initializeMobileMap() {
-        console.log('🗺️ Initializing mobile map');
+        console.warn('🗺️ Initializing mobile map');
 
         // Ensure map container is properly sized
         const mapContainer = document.getElementById('routeModalMap');
@@ -661,13 +661,13 @@ class MobileRouteDetailsEnhancer {
             try {
                 window.routeDetailsModalInstance.elevationChartInstance.resize();
                 window.routeDetailsModalInstance.elevationChartInstance.update();
-                console.log('📱 Chart resized for mobile:', {
+                console.warn('📱 Chart resized for mobile:', {
                     canvasWidth: elevationChart.width,
                     canvasHeight: elevationChart.height,
                     containerWidth: containerWidth
                 });
             } catch (e) {
-                console.log('Chart resize failed:', e);
+                console.warn('Chart resize failed:', e);
             }
         }
 
@@ -702,7 +702,7 @@ class MobileRouteDetailsEnhancer {
         if (mapContainer && mapContainer.contains(elevationContainer)) {
             // Move elevation container out of map container
             mapContainer.parentNode.appendChild(elevationContainer);
-            console.log('📱 Moved elevation container out of map container');
+            console.warn('📱 Moved elevation container out of map container');
         }
 
         // Make sure elevation container is positioned for scrolling
@@ -749,7 +749,7 @@ class MobileRouteDetailsEnhancer {
             elevationChart.style.height = '120px';
         }
         
-        console.log('📱 Elevation chart made scrollable on mobile');
+        console.warn('📱 Elevation chart made scrollable on mobile');
     }
 
     addMobileTouchInteractions(chartElement) {
@@ -908,7 +908,7 @@ class MobileRouteDetailsEnhancer {
             document.exitFullscreen();
         } else {
             modal.requestFullscreen().catch(err => {
-                console.log('Fullscreen not supported:', err);
+                console.warn('Fullscreen not supported:', err);
             });
         }
     }
@@ -994,7 +994,7 @@ class MobileRouteDetailsEnhancer {
                 const mapContainer = document.querySelector('.route-map-container');
                 if (elevationContainer.parentElement === mapContainer) {
                     mapContent.appendChild(elevationContainer);
-                    console.log('📱 Moved elevation container to map content for scrollability');
+                    console.warn('📱 Moved elevation container to map content for scrollability');
                 }
                 
                 // Apply mobile-friendly styling
@@ -1062,13 +1062,13 @@ class MobileRouteDetailsEnhancer {
                                 window.routeDetailsModalInstance.elevationChartInstance.resize();
                                 window.routeDetailsModalInstance.elevationChartInstance.update();
                             } catch (e) {
-                                console.log('Chart resize failed:', e);
+                                console.warn('Chart resize failed:', e);
                             }
                         }, 100);
                     }
                 }
                 
-                console.log('📱 Elevation chart styled for mobile visibility');
+                console.warn('📱 Elevation chart styled for mobile visibility');
             }
         }, 800);
     }

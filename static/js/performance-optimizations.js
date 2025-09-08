@@ -169,7 +169,7 @@ class RoutePerformanceMonitor {
     }
     
     logPerformanceStats() {
-        console.log('Performance Stats:', {
+        console.warn('Performance Stats:', {
             avgRouteLoadTime: this.getAverageTime('routeLoadTime').toFixed(2) + 'ms',
             avgSearchTime: this.getAverageTime('searchTime').toFixed(2) + 'ms',
             avgRenderTime: this.getAverageTime('renderTime').toFixed(2) + 'ms'

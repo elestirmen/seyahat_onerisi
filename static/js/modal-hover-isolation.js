@@ -453,9 +453,9 @@ class ModalHoverIsolation {
 
         const prefix = '[ModalHoverIsolation]';
         if (data) {
-            console.log(`${prefix} ${message}`, data);
+            console.warn(`${prefix} ${message}`, data);
         } else {
-            console.log(`${prefix} ${message}`);
+            console.warn(`${prefix} ${message}`);
         }
     }
 

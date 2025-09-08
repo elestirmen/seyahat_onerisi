@@ -632,7 +632,7 @@ class POIHoverIntegration {
      */
     log(message, ...args) {
         if (this.options.enableDebugLogging) {
-            console.log(`[POIHoverIntegration] ${message}`, ...args);
+            console.warn(`[POIHoverIntegration] ${message}`, ...args);
         }
     }
 }

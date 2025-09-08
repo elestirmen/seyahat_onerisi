@@ -74,7 +74,7 @@ let poiHoverIntegration = null;
 async function initializeHoverSystem() {
     try {
         if (poiHoverIntegration) {
-            console.log('Hover system already initialized');
+            console.warn('Hover system already initialized');
             return true;
         }
 
@@ -92,7 +92,7 @@ async function initializeHoverSystem() {
         const success = await poiHoverIntegration.initialize();
         
         if (success) {
-            console.log('POI hover event system initialized successfully');
+            console.warn('POI hover event system initialized successfully');
             
             // Setup custom event listeners for integration
             setupHoverEventListeners();
@@ -312,7 +312,7 @@ if (typeof window !== 'undefined' && window.createIconMap) {
         'ulasilabilirlik': 'ulasilabilirlik'
     });
     
-    console.log('🗺️ Fallback configuration loaded:', {
+    console.warn('🗺️ Fallback configuration loaded:', {
         iconMap: Object.keys(iconMap).length,
         styles: Object.keys(fallbackCategoryStyles).length,
         aliases: Object.keys(categoryIconAliases).length
@@ -410,7 +410,7 @@ function createCategoryMarker(lat, lng, poi, index = 0) {
     const categoryColor = categoryStyle.color;
     const categoryIcon = categoryStyle.iconClass.replace('fas fa-', ''); // Remove fas fa- prefix
     
-    console.log('🔍 Final marker styling:', {
+    console.warn('🔍 Final marker styling:', {
         category: poi.category,
         color: categoryColor,
         icon: categoryIcon,
@@ -5582,7 +5582,7 @@ async function displayRouteOnMap(route) {
     }
     
     // Log removed for cleaner console
-    console.log('🔍 Map state:', {
+    console.warn('🔍 Map state:', {
         mapExists: !!predefinedMap,
         mapInitialized: predefinedMapInitialized,
         layersCount: predefinedMapLayers.length
@@ -5596,7 +5596,7 @@ async function displayRouteOnMap(route) {
         mapContainer.style.opacity = '1';
         predefinedMap.invalidateSize();
         // Log removed for cleaner console
-        console.log('🔍 Map container dimensions:', {
+        console.warn('🔍 Map container dimensions:', {
             width: mapContainer.offsetWidth,
             height: mapContainer.offsetHeight,
             display: mapContainer.style.display,
@@ -6761,7 +6761,7 @@ function createRouteCard(route) {
     const imageUrl = route.preview_image || placeholderImage;
     const rid = route.id || route._id;
     
-    console.log('🏷️ Creating route card:', {
+    console.warn('🏷️ Creating route card:', {
         name: route.name,
         stopCount: stopCount,
         rawPoiCount: route.poi_count
@@ -7574,7 +7574,7 @@ async function loadRouteDetails(route, container) {
         if (response.ok) {
             const detailedRoute = await response.json();
             // Log removed for cleaner console
-            console.log('🔍 Route details inspection:', {
+            console.warn('🔍 Route details inspection:', {
                 hasGeometry: !!detailedRoute.geometry,
                 geometryType: typeof detailedRoute.geometry,
                 hasPois: !!(detailedRoute.pois && detailedRoute.pois.length > 0),
@@ -7620,7 +7620,7 @@ function displayRouteDetails(routeData, container) {
     const pois = route.pois || [];
     const poiCount = pois.length;
     
-    console.log('📊 Displaying route details:', {
+    console.warn('📊 Displaying route details:', {
         routeName: route.name,
         poiCount: poiCount,
         pois: pois
@@ -7970,7 +7970,7 @@ async function selectPredefinedRoute(route) {
     // Store the route globally for panel access
     window.currentSelectedRoute = route;
     // Log removed for cleaner console
-    console.log('🔍 Initial route data check:', {
+    console.warn('🔍 Initial route data check:', {
         hasId: !!route.id,
         hasName: !!route.name,
         hasGeometry: !!route.geometry,
@@ -8167,7 +8167,7 @@ async function selectPredefinedRoute(route) {
         }
     }
 
-    console.log('🔍 Final route data before display:', {
+    console.warn('🔍 Final route data before display:', {
         hasGeometry: !!route.geometry,
         geometryType: typeof route.geometry,
         hasPois: !!(route.pois && route.pois.length > 0),
@@ -9675,7 +9675,7 @@ window.checkRouteData = async function() {
             // Log removed for cleaner console
             
             routes.forEach((route, index) => {
-                console.log(`Route ${index + 1}:`, {
+                console.warn(`Route ${index + 1}:`, {
                     id: route.id || route._id,
                     name: route.name,
                     hasGeometry: !!route.geometry,
@@ -9727,7 +9727,7 @@ window.runAllSeparateTabMapTests = async function() {
 //         // Debug function to check elements
 //         function debugElements() {
 //             // Check loading manager availability
-//             console.log('Loading Manager Status:', {
+//             console.warn('Loading Manager Status:', {
 //                 available: !!window.loadingManager,
 //                 showPOISkeletons: !!(window.loadingManager && window.loadingManager.showPOISkeletons),
 //                 lazyLoader: !!window.lazyLoader
@@ -9738,7 +9738,7 @@ window.runAllSeparateTabMapTests = async function() {
 //             Object.keys(ratingCategories).forEach(category => {
 //                 const slider = document.getElementById(category);
 //                 const valueDisplay = document.getElementById(category + '-value');
-//                 console.log(`Slider ${category}:`, {
+//                 console.warn(`Slider ${category}:`, {
 //                     slider: !!slider,
 //                     valueDisplay: !!valueDisplay,
 //                     sliderValue: slider ? slider.value : 'N/A',
@@ -9748,7 +9748,7 @@ window.runAllSeparateTabMapTests = async function() {
 // 
 //             // Check recommend button
 //             const recommendBtn = document.getElementById('recommendBtn');
-//             console.log('Recommend button:', {
+//             console.warn('Recommend button:', {
 //                 found: !!recommendBtn,
 //                 hasEventListener: recommendBtn ? recommendBtn.onclick !== null : false,
 //                 text: recommendBtn ? recommendBtn.textContent : 'N/A'
@@ -10085,7 +10085,7 @@ async function getRecommendations() {
     const loadingIndicator = document.getElementById('loadingIndicator');
     const resultsContainer = document.getElementById('recommendationResults');
 
-    console.log('Elements found:', {
+    console.warn('Elements found:', {
         button: !!button,
         resultsSection: !!resultsSection,
         loadingIndicator: !!loadingIndicator,
@@ -12407,7 +12407,7 @@ async function showAllPOIs() {
     const resultsSection = document.getElementById('resultsSection');
     const resultsContainer = document.getElementById('recommendationResults');
 
-    console.log('Elements found:', {
+    console.warn('Elements found:', {
         button: !!button,
         resultsSection: !!resultsSection,
         resultsContainer: !!resultsContainer
@@ -12886,7 +12886,7 @@ function filterPOIMarkers(query) {
     const q = (query || '').trim().toLowerCase();
     if (!markers || !Array.isArray(markers)) return;
 
-    console.log(`🔍 Harita arama: "${q}"`);
+    console.warn(`🔍 Harita arama: "${q}"`);
 
     markers.forEach(marker => {
         try {
@@ -12897,7 +12897,7 @@ function filterPOIMarkers(query) {
 
             // Debug: Arama eşleşmelerini göster
             if (q && match) {
-                console.log(`✅ POI eşleşti: "${marker.poiName}" - Tags: "${tags}" - Query: "${q}"`);
+                console.warn(`✅ POI eşleşti: "${marker.poiName}" - Tags: "${tags}" - Query: "${q}"`);
             }
             const inCluster = poiCluster && poiCluster.hasLayer && poiCluster.hasLayer(marker);
             if (match && !inCluster) {
@@ -13136,7 +13136,7 @@ async function showPOIDetail(poiId, poiData = null) {
         setTimeout(() => {
             const modalCheck = document.getElementById('poiDetailModal');
             if (modalCheck) {
-                console.log('🔍 Modal visibility check:', {
+                console.warn('🔍 Modal visibility check:', {
                     display: modalCheck.style.display,
                     visibility: modalCheck.style.visibility,
                     zIndex: modalCheck.style.zIndex,
@@ -13289,7 +13289,7 @@ async function loadPOIModalMedia(poiId) {
     poiMediaElementCache.clear();
     
     try {
-        console.log(`🔍 Loading media for POI ${poiId}...`);
+        console.warn(`🔍 Loading media for POI ${poiId}...`);
         
         const response = await fetch(`${apiBase}/poi/${poiId}/media`);
         if (!response.ok) {
@@ -13299,7 +13299,7 @@ async function loadPOIModalMedia(poiId) {
         }
         
         const mediaData = await response.json();
-        console.log('📦 Raw media data received:', mediaData);
+        console.warn('📦 Raw media data received:', mediaData);
         
         // Handle different API response formats with validation
         let mediaItems = [];
@@ -13330,7 +13330,7 @@ async function loadPOIModalMedia(poiId) {
         currentMediaItems = validatedItems;
         currentMediaIndex = 0;
         
-        console.log(`✅ Successfully loaded ${validatedItems.length} media items`);
+        console.warn(`✅ Successfully loaded ${validatedItems.length} media items`);
         
         // Display media gallery
         displayMediaGallery();
@@ -13391,7 +13391,7 @@ async function validateAndNormalizeMediaItems(mediaItems, poiId) {
         }
     }
     
-    console.log(`📊 Media validation complete: ${validItems.length} valid items from ${mediaItems.length} total`);
+    console.warn(`📊 Media validation complete: ${validItems.length} valid items from ${mediaItems.length} total`);
     return validItems;
 }
 
@@ -13594,7 +13594,7 @@ function createRobustImageElement(mediaItem, index) {
         img.style.opacity = '1';
         loadingDiv.remove();
         wrapper.appendChild(img);
-        console.log(`✅ Image loaded successfully: ${mediaItem.path}`);
+        console.warn(`✅ Image loaded successfully: ${mediaItem.path}`);
     };
     
     img.onerror = () => {
@@ -13604,7 +13604,7 @@ function createRobustImageElement(mediaItem, index) {
         // Try fallback paths if available
         if (mediaItem.fallbackPaths && mediaItem.fallbackPaths.length > 0) {
             const nextPath = mediaItem.fallbackPaths.shift();
-            console.log(`🔄 Trying fallback path: ${nextPath}`);
+            console.warn(`🔄 Trying fallback path: ${nextPath}`);
             img.src = nextPath;
         } else {
             // Show error placeholder
@@ -13654,7 +13654,7 @@ function createRobustVideoElement(mediaItem, index) {
     });
     
     video.addEventListener('loadeddata', () => {
-        console.log(`✅ Video loaded successfully: ${mediaItem.path}`);
+        console.warn(`✅ Video loaded successfully: ${mediaItem.path}`);
     });
     
     wrapper.appendChild(video);
@@ -14084,7 +14084,7 @@ function createInModalMediaOverlay(index) {
     // Keyboard navigation
     setupInModalKeyboardNav();
     
-    console.log(`🖼️ Opened in-modal overlay for media ${index + 1}/${currentMediaItems.length}`);
+    console.warn(`🖼️ Opened in-modal overlay for media ${index + 1}/${currentMediaItems.length}`);
 }
 
 function createInModalNavControls(currentIndex) {
@@ -14647,7 +14647,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     } else {
         console.error('❌ POI Modal element not found on page load!');
-        console.log('Available elements with "modal" in id:', 
+        console.warn('Available elements with "modal" in id:', 
             Array.from(document.querySelectorAll('[id*="modal"]')).map(el => el.id));
     }
 });// Rate limiting bilgilendirme mesajı

@@ -12,7 +12,7 @@
                       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
       if (isMobile) {
-        console.log('🔧 Forcing mobile route card layout for device:', {
+        console.warn('🔧 Forcing mobile route card layout for device:', {
           innerWidth: window.innerWidth,
           screenWidth: window.screen.width,
           userAgent: navigator.userAgent.substring(0, 50) + '...'
@@ -146,7 +146,7 @@
         });
         });
 
-        console.log('✅ Mobile route card layout forced successfully');
+        console.warn('✅ Mobile route card layout forced successfully');
       }
     }
 
@@ -158,7 +158,7 @@
     // Force on multiple events for real devices
     function setupMobileForce() {
       if (isRealMobileDevice) {
-        console.log('📱 Real mobile device detected - Setting up aggressive layout forcing');
+        console.warn('📱 Real mobile device detected - Setting up aggressive layout forcing');
 
         // Force immediately
         forceMobileRouteCards();

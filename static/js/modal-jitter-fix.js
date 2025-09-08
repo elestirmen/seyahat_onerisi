@@ -25,16 +25,16 @@ window.modalJitterFix = {
  */
 function initializeModalJitterFix() {
     if (window.modalJitterFix.isInitialized) {
-        console.log('Modal jitter fix already initialized');
+        console.warn('Modal jitter fix already initialized');
         return;
     }
 
-    console.log('🔧 Initializing modal jitter fix system');
+    console.warn('🔧 Initializing modal jitter fix system');
     
     // Wait for modal manager to be available
     if (window.modalManager) {
         window.modalJitterFix.modalManager = window.modalManager;
-        console.log('✅ Connected to centralized ModalManager');
+        console.warn('✅ Connected to centralized ModalManager');
     } else {
         console.warn('ModalManager not available, using fallback system');
     }
@@ -50,7 +50,7 @@ function initializeModalJitterFix() {
     }
     
     window.modalJitterFix.isInitialized = true;
-    console.log('✅ Modal jitter fix system initialized');
+    console.warn('✅ Modal jitter fix system initialized');
 }
 
 /**
@@ -67,7 +67,7 @@ function patchRouteDetailsPanel() {
 
     // Enhanced show method with proper cleanup
     window.RouteDetailsPanel.prototype.show = function(routeData) {
-        console.log('🔧 Enhanced RouteDetailsPanel.show called');
+        console.warn('🔧 Enhanced RouteDetailsPanel.show called');
         
         // Use centralized modal manager if available
         if (window.modalJitterFix.modalManager) {
@@ -100,7 +100,7 @@ function patchRouteDetailsPanel() {
 
     // Enhanced hide method with thorough cleanup
     window.RouteDetailsPanel.prototype.hide = function() {
-        console.log('🔧 Enhanced RouteDetailsPanel.hide called');
+        console.warn('🔧 Enhanced RouteDetailsPanel.hide called');
         
         // Use centralized modal manager if available
         if (window.modalJitterFix.modalManager) {
@@ -122,7 +122,7 @@ function patchRouteDetailsPanel() {
 
     // Add cleanup methods to RouteDetailsPanel prototype
     window.RouteDetailsPanel.prototype.cleanupEventListeners = function() {
-        console.log('🧹 Cleaning up RouteDetailsPanel event listeners');
+        console.warn('🧹 Cleaning up RouteDetailsPanel event listeners');
         
         // Use centralized event registry if available
         if (window.modalJitterFix.modalManager) {
@@ -199,7 +199,7 @@ function patchRouteDetailsPanel() {
         window.modalJitterFix.eventListeners.set(panelId, listeners);
     };
 
-    console.log('✅ RouteDetailsPanel patched successfully');
+    console.warn('✅ RouteDetailsPanel patched successfully');
 }
 
 /**
@@ -216,7 +216,7 @@ function patchRouteDetailsModal() {
 
     // Enhanced show method with proper cleanup
     window.RouteDetailsModal.prototype.show = function(routeData) {
-        console.log('🔧 Enhanced RouteDetailsModal.show called');
+        console.warn('🔧 Enhanced RouteDetailsModal.show called');
         
         // Close any existing modals first
         closeAllActiveModals();
@@ -246,7 +246,7 @@ function patchRouteDetailsModal() {
 
     // Enhanced hide method with thorough cleanup
     window.RouteDetailsModal.prototype.hide = function() {
-        console.log('🔧 Enhanced RouteDetailsModal.hide called');
+        console.warn('🔧 Enhanced RouteDetailsModal.hide called');
         
         // Use centralized modal manager if available
         if (window.modalJitterFix.modalManager) {
@@ -268,7 +268,7 @@ function patchRouteDetailsModal() {
 
     // Add cleanup methods to RouteDetailsModal prototype
     window.RouteDetailsModal.prototype.cleanupEventListeners = function() {
-        console.log('🧹 Cleaning up RouteDetailsModal event listeners');
+        console.warn('🧹 Cleaning up RouteDetailsModal event listeners');
         
         // Use centralized event registry if available
         if (window.modalJitterFix.modalManager) {
@@ -305,7 +305,7 @@ function patchRouteDetailsModal() {
         window.modalJitterFix.activeModals.delete('routeDetailsModal');
     };
 
-    console.log('✅ RouteDetailsModal patched successfully');
+    console.warn('✅ RouteDetailsModal patched successfully');
 }
 
 /**
@@ -314,7 +314,7 @@ function patchRouteDetailsModal() {
 function resetModalAnimationState(modalElement) {
     if (!modalElement) return;
     
-    console.log('🎭 Resetting animation state for modal');
+    console.warn('🎭 Resetting animation state for modal');
     
     // Use centralized DOM utilities if available
     if (window.DOMStateResetUtils) {
@@ -351,7 +351,7 @@ function resetModalAnimationState(modalElement) {
  * Close all active modals to prevent conflicts
  */
 function closeAllActiveModals() {
-    console.log('🚪 Closing all active modals');
+    console.warn('🚪 Closing all active modals');
     
     // Use centralized modal manager if available
     if (window.modalJitterFix.modalManager) {
@@ -359,7 +359,7 @@ function closeAllActiveModals() {
     }
     
     // Fallback to legacy system
-    console.log('Using fallback modal closing system');
+    console.warn('Using fallback modal closing system');
     
     // Close RouteDetailsPanel if active
     if (window.modalJitterFix.activeModals.has('routeDetailsPanel')) {
@@ -392,7 +392,7 @@ function closeAllActiveModals() {
  * Clean up orphaned event listeners
  */
 function cleanupOrphanedEventListeners() {
-    console.log('🧹 Cleaning up orphaned event listeners');
+    console.warn('🧹 Cleaning up orphaned event listeners');
     
     // Clear all tracked event listeners
     window.modalJitterFix.eventListeners.forEach((listeners, modalId) => {
@@ -428,7 +428,7 @@ function addGlobalCleanupHandlers() {
     // Global escape key handler as fallback
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && window.modalJitterFix.activeModals.size > 0) {
-            console.log('🚨 Emergency modal close via Escape key');
+            console.warn('🚨 Emergency modal close via Escape key');
             closeAllActiveModals();
         }
     }, { passive: false });
@@ -443,7 +443,7 @@ function patchMediaModalFunctions() {
         const originalShowMediaModal = window.showMediaModal;
         
         window.showMediaModal = function(...args) {
-            console.log('🔧 Enhanced showMediaModal called');
+            console.warn('🔧 Enhanced showMediaModal called');
             
             // Close existing modals first
             closeAllActiveModals();
@@ -461,7 +461,7 @@ function patchMediaModalFunctions() {
         const originalCloseMediaModal = window.closeMediaModal;
         
         window.closeMediaModal = function(...args) {
-            console.log('🔧 Enhanced closeMediaModal called');
+            console.warn('🔧 Enhanced closeMediaModal called');
             
             // Enhanced cleanup
             cleanupMediaModalState();
@@ -481,7 +481,7 @@ function patchMediaModalFunctions() {
  * Reset global modal state
  */
 function resetGlobalModalState() {
-    console.log('🔄 Resetting global modal state');
+    console.warn('🔄 Resetting global modal state');
     
     // Use centralized DOM utilities if available
     if (window.DOMStateResetUtils) {
@@ -510,7 +510,7 @@ function resetGlobalModalState() {
  * Clean up media modal specific state
  */
 function cleanupMediaModalState() {
-    console.log('🧹 Cleaning up media modal state');
+    console.warn('🧹 Cleaning up media modal state');
     
     // Stop any playing media
     const videos = document.querySelectorAll('video');
@@ -579,7 +579,7 @@ window.initializeModalJitterFix = initializeModalJitterFix;
 window.closeAllActiveModals = closeAllActiveModals;
 window.resetModalAnimationState = resetModalAnimationState;
 
-console.log('📦 Modal jitter fix module loaded');
+console.warn('📦 Modal jitter fix module loaded');
 
 /**
  * Viewport/Scrollbar compensation after visibility/resize

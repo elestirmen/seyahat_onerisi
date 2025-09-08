@@ -31,7 +31,7 @@ class RouteSelectionManager {
      * Initialize the route selection manager
      */
     init() {
-        console.log('🚀 RouteSelectionManager initializing...');
+        console.warn('🚀 RouteSelectionManager initializing...');
         this.setupEventListeners();
         this.loadPredefinedRoutes();
     }
@@ -76,13 +76,13 @@ class RouteSelectionManager {
         this.showLoadingState();
 
         try {
-            console.log('📥 Loading predefined routes...');
+            console.warn('📥 Loading predefined routes...');
             const data = await window.apiClient.get('/routes');
             
             if (data.success) {
                 this.predefinedRoutes = data.routes || [];
                 this.filteredRoutes = [...this.predefinedRoutes];
-                console.log(`✅ Loaded ${this.predefinedRoutes.length} predefined routes`);
+                console.warn(`✅ Loaded ${this.predefinedRoutes.length} predefined routes`);
                 
                 this.renderRoutesList();
                 this.updateRouteCount();
@@ -106,7 +106,7 @@ class RouteSelectionManager {
     filterRoutes(criteria = null) {
         const filters = criteria || this.currentFilters;
         
-        console.log('🔍 Filtering routes with criteria:', filters);
+        console.warn('🔍 Filtering routes with criteria:', filters);
         
         this.filteredRoutes = this.predefinedRoutes.filter(route => {
             // Route type filter
@@ -154,7 +154,7 @@ class RouteSelectionManager {
             return true;
         });
 
-        console.log(`🔍 Filtered to ${this.filteredRoutes.length} routes`);
+        console.warn(`🔍 Filtered to ${this.filteredRoutes.length} routes`);
         this.renderRoutesList();
         this.updateRouteCount();
     }
@@ -245,7 +245,7 @@ class RouteSelectionManager {
      */
     async displayRouteDetails(routeId) {
         try {
-            console.log(`📋 Loading route details for ID: ${routeId}`);
+            console.warn(`📋 Loading route details for ID: ${routeId}`);
             
             const data = await window.apiClient.get(`/routes/${routeId}`);
             
@@ -274,7 +274,7 @@ class RouteSelectionManager {
         }
 
         this.selectedRoute = route;
-        console.log('✅ Route selected:', route.name);
+        console.warn('✅ Route selected:', route.name);
 
         // Trigger route selection event
         const event = new CustomEvent('routeSelected', {
@@ -703,7 +703,7 @@ class RouteSelectionManager {
             showNotification(message, type);
         } else {
             // Fallback notification
-            console.log(`${type.toUpperCase()}: ${message}`);
+            console.warn(`${type.toUpperCase()}: ${message}`);
             alert(message);
         }
     }

@@ -47,7 +47,7 @@ class EventListenerRegistry {
             
             this.listeners.get(modalId).push(listenerInfo);
             
-            console.log(`📝 Registered ${event} listener for modal: ${modalId}`);
+            console.warn(`📝 Registered ${event} listener for modal: ${modalId}`);
             
         } catch (error) {
             console.error(`Failed to register event listener for ${modalId}:`, error);
@@ -76,7 +76,7 @@ class EventListenerRegistry {
             
             this.globalListeners.add(listenerInfo);
             
-            console.log(`📝 Registered global ${event} listener`);
+            console.warn(`📝 Registered global ${event} listener`);
             
         } catch (error) {
             console.error('Failed to register global event listener:', error);
@@ -90,7 +90,7 @@ class EventListenerRegistry {
     unregister(modalId) {
         const listeners = this.listeners.get(modalId);
         if (!listeners) {
-            console.log(`No listeners found for modal: ${modalId}`);
+            console.warn(`No listeners found for modal: ${modalId}`);
             return;
         }
 
@@ -106,7 +106,7 @@ class EventListenerRegistry {
         });
 
         this.listeners.delete(modalId);
-        console.log(`🧹 Removed ${removedCount} listeners for modal: ${modalId}`);
+        console.warn(`🧹 Removed ${removedCount} listeners for modal: ${modalId}`);
     }
 
     /**
@@ -140,7 +140,7 @@ class EventListenerRegistry {
         this.listeners.clear();
         this.globalListeners.clear();
         
-        console.log(`🧹 Removed ${totalRemoved} total event listeners`);
+        console.warn(`🧹 Removed ${totalRemoved} total event listeners`);
     }
 
     /**
@@ -173,7 +173,7 @@ class DOMStateResetUtils {
     static resetModalElement(modalElement) {
         if (!modalElement) return;
 
-        console.log('🔄 Resetting modal element state');
+        console.warn('🔄 Resetting modal element state');
 
         // Reset CSS classes
         modalElement.classList.remove('show', 'hide', 'animating', 'modal-open');
@@ -199,7 +199,7 @@ class DOMStateResetUtils {
      * Reset document body state
      */
     static resetBodyState() {
-        console.log('🔄 Resetting document body state');
+        console.warn('🔄 Resetting document body state');
 
         // Reset body overflow
         document.body.style.overflow = '';
@@ -220,7 +220,7 @@ class DOMStateResetUtils {
      * @param {Element} previousFocus - Element that had focus before modal opened
      */
     static resetFocusState(previousFocus = null) {
-        console.log('🔄 Resetting focus state');
+        console.warn('🔄 Resetting focus state');
 
         // Remove focus from modal elements
         const modalElements = document.querySelectorAll('[role="dialog"], .modal, .modal-content');
@@ -246,7 +246,7 @@ class DOMStateResetUtils {
      * Stop all media playback
      */
     static stopMediaPlayback() {
-        console.log('🔄 Stopping media playback');
+        console.warn('🔄 Stopping media playback');
 
         // Stop videos
         const videos = document.querySelectorAll('video');
@@ -275,7 +275,7 @@ class DOMStateResetUtils {
      * Clean up temporary DOM elements
      */
     static cleanupTemporaryElements() {
-        console.log('🔄 Cleaning up temporary DOM elements');
+        console.warn('🔄 Cleaning up temporary DOM elements');
 
         // Remove temporary modal elements
         const tempSelectors = [
@@ -310,7 +310,7 @@ class DOMStateResetUtils {
             previousFocus = null
         } = options;
 
-        console.log('🔄 Performing complete DOM state reset');
+        console.warn('🔄 Performing complete DOM state reset');
 
         if (resetBody) {
             this.resetBodyState();
@@ -352,17 +352,17 @@ class ModalManager {
      */
     initialize() {
         if (this.isInitialized) {
-            console.log('ModalManager already initialized');
+            console.warn('ModalManager already initialized');
             return;
         }
 
-        console.log('🚀 Initializing ModalManager');
+        console.warn('🚀 Initializing ModalManager');
 
         // Register global emergency handlers
         this.registerGlobalHandlers();
 
         this.isInitialized = true;
-        console.log('✅ ModalManager initialized successfully');
+        console.warn('✅ ModalManager initialized successfully');
     }
 
     /**
@@ -387,7 +387,7 @@ class ModalManager {
         };
 
         this.activeModals.set(modalId, modalState);
-        console.log(`📝 Registered modal: ${modalId}`);
+        console.warn(`📝 Registered modal: ${modalId}`);
 
         return modalState;
     }
@@ -399,7 +399,7 @@ class ModalManager {
      * @param {Object} options - Opening options
      */
     async openModal(modalId, data = null, options = {}) {
-        console.log(`🚪 Opening modal: ${modalId}`);
+        console.warn(`🚪 Opening modal: ${modalId}`);
 
         try {
             // Close all existing modals first (requirement 1.4)
@@ -425,7 +425,7 @@ class ModalManager {
                 this.domUtils.resetModalElement(modalState.element);
             }
 
-            console.log(`✅ Modal ${modalId} opened successfully`);
+            console.warn(`✅ Modal ${modalId} opened successfully`);
             return modalState;
 
         } catch (error) {
@@ -439,11 +439,11 @@ class ModalManager {
      * @param {string} modalId - Modal identifier
      */
     async closeModal(modalId) {
-        console.log(`🚪 Closing modal: ${modalId}`);
+        console.warn(`🚪 Closing modal: ${modalId}`);
 
         const modalState = this.activeModals.get(modalId);
         if (!modalState) {
-            console.log(`Modal ${modalId} not found or already closed`);
+            console.warn(`Modal ${modalId} not found or already closed`);
             return;
         }
 
@@ -471,7 +471,7 @@ class ModalManager {
                 this.previousFocus = null;
             }
 
-            console.log(`✅ Modal ${modalId} closed successfully`);
+            console.warn(`✅ Modal ${modalId} closed successfully`);
 
         } catch (error) {
             console.error(`Failed to close modal ${modalId}:`, error);
@@ -485,11 +485,11 @@ class ModalManager {
      */
     async closeAllModals() {
         if (this.activeModals.size === 0) {
-            console.log('No active modals to close');
+            console.warn('No active modals to close');
             return;
         }
 
-        console.log(`🚪 Closing all ${this.activeModals.size} active modals`);
+        console.warn(`🚪 Closing all ${this.activeModals.size} active modals`);
 
         const modalIds = Array.from(this.activeModals.keys());
         
@@ -511,14 +511,14 @@ class ModalManager {
         // Emergency cleanup
         this.emergencyCleanup();
 
-        console.log('✅ All modals closed');
+        console.warn('✅ All modals closed');
     }
 
     /**
      * Emergency cleanup for critical situations
      */
     emergencyCleanup() {
-        console.log('🚨 Performing emergency cleanup');
+        console.warn('🚨 Performing emergency cleanup');
 
         try {
             // Clear all event listeners
@@ -534,7 +534,7 @@ class ModalManager {
 
             this.previousFocus = null;
 
-            console.log('✅ Emergency cleanup completed');
+            console.warn('✅ Emergency cleanup completed');
 
         } catch (error) {
             console.error('Emergency cleanup failed:', error);
@@ -551,7 +551,7 @@ class ModalManager {
             'keydown',
             (event) => {
                 if (event.key === 'Escape' && this.activeModals.size > 0) {
-                    console.log('🚨 Global escape key pressed');
+                    console.warn('🚨 Global escape key pressed');
                     this.closeAllModals();
                 }
             },
@@ -573,13 +573,13 @@ class ModalManager {
             'visibilitychange',
             () => {
                 if (document.hidden && this.activeModals.size > 0) {
-                    console.log('🚨 Page hidden with active modals, performing cleanup');
+                    console.warn('🚨 Page hidden with active modals, performing cleanup');
                     this.emergencyCleanup();
                 }
             }
         );
 
-        console.log('📝 Global event handlers registered');
+        console.warn('📝 Global event handlers registered');
     }
 
     /**
@@ -660,4 +660,4 @@ window.EventListenerRegistry = EventListenerRegistry;
 window.DOMStateResetUtils = DOMStateResetUtils;
 window.modalManager = modalManager;
 
-console.log('📦 Modal State Manager module loaded');
+console.warn('📦 Modal State Manager module loaded');

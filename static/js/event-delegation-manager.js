@@ -422,9 +422,9 @@ class EventDelegationManager {
     log(message, data = null) {
         if (this.options.debugMode) {
             if (data) {
-                console.log(`[EventDelegationManager] ${message}:`, data);
+                console.warn(`[EventDelegationManager] ${message}:`, data);
             } else {
-                console.log(`[EventDelegationManager] ${message}`);
+                console.warn(`[EventDelegationManager] ${message}`);
             }
         }
     }

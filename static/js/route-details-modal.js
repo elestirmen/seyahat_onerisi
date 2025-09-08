@@ -315,7 +315,7 @@ class RouteDetailsModal {
     }
 
     attachMapControlListeners() {
-        console.log('🔧 Attaching map control listeners');
+        console.warn('🔧 Attaching map control listeners');
 
         // Check if modal exists
         if (!this.modal) {
@@ -326,33 +326,33 @@ class RouteDetailsModal {
         // Map controls
         const fitBtn = document.getElementById('fitMapBtn');
         if (fitBtn) {
-            console.log('✅ Fit map button found, adding event listener');
+            console.warn('✅ Fit map button found, adding event listener');
             fitBtn.addEventListener('click', (e) => {
-                console.log('🔍 Fit map button clicked');
+                console.warn('🔍 Fit map button clicked');
                 e.preventDefault();
                 e.stopPropagation();
                 this.fitMapToRoute();
             });
-            console.log('✅ Fit map button event listener attached successfully');
+            console.warn('✅ Fit map button event listener attached successfully');
         } else {
             console.error('❌ Fit map button not found');
         }
 
         const fullscreenBtn = document.getElementById('fullscreenMapBtn');
         if (fullscreenBtn) {
-            console.log('✅ Fullscreen button found, adding event listener');
+            console.warn('✅ Fullscreen button found, adding event listener');
             fullscreenBtn.addEventListener('click', (e) => {
-                console.log('🔍 Fullscreen button clicked');
+                console.warn('🔍 Fullscreen button clicked');
                 e.preventDefault();
                 e.stopPropagation();
                 this.toggleFullscreenMap();
             });
-            console.log('✅ Fullscreen button event listener attached successfully');
+            console.warn('✅ Fullscreen button event listener attached successfully');
         } else {
             console.error('❌ Fullscreen button not found');
         }
 
-        console.log('🔧 Map control listeners attachment completed');
+        console.warn('🔧 Map control listeners attachment completed');
     }
 
     attachActionButtonListeners() {
@@ -383,9 +383,9 @@ class RouteDetailsModal {
         // Map controls
         const fitBtn = document.getElementById('fitMapBtn');
         if (fitBtn) {
-            console.log('✅ Fit map button found, adding event listener');
+            console.warn('✅ Fit map button found, adding event listener');
             fitBtn.addEventListener('click', (e) => {
-                console.log('🔍 Fit map button clicked');
+                console.warn('🔍 Fit map button clicked');
                 e.preventDefault();
                 e.stopPropagation();
                 this.fitMapToRoute();
@@ -396,9 +396,9 @@ class RouteDetailsModal {
 
         const fullscreenBtn = document.getElementById('fullscreenMapBtn');
         if (fullscreenBtn) {
-            console.log('✅ Fullscreen button found, adding event listener');
+            console.warn('✅ Fullscreen button found, adding event listener');
             fullscreenBtn.addEventListener('click', (e) => {
-                console.log('🔍 Fullscreen button clicked');
+                console.warn('🔍 Fullscreen button clicked');
                 e.preventDefault();
                 e.stopPropagation();
                 this.toggleFullscreenMap();
@@ -409,9 +409,9 @@ class RouteDetailsModal {
     }
 
     async show(routeData) {
-        console.log('🎯 Showing route details modal with data:', routeData);
-        console.log('📊 Modal element exists:', !!this.modal);
-        console.log('📊 Route data structure inspection:', {
+        console.warn('🎯 Showing route details modal with data:', routeData);
+        console.warn('📊 Modal element exists:', !!this.modal);
+        console.warn('📊 Route data structure inspection:', {
             hasId: !!routeData.id,
             hasName: !!routeData.name,
             hasPois: !!(routeData.pois && routeData.pois.length > 0),
@@ -425,10 +425,10 @@ class RouteDetailsModal {
 
         // Log POI structure if available
         if (routeData.pois && routeData.pois.length > 0) {
-            console.log('📍 First POI structure:', routeData.pois[0]);
+            console.warn('📍 First POI structure:', routeData.pois[0]);
         }
         if (routeData.waypoints && routeData.waypoints.length > 0) {
-            console.log('📍 First waypoint structure:', routeData.waypoints[0]);
+            console.warn('📍 First waypoint structure:', routeData.waypoints[0]);
         }
 
         this.currentRoute = routeData;
@@ -451,7 +451,7 @@ class RouteDetailsModal {
 
         // Attach map control listeners after modal HTML is created
         setTimeout(() => {
-            console.log('🎯 Attaching map control listeners after modal show');
+            console.warn('🎯 Attaching map control listeners after modal show');
             this.attachMapControlListeners();
         }, 100);
 
@@ -471,7 +471,7 @@ class RouteDetailsModal {
 
             // ALWAYS pre-load map content on mobile (critical fix)
             if (isMobile) {
-                console.log('📱 Pre-loading map content for mobile (critical fix)');
+                console.warn('📱 Pre-loading map content for mobile (critical fix)');
                 // Force map tab to be temporarily visible for initialization
                 const mapTab = document.querySelector('.route-details-tab-content[data-tab="map"]');
                 if (mapTab) {
@@ -508,7 +508,7 @@ class RouteDetailsModal {
     }
 
     hide() {
-        console.log('🎯 Hiding route details modal');
+        console.warn('🎯 Hiding route details modal');
 
         this.modal.classList.remove('show');
         this.isVisible = false;
@@ -621,7 +621,7 @@ class RouteDetailsModal {
     async switchTab(tabName) {
         if (this.currentTab === tabName) return;
 
-        console.log('🔄 Switching to tab:', tabName);
+        console.warn('🔄 Switching to tab:', tabName);
 
         const prevTab = this.currentTab;
 
@@ -723,7 +723,7 @@ class RouteDetailsModal {
                 mapContainer.getBoundingClientRect();
                 mapTab.offsetHeight;
 
-                console.log('📱 Forced map container sizing before content load:', {
+                console.warn('📱 Forced map container sizing before content load:', {
                     width: mapContainer.offsetWidth,
                     height: mapContainer.offsetHeight,
                     tabVisible: mapTab.style.visibility,
@@ -741,7 +741,7 @@ class RouteDetailsModal {
 
             setTimeout(() => {
                 if (this.mapInstance) {
-                    console.log('🗺️ Invalidating map size after tab switch');
+                    console.warn('🗺️ Invalidating map size after tab switch');
                     this.mapInstance.invalidateSize();
                     if (!this.hasFittedBounds && !this.userHasInteracted) {
                         this.fitMapToRoute(true);
@@ -763,7 +763,7 @@ class RouteDetailsModal {
                 const elevationCanvas = document.getElementById('modalElevationChart');
 
                 if (elevationContainer && !elevationCanvas) {
-                    console.log('🏔️ Initializing elevation chart after tab switch');
+                    console.warn('🏔️ Initializing elevation chart after tab switch');
                     const chartDelay = isMobile ? 400 : 100;
                     setTimeout(() => {
                         this.initializeElevationChart();
@@ -961,7 +961,7 @@ class RouteDetailsModal {
             const elevationCanvas = document.getElementById('modalElevationChart');
 
             if (!elevationContainer || !elevationCanvas) {
-                console.log('🏔️ Elevation chart missing, initializing...');
+                console.warn('🏔️ Elevation chart missing, initializing...');
                 const chartDelay = isMobile ? 800 : 200;
                 setTimeout(() => {
                     this.initializeElevationChart();
@@ -973,8 +973,8 @@ class RouteDetailsModal {
         }
 
         try {
-            console.log('🗺️ Initializing new map instance for modal');
-            console.log('📏 Container dimensions before map init:', {
+            console.warn('🗺️ Initializing new map instance for modal');
+            console.warn('📏 Container dimensions before map init:', {
                 width: mapContainer.offsetWidth,
                 height: mapContainer.offsetHeight,
                 style: mapContainer.style.cssText
@@ -983,14 +983,14 @@ class RouteDetailsModal {
             // Wait for container to be properly sized on mobile
             if (isMobile) {
                 await new Promise(resolve => setTimeout(resolve, 300));
-                console.log('📏 Container dimensions after wait:', {
+                console.warn('📏 Container dimensions after wait:', {
                     width: mapContainer.offsetWidth,
                     height: mapContainer.offsetHeight
                 });
             }
 
             // Initialize Leaflet map with proper sizing
-            console.log('🗺️ Creating Leaflet map instance...');
+            console.warn('🗺️ Creating Leaflet map instance...');
             this.mapInstance = L.map('routeModalMap', {
                 preferCanvas: true,
                 zoomControl: true,
@@ -1004,8 +1004,8 @@ class RouteDetailsModal {
                 scrollWheelZoom: 'center'
             }).setView([38.6431, 34.8286], 10);
 
-            console.log('✅ Map instance created successfully');
-            console.log('📊 Map container info after creation:', {
+            console.warn('✅ Map instance created successfully');
+            console.warn('📊 Map container info after creation:', {
                 mapSize: this.mapInstance.getSize(),
                 mapCenter: this.mapInstance.getCenter(),
                 mapZoom: this.mapInstance.getZoom(),
@@ -1024,8 +1024,8 @@ class RouteDetailsModal {
             const mapDelay = isMobile ? 800 : 200;
 
             setTimeout(async () => {
-                console.log('🗺️ Map ready, invalidating size and displaying route');
-                console.log('📏 Final container dimensions:', {
+                console.warn('🗺️ Map ready, invalidating size and displaying route');
+                console.warn('📏 Final container dimensions:', {
                     width: mapContainer.offsetWidth,
                     height: mapContainer.offsetHeight
                 });
@@ -1039,7 +1039,7 @@ class RouteDetailsModal {
                 if (isMobile) {
                     for (let i = 0; i < 3; i++) {
                         setTimeout(() => {
-                            console.log(`🔄 Mobile resize attempt ${i + 1}`);
+                            console.warn(`🔄 Mobile resize attempt ${i + 1}`);
                             this.mapInstance.invalidateSize();
                             if (i === 2) this.fitMapToRoute();
                         }, (i + 1) * 200);
@@ -1071,8 +1071,8 @@ class RouteDetailsModal {
         if (!poisContainer) return;
 
         try {
-            console.log('🏛️ Loading POIs content for route:', this.currentRoute.name);
-            console.log('📊 POI data in currentRoute:', {
+            console.warn('🏛️ Loading POIs content for route:', this.currentRoute.name);
+            console.warn('📊 POI data in currentRoute:', {
                 hasPois: !!(this.currentRoute.pois && this.currentRoute.pois.length > 0),
                 poisCount: this.currentRoute.pois ? this.currentRoute.pois.length : 0,
                 hasWaypoints: !!(this.currentRoute.waypoints && this.currentRoute.waypoints.length > 0),
@@ -1084,24 +1084,24 @@ class RouteDetailsModal {
             // Get POIs from route data
             if (this.currentRoute.pois) {
                 pois = this.currentRoute.pois;
-                console.log('✅ Using POIs from currentRoute.pois:', pois.length);
+                console.warn('✅ Using POIs from currentRoute.pois:', pois.length);
             } else if (this.currentRoute.waypoints) {
                 pois = this.currentRoute.waypoints;
-                console.log('✅ Using waypoints from currentRoute.waypoints:', pois.length);
+                console.warn('✅ Using waypoints from currentRoute.waypoints:', pois.length);
             } else {
                 // Fetch POIs from API
                 const apiBase = window.apiBase || '/api';
-                console.log('📡 Fetching POIs from API:', `${apiBase}/routes/${this.currentRoute.id}`);
+                console.warn('📡 Fetching POIs from API:', `${apiBase}/routes/${this.currentRoute.id}`);
 
                 const response = await fetch(`${apiBase}/routes/${this.currentRoute.id}`);
-                console.log('📡 POIs API response status:', response.status, response.statusText);
+                console.warn('📡 POIs API response status:', response.status, response.statusText);
 
                 if (response.ok) {
                     const routeDetails = await response.json();
                     pois = routeDetails.pois || [];
-                    console.log('✅ Fetched POIs from API:', pois.length);
+                    console.warn('✅ Fetched POIs from API:', pois.length);
                 } else {
-                    console.log('❌ Failed to fetch POIs from API:', response.status);
+                    console.warn('❌ Failed to fetch POIs from API:', response.status);
                 }
             }
 
@@ -1160,10 +1160,10 @@ class RouteDetailsModal {
         if (!mediaTabContent) return;
 
         try {
-            console.log('🎬 Loading media content for route:', this.currentRoute.name);
+            console.warn('🎬 Loading media content for route:', this.currentRoute.name);
 
             const apiBase = window.apiBase || '/api';
-            console.log('📡 Fetching media content from:', `${apiBase}/admin/routes/${this.currentRoute.id}/media`);
+            console.warn('📡 Fetching media content from:', `${apiBase}/admin/routes/${this.currentRoute.id}/media`);
 
             const response = await fetch(`${apiBase}/admin/routes/${this.currentRoute.id}/media`, {
                 credentials: 'include'
@@ -1246,7 +1246,7 @@ class RouteDetailsModal {
             const is3D = media.media_type === 'model_3d' || media.path?.includes('.glb');
 
             // Debug media URL construction
-            console.log('🎬 Media item URL construction:', {
+            console.warn('🎬 Media item URL construction:', {
                 mediaId: media.id || media._id,
                 url: media.url,
                 path: media.path,
@@ -1264,28 +1264,28 @@ class RouteDetailsModal {
                 // Prioritize full-resolution paths over thumbnails
                 if (media.original_path) {
                     mediaUrl = `/${media.original_path}`;
-                    console.log('🎯 Using original_path for full resolution');
+                    console.warn('🎯 Using original_path for full resolution');
                 } else if (media.full_path) {
                     mediaUrl = `/${media.full_path}`;
-                    console.log('🎯 Using full_path for full resolution');
+                    console.warn('🎯 Using full_path for full resolution');
                 } else if (media.file_path) {
                     mediaUrl = `/${media.file_path}`;
-                    console.log('🎯 Using file_path for full resolution');
+                    console.warn('🎯 Using file_path for full resolution');
                 } else if (media.path) {
                     mediaUrl = media.path.startsWith('/') ? media.path : `/${media.path}`;
-                    console.log('🎯 Using path for full resolution');
+                    console.warn('🎯 Using path for full resolution');
                 } else if (media.filename) {
                     // For files served from root domain (like the error shows)
                     mediaUrl = `/${media.filename}`;
-                    console.log('🎯 Using filename for full resolution');
+                    console.warn('🎯 Using filename for full resolution');
                 } else {
                     // Last resort - serve from uploads directory
                     mediaUrl = `/uploads/${mediaUrl}`;
-                    console.log('🎯 Using uploads directory as fallback');
+                    console.warn('🎯 Using uploads directory as fallback');
                 }
             }
 
-            console.log('🎬 Final media URL for display:', mediaUrl);
+            console.warn('🎬 Final media URL for display:', mediaUrl);
 
             let typeIcon = 'fas fa-file';
             if (isVideo) typeIcon = 'fas fa-play';
@@ -1391,13 +1391,13 @@ class RouteDetailsModal {
 
     async displayRouteOnMap() {
         if (!this.mapInstance || !this.currentRoute) {
-            console.log('❌ Cannot display route on map - missing map instance or route data');
+            console.warn('❌ Cannot display route on map - missing map instance or route data');
             return;
         }
 
         try {
-            console.log('🗺️ Displaying enhanced route on modal map:', this.currentRoute.name);
-            console.log('📊 Route data structure:', {
+            console.warn('🗺️ Displaying enhanced route on modal map:', this.currentRoute.name);
+            console.warn('📊 Route data structure:', {
                 hasPois: !!(this.currentRoute.pois && this.currentRoute.pois.length > 0),
                 poisCount: this.currentRoute.pois ? this.currentRoute.pois.length : 0,
                 hasWaypoints: !!(this.currentRoute.waypoints && this.currentRoute.waypoints.length > 0),
@@ -1406,7 +1406,7 @@ class RouteDetailsModal {
             });
 
             // Ensure map is properly sized before adding content
-            console.log('🗺️ Invalidating map size before displaying route');
+            console.warn('🗺️ Invalidating map size before displaying route');
             this.mapInstance.invalidateSize();
 
             // Clear existing layers
@@ -1418,7 +1418,7 @@ class RouteDetailsModal {
 
             // Add route geometry if available
             if (this.currentRoute.geometry) {
-                console.log('🛣️ Adding route geometry to map');
+                console.warn('🛣️ Adding route geometry to map');
                 const geometry = typeof this.currentRoute.geometry === 'string'
                     ? JSON.parse(this.currentRoute.geometry)
                     : this.currentRoute.geometry;
@@ -1440,29 +1440,29 @@ class RouteDetailsModal {
                         renderer: this.canvasRenderer || undefined
                     }).addTo(this.mapInstance);
 
-                    console.log('✅ Route geometry added successfully');
+                    console.warn('✅ Route geometry added successfully');
                 }
             }
 
             // Add enhanced POI markers with detailed popups and modal integration
             const pois = this.currentRoute.pois || this.currentRoute.waypoints || [];
-            console.log('📍 Processing POIs for markers:', pois.length, 'POIs found');
+            console.warn('📍 Processing POIs for markers:', pois.length, 'POIs found');
 
             if (pois.length === 0) {
-                console.log('⚠️ No POIs found to display as markers');
+                console.warn('⚠️ No POIs found to display as markers');
             } else {
-                console.log('📍 Adding POI markers to map...');
+                console.warn('📍 Adding POI markers to map...');
             }
 
             let markersAdded = 0;
             pois.forEach((poi, index) => {
-                console.log(`📍 Processing POI ${index + 1}:`, poi.name || `POI ${index + 1}`);
+                console.warn(`📍 Processing POI ${index + 1}:`, poi.name || `POI ${index + 1}`);
 
                 // More flexible coordinate detection
                 const lat = poi.latitude || poi.lat || poi.coords?.[1] || poi.location?.lat || poi.position?.lat;
                 const lng = poi.longitude || poi.lng || poi.lon || poi.coords?.[0] || poi.location?.lng || poi.position?.lng;
 
-                console.log(`📍 POI ${index + 1} coordinates:`, {
+                console.warn(`📍 POI ${index + 1} coordinates:`, {
                     lat, lng,
                     hasLat: !!lat,
                     hasLng: !!lng,
@@ -1471,7 +1471,7 @@ class RouteDetailsModal {
                 });
 
                 if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
-                    console.log(`✅ Creating marker for POI ${index + 1}: ${poi.name} at [${lat}, ${lng}]`);
+                    console.warn(`✅ Creating marker for POI ${index + 1}: ${poi.name} at [${lat}, ${lng}]`);
                     const categoryStyle = this.getCategoryStyle(poi.category);
 
                     try {
@@ -1502,7 +1502,7 @@ class RouteDetailsModal {
                         // Hover effects removed to prevent jitter on some browsers
 
                         markersAdded++;
-                        console.log(`✅ POI marker ${index + 1} added successfully`);
+                        console.warn(`✅ POI marker ${index + 1} added successfully`);
                     } catch (markerError) {
                         console.error(`❌ Error creating marker for POI ${index + 1}:`, markerError);
                     }
@@ -1511,14 +1511,14 @@ class RouteDetailsModal {
                 }
             });
 
-            console.log(`📍 Total markers added: ${markersAdded} out of ${pois.length} POIs`);
+            console.warn(`📍 Total markers added: ${markersAdded} out of ${pois.length} POIs`);
 
             // Load and display media markers for the route
             await this.loadRouteMediaMarkers();
 
             // Fit map once after marker creation to initial bounds
             setTimeout(() => {
-                console.log('🎯 Fitting map to route after marker creation');
+                console.warn('🎯 Fitting map to route after marker creation');
                 this.fitMapToRoute(true);
             }, 100);
 
@@ -1588,35 +1588,35 @@ class RouteDetailsModal {
     // Load and display media markers for the route
     async loadRouteMediaMarkers() {
         if (!this.mapInstance || !this.currentRoute) {
-            console.log('❌ Cannot load media markers - missing map instance or route data');
+            console.warn('❌ Cannot load media markers - missing map instance or route data');
             return;
         }
 
         try {
-            console.log('🎬 Loading media markers for route:', this.currentRoute.id || this.currentRoute._id);
+            console.warn('🎬 Loading media markers for route:', this.currentRoute.id || this.currentRoute._id);
 
             const routeId = this.currentRoute.id || this.currentRoute._id;
             if (!routeId) {
-                console.log('❌ No route ID available for media markers');
+                console.warn('❌ No route ID available for media markers');
                 return;
             }
 
             const apiBase = window.apiBase || '/api';
-            console.log('📡 Fetching media from:', `${apiBase}/admin/routes/${routeId}/media`);
+            console.warn('📡 Fetching media from:', `${apiBase}/admin/routes/${routeId}/media`);
 
             const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
                 credentials: 'include'
             });
 
-            console.log('📡 Media API response status:', response.status, response.statusText);
+            console.warn('📡 Media API response status:', response.status, response.statusText);
 
             if (!response.ok) {
-                console.log('ℹ️ No media found for route or access denied:', response.status);
+                console.warn('ℹ️ No media found for route or access denied:', response.status);
                 return;
             }
 
             const data = await response.json();
-            console.log('📊 Raw media API response:', data);
+            console.warn('📊 Raw media API response:', data);
 
             let mediaFiles = [];
 
@@ -1629,7 +1629,7 @@ class RouteDetailsModal {
                 mediaFiles = data.files;
             }
 
-            console.log(`📊 Found ${mediaFiles.length} media files total`);
+            console.warn(`📊 Found ${mediaFiles.length} media files total`);
 
             // Filter media items that have location data
             const locatedMedia = mediaFiles.filter(media => {
@@ -1638,7 +1638,7 @@ class RouteDetailsModal {
                 const lng = media.longitude || media.lng || media.lon || media.coords?.[0] || media.location?.lng || media.position?.lng;
                 const hasLocation = lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng));
 
-                console.log(`📍 Media item location check:`, {
+                console.warn(`📍 Media item location check:`, {
                     mediaId: media.id || media._id,
                     caption: media.caption || media.filename,
                     lat, lng, hasLocation,
@@ -1656,14 +1656,14 @@ class RouteDetailsModal {
                 return hasLocation;
             });
 
-            console.log(`📍 Found ${locatedMedia.length} media items with location data out of ${mediaFiles.length} total`);
+            console.warn(`📍 Found ${locatedMedia.length} media items with location data out of ${mediaFiles.length} total`);
 
             if (locatedMedia.length === 0) {
-                console.log('ℹ️ No media with location data found for this route');
+                console.warn('ℹ️ No media with location data found for this route');
                 return;
             }
 
-            console.log(`📍 Found ${locatedMedia.length} media items with location data`);
+            console.warn(`📍 Found ${locatedMedia.length} media items with location data`);
 
             // Also add image media markers to elevation chart overlay
             try {
@@ -1696,7 +1696,7 @@ class RouteDetailsModal {
                 const lat = parseFloat(media.latitude || media.lat || media.coords?.[1] || media.location?.lat || media.position?.lat);
                 const lng = parseFloat(media.longitude || media.lng || media.lon || media.coords?.[0] || media.location?.lng || media.position?.lng);
 
-                console.log(`🎯 Creating media marker ${index + 1} at [${lat}, ${lng}]:`, media.caption || media.filename);
+                console.warn(`🎯 Creating media marker ${index + 1} at [${lat}, ${lng}]:`, media.caption || media.filename);
 
                 // Create media marker icon
                 const mediaMarker = L.marker([lat, lng], {
@@ -1712,10 +1712,10 @@ class RouteDetailsModal {
                     className: 'media-popup'
                 });
 
-                console.log(`✅ Media marker ${index + 1} created successfully`);
+                console.warn(`✅ Media marker ${index + 1} created successfully`);
             });
 
-            console.log('✅ Media markers loaded successfully');
+            console.warn('✅ Media markers loaded successfully');
 
         } catch (error) {
             console.error('❌ Error loading media markers:', error);
@@ -1752,14 +1752,14 @@ class RouteDetailsModal {
 
     // Create media popup content
     createMediaPopupContent(media) {
-        console.log('🎬 Creating media popup content for:', media);
+        console.warn('🎬 Creating media popup content for:', media);
 
         // Get raw media URL
         const rawMediaUrl = media.url || media.path || media.filename || '';
         const caption = media.caption || media.alt_text || 'Medya';
         const mediaType = media.media_type || 'image';
 
-        console.log('🎬 Media popup details:', {
+        console.warn('🎬 Media popup details:', {
             rawMediaUrl,
             url: media.url,
             path: media.path,
@@ -1772,7 +1772,7 @@ class RouteDetailsModal {
         });
 
         if (!rawMediaUrl) {
-            console.log('❌ No media URL found for media item');
+            console.warn('❌ No media URL found for media item');
             return `
                 <div class="media-popup-content" style="font-family: 'Segoe UI', sans-serif; max-width: 250px;">
                     <div class="media-info">
@@ -1802,7 +1802,7 @@ class RouteDetailsModal {
             }
         }
 
-        console.log('🎬 Final media popup URL:', mediaUrl);
+        console.warn('🎬 Final media popup URL:', mediaUrl);
 
         let mediaPreview = '';
         if (mediaType === 'image') {
@@ -1852,20 +1852,20 @@ class RouteDetailsModal {
     }
 
     focusOnPoi(lat, lng) {
-        console.log('🎯 Focusing on POI at:', lat, lng);
+        console.warn('🎯 Focusing on POI at:', lat, lng);
 
         if (this.mapInstance) {
             this.switchTab('map');
             setTimeout(() => {
                 if (lat && lng) {
-                    console.log('✅ Setting map view to:', [lat, lng]);
+                    console.warn('✅ Setting map view to:', [lat, lng]);
                     this.mapInstance.setView([lat, lng], 16);
                 } else {
-                    console.log('❌ Invalid coordinates for focusOnPoi:', lat, lng);
+                    console.warn('❌ Invalid coordinates for focusOnPoi:', lat, lng);
                 }
             }, 300);
         } else {
-            console.log('❌ Map instance not available for focusOnPoi');
+            console.warn('❌ Map instance not available for focusOnPoi');
         }
     }
 
@@ -1878,7 +1878,7 @@ class RouteDetailsModal {
             return;
         }
 
-        console.log('🔄 Fitting map to route', { force, hasFittedBounds: this.hasFittedBounds, userHasInteracted: this.userHasInteracted });
+        console.warn('🔄 Fitting map to route', { force, hasFittedBounds: this.hasFittedBounds, userHasInteracted: this.userHasInteracted });
 
         if (!this.mapInstance) {
             console.error('❌ No map instance available');
@@ -1899,7 +1899,7 @@ class RouteDetailsModal {
             }
         });
 
-        console.log(`📍 Found ${markers.length} markers and ${polylines.length} polylines on map`);
+        console.warn(`📍 Found ${markers.length} markers and ${polylines.length} polylines on map`);
 
         // Collect all layers for bounds calculation
         const allLayers = [...markers, ...polylines];
@@ -1911,7 +1911,7 @@ class RouteDetailsModal {
 
                 // Check if bounds are valid
                 if (bounds.isValid()) {
-                    console.log('🎯 Fitting to bounds:', bounds);
+                    console.warn('🎯 Fitting to bounds:', bounds);
 
                     // Use different padding for mobile vs desktop
                     const isMobile = window.innerWidth <= 768;
@@ -1921,7 +1921,7 @@ class RouteDetailsModal {
                         padding: padding,
                         maxZoom: 16 // Prevent zooming too close
                     });
-                    console.log('✅ Map fitted to route successfully');
+                    console.warn('✅ Map fitted to route successfully');
                     this.hasFittedBounds = true;
                 } else {
                     console.warn('⚠️ Invalid bounds, using default view');
@@ -1941,7 +1941,7 @@ class RouteDetailsModal {
     }
 
     toggleFullscreenMap() {
-        console.log('🔄 Toggling fullscreen map');
+        console.warn('🔄 Toggling fullscreen map');
 
         const modalContent = document.querySelector('.route-details-modal-content');
         const modal = document.getElementById('routeDetailsModal');
@@ -1955,7 +1955,7 @@ class RouteDetailsModal {
         if (document.fullscreenElement) {
             // Exit fullscreen
             document.exitFullscreen().then(() => {
-                console.log('✅ Exited fullscreen mode');
+                console.warn('✅ Exited fullscreen mode');
                 modalContent.style.position = '';
                 modalContent.style.width = '';
                 modalContent.style.height = '';
@@ -1966,7 +1966,7 @@ class RouteDetailsModal {
         } else {
             // Enter fullscreen
             modalContent.requestFullscreen().then(() => {
-                console.log('✅ Entered fullscreen mode');
+                console.warn('✅ Entered fullscreen mode');
                 modalContent.style.position = 'fixed';
                 modalContent.style.width = '100vw';
                 modalContent.style.height = '100vh';
@@ -1982,7 +1982,7 @@ class RouteDetailsModal {
     }
 
     fallbackFullscreen(modalContent) {
-        console.log('🔄 Using fallback fullscreen mode');
+        console.warn('🔄 Using fallback fullscreen mode');
 
         // Fallback for browsers that don't support fullscreen API
         modalContent.style.position = 'fixed';
@@ -2002,7 +2002,7 @@ class RouteDetailsModal {
                 modalContent.style.zIndex = '';
                 modalContent.style.background = '';
                 document.removeEventListener('keydown', escapeHandler);
-                console.log('✅ Exited fallback fullscreen mode');
+                console.warn('✅ Exited fallback fullscreen mode');
             }
         };
         document.addEventListener('keydown', escapeHandler);
@@ -2062,36 +2062,36 @@ class RouteDetailsModal {
     }
 
     exportRoute() {
-        console.log('Export route');
+        console.warn('Export route');
         // Implementation for route export
     }
 
     shareRoute() {
-        console.log('Share route');
+        console.warn('Share route');
         // Implementation for route sharing
     }
 
     // Initialize elevation chart using Chart.js
     async initializeElevationChart() {
         if (!this.currentRoute) {
-            console.log('❌ Cannot initialize elevation chart - no route data');
+            console.warn('❌ Cannot initialize elevation chart - no route data');
             return;
         }
 
-        console.log('🏔️ Attempting to initialize elevation chart...');
+        console.warn('🏔️ Attempting to initialize elevation chart...');
 
         const container = document.getElementById('routeModalElevationContainer');
         if (!container) {
             console.error('❌ Elevation chart container not found');
-            console.log('🔍 Available elements with "elevation" in ID:',
+            console.warn('🔍 Available elements with "elevation" in ID:',
                 Array.from(document.querySelectorAll('[id*="elevation"]')).map(el => el.id));
             return;
         }
 
-        console.log('✅ Elevation chart container found:', container);
+        console.warn('✅ Elevation chart container found:', container);
 
         try {
-            console.log('🗺️ Initializing elevation chart for route details modal');
+            console.warn('🗺️ Initializing elevation chart for route details modal');
 
             // Clear any existing content
             container.innerHTML = '';
@@ -2107,13 +2107,13 @@ class RouteDetailsModal {
                 </div>
             `;
 
-            console.log('✅ Elevation chart HTML structure created successfully');
+            console.warn('✅ Elevation chart HTML structure created successfully');
 
             // Wait for DOM to update before loading elevation data
             setTimeout(async () => {
-                console.log('🏔️ DOM updated, checking for canvas...');
+                console.warn('🏔️ DOM updated, checking for canvas...');
                 const canvas = document.getElementById('modalElevationChart');
-                console.log('🏔️ Canvas found:', !!canvas);
+                console.warn('🏔️ Canvas found:', !!canvas);
 
                 // ULTRA AGGRESSIVE mobile canvas sizing
                 const isMobile = window.innerWidth <= 768;
@@ -2157,7 +2157,7 @@ class RouteDetailsModal {
                 }
 
                 if (canvas) {
-                    console.log('🏔️ Canvas details:', {
+                    console.warn('🏔️ Canvas details:', {
                         id: canvas.id,
                         width: canvas.width,
                         height: canvas.height,
@@ -2186,12 +2186,12 @@ class RouteDetailsModal {
 
     async loadElevationProfile() {
         if (!this.currentRoute) {
-            console.log('❌ Cannot load elevation profile - missing route data');
+            console.warn('❌ Cannot load elevation profile - missing route data');
             return;
         }
 
         try {
-            console.log('🗺️ Loading elevation profile for route:', this.currentRoute.name);
+            console.warn('🗺️ Loading elevation profile for route:', this.currentRoute.name);
 
             // Wait for canvas to be available with retry mechanism
             let canvas = document.getElementById('modalElevationChart');
@@ -2199,7 +2199,7 @@ class RouteDetailsModal {
             const maxRetries = 20;
 
             while (!canvas && retries < maxRetries) {
-                console.log(`🔄 Waiting for elevation canvas... attempt ${retries + 1}/${maxRetries}`);
+                console.warn(`🔄 Waiting for elevation canvas... attempt ${retries + 1}/${maxRetries}`);
                 await new Promise(resolve => setTimeout(resolve, 150));
                 canvas = document.getElementById('modalElevationChart');
                 retries++;
@@ -2223,7 +2223,7 @@ class RouteDetailsModal {
                 }
             } catch (_) { /* ignore */ }
 
-            console.log('✅ Elevation canvas found, proceeding with chart creation');
+            console.warn('✅ Elevation canvas found, proceeding with chart creation');
 
             const ctx = canvas.getContext('2d');
 
@@ -2231,7 +2231,7 @@ class RouteDetailsModal {
             let elevationData = [];
 
             if (this.currentRoute.elevation_profile) {
-                console.log('✅ Using pre-calculated elevation profile');
+                console.warn('✅ Using pre-calculated elevation profile');
                 // Normalize DB distances (meters) to km for the chart
                 const points = this.currentRoute.elevation_profile.points || [];
                 elevationData = points.map(p => {
@@ -2252,7 +2252,7 @@ class RouteDetailsModal {
                 // Sanitize series: remove invalids, sort, ensure monotonicity
                 elevationData = this._sanitizeElevationData(elevationData);
             } else {
-                console.log('🔄 Generating elevation data from route');
+                console.warn('🔄 Generating elevation data from route');
                 elevationData = await this.generateElevationData();
             }
 
@@ -2280,7 +2280,7 @@ class RouteDetailsModal {
                         name: i === 0 ? 'Başlangıç' : i === points - 1 ? 'Bitiş' : null
                     });
                 }
-                console.log(`✅ Created ${elevationData.length} fallback elevation points`);
+                console.warn(`✅ Created ${elevationData.length} fallback elevation points`);
             }
 
             // Optionally extend last point to route end if there is a small gap
@@ -2326,7 +2326,7 @@ class RouteDetailsModal {
                 }
             } catch (_) { /* ignore */ }
 
-            console.log('✅ Elevation profile loaded successfully');
+            console.warn('✅ Elevation profile loaded successfully');
 
         } catch (error) {
             console.error('❌ Error loading elevation profile:', error);
@@ -2435,7 +2435,7 @@ class RouteDetailsModal {
                 }
             }
 
-            console.log('📊 Generated elevation data points:', elevationData.length);
+            console.warn('📊 Generated elevation data points:', elevationData.length);
             return elevationData;
 
         } catch (error) {
@@ -2789,7 +2789,7 @@ class RouteDetailsModal {
         // Update statistics
         this.updateElevationStats(elevationData, routeTotalKm);
 
-        console.log('✅ Chart.js elevation chart created successfully');
+        console.warn('✅ Chart.js elevation chart created successfully');
     }
 
     addChartMouseHandlers(canvas, elevationData) {
@@ -3400,7 +3400,7 @@ class RouteDetailsModal {
     }
 
     showMediaViewer(mediaUrl, mediaType, mediaIndex = 0) {
-        console.log('🎬 Show media viewer:', mediaUrl, mediaType, 'index:', mediaIndex);
+        console.warn('🎬 Show media viewer:', mediaUrl, mediaType, 'index:', mediaIndex);
 
         if (!mediaUrl) {
             console.error('❌ No media URL provided to showMediaViewer');
@@ -3446,13 +3446,13 @@ class RouteDetailsModal {
             const response = await fetch(url, { method: 'HEAD' });
             return response.ok;
         } catch (error) {
-            console.log('❌ Media URL test failed:', url, error);
+            console.warn('❌ Media URL test failed:', url, error);
             return false;
         }
     }
 
     async findWorkingMediaUrl(originalUrl) {
-        console.log('🔍 Finding working media URL for:', originalUrl);
+        console.warn('🔍 Finding working media URL for:', originalUrl);
 
         // Extract filename from original URL
         const filename = originalUrl.split('/').pop();
@@ -3472,14 +3472,14 @@ class RouteDetailsModal {
         ];
 
         for (const pattern of urlPatterns) {
-            console.log('🔍 Testing URL pattern:', pattern);
+            console.warn('🔍 Testing URL pattern:', pattern);
             if (await this.testMediaUrl(pattern)) {
-                console.log('✅ Found working URL:', pattern);
+                console.warn('✅ Found working URL:', pattern);
                 return pattern;
             }
         }
 
-        console.log('❌ No working URL pattern found');
+        console.warn('❌ No working URL pattern found');
         return null;
     }
 
@@ -3561,7 +3561,7 @@ class RouteDetailsModal {
         // Add keyboard navigation
         this.addMediaViewerKeyboardNavigation(viewerModal);
 
-        console.log('✅ Enhanced media viewer modal created with URL:', mediaUrl);
+        console.warn('✅ Enhanced media viewer modal created with URL:', mediaUrl);
 
         // Build/stash current media list for fast navigation
         this.currentMediaList = this.buildCurrentMediaList();
@@ -4098,7 +4098,7 @@ class RouteDetailsModal {
 
     // Initialize base layers for modal map
     initializeBaseLayers() {
-        console.log('🗺️ Initializing base layers for modal map');
+        console.warn('🗺️ Initializing base layers for modal map');
 
         // Define available base layers (same as main map)
         const commonTileOpts = {
@@ -4137,7 +4137,7 @@ class RouteDetailsModal {
         baseLayers["🗺️ OpenStreetMap"].addTo(this.mapInstance);
         L.control.layers(baseLayers).addTo(this.mapInstance);
 
-        console.log('✅ Base layers initialized successfully');
+        console.warn('✅ Base layers initialized successfully');
     }
 
     // Add resize listener for responsive behavior
@@ -4172,7 +4172,7 @@ class RouteDetailsModal {
 
         // Handle orientation changes on mobile devices
         this.orientationListener = () => {
-            console.log('📱 Orientation changed, refreshing map and chart');
+            console.warn('📱 Orientation changed, refreshing map and chart');
             setTimeout(() => {
                 if (!(this.mapInstance && this.isVisible && this.currentTab === 'map')) return;
 
@@ -4271,7 +4271,7 @@ window.RouteDetailsModal = RouteDetailsModal;
 
 // Global function to show route details
 window.showRouteDetails = function (routeData) {
-    console.log('🎯 Global showRouteDetails called with:', routeData);
+    console.warn('🎯 Global showRouteDetails called with:', routeData);
     const modal = RouteDetailsModal.getInstance();
     if (modal) {
         modal.show(routeData);
@@ -4282,16 +4282,16 @@ window.showRouteDetails = function (routeData) {
 
 // Global function to test elevation chart
 window.testElevationChart = function () {
-    console.log('🧪 Testing elevation chart functionality');
+    console.warn('🧪 Testing elevation chart functionality');
 
     // Check for any duplicate elevation canvases
     const canvases = document.querySelectorAll('canvas[id*="levation"]');
-    console.log(`📊 Found ${canvases.length} elevation-related canvases:`, canvases);
+    console.warn(`📊 Found ${canvases.length} elevation-related canvases:`, canvases);
 
     if (canvases.length > 1) {
         console.warn('⚠️ Multiple elevation canvases detected! This might cause issues.');
         canvases.forEach((canvas, index) => {
-            console.log(`Canvas ${index + 1}:`, canvas.id, canvas);
+            console.warn(`Canvas ${index + 1}:`, canvas.id, canvas);
         });
     }
 
@@ -4300,7 +4300,7 @@ window.testElevationChart = function () {
         console.error('❌ Chart.js is not loaded! Elevation chart will not work.');
         return;
     } else {
-        console.log('✅ Chart.js is loaded and available');
+        console.warn('✅ Chart.js is loaded and available');
     }
 
     // Sample route data with geometry for testing
@@ -4357,16 +4357,16 @@ window.testElevationChart = function () {
 
     // Show the test route
     window.showRouteDetails(testRouteData);
-    console.log('✅ Test route loaded, switch to Map tab to see elevation chart');
-    console.log('💡 Tip: The elevation chart will show simulated elevation data for the Cappadocia region');
-    console.log('🔍 Check browser console for canvas count and debug info');
-    console.log('🎯 To test synchronization: Move your mouse over the elevation chart and watch the blue dot move on the map!');
-    console.log('🖱️ Click on the elevation chart to center the map on that position');
+    console.warn('✅ Test route loaded, switch to Map tab to see elevation chart');
+    console.warn('💡 Tip: The elevation chart will show simulated elevation data for the Cappadocia region');
+    console.warn('🔍 Check browser console for canvas count and debug info');
+    console.warn('🎯 To test synchronization: Move your mouse over the elevation chart and watch the blue dot move on the map!');
+    console.warn('🖱️ Click on the elevation chart to center the map on that position');
 };
 
 // Global function for showing route details (main entry point)
 window.showRouteDetails = async function (routeIdOrData) {
-    console.log('🎯 showRouteDetails called with:', routeIdOrData);
+    console.warn('🎯 showRouteDetails called with:', routeIdOrData);
 
     try {
         let routeData;
@@ -4374,7 +4374,7 @@ window.showRouteDetails = async function (routeIdOrData) {
         // If it's a number/string, fetch route data from API
         if (typeof routeIdOrData === 'string' || typeof routeIdOrData === 'number') {
             const routeId = routeIdOrData;
-            console.log('📡 Fetching route data for ID:', routeId);
+            console.warn('📡 Fetching route data for ID:', routeId);
 
             const apiBase = window.apiBase || '/api';
             const response = await fetch(`${apiBase}/routes/${routeId}`);
@@ -4387,12 +4387,12 @@ window.showRouteDetails = async function (routeIdOrData) {
             routeData = data.route || data;
         // Listen tab visibility to re-stabilize layout when returning from another tab
         try { document.addEventListener('visibilitychange', this.handleVisibilityChange); } catch (_) {}
-            console.log('✅ Route data fetched successfully:', routeData.name);
+            console.warn('✅ Route data fetched successfully:', routeData.name);
         }
         // If it's already an object, use it directly
         else if (typeof routeIdOrData === 'object' && routeIdOrData !== null) {
             routeData = routeIdOrData;
-            console.log('✅ Using provided route data:', routeData.name);
+            console.warn('✅ Using provided route data:', routeData.name);
         }
         else {
             throw new Error('Invalid route data provided');
@@ -4406,7 +4406,7 @@ window.showRouteDetails = async function (routeIdOrData) {
         // Get modal instance and show
         const modal = RouteDetailsModal.getInstance();
         if (modal) {
-            console.log('✅ Showing route modal for:', routeData.name);
+            console.warn('✅ Showing route modal for:', routeData.name);
             await modal.show(routeData);
         } else {
             throw new Error('Route details modal not available');

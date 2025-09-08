@@ -197,7 +197,7 @@ class APIClient {
         
         for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
             try {
-                console.log(`🌐 API Request [${requestId}] (attempt ${attempt}/${this.retryAttempts}):`, requestOptions.method, fullURL);
+                console.warn(`🌐 API Request [${requestId}] (attempt ${attempt}/${this.retryAttempts}):`, requestOptions.method, fullURL);
                 
                 const response = await this.fetchWithTimeout(fullURL, requestOptions);
                 
@@ -232,7 +232,7 @@ class APIClient {
                 
                 // Wait before retry
                 const delay = errorResult.delay || this.retryDelay * attempt;
-                console.log(`⏳ Retrying in ${delay}ms...`);
+                console.warn(`⏳ Retrying in ${delay}ms...`);
                 await this.sleep(delay);
             }
         }
@@ -328,7 +328,7 @@ class APIClient {
             throw error;
         }
 
-        console.log(`✅ API Response [${requestId}]:`, response.status, data);
+        console.warn(`✅ API Response [${requestId}]:`, response.status, data);
         return data;
     }
 
@@ -445,7 +445,7 @@ class APIClient {
             window.showToast(message, type);
         } else {
             // Fallback to console and alert for critical errors
-            console.log(`${type.toUpperCase()}: ${message}`);
+            console.warn(`${type.toUpperCase()}: ${message}`);
             if (type === 'error') {
                 alert(message);
             }

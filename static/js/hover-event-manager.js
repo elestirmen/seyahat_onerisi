@@ -831,9 +831,9 @@ class HoverEventManager {
     log(message, data = null) {
         if (this.options.enableDebugLogging) {
             if (data) {
-                console.log(`[HoverEventManager] ${message}:`, data);
+                console.warn(`[HoverEventManager] ${message}:`, data);
             } else {
-                console.log(`[HoverEventManager] ${message}`);
+                console.warn(`[HoverEventManager] ${message}`);
             }
         }
     }

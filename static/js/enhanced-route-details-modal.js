@@ -66,7 +66,7 @@ class EnhancedRouteDetailsModal {
     }
 
     init() {
-        console.log('🚀 Initializing Enhanced Route Details Modal');
+        console.warn('🚀 Initializing Enhanced Route Details Modal');
         
         // Ensure modal manager is available
         if (!this.modalManager) {
@@ -86,10 +86,10 @@ class EnhancedRouteDetailsModal {
                 closeOnClickOutside: true,
                 focusManagement: true
             });
-            console.log('✅ Modal registered with ModalManager');
+            console.warn('✅ Modal registered with ModalManager');
         }
 
-        console.log('✅ Enhanced Route Details Modal initialized');
+        console.warn('✅ Enhanced Route Details Modal initialized');
     }
 
     createModalHTML() {
@@ -232,7 +232,7 @@ class EnhancedRouteDetailsModal {
      * Requirement 1.1, 1.2: Proper modal state management and event listener cleanup
      */
     async show(routeData) {
-        console.log('🎯 Enhanced RouteDetailsModal.show called with data:', routeData);
+        console.warn('🎯 Enhanced RouteDetailsModal.show called with data:', routeData);
 
         try {
             // Store previous focus for restoration (Requirement 6.1: Error handling)
@@ -246,7 +246,7 @@ class EnhancedRouteDetailsModal {
                     closeOnClickOutside: true,
                     focusManagement: true
                 });
-                console.log('✅ Modal opened through ModalManager');
+                console.warn('✅ Modal opened through ModalManager');
             } else {
                 // Fallback: close existing modals manually
                 await this.closeAllModalsManually();
@@ -285,7 +285,7 @@ class EnhancedRouteDetailsModal {
 
                 // Pre-load map content on mobile
                 if (isMobile) {
-                    console.log('📱 Pre-loading map content for mobile');
+                    console.warn('📱 Pre-loading map content for mobile');
                     await this.preloadMapContent();
                 }
 
@@ -301,7 +301,7 @@ class EnhancedRouteDetailsModal {
             // Add resize listener
             this.addResizeListener();
 
-            console.log('✅ Enhanced RouteDetailsModal shown successfully');
+            console.warn('✅ Enhanced RouteDetailsModal shown successfully');
 
         } catch (error) {
             console.error('❌ Failed to show Enhanced RouteDetailsModal:', error);
@@ -317,13 +317,13 @@ class EnhancedRouteDetailsModal {
      * Requirement 1.1, 1.2: Proper cleanup and event listener management
      */
     async hide() {
-        console.log('🎯 Enhanced RouteDetailsModal.hide called');
+        console.warn('🎯 Enhanced RouteDetailsModal.hide called');
 
         try {
             // Use ModalManager to close modal (Requirement 1.1: Modal state management)
             if (this.modalManager) {
                 await this.modalManager.closeModal(this.modalId);
-                console.log('✅ Modal closed through ModalManager');
+                console.warn('✅ Modal closed through ModalManager');
             }
 
             // Pre-hide cleanup
@@ -340,7 +340,7 @@ class EnhancedRouteDetailsModal {
             // Post-hide cleanup using centralized utilities (Requirement 4.3, 4.4: DOM cleanup)
             await this.postHideCleanup();
 
-            console.log('✅ Enhanced RouteDetailsModal hidden successfully');
+            console.warn('✅ Enhanced RouteDetailsModal hidden successfully');
 
         } catch (error) {
             console.error('❌ Failed to hide Enhanced RouteDetailsModal:', error);
@@ -355,7 +355,7 @@ class EnhancedRouteDetailsModal {
      * Requirement 4.3, 4.4: DOM element cleanup
      */
     async preShowCleanup() {
-        console.log('🧹 Performing pre-show cleanup');
+        console.warn('🧹 Performing pre-show cleanup');
 
         // Reset modal element using DOMStateResetUtils
         if (this.domUtils) {
@@ -381,7 +381,7 @@ class EnhancedRouteDetailsModal {
      * Pre-hide cleanup
      */
     async preHideCleanup() {
-        console.log('🧹 Performing pre-hide cleanup');
+        console.warn('🧹 Performing pre-hide cleanup');
 
         // Clean up event listeners
         this.cleanupEventListeners();
@@ -399,7 +399,7 @@ class EnhancedRouteDetailsModal {
      * Requirement 4.3, 4.4: DOM element cleanup
      */
     async postHideCleanup() {
-        console.log('🧹 Performing post-hide cleanup');
+        console.warn('🧹 Performing post-hide cleanup');
 
         // Clean up chart with integration to DOMStateResetUtils
         await this.cleanupChart();
@@ -434,7 +434,7 @@ class EnhancedRouteDetailsModal {
      * Requirement 1.2: Event listener cleanup
      */
     setupEventListeners() {
-        console.log('📝 Setting up event listeners using EventListenerRegistry');
+        console.warn('📝 Setting up event listeners using EventListenerRegistry');
 
         if (!this.eventRegistry) {
             console.warn('EventListenerRegistry not available, using fallback');
@@ -493,14 +493,14 @@ class EnhancedRouteDetailsModal {
         // Touch navigation for mobile
         this.setupTouchNavigation();
 
-        console.log('✅ Event listeners setup completed');
+        console.warn('✅ Event listeners setup completed');
     }
 
     /**
      * Fallback event listener setup for when EventListenerRegistry is not available
      */
     setupEventListenersFallback() {
-        console.log('📝 Setting up fallback event listeners');
+        console.warn('📝 Setting up fallback event listeners');
 
         // Close button
         const closeBtn = document.getElementById('routeModalClose');
@@ -535,7 +535,7 @@ class EnhancedRouteDetailsModal {
      * Requirement 1.2: Event listener cleanup
      */
     cleanupEventListeners() {
-        console.log('🧹 Cleaning up event listeners');
+        console.warn('🧹 Cleaning up event listeners');
 
         if (this.eventRegistry) {
             this.eventRegistry.unregister(this.modalId);
@@ -549,7 +549,7 @@ class EnhancedRouteDetailsModal {
      * Fallback event listener cleanup
      */
     cleanupEventListenersFallback() {
-        console.log('🧹 Performing fallback event listener cleanup');
+        console.warn('🧹 Performing fallback event listener cleanup');
 
         // Remove keyboard event listeners
         document.removeEventListener('keydown', this.handleKeydown);
@@ -576,14 +576,14 @@ class EnhancedRouteDetailsModal {
      * Requirement 4.3, 4.4: DOM element cleanup
      */
     async cleanupChart() {
-        console.log('🧹 Cleaning up elevation chart');
+        console.warn('🧹 Cleaning up elevation chart');
 
         try {
             // Destroy Chart.js instance
             if (this.elevationChartInstance && typeof this.elevationChartInstance.destroy === 'function') {
                 this.elevationChartInstance.destroy();
                 this.elevationChartInstance = null;
-                console.log('✅ Chart.js instance destroyed');
+                console.warn('✅ Chart.js instance destroyed');
             }
 
             // Clean up chart event listeners using EventListenerRegistry
@@ -603,7 +603,7 @@ class EnhancedRouteDetailsModal {
                 }
                 
                 this.chartEventListeners = null;
-                console.log('✅ Chart event listeners cleaned up');
+                console.warn('✅ Chart event listeners cleaned up');
             }
 
             // Clear elevation data
@@ -619,14 +619,14 @@ class EnhancedRouteDetailsModal {
             const chartCanvas = document.getElementById('modalElevationChart');
             if (chartCanvas) {
                 chartCanvas.remove();
-                console.log('✅ Chart canvas element removed');
+                console.warn('✅ Chart canvas element removed');
             }
 
             // Clear chart container
             const chartContainer = document.getElementById('routeModalElevationContainer');
             if (chartContainer) {
                 chartContainer.innerHTML = '';
-                console.log('✅ Chart container cleared');
+                console.warn('✅ Chart container cleared');
             }
 
         } catch (error) {
@@ -639,13 +639,13 @@ class EnhancedRouteDetailsModal {
      * Map cleanup
      */
     cleanupMap() {
-        console.log('🧹 Cleaning up map instance');
+        console.warn('🧹 Cleaning up map instance');
 
         try {
             if (this.mapInstance) {
                 this.mapInstance.remove();
                 this.mapInstance = null;
-                console.log('✅ Map instance removed');
+                console.warn('✅ Map instance removed');
             }
 
             // Remove map marker
@@ -660,7 +660,7 @@ class EnhancedRouteDetailsModal {
      * Close all modals manually (fallback when ModalManager is not available)
      */
     async closeAllModalsManually() {
-        console.log('🚪 Closing all modals manually (fallback)');
+        console.warn('🚪 Closing all modals manually (fallback)');
 
         // Close any existing route details modals
         const existingModals = document.querySelectorAll('.route-details-modal.show');
@@ -838,7 +838,7 @@ class EnhancedRouteDetailsModal {
     async switchTab(tabName) {
         if (this.currentTab === tabName) return;
 
-        console.log('🔄 Switching to tab:', tabName);
+        console.warn('🔄 Switching to tab:', tabName);
 
         // Update tab buttons
         document.querySelectorAll('.route-details-tab').forEach(tab => {
@@ -891,42 +891,42 @@ class EnhancedRouteDetailsModal {
 
     async loadOverviewContent() {
         // Implementation would be the same as original
-        console.log('📊 Loading overview content');
+        console.warn('📊 Loading overview content');
     }
 
     async loadMapContent() {
         // Implementation would be the same as original
-        console.log('🗺️ Loading map content');
+        console.warn('🗺️ Loading map content');
     }
 
     async loadPoisContent() {
         // Implementation would be the same as original
-        console.log('📍 Loading POIs content');
+        console.warn('📍 Loading POIs content');
     }
 
     async loadMediaContent() {
         // Implementation would be the same as original
-        console.log('📸 Loading media content');
+        console.warn('📸 Loading media content');
     }
 
     async preloadMapContent() {
         // Mobile-specific map preloading
-        console.log('📱 Preloading map content for mobile');
+        console.warn('📱 Preloading map content for mobile');
     }
 
     initializeElevationChart() {
         // Chart initialization with proper cleanup integration
-        console.log('🏔️ Initializing elevation chart');
+        console.warn('🏔️ Initializing elevation chart');
     }
 
     removeMapMarker() {
         // Remove map markers
-        console.log('🗺️ Removing map markers');
+        console.warn('🗺️ Removing map markers');
     }
 
     setupActionButtonListeners() {
         // Setup action button listeners using EventListenerRegistry
-        console.log('🔘 Setting up action button listeners');
+        console.warn('🔘 Setting up action button listeners');
         
         const navBtn = document.getElementById('startNavigationBtn');
         const exportBtn = document.getElementById('exportRouteBtn');
@@ -962,33 +962,33 @@ class EnhancedRouteDetailsModal {
 
     setupTouchNavigation() {
         // Touch navigation setup
-        console.log('👆 Setting up touch navigation');
+        console.warn('👆 Setting up touch navigation');
     }
 
     startNavigation() {
-        console.log('🧭 Starting navigation');
+        console.warn('🧭 Starting navigation');
     }
 
     exportRoute() {
-        console.log('📤 Exporting route');
+        console.warn('📤 Exporting route');
     }
 
     shareRoute() {
-        console.log('📤 Sharing route');
+        console.warn('📤 Sharing route');
     }
 
     fitMapToRoute() {
-        console.log('🎯 Fitting map to route');
+        console.warn('🎯 Fitting map to route');
     }
 
     toggleFullscreenMap() {
-        console.log('🔍 Toggling fullscreen map');
+        console.warn('🔍 Toggling fullscreen map');
     }
 }
 
 // Replace the original RouteDetailsModal with the enhanced version
 if (window.RouteDetailsModal) {
-    console.log('🔄 Replacing original RouteDetailsModal with enhanced version');
+    console.warn('🔄 Replacing original RouteDetailsModal with enhanced version');
     
     // Store reference to original for fallback
     window.OriginalRouteDetailsModal = window.RouteDetailsModal;
@@ -999,14 +999,14 @@ if (window.RouteDetailsModal) {
     // Update singleton instance
     window.routeDetailsModalInstance = null; // Clear existing instance
     
-    console.log('✅ RouteDetailsModal replaced with enhanced version');
+    console.warn('✅ RouteDetailsModal replaced with enhanced version');
 } else {
     // Set as primary implementation
     window.RouteDetailsModal = EnhancedRouteDetailsModal;
-    console.log('✅ Enhanced RouteDetailsModal set as primary implementation');
+    console.warn('✅ Enhanced RouteDetailsModal set as primary implementation');
 }
 
 // Export for global access
 window.EnhancedRouteDetailsModal = EnhancedRouteDetailsModal;
 
-console.log('📦 Enhanced Route Details Modal module loaded');
+console.warn('📦 Enhanced Route Details Modal module loaded');

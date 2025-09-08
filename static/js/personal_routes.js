@@ -38,7 +38,7 @@
       // Initialize explore button
       initializeExploreButton();
       
-      console.log('Preference system initialized successfully');
+      console.warn('Preference system initialized successfully');
     } catch (err) {
       console.error('Error initializing preferences:', err);
     }
@@ -238,7 +238,7 @@
       }
     });
 
-    console.log(`Applied preset: ${preset}`);
+    console.warn(`Applied preset: ${preset}`);
   }
 
   // Animate slider value change
@@ -414,7 +414,7 @@
         pois = [];
       }
       
-      console.log(`Loaded ${pois.length} POIs for exploration`);
+      console.warn(`Loaded ${pois.length} POIs for exploration`);
       
       // Display POI count
       const recommendationResults = document.getElementById('recommendationResults');
@@ -470,7 +470,7 @@
         return;
       }
 
-      console.log('Displaying POIs on exploration map:', pois.length);
+      console.warn('Displaying POIs on exploration map:', pois.length);
 
       // Try different methods to display POIs
       if (typeof window.displayAllPOIs === 'function') {
@@ -481,7 +481,7 @@
         window.showAllPOIsOnMap(pois);
       } else {
         // Fallback: trigger recommendation system with all preferences set to 0
-        console.log('Using fallback method to display POIs');
+        console.warn('Using fallback method to display POIs');
         triggerRecommendationWithAllPOIs(pois);
       }
 

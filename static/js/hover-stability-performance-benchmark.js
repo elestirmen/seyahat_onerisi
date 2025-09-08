@@ -803,9 +803,9 @@ class HoverStabilityPerformanceBenchmark {
         if (this.options.enableLogging) {
             const timestamp = new Date().toISOString();
             if (data) {
-                console.log(`[HoverStabilityPerformanceBenchmark ${timestamp}] ${message}:`, data);
+                console.warn(`[HoverStabilityPerformanceBenchmark ${timestamp}] ${message}:`, data);
             } else {
-                console.log(`[HoverStabilityPerformanceBenchmark ${timestamp}] ${message}`);
+                console.warn(`[HoverStabilityPerformanceBenchmark ${timestamp}] ${message}`);
             }
         }
     }

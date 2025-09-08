@@ -63,7 +63,7 @@ class EnhancedMapManager {
             
             this.setupEventListeners();
             this.initialized = true;
-            console.log('EnhancedMapManager initialized successfully');
+            console.warn('EnhancedMapManager initialized successfully');
         } catch (error) {
             console.error('Error initializing EnhancedMapManager:', error);
             throw error;

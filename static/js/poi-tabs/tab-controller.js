@@ -33,7 +33,7 @@ class TabController {
         this.setupBeforeUnloadCleanup();
         
         this.isInitialized = true;
-        console.log('🎛️ Tab Controller initialized');
+        console.warn('🎛️ Tab Controller initialized');
     }
 
     /**
@@ -58,7 +58,7 @@ class TabController {
             scripts: options.scripts || []
         });
         
-        console.log(`📝 Registered tab: ${tabName}`);
+        console.warn(`📝 Registered tab: ${tabName}`);
     }
 
     /**
@@ -86,7 +86,7 @@ class TabController {
         // Check if tab is registered before trying to switch
         if (this.tabComponents.has(initialTab)) {
             await this.switchTab(initialTab);
-            console.log(`✅ Initial tab '${initialTab}' loaded successfully`);
+            console.warn(`✅ Initial tab '${initialTab}' loaded successfully`);
         } else {
             console.warn(`⚠️ Initial tab '${initialTab}' not registered yet`);
             // Don't try again automatically - let the caller handle it
@@ -99,7 +99,7 @@ class TabController {
     async switchTab(tabName) {
         if (this.activeTab === tabName) return;
 
-        console.log(`🔄 Switching from ${this.activeTab || 'none'} to ${tabName}`);
+        console.warn(`🔄 Switching from ${this.activeTab || 'none'} to ${tabName}`);
 
         try {
             // Cleanup current tab
@@ -116,7 +116,7 @@ class TabController {
             
             this.activeTab = tabName;
             
-            console.log(`✅ Successfully switched to tab: ${tabName}`);
+            console.warn(`✅ Successfully switched to tab: ${tabName}`);
             
         } catch (error) {
             console.error(`❌ Error switching to tab ${tabName}:`, error);
@@ -214,7 +214,7 @@ class TabController {
         this.clearActiveTimeouts();
         this.clearActiveIntervals();
         
-        console.log(`🧹 Cleaned up tab: ${tabName}`);
+        console.warn(`🧹 Cleaned up tab: ${tabName}`);
     }
 
     /**
@@ -343,7 +343,7 @@ class TabController {
             tabConfig.loaded = false;
         }
         
-        console.log(`🗑️ Destroyed tab: ${tabName}`);
+        console.warn(`🗑️ Destroyed tab: ${tabName}`);
     }
 
     /**
@@ -370,7 +370,7 @@ class TabController {
      * Clean up all resources
      */
     cleanupAll() {
-        console.log('🧹 Cleaning up all tab resources...');
+        console.warn('🧹 Cleaning up all tab resources...');
         
         this.cancelActiveRequests();
         this.clearActiveTimeouts();
@@ -441,7 +441,7 @@ class TabController {
         this.setupBeforeUnloadCleanup();
         
         this.isInitialized = true;
-        console.log('🎛️ Tab Controller initialized');
+        console.warn('🎛️ Tab Controller initialized');
     }
 
     /**
@@ -461,7 +461,7 @@ class TabController {
         // If not initialized yet, queue the registration
         if (!this.isInitialized) {
             this.pendingRegistrations.push({ tabName, componentClass, options });
-            console.log(`📋 Queued tab registration: ${tabName}`);
+            console.warn(`📋 Queued tab registration: ${tabName}`);
             return;
         }
         
@@ -473,7 +473,7 @@ class TabController {
             scripts: options.scripts || []
         });
         
-        console.log(`📝 Registered tab: ${tabName}`);
+        console.warn(`📝 Registered tab: ${tabName}`);
     }
 
     /**
@@ -501,7 +501,7 @@ class TabController {
         // Check if tab is registered before trying to switch
         if (this.tabComponents.has(initialTab)) {
             await this.switchTab(initialTab);
-            console.log(`✅ Initial tab '${initialTab}' loaded successfully`);
+            console.warn(`✅ Initial tab '${initialTab}' loaded successfully`);
         } else {
             console.warn(`⚠️ Initial tab '${initialTab}' not registered yet`);
             // Don't try again automatically - let the caller handle it
@@ -514,7 +514,7 @@ class TabController {
     async switchTab(tabName) {
         if (this.activeTab === tabName) return;
 
-        console.log(`🔄 Switching from ${this.activeTab || 'none'} to ${tabName}`);
+        console.warn(`🔄 Switching from ${this.activeTab || 'none'} to ${tabName}`);
 
         try {
             // Cleanup current tab
@@ -531,7 +531,7 @@ class TabController {
             
             this.activeTab = tabName;
             
-            console.log(`✅ Successfully switched to tab: ${tabName}`);
+            console.warn(`✅ Successfully switched to tab: ${tabName}`);
             
         } catch (error) {
             console.error(`❌ Error switching to tab ${tabName}:`, error);
@@ -629,7 +629,7 @@ class TabController {
         this.clearActiveTimeouts();
         this.clearActiveIntervals();
         
-        console.log(`🧹 Cleaned up tab: ${tabName}`);
+        console.warn(`🧹 Cleaned up tab: ${tabName}`);
     }
 
     /**
@@ -758,7 +758,7 @@ class TabController {
             tabConfig.loaded = false;
         }
         
-        console.log(`🗑️ Destroyed tab: ${tabName}`);
+        console.warn(`🗑️ Destroyed tab: ${tabName}`);
     }
 
     /**
@@ -785,7 +785,7 @@ class TabController {
      * Clean up all resources
      */
     cleanupAll() {
-        console.log('🧹 Cleaning up all tab resources...');
+        console.warn('🧹 Cleaning up all tab resources...');
         
         this.cancelActiveRequests();
         this.clearActiveTimeouts();
@@ -866,7 +866,7 @@ class TabController {
         this.setupBeforeUnloadCleanup();
         
         this.isInitialized = true;
-        console.log('🎛️ Tab Controller initialized');
+        console.warn('🎛️ Tab Controller initialized');
     }
 
     /**
@@ -886,7 +886,7 @@ class TabController {
         // If not initialized yet, queue the registration
         if (!this.isInitialized) {
             this.pendingRegistrations.push({ tabName, componentClass, options });
-            console.log(`📋 Queued tab registration: ${tabName}`);
+            console.warn(`📋 Queued tab registration: ${tabName}`);
             return;
         }
         
@@ -898,7 +898,7 @@ class TabController {
             scripts: options.scripts || []
         });
         
-        console.log(`📝 Registered tab: ${tabName}`);
+        console.warn(`📝 Registered tab: ${tabName}`);
     }
 
     /**
@@ -926,7 +926,7 @@ class TabController {
         // Check if tab is registered before trying to switch
         if (this.tabComponents.has(initialTab)) {
             await this.switchTab(initialTab);
-            console.log(`✅ Initial tab '${initialTab}' loaded successfully`);
+            console.warn(`✅ Initial tab '${initialTab}' loaded successfully`);
         } else {
             console.warn(`⚠️ Initial tab '${initialTab}' not registered yet`);
             // Don't try again automatically - let the caller handle it
@@ -939,7 +939,7 @@ class TabController {
     async switchTab(tabName) {
         if (this.activeTab === tabName) return;
 
-        console.log(`🔄 Switching from ${this.activeTab || 'none'} to ${tabName}`);
+        console.warn(`🔄 Switching from ${this.activeTab || 'none'} to ${tabName}`);
 
         try {
             // Cleanup current tab
@@ -956,7 +956,7 @@ class TabController {
             
             this.activeTab = tabName;
             
-            console.log(`✅ Successfully switched to tab: ${tabName}`);
+            console.warn(`✅ Successfully switched to tab: ${tabName}`);
             
         } catch (error) {
             console.error(`❌ Error switching to tab ${tabName}:`, error);
@@ -1054,7 +1054,7 @@ class TabController {
         this.clearActiveTimeouts();
         this.clearActiveIntervals();
         
-        console.log(`🧹 Cleaned up tab: ${tabName}`);
+        console.warn(`🧹 Cleaned up tab: ${tabName}`);
     }
 
     /**
@@ -1183,7 +1183,7 @@ class TabController {
             tabConfig.loaded = false;
         }
         
-        console.log(`🗑️ Destroyed tab: ${tabName}`);
+        console.warn(`🗑️ Destroyed tab: ${tabName}`);
     }
 
     /**
@@ -1210,7 +1210,7 @@ class TabController {
      * Clean up all resources
      */
     cleanupAll() {
-        console.log('🧹 Cleaning up all tab resources...');
+        console.warn('🧹 Cleaning up all tab resources...');
         
         this.cancelActiveRequests();
         this.clearActiveTimeouts();
