@@ -12043,6 +12043,49 @@ async function initializeApp() {
         }
     }
 
+    // Deep-link: open POI detail when ?poi=<id> present
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const poiParam = params.get('poi');
+        if (poiParam) {
+            // Ensure Bootstrap/modal is ready, then show POI detail
+            try {
+                // Pre-fetch POI to optionally focus the map after showing
+                const resp = await fetch(`${apiBase}/poi/${poiParam}`);
+                if (resp.ok) {
+                    const poi = await resp.json();
+                    // Show detail modal with data to avoid double fetch
+                    try { await showPOIDetail(poiParam, poi); } catch (_) { await showPOIDetail(poiParam); }
+                    // Focus map if available and coordinates are valid
+                    const lat = parseFloat(poi.latitude || poi.lat);
+                    const lng = parseFloat(poi.longitude || poi.lng || poi.lon);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        try {
+                            // Initialize map if container exists but map is not ready
+                            if (document.getElementById('mapContainer') && typeof initializeMainMap === 'function' && (!window.map || !window.map._loaded)) {
+                                await initializeMainMap();
+                            }
+                            if (typeof focusOnMap === 'function') {
+                                focusOnMap(lat, lng);
+                            }
+                            // Ensure map section visible on pages that hide it initially
+                            const mapSection = document.getElementById('mapSection');
+                            if (mapSection) mapSection.style.display = 'block';
+                        } catch (e) { console.warn('POI map focus skipped:', e); }
+                    }
+                } else {
+                    // Fallback: at least attempt to open the modal
+                    await showPOIDetail(poiParam);
+                }
+            } catch (e) {
+                console.warn('Deep-link POI load failed:', e);
+                try { await showPOIDetail(poiParam); } catch (_) {}
+            }
+        }
+    } catch (e) {
+        console.warn('POI deep-link handling error:', e);
+    }
+
     // Log removed for cleaner console
 }
 
