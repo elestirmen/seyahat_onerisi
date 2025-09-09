@@ -98,9 +98,27 @@
         bottom: 0 !important;
         top: 0 !important;
     }
+    /* Ensure modal uses full viewport height and body flexes, so actions stay visible */
+    .route-details-modal-content {
+        height: 100vh !important;
+        max-height: 100vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Use dynamic viewport units when available to avoid iOS URL bar issues */
+    @supports (height: 100dvh) {
+        .route-details-modal.map-tab-active .route-details-modal-content,
+        .route-details-modal-content {
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+        }
+    }
     
     .route-details-modal-body {
-        max-height: calc(95vh - 160px) !important;
+        flex: 1 1 auto !important;
+        max-height: none !important;
+        height: auto !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
         scroll-behavior: smooth !important;
@@ -110,8 +128,8 @@
     
     /* Full screen modal body for map tab */
     .route-details-modal.map-tab-active .route-details-modal-body {
-        max-height: calc(100vh - 160px) !important;
-        height: calc(100vh - 160px) !important;
+        max-height: none !important;
+        height: auto !important;
         overflow-y: auto !important;
     }
     
@@ -1783,6 +1801,11 @@
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+    flex-shrink: 0; /* never shrink below visible area */
+    /* Respect iOS safe-area */
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    /* Older iOS fallback */
+    padding-bottom: calc(20px + constant(safe-area-inset-bottom));
 }
 
 .route-action-btn {
@@ -1958,6 +1981,16 @@
         justify-content: center;
         align-items: center;
         flex-wrap: nowrap;
+        position: sticky;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        background: #f8fafc;
+        box-shadow: 0 -6px 16px rgba(0,0,0,0.06);
+        /* extra bottom padding for devices with home indicator */
+        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(10px + constant(safe-area-inset-bottom));
     }
 
     .route-action-btn {

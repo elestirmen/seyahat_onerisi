@@ -2067,8 +2067,106 @@ class RouteDetailsModal {
     }
 
     shareRoute() {
-        console.warn('Share route');
-        // Implementation for route sharing
+        try {
+            if (!this.currentRoute) {
+                console.warn('❌ No route to share');
+                try { (window.showNotification || window.notificationSystem?.show)?.('Paylaşılacak rota bulunamadı', 'warning'); } catch (_) {}
+                return;
+            }
+
+            const route = this.currentRoute;
+            const title = route.name || 'Ürgüp Rotası';
+            const text = `"${title}" rotasını keşfet!`;
+
+            // Prefer deep link by routeId when available (supported by predefined_routes.html)
+            const routeId = route.id || route._id;
+
+            // Decide base URL: use current predefined page if already there; otherwise fallback to predefined_routes.html
+            const isOnPredefinedPage = typeof window !== 'undefined' && window.location?.pathname?.includes('predefined_routes');
+            // Preserve current directory for correct sub-paths
+            const currentDir = (() => {
+                const p = window.location.pathname || '/';
+                if (p.endsWith('/')) return p;
+                const idx = p.lastIndexOf('/');
+                return idx >= 0 ? p.substring(0, idx + 1) : '/';
+            })();
+            const baseUrl = isOnPredefinedPage
+                ? `${window.location.origin}${window.location.pathname}`
+                : `${window.location.origin}${currentDir}predefined_routes.html`;
+
+            let shareUrl = baseUrl;
+
+            if (routeId) {
+                shareUrl = `${baseUrl}?routeId=${encodeURIComponent(String(routeId))}`;
+            } else {
+                // Fallback: encode minimal route data into URL (may not be auto-consumed yet, but still useful)
+                try {
+                    const pois = (route.pois || route.waypoints || []).map(p => ({
+                        id: p.id || p._id,
+                        name: p.name,
+                        latitude: p.latitude || p.lat,
+                        longitude: p.longitude || p.lng || p.lon,
+                        category: p.category
+                    }));
+                    const data = { name: title, pois };
+                    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+                    // Prefer dynamic routes page if present; otherwise stick to current page
+                    const dynamicPage = `${window.location.origin}/poi_recommendation_system.html`;
+                    shareUrl = `${dynamicPage}?route=${encoded}`;
+                } catch (e) {
+                    console.warn('⚠️ Could not encode fallback route data:', e);
+                    shareUrl = `${window.location.origin}${window.location.pathname}`;
+                }
+            }
+
+            const notify = (msg, type = 'info') => {
+                try {
+                    // Try shared notifier if available
+                    if (typeof window.showNotification === 'function') return window.showNotification(msg, type);
+                    if (window.notificationSystem?.show) return window.notificationSystem.show(msg, type);
+                } catch (_) { /* noop */ }
+                // Minimal fallback
+                if (type === 'error') {
+                    console.error(msg);
+                } else {
+                    console.log(msg);
+                }
+            };
+
+            // Try Web Share API first
+            if (navigator.share && (!navigator.canShare || navigator.canShare({ url: shareUrl }))) {
+                navigator.share({ title, text, url: shareUrl })
+                    .then(() => notify('Rota başarıyla paylaşıldı', 'success'))
+                    .catch(err => {
+                        if (err && err.name === 'AbortError') return; // user cancelled
+                        console.warn('Web Share failed, falling back to clipboard:', err);
+                        if (navigator.clipboard?.writeText) {
+                            navigator.clipboard.writeText(shareUrl)
+                                .then(() => notify('Rota linki panoya kopyalandı', 'success'))
+                                .catch(() => {
+                                    window.prompt('Rota linkini kopyalayın:', shareUrl);
+                                });
+                        } else {
+                            window.prompt('Rota linkini kopyalayın:', shareUrl);
+                        }
+                    });
+                return;
+            }
+
+            // Fallback to clipboard copy
+            if (navigator.clipboard?.writeText) {
+                navigator.clipboard.writeText(shareUrl)
+                    .then(() => notify('Rota linki panoya kopyalandı', 'success'))
+                    .catch(() => {
+                        window.prompt('Rota linkini kopyalayın:', shareUrl);
+                    });
+            } else {
+                window.prompt('Rota linkini kopyalayın:', shareUrl);
+            }
+        } catch (error) {
+            console.error('❌ Error in shareRoute:', error);
+            try { (window.showNotification || window.notificationSystem?.show)?.('Paylaşım sırasında hata oluştu', 'error'); } catch (_) {}
+        }
     }
 
     // Initialize elevation chart using Chart.js

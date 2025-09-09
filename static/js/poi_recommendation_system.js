@@ -11975,10 +11975,24 @@ async function initializeApp() {
         const params = new URLSearchParams(window.location.search);
         const routeIdParam = params.get('routeId');
         if (routeIdParam && typeof selectPredefinedRoute === 'function') {
-            const trySelect = () => {
+            const trySelect = async () => {
                 const route = predefinedRoutes.find(r => String(r.id || r._id) === routeIdParam);
                 if (route) {
-                    selectPredefinedRoute(route);
+                    try {
+                        await selectPredefinedRoute(route);
+                    } catch (e) {
+                        console.warn('⚠️ selectPredefinedRoute failed:', e);
+                    }
+                    // Open Route Details Modal automatically for deep links
+                    try {
+                        const modal = (window.RouteDetailsModal && window.RouteDetailsModal.getInstance && window.RouteDetailsModal.getInstance())
+                                     || window.routeDetailsModalInstance;
+                        if (modal && typeof modal.show === 'function') {
+                            modal.show(route);
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Could not open RouteDetailsModal:', e);
+                    }
                 } else {
                     setTimeout(trySelect, 500);
                 }
