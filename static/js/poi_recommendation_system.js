@@ -1931,6 +1931,17 @@ async function loadPOIMedia(poiId) {
     return { images: [], videos: [], audio: [], models: [] };
 }
 
+// Normalize media paths to avoid double "/poi_media/" prefixes
+function normalizeMediaPath(p) {
+    if (!p || typeof p !== 'string') return '';
+    // Keep absolute and full URLs as-is
+    if (p.startsWith('/') || /^https?:\/\//i.test(p)) return p;
+    // If already starts with "poi_media/" or "static/poi_media/", just add leading slash
+    if (p.startsWith('poi_media/') || p.startsWith('static/poi_media/')) return `/${p}`;
+    // Otherwise, ensure it is under /poi_media
+    return `/poi_media/${p.replace(/^\/+/, '')}`;
+}
+
 // Create media gallery HTML
 function createMediaGallery(media, poi = {}) {
     // Log removed for cleaner console
@@ -2007,7 +2018,7 @@ function createMediaGallery(media, poi = {}) {
 
         media.images.slice(0, 3).forEach((image, index) => {
             const imagePath = image.preview_path || image.path || `poi_media/${image.filename}`;
-            const finalImagePath = imagePath.startsWith('/') ? imagePath : `/poi_media/${imagePath}`;
+            const finalImagePath = normalizeMediaPath(imagePath);
             const mediaItemIndex = allMediaItems.findIndex(item =>
                 item.type === 'image' && item.originalIndex === index
             );
@@ -2184,7 +2195,7 @@ function loadCurrentMedia() {
 
     // Load media content
     setTimeout(() => {
-        const mediaPath = mediaItem.path.startsWith('/') ? mediaItem.path : `/poi_media/${mediaItem.path}`;
+        const mediaPath = normalizeMediaPath(mediaItem.path);
         let content = '';
 
         if (mediaItem.type === 'image') {
@@ -2318,7 +2329,7 @@ function updateThumbnails() {
         if (item.type === 'image') {
             const thumb = document.createElement('img');
             thumb.className = 'media-thumbnail';
-            thumb.src = item.path.startsWith('/') ? item.path : `/poi_media/${item.path}`;
+            thumb.src = normalizeMediaPath(item.path);
             thumb.alt = item.title || `Görsel ${index + 1}`;
 
             if (index === currentMediaIndex) {
@@ -2668,7 +2679,7 @@ function preloadAdjacentMedia() {
 function preloadMediaItem(mediaItem) {
     if (!mediaItem) return;
 
-    const mediaPath = mediaItem.path.startsWith("/") ? mediaItem.path : `/poi_media/${mediaItem.path}`;
+    const mediaPath = normalizeMediaPath(mediaItem.path);
 
     if (mediaItem.type === 'image') {
         const img = new Image();
@@ -10608,7 +10619,7 @@ async function displayRecommendations(recommendationData) {
                     const mainImage = media.images[0];
                     const img = document.createElement('img');
                     const mainImagePath = mainImage.preview_path || mainImage.path || `poi_media/${mainImage.filename}`;
-                    img.dataset.src = mainImagePath.startsWith('/') ? mainImagePath : `/poi_media/${mainImagePath}`;
+                    img.dataset.src = normalizeMediaPath(mainImagePath);
                     img.className = 'poi-card__image lazy-image';
                     img.alt = poi.name;
                     img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+';
@@ -13054,7 +13065,7 @@ function displayPOICardMedia(mediaItems, previewElement) {
     
     if (firstImage) {
         const imagePath = firstImage.thumbnail_path || firstImage.path;
-        const finalImagePath = imagePath.startsWith('/') ? imagePath : `/poi_media/${imagePath}`;
+        const finalImagePath = normalizeMediaPath(imagePath);
         previewElement.innerHTML = `
             <div class="poi-card-media-thumb">
                 <img src="${finalImagePath}" alt="POI Preview" loading="lazy" 
