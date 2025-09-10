@@ -301,17 +301,11 @@
             </div>
           </div>
 
-          <!-- Öneri butonu ve sonuçlar bölümü (moved above quick selection) -->
+          <!-- Öneri butonu (Hızlı Seçim üstünde) -->
           <div class="action-buttons-section">
             <button class="recommend-btn" id="recommendBtn">
               <i class="fas fa-magic btn-icon"></i>
               <span class="btn-text">Önerilerimi Getir</span>
-            </button>
-            
-            <button class="explore-btn" id="exploreBtn">
-              <i class="fas fa-compass btn-icon"></i>
-              <span class="btn-text">Serbest Keşif</span>
-              <span class="btn-subtitle">Tüm POI'leri Gör</span>
             </button>
           </div>
 
@@ -370,6 +364,15 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Sayfa Altı: Serbest Keşif (tüm POI'leri gör) -->
+  <div class="explore-bottom-section">
+    <button class="explore-btn" id="exploreBtn" aria-label="Serbest Keşif - Tüm POI'leri gör">
+      <i class="fas fa-compass btn-icon"></i>
+      <span class="btn-text">Serbest Keşif</span>
+      <span class="btn-subtitle">Tüm POI'leri Gör</span>
+    </button>
   </div>
 
   <!-- Shared overlays and modals used by this page -->
@@ -767,6 +770,35 @@
         font-size: 0.8rem;
         padding: 8px 4px;
       }
+      /* Mobile: action buttons spacing */
+      .action-buttons-section {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 8px 0 12px 0;
+      }
+      .recommend-btn {
+        flex: 1 1 100%;
+      }
+      .explore-bottom-section {
+        position: relative;
+        padding: 10px 12px 18px 12px;
+      }
+      .explore-bottom-section .explore-btn {
+        width: 100%;
+      }
+    }
+
+    /* Desktop/tablet: bottom explore button layout */
+    .explore-bottom-section {
+      display: flex;
+      justify-content: center;
+      padding: 16px 0 24px 0;
+      border-top: 1px solid rgba(0,0,0,0.05);
+      margin-top: 12px;
+    }
+    .explore-bottom-section .explore-btn {
+      min-width: 220px;
     }
   </style>
 
