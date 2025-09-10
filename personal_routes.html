@@ -301,6 +301,20 @@
             </div>
           </div>
 
+          <!-- Öneri butonu ve sonuçlar bölümü (moved above quick selection) -->
+          <div class="action-buttons-section">
+            <button class="recommend-btn" id="recommendBtn">
+              <i class="fas fa-magic btn-icon"></i>
+              <span class="btn-text">Önerilerimi Getir</span>
+            </button>
+            
+            <button class="explore-btn" id="exploreBtn">
+              <i class="fas fa-compass btn-icon"></i>
+              <span class="btn-text">Serbest Keşif</span>
+              <span class="btn-subtitle">Tüm POI'leri Gör</span>
+            </button>
+          </div>
+
           <div class="quick-selection-section">
             <div class="quick-selection-title"><i class="fas fa-magic"></i> Hızlı Seçim</div>
             <div class="quick-selection-buttons">
@@ -310,23 +324,22 @@
               <button class="quick-btn" data-preset="relax"><i class="fas fa-spa"></i> Dinlenme & Wellness</button>
               <button class="quick-btn" data-preset="adventure"><i class="fas fa-mountain"></i> Macera & Spor</button>
               <button class="quick-btn" data-preset="nightlife"><i class="fas fa-moon"></i> Gece Hayatı</button>
+
+              <!-- Akıllı Preset Butonları - JavaScript'e bağımlı olmadan çalışır -->
+              <button class="quick-btn smart-preset" onclick="event.preventDefault(); setSmartPreset('gunesli-gun'); return false;">
+                <i class="fas fa-sun"></i> Güneşli Gün
+              </button>
+              <button class="quick-btn smart-preset" onclick="event.preventDefault(); setSmartPreset('trend-yerler'); return false;">
+                <i class="fas fa-fire"></i> Trend Yerler
+              </button>
+              <button class="quick-btn smart-preset" onclick="event.preventDefault(); setSmartPreset('aksam-yemegi'); return false;">
+                <i class="fas fa-moon"></i> Akşam Yemeği
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- Öneri butonu ve sonuçlar bölümü -->
-        <div class="action-buttons-section">
-          <button class="recommend-btn" id="recommendBtn">
-            <i class="fas fa-magic btn-icon"></i>
-            <span class="btn-text">Önerilerimi Getir</span>
-          </button>
-          
-          <button class="explore-btn" id="exploreBtn">
-            <i class="fas fa-compass btn-icon"></i>
-            <span class="btn-text">Serbest Keşif</span>
-            <span class="btn-subtitle">Tüm POI'leri Gör</span>
-          </button>
-        </div>
+        <!-- Öneri sonuçları bölümü -->
 
         <div class="results-section" id="resultsSection">
           <h2 class="section-title"><i class="fas fa-star"></i> Size Özel Öneriler</h2>
@@ -516,6 +529,246 @@
   <script src="static/js/poi_recommendation_system.js"></script>
   <script src="static/js/modal-jitter-fix.js"></script>
   <script src="static/js/personal_routes.js"></script>
+
+  <!-- Simple smart preset functions -->
+  <script>
+    // Akıllı preset fonksiyonları - JavaScript'e bağımlı olmadan çalışır
+    // Smart preset lock mekanizması
+    let smartPresetLock = false;
+    let smartPresetValues = {};
+
+    // Global debug fonksiyonları
+    window.testSmartPreset = function(type) {
+      console.log('🧪 Testing smart preset:', type);
+      setSmartPreset(type);
+    };
+
+    window.debugSliders = function() {
+      console.log('🔍 Debug: Checking all slider elements...');
+      const categories = ['doga', 'macera', 'spor', 'eglence', 'yemek', 'gece_hayati'];
+      categories.forEach(cat => {
+        const slider = document.getElementById(cat);
+        const display = document.getElementById(cat + '-value');
+        console.log(`${cat}: slider=${!!slider}, display=${!!display}, value=${slider?.value}`);
+      });
+    };
+
+    function setSmartPreset(type) {
+      console.log('🎯 Setting smart preset:', type);
+
+      // Güneşli Gün için 0-100 arası mantıklı değerler:
+      // doga: 85 (maksimum - güneşli havada doğa çok önemli)
+      // macera: 70 (yüksek - açık hava macera aktiviteleri)
+      // spor: 65 (yüksek - spor aktiviteleri)
+      // Bu değerleri 0-4 slider aralığına dönüştürüyoruz:
+      // 80-100 → 4, 60-79 → 3, 40-59 → 2, 20-39 → 1, 0-19 → 0
+
+      const presets = {
+        'gunesli-gun': {
+          doga: 4,      // 85 puan (maksimum - doğa güneşli havada çok önemli)
+          macera: 3,    // 70 puan (yüksek - açık hava macera aktiviteleri)
+          spor: 3       // 65 puan (yüksek - spor aktiviteleri)
+        },
+        'trend-yerler': {
+          eglence: 3,   // 70 puan (yüksek - eğlence trend yerlerde önemli)
+          yemek: 3,     // 70 puan (yüksek - yemek trend yerlerde önemli)
+          gece_hayati: 2 // 45 puan (orta - gece hayatı bazı trend yerlerde önemli)
+        },
+        'aksam-yemegi': {
+          yemek: 4,     // 85 puan (maksimum - akşam yemeği için yemek çok önemli)
+          gece_hayati: 3, // 70 puan (yüksek - akşam eğlencesi)
+          eglence: 3   // 70 puan (yüksek - akşam aktiviteleri)
+        }
+      };
+
+      console.log('📋 Available presets:', Object.keys(presets));
+      console.log('🔍 Looking for preset:', type);
+
+      const preferences = presets[type];
+      if (!preferences) {
+        console.error('❌ Unknown preset type:', type);
+        console.log('💡 Available types:', Object.keys(presets));
+        return;
+      }
+
+      console.log('✅ Found preset:', preferences);
+
+      // Lock mekanizmasını aktif et
+      smartPresetLock = true;
+      smartPresetValues = { ...preferences };
+
+      const valueLabels = ['İlgilenmiyorum', 'Az İlgim Var', 'İlgim Var', 'Çok İlgim Var', 'Kesinlikle İhtiyacım Var'];
+      let updatedCount = 0;
+
+      // Önce tüm slider'ları güncelle
+      console.log('🔄 Updating sliders for preset:', type);
+      Object.entries(preferences).forEach(([category, value]) => {
+        console.log(`🔍 Processing category: ${category}, value: ${value}`);
+        const slider = document.getElementById(category);
+        const display = document.getElementById(category + '-value');
+
+        console.log(`🎛️ Slider element for ${category}:`, slider);
+        console.log(`📝 Display element for ${category}:`, display);
+
+        if (slider && display) {
+          // Önceki değeri kaydet
+          const oldValue = slider.value;
+
+          // Yeni değeri ayarla
+          slider.value = value;
+          display.textContent = valueLabels[value] || valueLabels[0];
+
+          // Değişikliği duyur (UI ve dinleyiciler için)
+          try {
+            slider.dispatchEvent(new Event('input', { bubbles: true }));
+            slider.dispatchEvent(new Event('change', { bubbles: true }));
+          } catch (e) {}
+
+          console.log(`✅ ${category}: ${oldValue} → ${value} (${valueLabels[value]})`);
+          updatedCount++;
+        } else {
+          console.error(`❌ Element not found for ${category}`);
+          console.log('🔍 Page elements:', document.querySelectorAll('[id*="' + category + '"]'));
+        }
+      });
+
+      console.log(`🎉 Smart preset "${type}" applied: ${updatedCount} sliders updated`);
+
+      // Lock mekanizmasını 5 saniye sonra kaldır
+      setTimeout(() => {
+        smartPresetLock = false;
+        console.log('🔓 Smart preset lock released');
+      }, 5000);
+
+      // Sürekli kontrol et - slider'lar hala doğru mu?
+      let checkInterval = setInterval(() => {
+        if (!smartPresetLock) {
+          clearInterval(checkInterval);
+          console.log('🔍 Smart preset monitoring stopped');
+          return;
+        }
+
+        let stillCorrect = 0;
+        Object.entries(preferences).forEach(([category, expectedValue]) => {
+          const slider = document.getElementById(category);
+          if (slider && parseInt(slider.value) === expectedValue) {
+            stillCorrect++;
+          } else {
+            console.warn(`⚠️ ${category} changed! Expected: ${expectedValue}, Got: ${slider ? slider.value : 'N/A'}`);
+            // Tekrar düzelt
+            if (slider) {
+              slider.value = expectedValue;
+              const display = document.getElementById(category + '-value');
+              if (display) {
+                display.textContent = valueLabels[expectedValue] || valueLabels[0];
+              }
+              console.log(`🔧 ${category} corrected back to ${expectedValue}`);
+            }
+          }
+        });
+
+        if (stillCorrect < Object.keys(preferences).length) {
+          console.log(`🔄 Corrected ${Object.keys(preferences).length - stillCorrect} sliders`);
+        }
+      }, 200);
+
+      // Visual feedback
+      showPresetFeedback(type);
+
+      // Auto-trigger recommendations after applying a smart preset
+      try {
+        const recommendBtn = document.getElementById('recommendBtn');
+        setTimeout(() => {
+          if (recommendBtn && !recommendBtn.disabled) {
+            recommendBtn.click();
+          } else if (typeof getRecommendations === 'function') {
+            // Fallback to direct call if button is not available
+            if (!(recommendBtn && recommendBtn.disabled)) {
+              getRecommendations();
+            }
+          }
+        }, 150);
+      } catch (e) {
+        // Silent if recommend flow unavailable
+      }
+    }
+
+    function showPresetFeedback(type) {
+      const messages = {
+        'gunesli-gun': 'Güneşli Gün ayarları uygulandı! ☀️',
+        'trend-yerler': 'Trend Yerler ayarları uygulandı! 🔥',
+        'aksam-yemegi': 'Akşam Yemeği ayarları uygulandı! 🌙'
+      };
+
+      // Simple alert for feedback (can be replaced with better notification)
+      setTimeout(() => {
+        alert(messages[type] || 'Ayarlar uygulandı!');
+      }, 100);
+    }
+
+    // Slider değişikliklerini izle
+    function monitorSliders() {
+      const sliders = ['doga', 'macera', 'spor', 'eglence', 'yemek', 'gece_hayati'];
+      sliders.forEach(category => {
+        const slider = document.getElementById(category);
+        if (slider) {
+          slider.addEventListener('change', function(e) {
+            console.log(`📊 Slider ${category} changed: ${e.target.value} (from smart preset monitoring)`);
+          });
+
+          slider.addEventListener('input', function(e) {
+            console.log(`🎚️ Slider ${category} input: ${e.target.value}`);
+          });
+        }
+      });
+    }
+
+    // Sayfa yüklendiğinde slider'ları izlemeye başla
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', monitorSliders);
+    } else {
+      monitorSliders();
+    }
+
+    console.log('🔧 Smart preset functions loaded');
+  </script>
+
+  <style>
+    /* Akıllı preset butonları için özel stiller */
+    .smart-preset {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      color: white !important;
+      margin: 2px !important;
+      transition: all 0.3s ease !important;
+    }
+
+    .smart-preset:hover {
+      background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+    }
+
+    .smart-preset:active {
+      transform: translateY(0) !important;
+    }
+
+    /* Responsive düzen için */
+    @media (max-width: 768px) {
+      .quick-selection-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      .quick-btn {
+        flex: 1;
+        min-width: calc(33.333% - 8px);
+        font-size: 0.8rem;
+        padding: 8px 4px;
+      }
+    }
+  </style>
 
 </body>
 </html>

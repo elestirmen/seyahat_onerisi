@@ -10008,7 +10008,22 @@ function initializeQuickSelection() {
             if (preset === 'reset') {
                 resetAllPreferences();
             } else if (quickPresets[preset]) {
-                applyPreset(quickPresets[preset]);
+                // Preset application is handled in personal_routes.js; just trigger recommendations
+                // Auto-trigger recommendations after selecting a quick preset
+                try {
+                    const recommendBtn = document.getElementById('recommendBtn');
+                    if (recommendBtn && !recommendBtn.disabled && typeof getRecommendations === 'function') {
+                        // Slight delay to ensure UI updates and change events settle (allow slider animation)
+                        setTimeout(() => {
+                            // Double-check still not loading
+                            if (!recommendBtn.disabled) {
+                                getRecommendations();
+                            }
+                        }, 600);
+                    }
+                } catch (e) {
+                    // Silent fallback if not available
+                }
             }
             
             // Add visual feedback
@@ -10287,22 +10302,28 @@ async function getRecommendations() {
         }
 
         // Transform API response to match our display format
+        // Build recommendation buckets
+        let high = apiData.recommendations
+            .filter(poi => poi.score >= 45)
+            .map(poi => ({ ...poi, recommendationScore: Math.round(poi.score), ratings: poi.ratings || {}, tier: 'high' }));
+        let low = apiData.recommendations
+            .filter(poi => poi.score < 45)
+            .map(poi => ({ ...poi, recommendationScore: Math.round(poi.score), ratings: poi.ratings || {}, tier: 'low' }));
+
+        // If there are no high-score items, promote top alternatives to primary list for better UX
+        if (high.length === 0 && low.length > 0) {
+            // Sort low by score desc just in case
+            low.sort((a, b) => b.recommendationScore - a.recommendationScore);
+            const promoteCount = Math.min(6, low.length);
+            const promoted = low.slice(0, promoteCount).map(p => ({ ...p, tier: 'high' }));
+            high = promoted;
+            low = low.slice(promoteCount);
+        }
+
         const recommendationData = {
-            highScore: apiData.recommendations.filter(poi => poi.score >= 45).map(poi => ({
-                ...poi,
-                recommendationScore: Math.round(poi.score),
-                ratings: poi.ratings || {}
-            })),
-            lowScore: apiData.recommendations.filter(poi => poi.score < 45).map(poi => ({
-                ...poi,
-                recommendationScore: Math.round(poi.score),
-                ratings: poi.ratings || {}
-            })),
-            all: apiData.recommendations.map(poi => ({
-                ...poi,
-                recommendationScore: Math.round(poi.score),
-                ratings: poi.ratings || {}
-            }))
+            highScore: high,
+            lowScore: low,
+            all: apiData.recommendations.map(poi => ({ ...poi, recommendationScore: Math.round(poi.score), ratings: poi.ratings || {} }))
         };
 
         // Log removed for cleaner console
@@ -10524,6 +10545,7 @@ async function displayRecommendations(recommendationData) {
     }
 
     if (recommendationData.lowScore.length > 0) {
+        const noPrimary = recommendationData.highScore.length === 0;
         html += `
             <div class="recommendation-category secondary">
                 <div class="category-header">
@@ -10533,12 +10555,12 @@ async function displayRecommendations(recommendationData) {
                         <span class="category-badge secondary">${recommendationData.lowScore.length}</span>
                     </div>
                     <p class="category-description">Farklı deneyimler için alternatif seçenekler</p>
-                    <button class="toggle-category-btn" onclick="toggleAlternativeRecommendations()">
-                        <span class="toggle-text">Göster</span>
-                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    <button class="toggle-category-btn ${noPrimary ? 'active' : ''}" onclick="toggleAlternativeRecommendations()">
+                        <span class="toggle-text">${noPrimary ? 'Gizle' : 'Göster'}</span>
+                        <i class="fas fa-chevron-down toggle-icon" style="transform: ${noPrimary ? 'rotate(180deg)' : 'rotate(0deg)'};"></i>
                     </button>
                 </div>
-                <div class="recommendations-grid alternative" id="alternativeRecommendations" style="display: none;">
+                <div class="recommendations-grid alternative" id="alternativeRecommendations" style="display: ${noPrimary ? 'grid' : 'none'};">
                     ${createModernPOICards(recommendationData.lowScore, 'secondary')}
                 </div>
             </div>
@@ -10771,6 +10793,27 @@ async function initializeEmptyMap() {
     markers.forEach(marker => marker.remove());
     markers = [];
 
+    // If only low score results exist, focus and open the top one
+    if (showLowByDefault && recommendationData.lowScore.length > 0) {
+        try {
+            const top = recommendationData.lowScore[0];
+            // Focus map smoothly and open popup for top item
+            setTimeout(() => {
+                if (map) {
+                    map.setView([top.latitude, top.longitude], 15);
+                    const m = markers.find(mk => {
+                        const id = (mk.poiData && (mk.poiData.poi_id || mk.poiData.id || mk.poiData._id));
+                        const tid = (top.poi_id || top.id || top._id);
+                        return String(id) === String(tid);
+                    });
+                    if (m) {
+                        try { m.openPopup(); } catch (_) {}
+                    }
+                }
+            }, 700);
+        } catch (_) { /* noop */ }
+    }
+
     // Remove loading state after map is fully loaded
     setTimeout(() => {
         mapContainer.classList.remove('loading');
@@ -10879,9 +10922,11 @@ async function initializeMap(recommendationData) {
 
     // Add markers for all recommendations (high and low score)
     const allPOIs = [...recommendationData.highScore, ...recommendationData.lowScore];
+    const showLowByDefault = (recommendationData.highScore.length === 0 && recommendationData.lowScore.length > 0);
 
     for (const [index, poi] of allPOIs.entries()) {
-        const isLowScore = poi.recommendationScore < 45;
+        // Treat items in highScore bucket as primary even if score < 45 (promoted)
+        const isLowScore = (poi.tier === 'high') ? false : (poi.recommendationScore < 45);
         
         // Debug: Log POI category
         if (index < 3) { // Only log first 3 POIs to avoid spam
@@ -11037,9 +11082,9 @@ async function initializeMap(recommendationData) {
         marker.isLowScore = isLowScore;
         marker.poiData = poi;
 
-        if (isLowScore) {
+        if (isLowScore && !showLowByDefault) {
             marker.setOpacity(0); // Başlangıçta gizli
-            marker._icon.style.display = 'none';
+            if (marker._icon) marker._icon.style.display = 'none';
         }
 
         markers.push(marker);

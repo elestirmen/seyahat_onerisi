@@ -61,37 +61,46 @@
 }
 
 /* =============================================================================
-   ENHANCED MODAL TRANSITIONS - Jitter-free animations
+   ENHANCED MODAL TRANSITIONS - Jitter-free animations (Updated)
    ============================================================================= */
+
+/* Force integer positioning to prevent subpixel jitter */
+.modal-force-integer {
+    transform: translate3d(0, 0, 0) !important;
+    will-change: transform !important;
+    contain: layout style paint !important;
+}
 
 /* Smooth modal show animation */
 .route-details-modal.show {
     /* Avoid transforms on the container to keep fixed children anchored to viewport */
-    transform: none !important;
+    transform: translate3d(0, 0, 0) !important;
     opacity: 1 !important;
     visibility: visible !important;
-    
-    /* Smooth transition */
-    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    
-    /* Prevent layout shifts */
-    contain: layout style !important;
+
+    /* Smooth transition with optimized timing */
+    transition: opacity 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                visibility 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+
+    /* Prevent layout shifts and subpixel jitter */
+    contain: layout style paint !important;
+    backface-visibility: hidden !important;
 }
 
 /* Smooth modal hide animation */
 .route-details-modal:not(.show) {
     /* Avoid transforms on the container to keep fixed children anchored to viewport */
-    transform: none !important;
+    transform: translate3d(0, 0, 0) !important;
     opacity: 0 !important;
     visibility: hidden !important;
-    
-    /* Smooth transition */
-    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    
-    /* Prevent layout shifts */
-    contain: layout style !important;
+
+    /* Smooth transition with optimized timing */
+    transition: opacity 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                visibility 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+
+    /* Prevent layout shifts and subpixel jitter */
+    contain: layout style paint !important;
+    backface-visibility: hidden !important;
 }
 
 /* RouteDetailsPanel smooth transitions */
@@ -242,8 +251,37 @@
 }
 
 /* =============================================================================
-   JITTER PREVENTION UTILITIES
+   JITTER PREVENTION UTILITIES (Enhanced)
    ============================================================================= */
+
+/* Critical jitter prevention for modal containers */
+.modal-jitter-fix {
+    /* Force hardware acceleration with stable transforms */
+    transform: translate3d(0, 0, 0) !important;
+    will-change: transform, opacity !important;
+
+    /* Prevent subpixel rendering issues */
+    backface-visibility: hidden !important;
+    -webkit-backface-visibility: hidden !important;
+
+    /* Optimize for GPU composition */
+    contain: layout style paint !important;
+
+    /* Prevent layout thrashing */
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+/* Force integer pixel positioning during animations */
+.modal-pixel-aligned {
+    image-rendering: -webkit-optimize-contrast !important;
+    image-rendering: crisp-edges !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
 
 /* Prevent layout shifts during modal operations */
 .prevent-layout-shift {

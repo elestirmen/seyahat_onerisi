@@ -21,7 +21,7 @@ window.modalJitterFix = {
 };
 
 /**
- * Initialize the modal jitter fix system
+ * Initialize the modal jitter fix system (Enhanced)
  */
 function initializeModalJitterFix() {
     if (window.modalJitterFix.isInitialized) {
@@ -29,8 +29,8 @@ function initializeModalJitterFix() {
         return;
     }
 
-    console.warn('🔧 Initializing modal jitter fix system');
-    
+    console.warn('🔧 Initializing enhanced modal jitter fix system');
+
     // Wait for modal manager to be available
     if (window.modalManager) {
         window.modalJitterFix.modalManager = window.modalManager;
@@ -38,19 +38,250 @@ function initializeModalJitterFix() {
     } else {
         console.warn('ModalManager not available, using fallback system');
     }
-    
-    // Patch existing modal functions
-    patchRouteDetailsPanel();
-    patchRouteDetailsModal();
-    installViewportCompensationHandlers();
-    
+
+    // Enhanced initialization with performance optimizations
+    setupPerformanceOptimizations();
+    patchExistingModalFunctions();
+    installAdvancedViewportHandlers();
+
     // Add global cleanup handlers (only if no modal manager)
     if (!window.modalJitterFix.modalManager) {
         addGlobalCleanupHandlers();
     }
-    
+
+    // Initialize hardware acceleration monitoring
+    setupHardwareAccelerationMonitoring();
+
     window.modalJitterFix.isInitialized = true;
-    console.warn('✅ Modal jitter fix system initialized');
+    console.warn('✅ Enhanced modal jitter fix system initialized');
+}
+
+/**
+ * Setup performance optimizations for modal operations
+ */
+function setupPerformanceOptimizations() {
+    console.warn('⚡ Setting up performance optimizations');
+
+    // Pre-warm GPU layers for common modal elements
+    const warmUpGPU = () => {
+        const testElement = document.createElement('div');
+        testElement.style.position = 'absolute';
+        testElement.style.top = '-9999px';
+        testElement.style.left = '-9999px';
+        testElement.style.width = '100px';
+        testElement.style.height = '100px';
+        testElement.style.transform = 'translate3d(0, 0, 0)';
+        testElement.style.willChange = 'transform';
+        document.body.appendChild(testElement);
+
+        // Force GPU layer creation
+        void testElement.offsetHeight;
+
+        setTimeout(() => {
+            document.body.removeChild(testElement);
+        }, 100);
+    };
+
+    // Warm up GPU on first user interaction
+    const handleFirstInteraction = () => {
+        warmUpGPU();
+        document.removeEventListener('click', handleFirstInteraction);
+        document.removeEventListener('keydown', handleFirstInteraction);
+        document.removeEventListener('touchstart', handleFirstInteraction);
+    };
+
+    document.addEventListener('click', handleFirstInteraction, { once: true });
+    document.addEventListener('keydown', handleFirstInteraction, { once: true });
+    document.addEventListener('touchstart', handleFirstInteraction, { once: true });
+}
+
+/**
+ * Setup hardware acceleration monitoring
+ */
+function setupHardwareAccelerationMonitoring() {
+    console.warn('👁️ Setting up hardware acceleration monitoring');
+
+    // Monitor transform3d support and performance
+    const testHardwareAcceleration = () => {
+        const testElement = document.createElement('div');
+        testElement.style.position = 'absolute';
+        testElement.style.top = '-9999px';
+        testElement.style.left = '-9999px';
+        testElement.style.width = '100px';
+        testElement.style.height = '100px';
+
+        const startTime = performance.now();
+
+        // Test transform3d performance
+        testElement.style.transform = 'translate3d(10px, 10px, 0)';
+        void testElement.offsetHeight; // Force reflow
+
+        const endTime = performance.now();
+        const duration = endTime - startTime;
+
+        // Store hardware acceleration capability
+        window.modalJitterFix.hardwareAcceleration = {
+            supported: duration < 5, // If it takes less than 5ms, hardware acceleration is likely working
+            duration: duration,
+            transform3d: CSS.supports('transform', 'translate3d(0, 0, 0)')
+        };
+
+        console.warn('🎮 Hardware acceleration test results:', window.modalJitterFix.hardwareAcceleration);
+    };
+
+    // Run test after DOM is ready
+    if (document.readyState === 'complete') {
+        testHardwareAcceleration();
+    } else {
+        window.addEventListener('load', testHardwareAcceleration);
+    }
+}
+
+/**
+ * Patch existing modal functions with enhanced jitter fixes
+ */
+function patchExistingModalFunctions() {
+    console.warn('🔧 Patching existing modal functions with enhanced fixes');
+
+    // Patch existing modal functions
+    patchRouteDetailsPanel();
+    patchRouteDetailsModal();
+    patchMediaModalFunctions();
+
+    // Add enhanced modal opening/closing with jitter prevention
+    enhanceModalLifecycle();
+}
+
+/**
+ * Install advanced viewport compensation handlers
+ */
+function installAdvancedViewportHandlers() {
+    console.warn('📐 Installing advanced viewport compensation handlers');
+
+    installViewportCompensationHandlers();
+
+    // Add additional viewport change detection
+    let viewportChangeTimeout;
+
+    const handleViewportChange = () => {
+        clearTimeout(viewportChangeTimeout);
+        viewportChangeTimeout = setTimeout(() => {
+            console.warn('📐 Viewport changed, applying compensation');
+
+            // Close any open modals that might be affected
+            if (window.modalJitterFix.activeModals.size > 0) {
+                closeAllActiveModals();
+            }
+
+            // Reapply viewport compensation
+            applyViewportCompensation();
+        }, 100);
+    };
+
+    // Listen for viewport changes
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('orientationchange', handleViewportChange);
+
+    // Handle fullscreen changes
+    document.addEventListener('fullscreenchange', handleViewportChange);
+}
+
+/**
+ * Apply viewport compensation
+ */
+function applyViewportCompensation() {
+    const anyModal = document.querySelector('#routeDetailsModal.show, .modal.show');
+    if (!anyModal) return;
+
+    // Apply compensation logic
+    const compensationLogic = () => {
+        const isRouteModal = anyModal.id === 'routeDetailsModal' || anyModal.classList.contains('route-details-modal');
+        const isBootstrapModal = anyModal.classList.contains('modal') && !anyModal.id?.includes('routeDetailsModal');
+
+        if (isBootstrapModal) {
+            const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+            document.body.style.overflow = 'hidden';
+            if (scrollbarWidth > 0) {
+                document.body.style.paddingRight = scrollbarWidth + 'px';
+            } else {
+                document.body.style.paddingRight = '';
+            }
+        }
+
+        if (!isRouteModal) {
+            safeRefreshModalLayout(anyModal);
+        } else {
+            safeRefreshModalLayout(anyModal, { willChange: 'opacity' });
+        }
+
+        try {
+            const modalInstance = window.routeDetailsModalInstance || (window.RouteDetailsModal && window.RouteDetailsModal.getInstance && window.RouteDetailsModal.getInstance());
+            if (modalInstance && modalInstance.isVisible) {
+                if (modalInstance.mapInstance && typeof modalInstance.mapInstance.invalidateSize === 'function') {
+                    modalInstance.mapInstance.invalidateSize();
+                }
+            }
+        } catch (_) { /* noop */ }
+    };
+
+    requestAnimationFrame(() => requestAnimationFrame(compensationLogic));
+}
+
+/**
+ * Enhance modal lifecycle with jitter prevention
+ */
+function enhanceModalLifecycle() {
+    console.warn('🔄 Enhancing modal lifecycle with jitter prevention');
+
+    // Override modal show/hide methods to include jitter fixes
+    const originalShowModal = window.showModal || (() => {});
+    const originalHideModal = window.hideModal || (() => {});
+
+    window.showModal = function(modalElement, options = {}) {
+        console.warn('🚪 Enhanced showModal called with jitter prevention');
+
+        // Apply jitter prevention before showing
+        if (modalElement) {
+            modalElement.classList.add('modal-jitter-fix');
+            resetModalAnimationState(modalElement);
+        }
+
+        // Call original function
+        const result = originalShowModal.call(this, modalElement, options);
+
+        // Remove jitter prevention after animation starts
+        if (modalElement) {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    modalElement.classList.remove('modal-jitter-fix');
+                });
+            });
+        }
+
+        return result;
+    };
+
+    window.hideModal = function(modalElement, options = {}) {
+        console.warn('🚪 Enhanced hideModal called with jitter prevention');
+
+        // Apply jitter prevention before hiding
+        if (modalElement) {
+            modalElement.classList.add('modal-jitter-fix');
+        }
+
+        // Call original function
+        const result = originalHideModal.call(this, modalElement, options);
+
+        // Clean up after hiding
+        if (modalElement) {
+            setTimeout(() => {
+                resetModalAnimationState(modalElement);
+                modalElement.classList.remove('modal-jitter-fix');
+            }, 300); // Wait for animation to complete
+        }
+
+        return result;
+    };
 }
 
 /**
@@ -322,28 +553,45 @@ function resetModalAnimationState(modalElement) {
         return;
     }
     
-    // Fallback to legacy reset
+    // Enhanced reset with jitter prevention
+    const computedStyle = window.getComputedStyle(modalElement);
+
     // Force reflow to ensure any pending animations complete
-    modalElement.offsetHeight;
-    
-    // Remove animation classes
-    modalElement.classList.remove('show', 'hide', 'animating');
-    
-    // Reset transform and transition properties
-    modalElement.style.transform = '';
-    modalElement.style.transition = '';
-    modalElement.style.animation = '';
-    
-    // Reset will-change property to auto
-    modalElement.style.willChange = 'auto';
-    
-    // Force another reflow
-    modalElement.offsetHeight;
-    
+    void modalElement.offsetHeight;
+
+    // Remove animation classes with proper timing
+    modalElement.classList.remove('show', 'hide', 'animating', 'modal-opening', 'modal-closing');
+
+    // Add jitter prevention class temporarily
+    modalElement.classList.add('modal-jitter-fix');
+
+    // Reset transform and transition properties with stable values
+    modalElement.style.transform = 'translate3d(0, 0, 0)';
+    modalElement.style.transition = 'none';
+    modalElement.style.animation = 'none';
+    modalElement.style.opacity = '1';
+    modalElement.style.visibility = 'visible';
+
+    // Reset will-change property to prevent unnecessary GPU layers
+    modalElement.style.willChange = 'transform, opacity';
+
+    // Force another reflow to ensure changes take effect
+    void modalElement.offsetHeight;
+
+    // Remove jitter fix class after a brief moment
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            modalElement.classList.remove('modal-jitter-fix');
+            modalElement.style.willChange = 'auto';
+        });
+    });
+
     // Store animation state
     window.modalJitterFix.animationStates.set(modalElement, {
         reset: true,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        transform: modalElement.style.transform,
+        opacity: modalElement.style.opacity
     });
 }
 
