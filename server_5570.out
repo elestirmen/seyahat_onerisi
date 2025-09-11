@@ -1,0 +1,25 @@
+INFO:auth_config:Authentication configuration loaded successfully
+INFO:poi_database_adapter:PostgreSQL veritabanına bağlandı
+INFO:poi_database_adapter:PostgreSQL bağlantısı kapatıldı
+Session cleanup worker started
+🚀 POI Yönetim Sistemi başlatılıyor...
+📊 Web arayüzü: http://localhost:5570/poi_manager_ui.html
+🔌 API endpoint'leri: http://localhost:5570/api/
+✅ POSTGRESQL veritabanı bağlantısı aktif
+🔌 Server starting on port 5570
+ * Serving Flask app 'poi_api'
+ * Debug mode: on
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5570
+ * Running on http://192.168.1.81:5570
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+INFO:auth_config:Authentication configuration loaded successfully
+INFO:poi_database_adapter:PostgreSQL veritabanına bağlandı
+INFO:poi_database_adapter:PostgreSQL bağlantısı kapatıldı
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 652-077-041
+INFO:werkzeug:127.0.0.1 - - [11/Sep/2025 22:15:26] "HEAD /poi_recommendation_system.html HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [11/Sep/2025 22:15:36] "GET /api/route-panoramas HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [11/Sep/2025 22:15:36] "GET /api/panoramas HTTP/1.1" 200 -

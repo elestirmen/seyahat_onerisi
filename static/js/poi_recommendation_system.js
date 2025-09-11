@@ -8781,6 +8781,13 @@ async function loadPanoramasLayer() {
             panoramaLayer.clearLayers();
         }
 
+        // Simple heuristic to detect 360° image by filename keywords
+        const isPanoramicCandidate = (name) => {
+            if (!name || typeof name !== 'string') return false;
+            const lower = name.toLowerCase();
+            return /(\b|[_-])(360|pano|panorama|equirect|spherical)(\b|[_-]|\.)/.test(lower);
+        };
+
         const res = await fetch('/api/panoramas', { credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
@@ -8821,6 +8828,53 @@ async function loadPanoramasLayer() {
                 `);
             panoramaLayer.addLayer(marker);
         });
+
+        // Also load route media with coordinates and show only those that look like 360°
+        try {
+            const res2 = await fetch('/api/route-panoramas', { credentials: 'include' });
+            if (res2.ok) {
+                const data2 = await res2.json();
+                const items2 = Array.isArray(data2) ? data2 : (data2.panoramas || []);
+                items2.forEach(p => {
+                    const lat = typeof p.lat === 'number' ? p.lat : parseFloat(p.lat);
+                    const lng = typeof p.lng === 'number' ? p.lng : parseFloat(p.lng);
+                    if (isNaN(lat) || isNaN(lng)) return;
+                    if (!isPanoramicCandidate(p.filename)) return;
+
+                    const icon = L.divIcon({
+                        className: 'pano-marker-wrapper',
+                        html: `
+                            <div class="pano-marker-circle" aria-label="360 derece panorama işareti">
+                              <span class="pano-360">360°</span>
+                            </div>
+                        `,
+                        iconSize: [34, 34],
+                        iconAnchor: [17, 17],
+                        popupAnchor: [0, -16]
+                    });
+
+                    const mediaPath = (p.path || '').startsWith('/') ? p.path : `/${p.path}`;
+                    const caption = p.caption || 'Rota Medyası 360°';
+
+                    const marker = L.marker([lat, lng], { icon })
+                        .bindPopup(`
+                            <div style="min-width:180px;">
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                                    <span style="display:inline-flex;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;background:#111827;color:#fff;font-size:10px;font-weight:800;">360°</span>
+                                    <strong>360° Panorama</strong>
+                                </div>
+                                ${caption ? `<div style=\"color:#444;font-size:0.9rem;margin-bottom:6px;\">${caption}</div>` : ''}
+                                <button class="btn btn-sm btn-primary" onclick="openPanoramaViewer('${mediaPath.replace(/'/g, "\'")}', '${(caption || '').replace(/'/g, "\'")}')">
+                                    <i class="fas fa-vr-cardboard"></i> Aç
+                                </button>
+                            </div>
+                        `);
+                    panoramaLayer.addLayer(marker);
+                });
+            }
+        } catch (e2) {
+            console.warn('Route panoramas load error:', e2);
+        }
     } catch (e) {
         console.warn('Panoramas load error:', e);
     }

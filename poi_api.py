@@ -2552,6 +2552,77 @@ def list_panoramas():
     except Exception as e:
         return jsonify({'error': f'Error fetching panoramas: {str(e)}'}), 500
 
+@app.route('/api/route-panoramas', methods=['GET'])
+def list_route_panoramas():
+    """Rotalara ait, konumu belirlenmiş görüntü medyalarını listele (360 filtreleme istemci tarafında yapılır)."""
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Sadece konumu olan görselleri getir (video/ses hariç)
+        cur.execute(
+            """
+            SELECT route_id, file_path, thumbnail_path, caption, lat, lng, media_type, uploaded_at
+            FROM route_media
+            WHERE lat IS NOT NULL
+              AND lng IS NOT NULL
+              AND (media_type IS NULL OR media_type IN ('image','photo'))
+            ORDER BY uploaded_at DESC NULLS LAST
+            """
+        )
+
+        rows = cur.fetchall() or []
+        results = []
+        for row in rows:
+            raw_path = row.get('file_path') or ''
+            rel_path = None
+            if isinstance(raw_path, str):
+                if raw_path.startswith('/'):
+                    # absolute path olabilir; 'poi_media/' segmentini bulup oradan itibaren kırp
+                    idx = raw_path.find('poi_media/')
+                    if idx != -1:
+                        rel_path = raw_path[idx:]
+                    else:
+                        rel_path = raw_path.lstrip('/')
+                else:
+                    rel_path = raw_path
+            else:
+                rel_path = ''
+
+            filename = None
+            try:
+                filename = rel_path.split('/')[-1] if rel_path else None
+            except Exception:
+                filename = None
+
+            # Nihai çıktı (istemci 360 tespitini yapacak)
+            results.append({
+                'route_id': row.get('route_id'),
+                'path': rel_path,
+                'caption': row.get('caption') or '',
+                'lat': float(row['lat']) if row.get('lat') is not None else None,
+                'lng': float(row['lng']) if row.get('lng') is not None else None,
+                'filename': filename,
+                'media_type': (row.get('media_type') or 'image')
+            })
+
+        cur.close()
+        conn.close()
+        return jsonify({'panoramas': results})
+    except Exception as e:
+        logger.error(f"Error fetching route panoramas: {e}")
+        try:
+            if cur:
+                cur.close()
+        except Exception:
+            pass
+        try:
+            if conn:
+                conn.close()
+        except Exception:
+            pass
+        return jsonify({'error': f'Error fetching route panoramas: {str(e)}'}), 500
+
 
 @app.route('/api/panoramas/<pano_id>', methods=['DELETE'])
 @auth_middleware.require_auth

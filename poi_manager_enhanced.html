@@ -2856,6 +2856,49 @@
                             `);
                         this.panoramaLayer.addLayer(marker);
                     });
+
+                    // Rota medyasındaki 360° görselleri de ekle (dosya adına göre basit tespit)
+                    try {
+                        const res2 = await this.authenticatedFetch('/api/route-panoramas');
+                        if (res2.ok) {
+                            const data2 = await res2.json();
+                            const items2 = data2.panoramas || [];
+                            items2.forEach(p => {
+                                if (typeof p.lat !== 'number' || typeof p.lng !== 'number') return;
+                                if (!this.isPanoramaFilename(p.filename)) return;
+                                const icon2 = L.divIcon({
+                                    className: 'pano-marker-wrapper',
+                                    html: `
+                                        <div class="pano-marker-circle" aria-label="360 derece panorama işareti">
+                                            <span class="pano-360">360°</span>
+                                        </div>
+                                    `,
+                                    iconSize: [34, 34],
+                                    iconAnchor: [17, 17],
+                                    popupAnchor: [0, -16]
+                                });
+                                const caption = p.caption || 'Rota Medyası 360°';
+                                const marker2 = L.marker([p.lat, p.lng], { icon: icon2 })
+                                    .bindPopup(`
+                                        <div class="poi-popup">
+                                            <div class="poi-popup-header" style="display:flex;align-items:center;gap:8px;">
+                                                <span style="display:inline-flex;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;background:#111827;color:#fff;font-size:10px;font-weight:800;">360°</span>
+                                                <strong>360° Panorama</strong>
+                                            </div>
+                                            ${caption ? `<div class=\"poi-popup-description\">${caption}</div>` : ''}
+                                            <div style="margin-top:6px;">
+                                                <button class="btn btn-sm btn-primary" onclick="showMediaModal('/${p.path}', '${p.filename}', 'image')">
+                                                    <i class="fas fa-vr-cardboard"></i> Aç
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `);
+                                this.panoramaLayer.addLayer(marker2);
+                            });
+                        }
+                    } catch (e2) {
+                        console.warn('Rota panoramaları yüklenemedi:', e2);
+                    }
                 } catch (e) {
                     console.warn('Panorama yüklenemedi:', e);
                 }

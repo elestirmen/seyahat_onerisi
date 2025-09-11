@@ -1,0 +1,7 @@
+INFO:auth_config:Authentication configuration loaded successfully
+Session cleanup worker started
+Traceback (most recent call last):
+  File "/opt/rehber/seyahat_onerisi/poi_api.py", line 2556, in <module>
+    @public_rate_limit(max_requests=50, window_seconds=60)
+     ^^^^^^^^^^^^^^^^^
+NameError: name 'public_rate_limit' is not defined. Did you mean: 'admin_rate_limit'?
