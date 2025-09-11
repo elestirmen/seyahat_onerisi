@@ -2498,6 +2498,75 @@ def delete_poi_image_legacy(poi_id, filename):
     """Geriye uyumluluk için eski görsel silme endpoint'i"""
     return delete_poi_media(poi_id, filename)
 
+# Bağımsız 360° panorama endpoint'leri
+@app.route('/api/panoramas', methods=['POST'])
+@auth_middleware.require_auth
+def upload_panorama():
+    """POI'den bağımsız 360° görsel yükle, EXIF'ten konumu al ve sakla"""
+    try:
+        if 'media' not in request.files:
+            return jsonify({'error': 'No media file provided'}), 400
+        file = request.files['media']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'Invalid file type'}), 400
+
+        # Geçici dosya oluştur ve kaydet
+        filename = secure_filename(file.filename)
+        temp_path = f"/tmp/{uuid.uuid4()}_{filename}"
+        file.save(temp_path)
+
+        # Boyut ve tür doğrulaması (daha anlamlı hata kodu için)
+        is_valid, message, detected_type = media_manager.validate_file(temp_path, 'image')
+        if not is_valid:
+            # Geçici dosyayı temizle
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            finally:
+                pass
+            return jsonify({'error': message}), 400
+
+        caption = request.form.get('caption', '')
+        try:
+            result = media_manager.add_panorama_image(temp_path, caption)
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+        if not result:
+            return jsonify({'error': 'Failed to process panorama'}), 500
+        return jsonify({'success': True, 'panorama': result}), 201
+    except Exception as e:
+        return jsonify({'error': f'Error uploading panorama: {str(e)}'}), 500
+
+
+@app.route('/api/panoramas', methods=['GET'])
+def list_panoramas():
+    """Tüm bağımsız 360° panoramaları listele"""
+    try:
+        items = media_manager.get_all_panoramas()
+        return jsonify({'panoramas': items})
+    except Exception as e:
+        return jsonify({'error': f'Error fetching panoramas: {str(e)}'}), 500
+
+
+@app.route('/api/panoramas/<pano_id>', methods=['DELETE'])
+@auth_middleware.require_auth
+def delete_panorama(pano_id):
+    """Bağımsız panorama sil"""
+    try:
+        if not pano_id or len(pano_id) < 6:
+            return jsonify({'error': 'Invalid panorama id'}), 400
+        success = media_manager.delete_panorama_by_id(pano_id)
+        if success:
+            return jsonify({'success': True})
+        return jsonify({'success': True, 'message': 'Panorama not found or already deleted'}), 200
+    except Exception as e:
+        return jsonify({'error': f'Error deleting panorama: {str(e)}'}), 500
+
 # Medya dosyalarını serve etme endpoint'leri
 @app.route('/poi_media/<path:filename>')
 def serve_poi_media(filename):

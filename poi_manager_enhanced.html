@@ -10,6 +10,10 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="static/css/route-admin.css">
+    <!-- Photo Sphere Viewer for 360° panoramas -->
+    <link rel="stylesheet" href="https://unpkg.com/photo-sphere-viewer@5/dist/photo-sphere-viewer.css">
+    <script src="https://unpkg.com/three@0.157.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/photo-sphere-viewer@5/dist/photo-sphere-viewer.js"></script>
     <style>
         :root {
             --poi-primary: #2d3748;
@@ -255,10 +259,27 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             border: 3px solid white;
             transition: transform 0.2s ease;
+            position: relative;
         }
 
         .poi-marker-container:hover {
             transform: scale(1.1);
+        }
+
+        /* 360° badge for markers */
+        .poi-badge-360 {
+            position: absolute;
+            right: -6px;
+            bottom: -6px;
+            background: #0ea5e9;
+            color: #fff;
+            font-weight: 700;
+            font-size: 10px;
+            line-height: 1;
+            border-radius: 10px;
+            padding: 2px 5px;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
         }
 
         /* Custom Popup Styles */
@@ -466,6 +487,21 @@
             width: 100%;
             height: 100px;
             object-fit: cover;
+        }
+
+        /* 360° badge on media thumbnails */
+        .media-360-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(14, 165, 233, 0.95);
+            color: #fff;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.9);
+            z-index: 2;
         }
 
         .media-gallery-placeholder {
@@ -1648,6 +1684,35 @@
                 </div>
             </div>
 
+            <!-- 360° Panoramalar (POI'den bağımsız) -->
+            <div class="sidebar-controls" style="border-top: 1px solid var(--poi-border);">
+                <div class="filter-controls">
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-street-view"></i>
+                            360° Panoramalar
+                        </label>
+                        <div class="form-check">
+                            <input type="checkbox" id="togglePanoramas" class="form-check-input">
+                            <label class="form-check-label" for="togglePanoramas">Haritada göster</label>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-upload"></i>
+                            360° Görsel Yükle
+                        </label>
+                        <input type="file" id="panoFile" accept=".jpg,.jpeg,.png,.webp" class="filter-select">
+                        <input type="text" id="panoCaption" class="filter-select" placeholder="Açıklama (opsiyonel)">
+                        <button type="button" class="btn btn-primary btn-sm" id="uploadPanoBtn">
+                            <i class="fas fa-cloud-upload-alt"></i> Yükle
+                        </button>
+                        <span class="form-help">Konum EXIF bilgilerinden otomatik alınır.</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- POI List -->
             <div class="poi-list-container" id="poiListContainer">
                 <div class="loading-state" id="loadingState">
@@ -2040,6 +2105,9 @@
                 this.map = L.map('map').setView([38.6431, 34.8331], 11);
 
                 addBaseLayers(this.map);
+
+                // Panoramas layer
+                this.panoramaLayer = L.layerGroup().addTo(this.map);
 
                 // Add double-click handler for creating new POIs
                 this.map.on('dblclick', (e) => {
@@ -2457,6 +2525,7 @@
 
                         const categoryIcon = category ? category.icon : 'map-marker-alt';
                         const categoryColor = category ? category.color : '#2563eb';
+                        const has360 = this.poiHas360Tag(poi);
 
                         // Create custom icon
                         const customIcon = L.divIcon({
@@ -2464,6 +2533,7 @@
                             html: `
                                 <div class="poi-marker-container" style="background-color: ${categoryColor}">
                                     <i class="fas fa-${categoryIcon}"></i>
+                                    ${has360 ? '<div class="poi-badge-360">360°</div>' : ''}
                                 </div>
                             `,
                             iconSize: [30, 30],
@@ -2489,6 +2559,16 @@
                         this.markers[poi.id || poi._id] = marker;
                     }
                 });
+            }
+
+            poiHas360Tag(poi) {
+                try {
+                    if (!poi || !poi.tags) return false;
+                    const tags = Array.isArray(poi.tags) ? poi.tags : String(poi.tags).split(',');
+                    return tags.some(t => /(360|pano|panorama)/i.test(String(t).trim()));
+                } catch (_) {
+                    return false;
+                }
             }
 
             // --- Routes on Map (display routes like in route manager) ---
@@ -2688,6 +2768,107 @@
                     e.preventDefault();
                     this.savePOI();
                 });
+
+                // Panoramas toggle
+                const togglePanos = document.getElementById('togglePanoramas');
+                if (togglePanos) {
+                    togglePanos.addEventListener('change', async (e) => {
+                        if (e.target.checked) {
+                            await this.loadPanoramas();
+                        } else {
+                            if (this.panoramaLayer) this.panoramaLayer.clearLayers();
+                        }
+                    });
+                }
+
+                // Panorama upload
+                const uploadPanoBtn = document.getElementById('uploadPanoBtn');
+                if (uploadPanoBtn) {
+                    uploadPanoBtn.addEventListener('click', () => this.uploadPanorama());
+                }
+            }
+
+            async loadPanoramas() {
+                try {
+                    const res = await this.authenticatedFetch('/api/panoramas');
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const items = data.panoramas || [];
+
+                    if (!this.panoramaLayer) this.panoramaLayer = L.layerGroup().addTo(this.map);
+                    this.panoramaLayer.clearLayers();
+
+                    items.forEach(pano => {
+                        if (typeof pano.lat !== 'number' || typeof pano.lng !== 'number') return;
+                        const icon = L.divIcon({
+                            className: 'custom-poi-marker',
+                            html: `
+                                <div class="poi-marker-container" style="background-color:#0ea5e9">
+                                    <i class="fas fa-compass"></i>
+                                    <div class="poi-badge-360">360°</div>
+                                </div>
+                            `,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15],
+                            popupAnchor: [0, -15]
+                        });
+
+                        const marker = L.marker([pano.lat, pano.lng], { icon })
+                            .bindPopup(`
+                                <div class="poi-popup">
+                                    <div class="poi-popup-header">
+                                        <i class="fas fa-compass" style="color:#0ea5e9"></i>
+                                        <strong>360° Panorama</strong>
+                                    </div>
+                                    ${pano.caption ? `<div class="poi-popup-description">${pano.caption}</div>` : ''}
+                                    <div style="margin-top:6px;">
+                                        <button class="btn btn-sm btn-primary" onclick="showMediaModal('/${pano.path}', '${pano.filename}', 'image')">
+                                            <i class="fas fa-vr-cardboard"></i> Aç
+                                        </button>
+                                    </div>
+                                </div>
+                            `);
+                        this.panoramaLayer.addLayer(marker);
+                    });
+                } catch (e) {
+                    console.warn('Panorama yüklenemedi:', e);
+                }
+            }
+
+            async uploadPanorama() {
+                try {
+                    const fileInput = document.getElementById('panoFile');
+                    const captionInput = document.getElementById('panoCaption');
+                    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                        this.showToast('Lütfen bir 360° görsel seçin', 'error');
+                        return;
+                    }
+                    const file = fileInput.files[0];
+                    const form = new FormData();
+                    form.append('media', file);
+                    if (captionInput && captionInput.value) form.append('caption', captionInput.value);
+
+                    const res = await this.authenticatedFetch('/api/panoramas', { method: 'POST', body: form });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.error || 'Yükleme başarısız');
+                    }
+                    const result = await res.json();
+                    const cr = result?.panorama?.compression_ratio;
+                    this.showToast(`360° görsel yüklendi${cr && cr !== '0%' ? ` (📦 ${cr})` : ''}`, 'success');
+                    fileInput.value = '';
+                    if (captionInput) captionInput.value = '';
+                    const pano = result?.panorama;
+                    if (!pano || typeof pano.lat !== 'number' || typeof pano.lng !== 'number') {
+                        this.showToast('EXIF konumu bulunamadı, haritaya eklenmedi.', 'error');
+                    } else {
+                        const toggle = document.getElementById('togglePanoramas');
+                        if (toggle && toggle.checked) await this.loadPanoramas();
+                    }
+                } catch (e) {
+                    console.error('Panorama upload error:', e);
+                    this.showToast('Panorama yükleme hatası: ' + e.message, 'error');
+                }
             }
 
             showLoading(show) {
@@ -3387,9 +3568,11 @@
                 mediaGallery.innerHTML = mediaFiles.map(media => {
                     const previewPath = media.preview_path || media.thumbnail_path || media.path;
                     const isImage = media.media_type === 'image';
+                    const isPano = isImage && this.isPanoramaFilename(media.filename);
 
                     return `
                         <div class="media-gallery-item" onclick="showMediaModal('/${media.path}', '${media.filename}', '${media.media_type}')">
+                            ${isPano ? `<div class=\"media-360-badge\">360°</div>` : ''}
                             ${isImage ?
                             `<img src="/${previewPath}" class="media-gallery-preview" alt="${media.filename}">` :
                             `<div class="media-gallery-placeholder">
@@ -3440,13 +3623,14 @@
                     groupedMedia[mediaType].forEach(media => {
                         const previewPath = media.preview_path || media.thumbnail_path || media.path;
                         const isImage = mediaType === 'image';
+                        const isPano = isImage && this.isPanoramaFilename(media.filename);
 
                         mediaHtml += `
                             <div class="media-item-card">
                                 <button class="media-delete-btn" onclick="deleteMediaFile('${poiId}', '${media.filename}')" title="Sil">
                                     <i class="fas fa-times"></i>
                                 </button>
-                                
+                                ${isPano ? `<div class=\"media-360-badge\">360°</div>` : ''}
                                 ${isImage ?
                                 `<img src="/${previewPath}" class="media-preview" alt="${media.filename}" 
                                           onclick="showMediaModal('/${media.path}', '${media.filename}', '${mediaType}')">` :
@@ -3465,11 +3649,11 @@
                             </div>
                         `;
                     });
-
-                    mediaHtml += `
-                            </div>
+                
+                mediaHtml += `
                         </div>
-                    `;
+                    </div>
+                `;
                 });
 
                 container.innerHTML = mediaHtml;
@@ -3484,6 +3668,13 @@
                     'unknown': '📄'
                 };
                 return icons[mediaType] || '📄';
+            }
+
+            // Heuristic to detect 360° panorama by filename keywords
+            isPanoramaFilename(filename) {
+                if (!filename) return false;
+                const name = String(filename).toLowerCase();
+                return /(\b|[_-])(360|pano|panorama|equirect|spherical)(\b|[_-]|\.)/.test(name);
             }
 
             getMediaMaxSize(mediaType) {
@@ -3584,7 +3775,18 @@
 
                 let modalContent = '';
                 if (mediaType === 'image') {
-                    modalContent = `<img src="${mediaPath}" class="img-fluid rounded-3 shadow-lg" alt="${filename}" style="max-height: 70vh;">`;
+                    const isPanoByName = this.isPanoramaFilename(filename);
+                    if (isPanoByName) {
+                        const viewerId = `pano_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+                        modalContent = `
+                            <div id="${viewerId}" style="width: 100%; height: 70vh; border-radius: 12px; overflow: hidden; background:#000;"></div>
+                        `;
+                        modal.dataset.panoViewerId = viewerId;
+                        modal.dataset.panoImage = mediaPath;
+                    } else {
+                        // Fallback to normal image, auto-detect 2:1 after modal shows
+                        modalContent = `<img id="panoCheck" src="${mediaPath}" class="img-fluid rounded-3 shadow-lg" alt="${filename}" style="max-height: 70vh;">`;
+                    }
                 } else if (mediaType === 'video') {
                     modalContent = `
                         <video controls class="w-100 rounded-3 shadow-lg" style="max-height: 70vh;">
@@ -3645,6 +3847,47 @@
 
                 modal.addEventListener('hidden.bs.modal', () => {
                     modal.remove();
+                });
+                
+                // Initialize Photo Sphere Viewer after modal is shown
+                modal.addEventListener('shown.bs.modal', () => {
+                    try {
+                        const viewerId = modal.dataset.panoViewerId;
+                        const panoImg = modal.dataset.panoImage;
+                        if (viewerId && panoImg && window.PhotoSphereViewer && window.THREE) {
+                            new PhotoSphereViewer.Viewer({
+                                container: document.getElementById(viewerId),
+                                panorama: panoImg,
+                                touchmoveTwoFingers: true,
+                                mousewheel: true,
+                                navbar: ['zoom', 'fullscreen'],
+                            });
+                            return;
+                        }
+                        // Auto-detect 2:1 images
+                        const imgEl = modal.querySelector('#panoCheck');
+                        if (imgEl && window.PhotoSphereViewer && window.THREE) {
+                            const testImg = new Image();
+                            testImg.onload = () => {
+                                const ratio = testImg.naturalWidth / testImg.naturalHeight;
+                                if (ratio > 1.95 && ratio < 2.05) {
+                                    const viewerDiv = document.createElement('div');
+                                    viewerDiv.style.cssText = 'width:100%; height:70vh; border-radius:12px; overflow:hidden; background:#000;';
+                                    imgEl.replaceWith(viewerDiv);
+                                    new PhotoSphereViewer.Viewer({
+                                        container: viewerDiv,
+                                        panorama: imgEl.src,
+                                        touchmoveTwoFingers: true,
+                                        mousewheel: true,
+                                        navbar: ['zoom', 'fullscreen'],
+                                    });
+                                }
+                            };
+                            testImg.src = imgEl.src;
+                        }
+                    } catch (e) {
+                        console.warn('360° viewer init failed:', e);
+                    }
                 });
             }
 

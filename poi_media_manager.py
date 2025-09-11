@@ -25,7 +25,7 @@ class POIMediaManager:
         'image': {
             'extensions': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'],
             'mime_types': ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff'],
-            'max_size': 15 * 1024 * 1024,  # 15MB
+            'max_size': 50 * 1024 * 1024,  # 50MB (panorama için yükseltildi)
             'folder': 'images'
         },
         'video': {
@@ -69,6 +69,16 @@ class POIMediaManager:
         (self.base_path / "by_route_id").mkdir(exist_ok=True)
         (self.thumbnails_path / "by_route_id").mkdir(exist_ok=True)
         (self.previews_path / "by_route_id").mkdir(exist_ok=True)
+
+        # Bağımsız panoramalar için klasörler
+        pano_base = self.base_path / "by_panorama"
+        pano_imgs = pano_base / "images"
+        pano_meta = pano_base / "meta"
+        pano_prev = self.previews_path / "by_panorama" / "images"
+        pano_base.mkdir(exist_ok=True)
+        pano_imgs.mkdir(parents=True, exist_ok=True)
+        pano_meta.mkdir(parents=True, exist_ok=True)
+        pano_prev.mkdir(parents=True, exist_ok=True)
     
     def cleanup_unused_directories(self):
         """Kullanılmayan eski medya türü klasörlerini temizle"""
@@ -527,6 +537,126 @@ class POIMediaManager:
         except Exception as e:
             print(f"❌ Medya ekleme hatası: {e}")
             return None
+
+    def add_panorama_image(self, image_file_path: str, caption: str = '') -> Optional[Dict]:
+        """POI'den bağımsız 360° panorama görselini ekle (EXIF'ten konumu alır)."""
+        try:
+            # Dosya doğrulama (sadece image kabul)
+            is_valid, message, detected_type = self.validate_file(image_file_path, 'image')
+            if not is_valid:
+                raise ValueError(message)
+            if detected_type != 'image':
+                raise ValueError("Sadece görsel dosyalar kabul edilir")
+
+            original_size = os.path.getsize(image_file_path)
+
+            # EXIF'ten konum
+            lat, lng = self._get_exif_location(image_file_path)
+
+            # Klasörler
+            pano_imgs = self.base_path / "by_panorama" / "images"
+            pano_prev = self.previews_path / "by_panorama" / "images"
+            pano_meta = self.base_path / "by_panorama" / "meta"
+            pano_imgs.mkdir(parents=True, exist_ok=True)
+            pano_prev.mkdir(parents=True, exist_ok=True)
+            pano_meta.mkdir(parents=True, exist_ok=True)
+
+            # Benzersiz id ve dosya adı
+            unique_id = str(uuid.uuid4())[:8]
+            file_extension = Path(image_file_path).suffix.lower()
+            target_path = pano_imgs / f"{unique_id}.webp"
+
+            # WebP'ye dönüştür (EXIF konumu yazar)
+            gps = (lat, lng) if lat is not None and lng is not None else None
+            webp_success = self.convert_to_webp(Path(image_file_path), target_path, quality=90, gps_data=gps)
+            if not webp_success:
+                # Orijinal uzantı ile kopyala
+                target_path = pano_imgs / f"{unique_id}{file_extension}"
+                shutil.copy2(image_file_path, target_path)
+
+            # Thumbnail/preview oluştur
+            preview_path = pano_prev / f"thumb_{unique_id}.webp"
+            preview_created = self.create_image_thumbnail(target_path, preview_path)
+
+            final_size = os.path.getsize(target_path)
+            size_reduction = ((original_size - final_size) / original_size * 100) if original_size > 0 else 0
+
+            # Meta oluştur ve kaydet
+            meta = {
+                'id': unique_id,
+                'media_type': 'image',
+                'path': str(target_path.relative_to(self.base_path.parent)),
+                'preview_path': str(preview_path.relative_to(self.base_path.parent)) if preview_created else None,
+                'filename': target_path.name,
+                'format': Path(target_path.name).suffix[1:] if Path(target_path.name).suffix else 'unknown',
+                'size': final_size,
+                'original_size': original_size,
+                'caption': caption,
+                'lat': lat,
+                'lng': lng,
+                'compression_ratio': f"{size_reduction:.1f}%" if size_reduction > 0 else "0%",
+                'created_at': datetime.utcnow().isoformat() + 'Z'
+            }
+
+            meta_path = pano_meta / f"{unique_id}.json"
+            with open(meta_path, 'w', encoding='utf-8') as f:
+                json.dump(meta, f, ensure_ascii=False, indent=2)
+
+            print(f"✅ Panorama eklendi: {target_path} (lat={lat}, lng={lng})")
+            return meta
+        except Exception as e:
+            print(f"❌ Panorama ekleme hatası: {e}")
+            return None
+
+    def get_all_panoramas(self) -> List[Dict]:
+        """Tüm bağımsız panoramaları meta klasöründen oku."""
+        results: List[Dict] = []
+        try:
+            pano_meta = self.base_path / "by_panorama" / "meta"
+            pano_meta.mkdir(parents=True, exist_ok=True)
+            for meta_file in pano_meta.glob('*.json'):
+                try:
+                    with open(meta_file, 'r', encoding='utf-8') as f:
+                        meta = json.load(f)
+                    # Dosyalar mevcut mu kontrol et (opsiyonel)
+                    path_rel = meta.get('path')
+                    prev_rel = meta.get('preview_path')
+                    if path_rel and not (self.base_path.parent / Path(path_rel)).exists():
+                        continue
+                    if prev_rel and not (self.base_path.parent / Path(prev_rel)).exists():
+                        meta['preview_path'] = None
+                    results.append(meta)
+                except Exception as e:
+                    print(f"⚠️ Panorama meta okunamadı: {meta_file} - {e}")
+            # Tarihe göre sırala (yeniden eskiye)
+            results.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        except Exception as e:
+            print(f"❌ Panorama listeleme hatası: {e}")
+        return results
+
+    def delete_panorama_by_id(self, pano_id: str) -> bool:
+        """Panoramayı id ile sil (dosya, preview ve meta)."""
+        try:
+            pano_imgs = self.base_path / "by_panorama" / "images"
+            pano_prev = self.previews_path / "by_panorama" / "images"
+            pano_meta = self.base_path / "by_panorama" / "meta"
+
+            deleted = False
+            # Olası uzantılar
+            candidates = list(pano_imgs.glob(f"{pano_id}.*"))
+            for file in candidates:
+                file.unlink(missing_ok=True)
+                deleted = True
+            # WebP default
+            (pano_imgs / f"{pano_id}.webp").unlink(missing_ok=True)
+            # Preview
+            (pano_prev / f"thumb_{pano_id}.webp").unlink(missing_ok=True)
+            # Meta
+            (pano_meta / f"{pano_id}.json").unlink(missing_ok=True)
+            return deleted
+        except Exception as e:
+            print(f"❌ Panorama silme hatası: {e}")
+            return False
 
     def get_poi_media_by_id(self, poi_id: str, media_type: str = None) -> List[Dict]:
         """POI ID bazlı medya listeleme"""

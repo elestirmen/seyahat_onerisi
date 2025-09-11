@@ -8709,6 +8709,15 @@ async function performMainMapInitialization() {
         // Add base layers
         addBaseLayers(map);
 
+        // Initialize standalone panorama layer and load items
+        try {
+            if (typeof window.loadPanoramasLayer === 'function') {
+                await window.loadPanoramasLayer();
+            }
+        } catch (e) {
+            console.warn('Panorama layer failed to load:', e);
+        }
+
         // Initialize marker clustering for performance
         try {
             if (poiCluster && map.hasLayer(poiCluster)) {
@@ -8757,6 +8766,186 @@ async function performMainMapInitialization() {
 async function initializeMapForRoute() {
     return await initializeMainMap();
 }
+
+// --------- Standalone 360° Panoramas on User Map ---------
+let panoramaLayer;
+
+async function loadPanoramasLayer() {
+    try {
+        if (!map) return;
+        // Create layer if needed
+        if (!panoramaLayer) {
+            panoramaLayer = L.layerGroup();
+            map.addLayer(panoramaLayer);
+        } else {
+            panoramaLayer.clearLayers();
+        }
+
+        const res = await fetch('/api/panoramas', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : (data.panoramas || []);
+
+        items.forEach(pano => {
+            const lat = typeof pano.lat === 'number' ? pano.lat : parseFloat(pano.lat);
+            const lng = typeof pano.lng === 'number' ? pano.lng : parseFloat(pano.lng);
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            const icon = L.divIcon({
+                className: 'custom-poi-marker',
+                html: `
+                    <div style="position:relative;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.3);border:3px solid #fff;background:#0ea5e9;">
+                        <i class="fas fa-compass"></i>
+                        <div style="position:absolute;right:-6px;bottom:-6px;background:#0ea5e9;color:#fff;font-weight:700;font-size:10px;line-height:1;border-radius:10px;padding:2px 5px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);">360°</div>
+                    </div>
+                `,
+                iconSize: [28, 28],
+                iconAnchor: [14, 14],
+                popupAnchor: [0, -14]
+            });
+
+            const mediaPath = (pano.path || '').startsWith('/') ? pano.path : `/${pano.path}`;
+            const caption = pano.caption || '360° Panorama';
+
+            const marker = L.marker([lat, lng], { icon })
+                .bindPopup(`
+                    <div style="min-width:180px;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                            <i class="fas fa-compass" style="color:#0ea5e9"></i>
+                            <strong>360° Panorama</strong>
+                        </div>
+                        ${caption ? `<div style=\"color:#444;font-size:0.9rem;margin-bottom:6px;\">${caption}</div>` : ''}
+                        <button class="btn btn-sm btn-primary" onclick="openPanoramaViewer('${mediaPath.replace(/'/g, "\'")}', '${(caption || '').replace(/'/g, "\'")}')">
+                            <i class="fas fa-vr-cardboard"></i> Aç
+                        </button>
+                    </div>
+                `);
+            panoramaLayer.addLayer(marker);
+        });
+    } catch (e) {
+        console.warn('Panoramas load error:', e);
+    }
+}
+
+window.loadPanoramasLayer = loadPanoramasLayer;
+
+function openPanoramaViewer(imageUrl, caption) {
+    try {
+        // Basic overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+        const container = document.createElement('div');
+        container.style.cssText = 'position:relative;width:90vw;max-width:1200px;height:75vh;border-radius:12px;overflow:hidden;background:#000;';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        closeBtn.className = 'btn btn-light';
+        closeBtn.style.cssText = 'position:absolute;top:10px;right:10px;z-index:10000;';
+        closeBtn.onclick = () => document.body.removeChild(overlay);
+
+        const title = document.createElement('div');
+        title.textContent = caption || '360° Panorama';
+        title.style.cssText = 'position:absolute;left:16px;top:12px;color:#fff;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.6);z-index:10000;';
+
+        const viewerDiv = document.createElement('div');
+        viewerDiv.style.cssText = 'width:100%;height:100%;';
+
+        container.appendChild(viewerDiv);
+        container.appendChild(closeBtn);
+        container.appendChild(title);
+        overlay.appendChild(container);
+        document.body.appendChild(overlay);
+
+        function cleanupOnEsc(e) {
+            if (e.key === 'Escape') {
+                try { document.body.removeChild(overlay); } catch(_) {}
+                document.removeEventListener('keydown', cleanupOnEsc);
+            }
+        }
+        document.addEventListener('keydown', cleanupOnEsc);
+
+        // Helper loaders
+        const loadScript = (src) => new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src; s.async = true; s.onload = resolve; s.onerror = reject;
+            document.head.appendChild(s);
+        });
+        const loadCss = (href) => new Promise((resolve, reject) => {
+            const l = document.createElement('link');
+            l.rel = 'stylesheet'; l.href = href; l.onload = resolve; l.onerror = reject;
+            document.head.appendChild(l);
+        });
+
+        const ensurePSV = async () => {
+            if (window.PhotoSphereViewer && window.THREE) return true;
+            try {
+                if (!window.THREE) await loadScript('https://unpkg.com/three@0.157.0/build/three.min.js');
+                if (!window.PhotoSphereViewer) {
+                    await loadCss('https://unpkg.com/photo-sphere-viewer@5/dist/photo-sphere-viewer.css');
+                    await loadScript('https://unpkg.com/photo-sphere-viewer@5/dist/photo-sphere-viewer.js');
+                }
+                return !!(window.PhotoSphereViewer && window.THREE);
+            } catch (_) { return false; }
+        };
+
+        const ensurePannellum = async () => {
+            if (window.pannellum) return true;
+            try {
+                await loadCss('https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css');
+                await loadScript('https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js');
+                return !!window.pannellum;
+            } catch (_) { return false; }
+        };
+
+        (async () => {
+            // Try PSV first
+            let inited = false;
+            if (await ensurePSV()) {
+                try {
+                    new PhotoSphereViewer.Viewer({
+                        container: viewerDiv,
+                        panorama: imageUrl,
+                        touchmoveTwoFingers: true,
+                        mousewheel: true,
+                        navbar: ['zoom', 'fullscreen'],
+                    });
+                    inited = true;
+                } catch (e) {
+                    console.warn('PSV init failed, trying Pannellum:', e);
+                }
+            }
+
+            // Fallback to Pannellum
+            if (!inited && await ensurePannellum()) {
+                try {
+                    window.pannellum.viewer(viewerDiv, {
+                        type: 'equirectangular',
+                        panorama: imageUrl,
+                        autoLoad: true,
+                        showZoomCtrl: true,
+                        compass: false,
+                    });
+                    inited = true;
+                } catch (e) {
+                    console.warn('Pannellum init failed:', e);
+                }
+            }
+
+            // Final fallback: static image
+            if (!inited) {
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#000;';
+                viewerDiv.appendChild(img);
+            }
+        })();
+
+    } catch (e) {
+        console.warn('Panorama viewer error:', e);
+    }
+}
+window.openPanoramaViewer = openPanoramaViewer;
 
 function clearMapMarkers() {
     markers.forEach(marker => {
@@ -10764,6 +10953,15 @@ async function initializeEmptyMap() {
 
         // Add base layers
         addBaseLayers(map);
+
+        // Load standalone panoramas as a separate layer
+        try {
+            if (typeof window.loadPanoramasLayer === 'function') {
+                await window.loadPanoramasLayer();
+            }
+        } catch (e) {
+            console.warn('Panorama layer failed to load (empty map init):', e);
+        }
 
         // Ensure POI search bar exists on dynamic map
         try { ensurePOISearchBar(); } catch (_) {}
@@ -12870,6 +13068,12 @@ function switchToDynamicMapView() {
                 if (map && map.invalidateSize) {
                     setTimeout(() => map.invalidateSize(), 300);
                 }
+                // Ensure panoramas are visible when map becomes visible
+                try {
+                    if (typeof window.loadPanoramasLayer === 'function') {
+                        window.loadPanoramasLayer();
+                    }
+                } catch (_) {}
             }, 50);
         }
     } catch (e) {
