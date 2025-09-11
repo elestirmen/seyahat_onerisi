@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Shared map styles for 360° markers -->
+    <link rel="stylesheet" href="static/css/poi_recommendation_system.css">
     <style>
         :root {
             --route-primary: #2563eb;
@@ -1895,24 +1897,25 @@
 
                                     // Add markers for media that have coordinates
                                     const locatedMedia = mediaItems.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
-                                    const typeLabels = { image: 'Fotoğraf', video: 'Video', audio: 'Ses', model_3d: '3D Model', unknown: 'Medya' };
+                                    const typeLabels = { panorama: '360° Panorama', image: 'Fotoğraf', video: 'Video', audio: 'Ses', model_3d: '3D Model', unknown: 'Medya' };
                                     locatedMedia.forEach(m => {
                                         const lat = parseFloat(m.lat ?? m.latitude);
                                         const lng = parseFloat(m.lng ?? m.longitude ?? m.lon);
                                         if (isFinite(lat) && isFinite(lng)) {
-                                            const label = typeLabels[m.media_type] || 'Medya';
+                                            const effType = (m.media_type === 'panorama' || m.is_pano === true) ? 'panorama' : (m.media_type || 'image');
+                                            const label = typeLabels[effType] || 'Medya';
                                             let preview = '';
                                             const mediaPath = m.preview_path || m.thumbnail_path || m.file_path;
                                             if (mediaPath) {
-                                                if (m.media_type === 'image') {
+                                                if (effType === 'image' || effType === 'panorama') {
                                                     preview = `<div style=\"margin-top:8px\"><img src='/${mediaPath}' alt='media' style='width:100%;border-radius:6px;'/></div>`;
-                                                } else if (m.media_type === 'video') {
+                                                } else if (effType === 'video') {
                                                     preview = `<div style=\"margin-top:8px\"><video src='/${mediaPath}' controls style='width:100%;border-radius:6px;max-height:200px'></video></div>`;
                                                 } else if (m.media_type === 'audio') {
                                                     preview = `<div style=\"margin-top:8px\"><audio controls style='width:100%'><source src='/${mediaPath}'></audio></div>`;
                                                 }
                                             }
-                                            const mk = L.marker([lat, lng], { icon: getMediaMarkerIcon(m.media_type) })
+                                            const mk = L.marker([lat, lng], { icon: getMediaMarkerIcon(effType) })
                                                 .bindPopup(`<div style=\"min-width:180px\"><strong>${label}</strong>${m.caption ? `<div style=\\\"margin-top:4px;color:#666\\\">${m.caption}</div>`: ''}${preview}</div>`)
                                                 .addTo(map);
                                             poiMarkersLayer.addLayer(mk);
@@ -4001,7 +4004,7 @@
 
                 // Extract EXIF from original image, if applicable
                 let exifLocation = null;
-                if (mediaType === 'image') {
+                if (mediaType === 'image' || mediaType === 'panorama') {
                     try {
                         exifLocation = await extractExifLocation(file);
                     } catch (exErr) {
@@ -4010,7 +4013,7 @@
                 }
 
                 let fileToUpload = file;
-                if (mediaType === 'image' && !filename.endsWith('.webp')) {
+                if ((mediaType === 'image' || mediaType === 'panorama') && !filename.endsWith('.webp')) {
                     try {
                         updateUploadProgress(progressModal, index + 1, files.length, `${file.name} (WebP'ye dönüştürülüyor...)`, successCount, errorCount);
                         fileToUpload = await convertImageToWebP(file);
@@ -4023,6 +4026,7 @@
                 const formData = new FormData();
                 formData.append('file', fileToUpload);
                 formData.append('caption', mediaCaption);
+                formData.append('media_type', mediaType);
                 // Only first file can be primary if checked
                 formData.append('is_primary', index === 0 && isPrimary);
 
@@ -4045,7 +4049,7 @@
                     const result = await response.json();
 
                     // Update location for images using EXIF (fallback to pendingExifLocation)
-                    if (mediaType === 'image') {
+                    if (mediaType === 'image' || mediaType === 'panorama') {
                         const uploadedFilename = result.media?.filename || fileToUpload.name;
                         const loc = exifLocation || pendingExifLocation;
                         if (loc) {
@@ -4588,9 +4592,9 @@
                     continue;
                 }
 
-                // Extract EXIF from original image, if applicable
+                // Extract EXIF from original image/panorama, if applicable
                 let exifLocation = null;
-                if (mediaType === 'image') {
+                if (mediaType === 'image' || mediaType === 'panorama') {
                     try {
                         exifLocation = await extractExifLocation(file);
                     } catch (exErr) {
@@ -4599,7 +4603,7 @@
                 }
 
                 let fileToUpload = file;
-                if (mediaType === 'image' && !filename.endsWith('.webp')) {
+                if ((mediaType === 'image' || mediaType === 'panorama') && !filename.endsWith('.webp')) {
                     try {
                         updateUploadProgress(progressModal, index + 1, files.length, `${file.name} (WebP'ye dönüştürülüyor...)`, successCount, errorCount);
                         fileToUpload = await convertImageToWebP(file);
@@ -4612,6 +4616,7 @@
                 const formData = new FormData();
                 formData.append('file', fileToUpload);
                 formData.append('caption', mediaCaption);
+                formData.append('media_type', mediaType);
                 // Only first file can be primary if checked
                 formData.append('is_primary', index === 0 && isPrimary);
 
@@ -4633,8 +4638,8 @@
 
                     const result = await response.json();
 
-                    // Update location for images using EXIF (fallback to pendingExifLocation)
-                    if (mediaType === 'image') {
+                    // Update location for images/panoramas using EXIF (fallback to pendingExifLocation)
+                    if (mediaType === 'image' || mediaType === 'panorama') {
                         const uploadedFilename = result.media?.filename || fileToUpload.name;
                         const loc = exifLocation || pendingExifLocation;
                         if (loc) {
@@ -4716,6 +4721,7 @@
         function getMediaTypeIcon(mediaType) {
             const icons = {
                 'image': '📸',
+                'panorama': '🌀',
                 'video': '🎥',
                 'audio': '🎵',
                 'model_3d': '🧊',
@@ -4727,6 +4733,7 @@
         function getMediaMaxSize(mediaType) {
             const sizes = {
                 'image': 15,
+                'panorama': 15,
                 'video': 100,
                 'audio': 50,
                 'model_3d': 50
@@ -4952,6 +4959,12 @@
                     }
                 }
                 
+                // Promote panoramic images to dedicated 'panorama' type for UI grouping
+                if ((type === 'image' || type === 'unknown') && (media.is_pano === true)) {
+                    type = 'panorama';
+                    media.media_type = 'panorama';
+                }
+
                 if (!groupedMedia[type]) groupedMedia[type] = [];
                 groupedMedia[type].push(media);
             });
@@ -4963,6 +4976,7 @@
             Object.keys(groupedMedia).forEach(mediaType => {
                 const typeIcon = getMediaTypeIcon(mediaType);
                 const typeLabel = {
+                    'panorama': '360° Panoramalar',
                     'image': 'Görseller',
                     'video': 'Videolar',
                     'audio': 'Ses Dosyaları',
@@ -5007,8 +5021,8 @@
                     });
                     
                     // Enhanced image detection - include WebP files
-                    const isImage = mediaType === 'image' || 
-                                  (media.media_type === 'image') || 
+                    const isImage = mediaType === 'image' || mediaType === 'panorama' ||
+                                  (media.media_type === 'image') || (media.media_type === 'panorama') || 
                                   filename.toLowerCase().endsWith('.webp') ||
                                   filename.toLowerCase().endsWith('.jpg') ||
                                   filename.toLowerCase().endsWith('.jpeg') ||
@@ -5232,6 +5246,21 @@
         }
 
         function getMediaMarkerIcon(mediaType) {
+            // Use special 360° circular marker for panoramas
+            if (mediaType === 'panorama') {
+                return L.divIcon({
+                    className: 'pano-marker-wrapper',
+                    html: `
+                        <div class="pano-marker-circle" aria-label="360 derece panorama işareti">
+                            <span class="pano-360">360°</span>
+                        </div>
+                    `,
+                    iconSize: [34, 34],
+                    iconAnchor: [17, 17],
+                    popupAnchor: [0, -16]
+                });
+            }
+
             const iconMap = {
                 image: { icon: 'fa-camera', cls: 'image' },
                 video: { icon: 'fa-video', cls: 'video' },
@@ -5631,7 +5660,8 @@
                         const filename = m.filename || m.name || m.path?.split('/').pop() || 'Unknown';
 
                         if (isFinite(lat) && isFinite(lng)) {
-                            updatePhotoLocationMarker(filename, lat, lng, m.media_type);
+                            const effType = (m.media_type === 'panorama' || m.is_pano === true) ? 'panorama' : (m.media_type || 'image');
+                            updatePhotoLocationMarker(filename, lat, lng, effType);
                         }
                     });
 
@@ -6825,6 +6855,7 @@
                                         <label class="form-label">Medya Türü</label>
                                         <select class="form-input" id="routeMediaType">
                                             <option value="auto">🔍 Otomatik Tespit</option>
+                                            <option value="panorama">🌀 360° Panorama</option>
                                             <option value="image">📸 Görsel</option>
                                             <option value="video">🎥 Video</option>
                                             <option value="audio">🎵 Ses</option>
