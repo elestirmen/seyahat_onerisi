@@ -8792,16 +8792,15 @@ async function loadPanoramasLayer() {
             if (isNaN(lat) || isNaN(lng)) return;
 
             const icon = L.divIcon({
-                className: 'custom-poi-marker',
+                className: 'pano-marker-wrapper',
                 html: `
-                    <div style="position:relative;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.3);border:3px solid #fff;background:#0ea5e9;">
-                        <i class="fas fa-compass"></i>
-                        <div style="position:absolute;right:-6px;bottom:-6px;background:#0ea5e9;color:#fff;font-weight:700;font-size:10px;line-height:1;border-radius:10px;padding:2px 5px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);">360°</div>
+                    <div class="pano-marker-circle" aria-label="360 derece panorama işareti">
+                      <span class="pano-360">360°</span>
                     </div>
                 `,
-                iconSize: [28, 28],
-                iconAnchor: [14, 14],
-                popupAnchor: [0, -14]
+                iconSize: [34, 34],
+                iconAnchor: [17, 17],
+                popupAnchor: [0, -16]
             });
 
             const mediaPath = (pano.path || '').startsWith('/') ? pano.path : `/${pano.path}`;
@@ -8811,7 +8810,7 @@ async function loadPanoramasLayer() {
                 .bindPopup(`
                     <div style="min-width:180px;">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                            <i class="fas fa-compass" style="color:#0ea5e9"></i>
+                            <span style="display:inline-flex;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;background:#111827;color:#fff;font-size:10px;font-weight:800;">360°</span>
                             <strong>360° Panorama</strong>
                         </div>
                         ${caption ? `<div style=\"color:#444;font-size:0.9rem;margin-bottom:6px;\">${caption}</div>` : ''}

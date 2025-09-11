@@ -489,6 +489,33 @@
             object-fit: cover;
         }
 
+        /* 360° panorama marker (admin) */
+        .pano-marker-circle {
+            position: relative;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #000;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .15s ease, box-shadow .2s ease;
+        }
+        .pano-marker-circle:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+        }
+        .pano-360 {
+            color: #fff;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 0.2px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+            user-select: none;
+        }
+
         /* 360° badge on media thumbnails */
         .media-360-badge {
             position: absolute;
@@ -2801,23 +2828,22 @@
                     items.forEach(pano => {
                         if (typeof pano.lat !== 'number' || typeof pano.lng !== 'number') return;
                         const icon = L.divIcon({
-                            className: 'custom-poi-marker',
+                            className: 'pano-marker-wrapper',
                             html: `
-                                <div class="poi-marker-container" style="background-color:#0ea5e9">
-                                    <i class="fas fa-compass"></i>
-                                    <div class="poi-badge-360">360°</div>
+                                <div class="pano-marker-circle" aria-label="360 derece panorama işareti">
+                                    <span class="pano-360">360°</span>
                                 </div>
                             `,
-                            iconSize: [30, 30],
-                            iconAnchor: [15, 15],
-                            popupAnchor: [0, -15]
+                            iconSize: [34, 34],
+                            iconAnchor: [17, 17],
+                            popupAnchor: [0, -16]
                         });
 
                         const marker = L.marker([pano.lat, pano.lng], { icon })
                             .bindPopup(`
                                 <div class="poi-popup">
-                                    <div class="poi-popup-header">
-                                        <i class="fas fa-compass" style="color:#0ea5e9"></i>
+                                    <div class="poi-popup-header" style="display:flex;align-items:center;gap:8px;">
+                                        <span style="display:inline-flex;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;background:#111827;color:#fff;font-size:10px;font-weight:800;">360°</span>
                                         <strong>360° Panorama</strong>
                                     </div>
                                     ${pano.caption ? `<div class="poi-popup-description">${pano.caption}</div>` : ''}
