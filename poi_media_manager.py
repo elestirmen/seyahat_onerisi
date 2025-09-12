@@ -1105,7 +1105,7 @@ class POIMediaManager:
                         
                         # If we found some media from database, but some might be missing files
                         # Let's also check if there are additional WebP files not in the database
-                        print(f"🔍 Checking for additional WebP files not in database...")
+                        print(f"🔍 Checking for additional files not in database (previews + originals)...")
                         
                         # Get the route folder name from the first record
                         if db_media and len(db_media) > 0:
@@ -1161,6 +1161,57 @@ class POIMediaManager:
                                                     }
                                                     route_media.append(media_info)
                                                     print(f"      ✅ Added additional WebP media: {base_filename}.webp")
+
+                                    # Also scan original media folders (images/videos/audio/3d_models)
+                                    originals_base = self.base_path / "by_route_id" / route_folder_name
+                                    type_folders = {
+                                        'image': 'images',
+                                        'video': 'videos',
+                                        'audio': 'audio',
+                                        'model_3d': '3d_models'
+                                    }
+                                    existing_filenames = {m['filename'] for m in route_media}
+                                    for mtype, folder in type_folders.items():
+                                        orig_dir = originals_base / folder
+                                        if not orig_dir.exists():
+                                            continue
+                                        for f in orig_dir.iterdir():
+                                            if not f.is_file():
+                                                continue
+                                            if f.name in existing_filenames:
+                                                continue
+                                            # Detect panorama heuristic for images
+                                            is_pano2 = False
+                                            if mtype == 'image':
+                                                try:
+                                                    with Image.open(f) as im:
+                                                        w, h = im.size
+                                                        if h not in (0, None):
+                                                            ratio = float(w) / float(h)
+                                                            if 1.90 <= ratio <= 2.10 and w >= 1000:
+                                                                is_pano2 = True
+                                                except Exception:
+                                                    pass
+                                            route_media.append({
+                                                'id': str(uuid.uuid4()),
+                                                'route_id': route_id,
+                                                'file_path': str(f),
+                                                'thumbnail_path': None,
+                                                'preview_path': None,
+                                                'filename': f.name,
+                                                'media_type': 'panorama' if (mtype == 'image' and is_pano2) else mtype,
+                                                'file_size': f.stat().st_size,
+                                                'caption': '',
+                                                'is_primary': False,
+                                                'lat': None,
+                                                'lng': None,
+                                                'latitude': None,
+                                                'longitude': None,
+                                                'uploaded_at': datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
+                                                'is_pano': is_pano2
+                                            })
+                                            existing_filenames.add(f.name)
+                                            print(f"      ✅ Added additional original file: {f.name} ({mtype})")
                         
                         return route_media
                     else:

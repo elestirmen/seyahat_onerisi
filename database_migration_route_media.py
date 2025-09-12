@@ -220,7 +220,7 @@ def ensure_route_media_columns(cursor):
     else:
         print("  ℹ️ route_media.preview_path already exists")
     
-    # Update media_type constraint if needed
+    # Update media_type constraint if needed (include panorama)
     try:
         cursor.execute("""
             ALTER TABLE route_media 
@@ -229,7 +229,7 @@ def ensure_route_media_columns(cursor):
         cursor.execute("""
             ALTER TABLE route_media 
             ADD CONSTRAINT valid_media_type 
-            CHECK (media_type IN ('image','video','audio','model_3d'));
+            CHECK (media_type IN ('image','video','audio','model_3d','panorama'));
         """)
         print("  ✅ Updated media_type constraint")
     except Exception as e:

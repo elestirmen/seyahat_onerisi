@@ -428,6 +428,13 @@ class RouteAdminManager {
         formData.append('file', file);
         formData.append('caption', caption);
         formData.append('is_primary', isPrimary);
+        // Hint media type for 360° panoramas based on filename keywords
+        try {
+            const n = (file && file.name ? file.name : '').toLowerCase();
+            if (/(\b|[_-])(360|pano|panorama|equirect|spherical)(\b|[_-]|\.)/.test(n)) {
+                formData.append('media_type', 'panorama');
+            }
+        } catch (_) {}
         formData.append('lat', e.latlng.lat);
         formData.append('lng', e.latlng.lng);
         try {
@@ -479,22 +486,31 @@ class RouteAdminManager {
         const lng = media.lng ?? media.longitude;
         if (lat == null || lng == null) return;
 
-        const isPano = !!media.is_pano || (media.media_type === 'panorama');
+        const isPano = !!media.is_pano || (media.media_type === 'panorama') || this.isLikelyPanoramaName(media.filename || media.original_filename || '');
+        const effType = isPano ? 'panorama' : (String(media.media_type || 'image').toLowerCase());
         let marker;
-        if (isPano) {
-            const icon = L.divIcon({
-                className: 'pano-marker-wrapper',
-                html: `
-                    <div class="pano-marker-circle" aria-label="360 derece panorama işareti">
-                        <span class="pano-360">360°</span>
-                    </div>
-                `,
-                iconSize: [34, 34],
-                iconAnchor: [17, 17],
-                popupAnchor: [0, -16]
-            });
+        try {
+            // Prefer global helper from the page if available for consistent styling
+            const icon = (typeof window.getMediaMarkerIcon === 'function')
+                ? window.getMediaMarkerIcon(effType)
+                : L.divIcon({
+                    html: (() => {
+                        if (effType === 'panorama') {
+                            return '<div class="pano-marker-circle"><span class="pano-360">360°</span></div>';
+                        }
+                        const map = { image: 'fa-camera', video: 'fa-video', audio: 'fa-music', model_3d: 'fa-cube' };
+                        const cls = effType in map ? effType : 'image';
+                        const iconCls = map[effType] || 'fa-file';
+                        return `<div class="media-marker ${cls}"><i class="fas ${iconCls}"></i></div>`;
+                    })(),
+                    className: '',
+                    iconSize: effType === 'panorama' ? [34, 34] : [24, 24],
+                    iconAnchor: effType === 'panorama' ? [17, 17] : [12, 12],
+                    popupAnchor: [0, -16]
+                });
             marker = L.marker([lat, lng], { icon }).addTo(this.map);
-        } else {
+        } catch (e) {
+            // Fallback to default marker if anything goes wrong
             marker = L.marker([lat, lng]).addTo(this.map);
         }
 
@@ -504,6 +520,13 @@ class RouteAdminManager {
             marker.bindPopup(`<div style="min-width:160px;">${isPano ? '<div style=\'margin-bottom:6px;display:flex;align-items:center;gap:8px;\'><span style=\'display:inline-flex;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;background:#111827;color:#fff;font-size:10px;font-weight:800;\'>360°</span><strong>Panorama</strong></div>' : ''}<img src="${imageUrl}" alt="route media" style="max-width:150px;border-radius:6px;display:block;"><div class="text-muted small mt-1">${title}</div></div>`);
         }
         this.mediaMarkers.push({ id: media.id, marker });
+    }
+
+    isLikelyPanoramaName(name) {
+        try {
+            const n = String(name || '').toLowerCase();
+            return /(\b|[_-])(360|pano|panorama|equirect|spherical)(\b|[_-]|\.)/.test(n);
+        } catch (_) { return false; }
     }
 
     /**

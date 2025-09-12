@@ -1902,7 +1902,9 @@
                                         const lat = parseFloat(m.lat ?? m.latitude);
                                         const lng = parseFloat(m.lng ?? m.longitude ?? m.lon);
                                         if (isFinite(lat) && isFinite(lng)) {
-                                            const effType = (m.media_type === 'panorama' || m.is_pano === true) ? 'panorama' : (m.media_type || 'image');
+                                            let effType = (m.media_type === 'panorama' || m.is_pano === true) ? 'panorama' : (m.media_type || 'image');
+                                            const fname = m.filename || m.name || m.path?.split('/')?.pop() || '';
+                                            if (effType === 'image' && isLikelyPanoramaName(fname)) effType = 'panorama';
                                             const label = typeLabels[effType] || 'Medya';
                                             let preview = '';
                                             const mediaPath = m.preview_path || m.thumbnail_path || m.file_path;
@@ -4054,6 +4056,8 @@
                         const loc = exifLocation || pendingExifLocation;
                         if (loc) {
                             try {
+                                // Draw marker immediately with the selected media type for correct icon
+                                updatePhotoLocationMarker(uploadedFilename, loc.lat, loc.lng, mediaType);
                                 await updatePhotoLocation(uploadedFilename, loc.lat, loc.lng);
                                 refreshPhotoLocationMarkers();
                             } catch (exifError) {
@@ -4644,6 +4648,8 @@
                         const loc = exifLocation || pendingExifLocation;
                         if (loc) {
                             try {
+                                // Draw marker immediately with the selected media type for correct icon
+                                updatePhotoLocationMarker(uploadedFilename, loc.lat, loc.lng, mediaType);
                                 await updatePhotoLocation(uploadedFilename, loc.lat, loc.lng);
                                 refreshPhotoLocationMarkers();
                             } catch (exifError) {
@@ -4740,6 +4746,9 @@
             };
             return sizes[mediaType] || 15;
         }
+
+        // Cache of last fetched media files for current route
+        let currentRouteMediaFilesCache = [];
 
         async function loadRouteMediaForEdit(routeId) {
             if (!routeId) {
@@ -4865,6 +4874,9 @@
                     console.log('First media file structure:', mediaFiles[0]);
                 }
 
+                // Cache media for downstream lookups (e.g., marker type by filename)
+                currentRouteMediaFilesCache = mediaFiles;
+
                 // Update edit form current media
                 displayRouteCurrentMedia(mediaFiles, routeId);
 
@@ -4873,24 +4885,25 @@
                     const located = mediaFiles.filter(m => (m.lat || m.latitude) && (m.lng || m.longitude || m.lon));
                     if (located.length > 0) {
                         // Add markers
-                        const typeLabels = { image: 'Fotoğraf', video: 'Video', audio: 'Ses', model_3d: '3D Model', unknown: 'Medya' };
+                        const typeLabels = { panorama: '360° Panorama', image: 'Fotoğraf', video: 'Video', audio: 'Ses', model_3d: '3D Model', unknown: 'Medya' };
                         located.forEach(m => {
                             const lat = parseFloat(m.lat ?? m.latitude);
                             const lng = parseFloat(m.lng ?? m.longitude ?? m.lon);
                             if (!isFinite(lat) || !isFinite(lng)) return;
-                            const label = typeLabels[m.media_type] || 'Medya';
+                            const effType = (m?.media_type === 'panorama' || m?.is_pano === true) ? 'panorama' : (m?.media_type || 'image');
+                            const label = typeLabels[effType] || 'Medya';
                             let preview = '';
                             const mediaPath = m.preview_path || m.thumbnail_path || m.file_path;
                             if (mediaPath) {
-                                if (m.media_type === 'image') {
+                                if (effType === 'image' || effType === 'panorama') {
                                     preview = `<div style=\"margin-top:8px\"><img src='/${mediaPath}' alt='media' style='width:100%;border-radius:6px;'/></div>`;
-                                } else if (m.media_type === 'video') {
+                                } else if (effType === 'video') {
                                     preview = `<div style=\"margin-top:8px\"><video src='/${mediaPath}' controls style='width:100%;border-radius:6px;max-height:200px'></video></div>`;
-                                } else if (m.media_type === 'audio') {
+                                } else if (effType === 'audio') {
                                     preview = `<div style=\"margin-top:8px\"><audio controls style='width:100%'><source src='/${mediaPath}'></audio></div>`;
                                 }
                             }
-                            const mk = L.marker([lat, lng], { icon: getMediaMarkerIcon(m.media_type) })
+                            const mk = L.marker([lat, lng], { icon: getMediaMarkerIcon(effType) })
                                 .bindPopup(`<div style=\"min-width:180px\"><strong>${label}</strong>${m.caption ? `<div style=\\\"margin-top:4px;color:#666\\\">${m.caption}</div>`: ''}${preview}</div>`)
                                 .addTo(map);
                             poiMarkersLayer.addLayer(mk);
@@ -5246,8 +5259,9 @@
         }
 
         function getMediaMarkerIcon(mediaType) {
+            const mt = String(mediaType || '').toLowerCase();
             // Use special 360° circular marker for panoramas
-            if (mediaType === 'panorama') {
+            if (mt === 'panorama' || mt === 'image_360' || mt === 'photo_360' || mt === 'pano') {
                 return L.divIcon({
                     className: 'pano-marker-wrapper',
                     html: `
@@ -5516,6 +5530,31 @@
                 showNotification('Konum kaldırılırken hata oluştu: ' + error.message, 'error');
             }
         }
+        // Helper: infer effective media type for a filename using cached media list
+        function inferMediaTypeForFilename(filename) {
+            try {
+                if (!filename) return 'image';
+                const f = filename.toLowerCase();
+                const m = (currentRouteMediaFilesCache || []).find(x => {
+                    const n = (x?.filename || x?.name || x?.path?.split('/')?.pop() || '').toLowerCase();
+                    return n === f;
+                });
+                if (!m) return 'image';
+                if (m.media_type === 'panorama' || m.is_pano === true) return 'panorama';
+                return m.media_type || 'image';
+            } catch (_) {
+                return 'image';
+            }
+        }
+
+        // Helper: detect 360° from filename heuristics
+        function isLikelyPanoramaName(name) {
+            try {
+                const n = String(name || '').toLowerCase();
+                return /(\b|[_-])(360|pano|panorama|equirect|spherical)(\b|[_-]|\.)/.test(n);
+            } catch (_) { return false; }
+        }
+
         // Update photo location in the system
         async function updatePhotoLocation(filename, lat, lng) {
             if (!currentRoute) {
@@ -5588,8 +5627,9 @@
                     // Refresh media display
                     await loadRouteMediaForEdit(routeId);
                     
-                    // Update map markers immediately with a default icon
-                    updatePhotoLocationMarker(filename, lat, lng, 'image');
+                    // Update map marker immediately with inferred type (handles panorama)
+                    const inferredType = inferMediaTypeForFilename(filename);
+                    updatePhotoLocationMarker(filename, lat, lng, inferredType);
 
                     // Update elevation chart and refresh markers with actual types
                     refreshPhotoLocationMarkers();
@@ -5604,7 +5644,7 @@
         }
 
         // Update photo location marker on map
-        function updatePhotoLocationMarker(filename, lat, lng, mediaType = 'image') {
+function updatePhotoLocationMarker(filename, lat, lng, mediaType = 'image') {
             // Remove existing marker if any
             if (photoLocationMarkers[filename]) {
                 poiMarkersLayer.removeLayer(photoLocationMarkers[filename]);
@@ -5612,9 +5652,13 @@
             }
 
             // Create new marker
-            const typeLabels = { image: 'Fotoğraf', video: 'Video', audio: 'Ses', model_3d: '3D Model' };
-            const label = typeLabels[mediaType] || 'Medya';
-            const marker = L.marker([lat, lng], { icon: getMediaMarkerIcon(mediaType) })
+            let effType = mediaType || 'image';
+            if (effType === 'image' && isLikelyPanoramaName(filename)) {
+                effType = 'panorama';
+            }
+            const typeLabels = { panorama: '360° Panorama', image: 'Fotoğraf', video: 'Video', audio: 'Ses', model_3d: '3D Model' };
+            const label = typeLabels[effType] || 'Medya';
+            const marker = L.marker([lat, lng], { icon: getMediaMarkerIcon(effType) })
                 .bindPopup(`<div style="min-width:180px"><strong>${label}: ${filename}</strong><div style="margin-top:4px;color:#666">Konum: ${lat.toFixed(6)}, ${lng.toFixed(6)}</div></div>`);
 
             photoLocationMarkers[filename] = marker;
@@ -5660,7 +5704,8 @@
                         const filename = m.filename || m.name || m.path?.split('/').pop() || 'Unknown';
 
                         if (isFinite(lat) && isFinite(lng)) {
-                            const effType = (m.media_type === 'panorama' || m.is_pano === true) ? 'panorama' : (m.media_type || 'image');
+                            let effType = (m.media_type === 'panorama' || m.is_pano === true) ? 'panorama' : (m.media_type || 'image');
+                            if (effType === 'image' && isLikelyPanoramaName(filename)) effType = 'panorama';
                             updatePhotoLocationMarker(filename, lat, lng, effType);
                         }
                     });
