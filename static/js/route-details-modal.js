@@ -1670,11 +1670,12 @@ class RouteDetailsModal {
                 const imageOnly = locatedMedia.filter(m => {
                     const t = (m.media_type || '').toLowerCase();
                     const url = m.url || m.path || m.file_path || '';
-                    return t === 'image' || /\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+                    return t === 'image' || t === 'panorama' || /\.(jpg|jpeg|png|webp|gif)$/i.test(url);
                 }).map(m => ({
                     lat: m.latitude || m.lat || m.coords?.[1] || m.location?.lat || m.position?.lat,
                     lng: m.longitude || m.lng || m.lon || m.coords?.[0] || m.location?.lng || m.position?.lng,
-                    media_type: (m.media_type || 'image'),
+                    media_type: ((m.media_type && m.media_type.toLowerCase()) || 'image'),
+                    is_pano: m.is_pano === true,
                     url: m.url || m.path || m.file_path || m.full_path || m.original_path || ''
                 }));
 
@@ -1726,6 +1727,23 @@ class RouteDetailsModal {
     createMediaMarkerIcon(mediaType, media) {
         const iconSize = [24, 24];
         const iconAnchor = [12, 12];
+
+        // 360° panoramas use a distinct circular marker
+        try {
+            if ((mediaType && String(mediaType).toLowerCase() === 'panorama') || (media && media.is_pano === true)) {
+                return L.divIcon({
+                    className: 'pano-marker-wrapper',
+                    html: `
+                        <div class="pano-marker-circle" aria-label="360 derece panorama işareti">
+                            <span class="pano-360">360°</span>
+                        </div>
+                    `,
+                    iconSize: [34, 34],
+                    iconAnchor: [17, 17],
+                    popupAnchor: [0, -16]
+                });
+            }
+        } catch (_) { /* ignore */ }
 
         // Define icons and classes for different media types
         const iconMap = {
@@ -3161,7 +3179,8 @@ class RouteDetailsModal {
                 el.title = media.caption || media.alt_text || 'Medya';
                 // Color + icon per type
                 let bg = '#f59e0b', icon = 'fas fa-camera';
-                if (type === 'video') { bg = '#ef4444'; icon = 'fas fa-play'; }
+                if (type === 'panorama' || (media && media.is_pano === true)) { bg = '#111827'; icon = 'fas fa-vr-cardboard'; }
+                else if (type === 'video') { bg = '#ef4444'; icon = 'fas fa-play'; }
                 else if (type === 'audio') { bg = '#10b981'; icon = 'fas fa-volume-up'; }
                 else if (type === 'model_3d') { bg = '#6366f1'; icon = 'fas fa-cube'; }
                 el.style.backgroundColor = bg;
@@ -3344,7 +3363,7 @@ class RouteDetailsModal {
                     if (!onlyImages) return true;
                     const t = (m.media_type || '').toLowerCase();
                     const url = m.url || m.path || '';
-                    return t === 'image' || /\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+                    return t === 'image' || t === 'panorama' || /\.(jpg|jpeg|png|webp|gif)$/i.test(url);
                 })
                 .map(m => {
                     const lat = parseFloat(m.lat ?? m.latitude);

@@ -776,8 +776,10 @@ class POIMediaManager:
 
     # --- Route Media Management Methods ---
     
-    def add_route_media(self, route_id: int, route_name: str, media_file_path: str, 
-                        caption: str = '', is_primary: bool = False, lat: float = None, lng: float = None) -> Optional[Dict]:
+    def add_route_media(self, route_id: int, route_name: str, media_file_path: str,
+                        caption: str = '', is_primary: bool = False,
+                        lat: float = None, lng: float = None,
+                        requested_media_type: Optional[str] = None) -> Optional[Dict]:
         """
         Rota için medya dosyası ekle
         
@@ -892,6 +894,26 @@ class POIMediaManager:
                 preview_path = self._create_3d_model_preview(destination_path, preview_dir)
             
             # Medya bilgilerini döndür
+            # Panorama (360°) tespiti: en-boy oranı ≈ 2:1 ve yeterli genişlik
+            is_pano = False
+            try:
+                if media_type == 'image' and destination_path.exists():
+                    with Image.open(destination_path) as im:
+                        w, h = im.size
+                        if h not in (0, None):
+                            ratio = float(w) / float(h)
+                            if 1.90 <= ratio <= 2.10 and w >= 1000:
+                                is_pano = True
+            except Exception:
+                pass
+
+            # Son medya türü: İstemci panorama seçmişse veya otomatik panorama tespit edildiyse 'panorama'
+            final_media_type = media_type
+            if (requested_media_type or '').lower() in ('panorama', '360', 'image_360'):
+                final_media_type = 'panorama'
+            elif media_type == 'image' and is_pano:
+                final_media_type = 'panorama'
+
             media_info = {
                 'id': str(uuid.uuid4()),
                 'route_id': route_id,
@@ -900,14 +922,15 @@ class POIMediaManager:
                 'preview_path': str(preview_path) if preview_path else None,
                 'filename': safe_filename,
                 'original_filename': filename,
-                'media_type': media_type,
+                'media_type': final_media_type,
                 'file_size': file_size,
                 'caption': caption,
                 'is_primary': is_primary,
                 'lat': lat,
                 'lng': lng,
                 'uploaded_at': datetime.now().isoformat(),
-                'compression_ratio': self._calculate_compression_ratio(media_file_path, destination_path) if media_type == 'image' else "0%"
+                'compression_ratio': self._calculate_compression_ratio(media_file_path, destination_path) if media_type == 'image' else "0%",
+                'is_pano': is_pano
             }
             
             print(f"✅ Rota medyası başarıyla eklendi: {media_info['filename']}")
@@ -1044,6 +1067,18 @@ class POIMediaManager:
                             # Only add media if we found a valid file
                             if actual_file_path:
                                 print(f"    ✅ Adding media with file: {actual_file_path}")
+                                # Panorama (360°) tespiti: en-boy oranı ≈ 2:1 ve yeterli genişlik
+                                is_pano = False
+                                try:
+                                    if Path(actual_file_path).exists() and (row['media_type'] == 'photo' or row['media_type'] == 'image' or row['media_type'] is None):
+                                        with Image.open(actual_file_path) as im:
+                                            w, h = im.size
+                                            if h not in (0, None):
+                                                ratio = float(w) / float(h)
+                                                if 1.90 <= ratio <= 2.10 and w >= 1000:
+                                                    is_pano = True
+                                except Exception:
+                                    pass
                                 media_info = {
                                     'id': str(row['id']),
                                     'route_id': row['route_id'],
@@ -1061,6 +1096,7 @@ class POIMediaManager:
                                     'longitude': row['lng'],  # For compatibility
                                     'uploaded_at': row['uploaded_at'].isoformat() if row['uploaded_at'] else None
                                 }
+                                media_info['is_pano'] = is_pano
                                 route_media.append(media_info)
                             else:
                                 print(f"    ❌ No valid file found for this record")
@@ -1250,6 +1286,19 @@ class POIMediaManager:
                                     if thumbnail_path:
                                         print(f"      ✅ Corresponding thumbnail: {thumb_file}")
                                     
+                                    # Panorama (360°) tespiti: en-boy oranı ≈ 2:1 ve yeterli genişlik
+                                    is_pano2 = False
+                                    try:
+                                        if webp_file.exists():
+                                            with Image.open(webp_file) as im:
+                                                w, h = im.size
+                                                if h not in (0, None):
+                                                    ratio = float(w) / float(h)
+                                                    if 1.90 <= ratio <= 2.10 and w >= 1000:
+                                                        is_pano2 = True
+                                    except Exception:
+                                        pass
+
                                     media_info = {
                                         'id': str(uuid.uuid4()),
                                         'route_id': route_id,
@@ -1265,7 +1314,8 @@ class POIMediaManager:
                                         'lng': None,
                                         'latitude': None,
                                         'longitude': None,
-                                        'uploaded_at': datetime.fromtimestamp(webp_file.stat().st_mtime).isoformat()
+                                        'uploaded_at': datetime.fromtimestamp(webp_file.stat().st_mtime).isoformat(),
+                                        'is_pano': is_pano2
                                     }
                                     route_media.append(media_info)
                                     print(f"      ✅ Added WebP media: {base_filename}.webp")

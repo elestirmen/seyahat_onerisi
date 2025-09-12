@@ -521,7 +521,7 @@ class ElevationChart {
                         const x = padding + (mediaPoint.distance / maxDistance) * chartWidth;
                         const y = height - padding - ((mediaPoint.elevation - minElevation) / elevationRange) * chartHeight;
                         const type = mediaPoint.media?.media_type || 'image';
-                        const iconMap = { image: '📷', video: '🎥', audio: '🎵', model_3d: '🧊', unknown: '📍' };
+                        const iconMap = { image: '📷', panorama: '🌀', video: '🎥', audio: '🎵', model_3d: '🧊', unknown: '📍' };
                         const iconChar = iconMap[type] || iconMap.unknown;
                         ctx.save();
                         ctx.font = '16px sans-serif';

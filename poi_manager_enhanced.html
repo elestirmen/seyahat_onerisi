@@ -2865,7 +2865,12 @@
                             const items2 = data2.panoramas || [];
                             items2.forEach(p => {
                                 if (typeof p.lat !== 'number' || typeof p.lng !== 'number') return;
-                                if (!this.isPanoramaFilename(p.filename)) return;
+                                // Server işaretliyse ona güven, yoksa dosya adına göre tahmin et
+                                if (Object.prototype.hasOwnProperty.call(p, 'is_pano')) {
+                                    if (!p.is_pano) return;
+                                } else if (!this.isPanoramaFilename(p.filename)) {
+                                    return;
+                                }
                                 const icon2 = L.divIcon({
                                     className: 'pano-marker-wrapper',
                                     html: `

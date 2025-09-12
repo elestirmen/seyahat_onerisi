@@ -5540,7 +5540,15 @@ async function initializePredefinedMap() {
             
             // Add base layers
             addBaseLayers(predefinedMap);
-            
+            // Load standalone and route panoramas on predefined map too
+            try {
+                if (typeof window.loadPanoramasLayer === 'function') {
+                    await window.loadPanoramasLayer();
+                }
+            } catch (e) {
+                console.warn('Panorama layer failed to load on predefined map:', e);
+            }
+
             // Log removed for cleaner console
         }
         
@@ -8772,11 +8780,13 @@ let panoramaLayer;
 
 async function loadPanoramasLayer() {
     try {
-        if (!map) return;
+        // Support both dynamic map (`map`) and predefined routes map (`predefinedMap`)
+        const targetMap = (typeof predefinedMap !== 'undefined' && predefinedMap) ? predefinedMap : map;
+        if (!targetMap) return;
         // Create layer if needed
         if (!panoramaLayer) {
             panoramaLayer = L.layerGroup();
-            map.addLayer(panoramaLayer);
+            targetMap.addLayer(panoramaLayer);
         } else {
             panoramaLayer.clearLayers();
         }
@@ -8829,7 +8839,7 @@ async function loadPanoramasLayer() {
             panoramaLayer.addLayer(marker);
         });
 
-        // Also load route media with coordinates and show only those that look like 360°
+        // Also load route media with coordinates and show only true 360° (server marks is_pano)
         try {
             const res2 = await fetch('/api/route-panoramas', { credentials: 'include' });
             if (res2.ok) {
@@ -8839,7 +8849,14 @@ async function loadPanoramasLayer() {
                     const lat = typeof p.lat === 'number' ? p.lat : parseFloat(p.lat);
                     const lng = typeof p.lng === 'number' ? p.lng : parseFloat(p.lng);
                     if (isNaN(lat) || isNaN(lng)) return;
-                    if (!isPanoramicCandidate(p.filename)) return;
+                    // Prefer server-side flag; fallback to name heuristic
+                    if (p && p.is_pano !== undefined) {
+                        if (!p.is_pano) return;
+                    } else if (p && p.media_type === 'panorama') {
+                        // accept
+                    } else {
+                        if (!isPanoramicCandidate(p.filename)) return;
+                    }
 
                     const icon = L.divIcon({
                         className: 'pano-marker-wrapper',

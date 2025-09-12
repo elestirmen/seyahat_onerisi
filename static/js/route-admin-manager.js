@@ -479,10 +479,29 @@ class RouteAdminManager {
         const lng = media.lng ?? media.longitude;
         if (lat == null || lng == null) return;
 
-        const marker = L.marker([lat, lng]).addTo(this.map);
+        const isPano = !!media.is_pano || (media.media_type === 'panorama');
+        let marker;
+        if (isPano) {
+            const icon = L.divIcon({
+                className: 'pano-marker-wrapper',
+                html: `
+                    <div class="pano-marker-circle" aria-label="360 derece panorama işareti">
+                        <span class="pano-360">360°</span>
+                    </div>
+                `,
+                iconSize: [34, 34],
+                iconAnchor: [17, 17],
+                popupAnchor: [0, -16]
+            });
+            marker = L.marker([lat, lng], { icon }).addTo(this.map);
+        } else {
+            marker = L.marker([lat, lng]).addTo(this.map);
+        }
+
         const imageUrl = media.url || `/${media.thumbnail_path || media.file_path}`;
         if (imageUrl) {
-            marker.bindPopup(`<img src="${imageUrl}" alt="route media" style="max-width:150px;">`);
+            const title = media.caption || (isPano ? '360° Fotoğraf' : 'Rota medyası');
+            marker.bindPopup(`<div style="min-width:160px;">${isPano ? '<div style=\'margin-bottom:6px;display:flex;align-items:center;gap:8px;\'><span style=\'display:inline-flex;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;background:#111827;color:#fff;font-size:10px;font-weight:800;\'>360°</span><strong>Panorama</strong></div>' : ''}<img src="${imageUrl}" alt="route media" style="max-width:150px;border-radius:6px;display:block;"><div class="text-muted small mt-1">${title}</div></div>`);
         }
         this.mediaMarkers.push({ id: media.id, marker });
     }

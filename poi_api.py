@@ -2361,6 +2361,7 @@ def upload_poi_media(poi_id):
         # Form verilerini al
         caption = request.form.get('caption', '')
         is_primary = request.form.get('is_primary', 'false').lower() == 'true'
+        requested_media_type = request.form.get('media_type', '').strip().lower() if request.form else ''
         
         # Medya dosyasını işle ve kaydet - POI ID bazlı klasör yapısı
         result = media_manager.add_poi_media(
@@ -2554,7 +2555,9 @@ def list_panoramas():
 
 @app.route('/api/route-panoramas', methods=['GET'])
 def list_route_panoramas():
-    """Rotalara ait, konumu belirlenmiş görüntü medyalarını listele (360 filtreleme istemci tarafında yapılır)."""
+    """Rotalara ait, konumu belirlenmiş görüntü medyalarını listele.
+    Her kayıt için 'is_pano' alanını boyut oranına göre set eder (≈2:1 -> True).
+    """
     try:
         conn = get_db_conn()
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -2566,13 +2569,18 @@ def list_route_panoramas():
             FROM route_media
             WHERE lat IS NOT NULL
               AND lng IS NOT NULL
-              AND (media_type IS NULL OR media_type IN ('image','photo'))
+              AND (media_type IS NULL OR media_type IN ('image','photo','panorama'))
             ORDER BY uploaded_at DESC NULLS LAST
             """
         )
 
         rows = cur.fetchall() or []
         results = []
+        # Lazy import to avoid global dependency if not needed
+        try:
+            from PIL import Image  # type: ignore
+        except Exception:
+            Image = None
         for row in rows:
             raw_path = row.get('file_path') or ''
             rel_path = None
@@ -2595,6 +2603,23 @@ def list_route_panoramas():
             except Exception:
                 filename = None
 
+            # Determine if this image is likely a 360° equirectangular panorama (≈2:1)
+            is_pano = False
+            if Image and rel_path:
+                try:
+                    # Build filesystem path relative to project root
+                    fs_path = os.path.join(os.getcwd(), rel_path)
+                    if os.path.isfile(fs_path):
+                        with Image.open(fs_path) as im:
+                            w, h = im.size
+                            if h not in (0, None):
+                                ratio = float(w) / float(h)
+                                if 1.90 <= ratio <= 2.10 and w >= 1000:
+                                    is_pano = True
+                except Exception as _:
+                    # ignore detection errors, keep is_pano False
+                    pass
+
             # Nihai çıktı (istemci 360 tespitini yapacak)
             results.append({
                 'route_id': row.get('route_id'),
@@ -2603,7 +2628,8 @@ def list_route_panoramas():
                 'lat': float(row['lat']) if row.get('lat') is not None else None,
                 'lng': float(row['lng']) if row.get('lng') is not None else None,
                 'filename': filename,
-                'media_type': (row.get('media_type') or 'image')
+                'media_type': 'image' if (row.get('media_type') or '').lower() in ('photo', 'image', '') else row.get('media_type'),
+                'is_pano': is_pano
             })
 
         cur.close()
@@ -4471,7 +4497,8 @@ def upload_route_media(route_id: int):
                 route_name=route_name,
                 media_file_path=temp_file_path,
                 caption=caption,
-                is_primary=is_primary
+                is_primary=is_primary,
+                requested_media_type=(request.form.get('media_type', '').strip().lower() if request.form else '')
             )
             
             if not media_info:
