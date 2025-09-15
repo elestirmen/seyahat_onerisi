@@ -12,10 +12,14 @@
 
 // Global modal state tracking - now using centralized ModalManager
 window.modalJitterFix = {
-    activeModals: new Set(), // Kept for backward compatibility
-    eventListeners: new Map(), // Kept for backward compatibility
+    activeModals: new Set(),
+    eventListeners: new Map(),
     animationStates: new Map(),
-    isInitialized: false,
+    // Core init (one‑time)
+    coreInitialized: false,
+    // Feature patch guards (route / poi can be enabled independently)
+    routePatched: false,
+    poiPatched: false,
     // Reference to centralized modal manager
     modalManager: null
 };
@@ -23,15 +27,12 @@ window.modalJitterFix = {
 /**
  * Initialize the modal jitter fix system (Enhanced)
  */
-function initializeModalJitterFix() {
-    if (window.modalJitterFix.isInitialized) {
-        console.warn('Modal jitter fix already initialized');
-        return;
-    }
+function ensureCoreInitialized() {
+    if (window.modalJitterFix.coreInitialized) return;
 
-    console.warn('🔧 Initializing enhanced modal jitter fix system');
+    console.warn('🔧 Initializing modal jitter fix core');
 
-    // Wait for modal manager to be available
+    // Bind modal manager if available
     if (window.modalManager) {
         window.modalJitterFix.modalManager = window.modalManager;
         console.warn('✅ Connected to centralized ModalManager');
@@ -39,21 +40,38 @@ function initializeModalJitterFix() {
         console.warn('ModalManager not available, using fallback system');
     }
 
-    // Enhanced initialization with performance optimizations
+    // One‑time core setup
     setupPerformanceOptimizations();
-    patchExistingModalFunctions();
     installAdvancedViewportHandlers();
-
-    // Add global cleanup handlers (only if no modal manager)
+    enhanceModalLifecycle();
     if (!window.modalJitterFix.modalManager) {
         addGlobalCleanupHandlers();
     }
-
-    // Initialize hardware acceleration monitoring
     setupHardwareAccelerationMonitoring();
 
-    window.modalJitterFix.isInitialized = true;
-    console.warn('✅ Enhanced modal jitter fix system initialized');
+    window.modalJitterFix.coreInitialized = true;
+    console.warn('✅ Modal jitter fix core initialized');
+}
+
+// Initialize with options to enable specific patches without interfering
+// opts: { enableRoute?: boolean, enablePOI?: boolean }
+function initializeModalJitterFix(opts = {}) {
+    ensureCoreInitialized();
+
+    // Route‑specific patches
+    if (opts.enableRoute && !window.modalJitterFix.routePatched) {
+        patchRouteDetailsPanel();
+        patchRouteDetailsModal();
+        window.modalJitterFix.routePatched = true;
+        console.warn('🧭 Route modal jitter fixes applied');
+    }
+
+    // POI/media‑specific patches
+    if (opts.enablePOI && !window.modalJitterFix.poiPatched) {
+        patchMediaModalFunctions();
+        window.modalJitterFix.poiPatched = true;
+        console.warn('📸 POI/media modal jitter fixes applied');
+    }
 }
 
 /**
@@ -140,16 +158,10 @@ function setupHardwareAccelerationMonitoring() {
 /**
  * Patch existing modal functions with enhanced jitter fixes
  */
+// Kept for backward compatibility (no-op wrapper)
 function patchExistingModalFunctions() {
-    console.warn('🔧 Patching existing modal functions with enhanced fixes');
-
-    // Patch existing modal functions
-    patchRouteDetailsPanel();
-    patchRouteDetailsModal();
-    patchMediaModalFunctions();
-
-    // Add enhanced modal opening/closing with jitter prevention
-    enhanceModalLifecycle();
+    // Do not automatically patch everything anymore; use initializeModalJitterFix(opts)
+    console.warn('ℹ️ patchExistingModalFunctions is deprecated; call initializeModalJitterFix(opts)');
 }
 
 /**
@@ -807,11 +819,10 @@ function cleanupMediaEventListeners() {
  * Initialize the modal jitter fix when DOM is ready
  */
 function initializeWithModalManager() {
-    // Wait for modal manager to be available
+    // Wait for modal manager then only init core; feature patches are enabled via wrappers
     if (window.modalManager && window.modalManager.isInitialized) {
-        initializeModalJitterFix();
+        ensureCoreInitialized();
     } else {
-        // Retry after a short delay
         setTimeout(initializeWithModalManager, 100);
     }
 }
