@@ -1230,6 +1230,7 @@
     const exploreBtn = document.getElementById('exploreBtn');
     const resultsSection = document.getElementById('resultsSection');
     const mapSection = document.getElementById('mapSection');
+    const loadingIndicator = document.getElementById('loadingIndicator');
     
     try {
       // Add loading state
@@ -1262,13 +1263,19 @@
 
       // Load all POIs and show them on the map
       const pois = await loadAllPOIs();
+      let mapUpdated = false;
 
       try {
         if (Array.isArray(pois) && pois.length > 0 && (typeof window.updateMapWithPOIs === 'function' || typeof updateMapWithPOIs === 'function')) {
           (window.updateMapWithPOIs || updateMapWithPOIs)(pois);
+          mapUpdated = true;
         }
       } catch (e) {
         console.warn('Could not update map with POIs:', e);
+      }
+
+      if (!mapUpdated) {
+        displayPOIsOnExplorationMap(pois);
       }
 
       // Focus the map section
@@ -1297,10 +1304,36 @@
       `;
       
     } finally {
+      hideRecommendationLoadingIndicator(loadingIndicator);
+
       // Remove loading state
       exploreBtn.classList.remove('loading');
       exploreBtn.querySelector('.btn-text').textContent = 'Serbest Keşif';
     }
+  }
+
+  function hideRecommendationLoadingIndicator(loadingIndicatorFromCaller) {
+    const indicator = loadingIndicatorFromCaller || document.getElementById('loadingIndicator');
+    if (!indicator) {
+      return;
+    }
+
+    if (window.loadingManager && typeof window.loadingManager.hideLoading === 'function') {
+      try {
+        window.loadingManager.hideLoading('loadingIndicator');
+      } catch (managerError) {
+        console.warn('Loading manager hide failed:', managerError);
+      }
+    }
+
+    indicator.style.display = 'none';
+
+    if (indicator.style.opacity) {
+      indicator.style.opacity = '';
+    }
+
+    indicator.classList.remove('d-none');
+    indicator.removeAttribute('hidden');
   }
 
   // Load all POIs for exploration
