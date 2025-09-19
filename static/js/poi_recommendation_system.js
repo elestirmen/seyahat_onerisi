@@ -26,9 +26,6 @@ if (window.rateLimiter) {
 // Test function for debugging - REMOVED
 
 // Global variables
-let map = null;
-let markers = [];
-let poiCluster = null; // MarkerCluster group for performance
 let routingControl = null;
 let selectedPOIs = [];
 let mediaCache = {};
@@ -4790,6 +4787,20 @@ async function handleLocationPermission(choice) {
 // Request actual location from browser
 function requestActualLocation() {
     // Log removed for cleaner console
+    const isSecureContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
+
+    if (!isSecureContext) {
+        const error = new Error('Konum servisleri güvenli bağlantı gerektiriyor');
+        error.helpText = 'Sayfayı HTTPS üzerinden açın veya localhost kullanın.';
+        if (typeof showNotification === 'function') {
+            showNotification('Konum servisleri için HTTPS gerekli. Lütfen siteyi güvenli bağlantı ile açın.', 'error');
+        }
+        if (window.locationPermissionReject) {
+            window.locationPermissionReject(error);
+        }
+        return;
+    }
+
     const options = {
         enableHighAccuracy: false,
         timeout: 15000,
@@ -4832,6 +4843,11 @@ function requestActualLocation() {
                 default:
                     errorMessage = 'Konum hatası (Kod: ' + error.code + ')';
                     helpText = 'Tarayıcınızı yenileyin ve tekrar deneyin.';
+            }
+
+            if (error.message && error.message.toLowerCase().includes('permissions policy')) {
+                errorMessage = 'Bu sayfa için konum özelliğine izin verilmiyor';
+                helpText = 'Sayfayı doğrudan açın veya ebeveyn sayfadaki iframe\'e geolocation izni verildiğinden emin olun (ör. allow="geolocation").';
             }
 
             const fullError = new Error(errorMessage);
@@ -4918,18 +4934,23 @@ Alternatif: chrome://settings/content/location adresinden site izinlerini kontro
                         errorMessage = 'Konum bilgisi mevcut değil';
                         helpText = 'GPS\'inizi açın, WiFi\'ye bağlanın veya açık alanda olduğunuzdan emin olun.';
                         break;
-                    case error.TIMEOUT:
-                        errorMessage = 'Konum alma zaman aşımı';
-                        helpText = 'İnternet bağlantınızı kontrol edin ve tekrar deneyin.';
-                        break;
-                    default:
-                        errorMessage = 'Konum hatası (Kod: ' + error.code + ')';
-                        helpText = 'Tarayıcınızı yenileyin ve tekrar deneyin.';
-                }
+                case error.TIMEOUT:
+                    errorMessage = 'Konum alma zaman aşımı';
+                    helpText = 'İnternet bağlantınızı kontrol edin ve tekrar deneyin.';
+                    break;
+                default:
+                    errorMessage = 'Konum hatası (Kod: ' + error.code + ')';
+                    helpText = 'Tarayıcınızı yenileyin ve tekrar deneyin.';
+            }
 
-                const fullError = new Error(errorMessage);
-                fullError.helpText = helpText;
-                reject(fullError);
+            if (error.message && error.message.toLowerCase().includes('permissions policy')) {
+                errorMessage = 'Bu sayfa için konum özelliğine izin verilmiyor';
+                helpText = 'Sayfayı doğrudan açın veya ebeveyn sayfadaki iframe\'e geolocation izni verildiğinden emin olun (ör. allow="geolocation").';
+            }
+
+            const fullError = new Error(errorMessage);
+            fullError.helpText = helpText;
+            reject(fullError);
             },
             options
         );
@@ -5508,8 +5529,19 @@ let predefinedMapLayers = [];
 let predefinedMapInitialized = false;
 
 // Map initialization state management
-let mapInitializationPromise = null;
-let mapInitialized = false;
+const mapState = {
+    map: null,
+    markers: [],
+    poiCluster: null,
+    mapInitializationPromise: null,
+    mapInitialized: false,
+};
+
+let map = mapState.map;
+let markers = mapState.markers;
+let poiCluster = mapState.poiCluster;
+let mapInitializationPromise = mapState.mapInitializationPromise;
+let mapInitialized = mapState.mapInitialized;
 
 async function initializePredefinedMap() {
     // Log removed for cleaner console
@@ -8421,6 +8453,7 @@ async function displayRoutePOIsOnMap(pois) {
         } catch (_) {}
     });
     markers = [];
+    mapState.markers = markers;
     
     // Add POI markers to map
     const routeCoordinates = [];
@@ -8635,139 +8668,25 @@ function fitMapToRoutePOIs(pois) {
 }
 
 async function initializeMainMap() {
-    // Return existing promise if initialization is already in progress
-    if (mapInitializationPromise) {
-        // Log removed for cleaner console
-        return await mapInitializationPromise;
-    }
-    
-    // Check if map is already initialized and valid
-    if (map && map._container && mapInitialized) {
-        // Log removed for cleaner console
-        map.invalidateSize(); // Ensure proper sizing
-        return true;
-    }
-    
-    // Create new initialization promise
-    mapInitializationPromise = performMainMapInitialization();
-    
-    try {
-        const result = await mapInitializationPromise;
-        mapInitialized = result;
-        return result;
-    } finally {
-        // Clear the promise once complete
-        mapInitializationPromise = null;
-    }
-}
-
-async function performMainMapInitialization() {
-    // Log removed for cleaner console
-    
-    const mapContainer = document.getElementById('mapContainer');
-    if (!mapContainer) {
-        console.error('❌ Map container not found');
+    if (!window.MapControllerImpl) {
+        console.error('MapControllerImpl module is not available');
         return false;
     }
-    
-    // Make sure map container is visible
-    const routeSection = document.getElementById('routeSection');
-    if (routeSection) {
-        routeSection.style.display = 'block';
-    }
-    
-    // Wait a bit for the container to be visible (optimized timing)
-    await new Promise(resolve => addTimeout(resolve, 50));
-    
-    // Clear existing map
-    if (map) {
-        try {
-            map.remove();
-        } catch (e) {
-            console.warn('Error removing existing map:', e);
-        }
-        map = null;
-    }
-    
-    try {
-        // Check if Leaflet is available
-        if (typeof L === 'undefined') {
-            console.error('❌ Leaflet library not loaded');
-            return false;
-        }
-        
-        // Initialize map with performance optimizations
-        map = L.map('mapContainer', {
-            zoomControl: true,
-            scrollWheelZoom: true,
-            doubleClickZoom: true,
-            touchZoom: true,
-            dragging: true,
-            tap: true,
-            tapTolerance: 15,
-            worldCopyJump: false,
-            maxBoundsViscosity: 0.0,
-            preferCanvas: true, // Use Canvas renderer for better performance
-            renderer: L.canvas(), // Explicit canvas renderer
-            zoomAnimation: true, // Enable zoom animations
-            fadeAnimation: true, // Enable fade animations
-            markerZoomAnimation: true // Enable marker zoom animations
-        }).setView([38.632, 34.912], 13);
-        
-        // Add base layers
-        addBaseLayers(map);
 
-        // Initialize standalone panorama layer and load items
-        try {
-            if (typeof window.loadPanoramasLayer === 'function') {
-                await window.loadPanoramasLayer();
-            }
-        } catch (e) {
-            console.warn('Panorama layer failed to load:', e);
-        }
+    const result = await window.MapControllerImpl.initializeMainMapImpl(mapState, {
+        L,
+        addBaseLayers,
+        ensurePOISearchBar,
+        addTimeout,
+    });
 
-        // Initialize marker clustering for performance
-        try {
-            if (poiCluster && map.hasLayer(poiCluster)) {
-                map.removeLayer(poiCluster);
-            }
-            poiCluster = L.markerClusterGroup({
-                chunkedLoading: true,
-                chunkDelay: 25,
-                chunkInterval: 200,
-                // Even less aggressive clustering
-                disableClusteringAtZoom: 13,
-                spiderfyOnMaxZoom: true,
-                removeOutsideVisibleBounds: true,
-                maxClusterRadius: function (zoom) {
-                    // Split clusters sooner as zoom increases
-                    return zoom >= 13 ? 25 : Math.max(10, 50 - zoom * 3);
-                }
-            });
-            map.addLayer(poiCluster);
-        } catch (e) {
-            console.warn('MarkerCluster init failed or not available:', e);
-        }
+    map = mapState.map;
+    markers = mapState.markers;
+    poiCluster = mapState.poiCluster;
+    mapInitializationPromise = mapState.mapInitializationPromise;
+    mapInitialized = mapState.mapInitialized;
 
-        // Ensure POI search bar exists on dynamic map
-        try { ensurePOISearchBar(); } catch (_) {}
-        
-        // Clear markers array
-        markers = [];
-        
-        // Force map to resize after initialization
-        addTimeout(() => {
-            if (map) {
-                map.invalidateSize();
-            }
-        }, 200);
-        
-        // Log removed for cleaner console
-        return true;
-    } catch (error) {
-        console.error('❌ Error initializing main map:', error);
-        return false;
-    }
+    return result;
 }
 
 // Backward compatibility - keep the old function name
@@ -9024,6 +8943,7 @@ function clearMapMarkers() {
         }
     });
     markers = [];
+    mapState.markers = markers;
 }
 
 function getDifficultyStars(level) {
@@ -9774,8 +9694,9 @@ function cleanupApplication() {
         if (map) {
             map.remove();
             map = null;
+            mapState.map = null;
         }
-        
+
         if (predefinedMap) {
             predefinedMap.remove();
             predefinedMap = null;
@@ -9792,6 +9713,13 @@ function cleanupApplication() {
         
         // Reset state variables
         markers = [];
+        mapState.markers = markers;
+        poiCluster = null;
+        mapState.poiCluster = null;
+        mapInitializationPromise = null;
+        mapState.mapInitializationPromise = null;
+        mapInitialized = false;
+        mapState.mapInitialized = false;
         selectedPOIs = [];
         predefinedRoutes = [];
         filteredRoutes = [];
@@ -10434,11 +10362,25 @@ async function getRecommendations() {
             });
         } catch (error) {
             console.warn('Loading manager error, using fallback:', error);
-            loadingIndicator.style.display = 'block';
+            if (window.loadingManager && typeof window.loadingManager.resetIndicator === 'function') {
+                window.loadingManager.resetIndicator('loadingIndicator');
+            }
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'block';
+                loadingIndicator.style.visibility = 'visible';
+                loadingIndicator.style.opacity = '1';
+            }
         }
     } else {
         // Fallback - show basic loading
-        loadingIndicator.style.display = 'block';
+        if (window.loadingManager && typeof window.loadingManager.resetIndicator === 'function') {
+            window.loadingManager.resetIndicator('loadingIndicator');
+        }
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'block';
+            loadingIndicator.style.visibility = 'visible';
+            loadingIndicator.style.opacity = '1';
+        }
     }
 
     try {
@@ -10858,30 +10800,24 @@ async function displayRecommendations(recommendationData) {
     // Hide loading indicator after a reasonable delay for better UX
     const loadingIndicator = document.getElementById('loadingIndicator');
     setTimeout(() => {
+        if (window.loadingManager && typeof window.loadingManager.safeHideIndicator === 'function') {
+            window.loadingManager.safeHideIndicator(loadingIndicator || 'loadingIndicator', { fadeDuration: 500 });
+            return;
+        }
+
         if (loadingIndicator) {
-            // Smooth fade out transition
             loadingIndicator.style.transition = 'opacity 0.5s ease-out';
             loadingIndicator.style.opacity = '0';
-
-            // Hide completely after fade out
             setTimeout(() => {
                 loadingIndicator.style.display = 'none';
                 loadingIndicator.style.visibility = 'hidden';
-                loadingIndicator.classList.add('d-none');
-                loadingIndicator.setAttribute('hidden', 'true');
-
-                if (window.loadingManager && typeof window.loadingManager.hideLoading === 'function') {
-                    try {
-                        window.loadingManager.hideLoading('loadingIndicator');
-                    } catch (error) {
-                        console.warn('Hide loading error:', error);
-                    }
-                }
-
-                // Log removed for cleaner console
-            }, 500); // Wait for fade out to complete
+                loadingIndicator.style.opacity = '';
+                loadingIndicator.style.transition = '';
+                loadingIndicator.classList.remove('d-none');
+                loadingIndicator.removeAttribute('hidden');
+            }, 500);
         }
-    }, 2000); // Show loading for at least 2 seconds
+    }, 2000);
 
     // Asynchronously load media for each card in background (don't block UI)
     const allPOIs = [...recommendationData.highScore, ...recommendationData.lowScore];
@@ -11006,6 +10942,7 @@ async function initializeEmptyMap() {
     // Clear existing map
     if (map) {
         map.remove();
+        mapState.map = null;
     }
 
     // Initialize map with better options
@@ -11020,6 +10957,8 @@ async function initializeEmptyMap() {
         worldCopyJump: false,
         maxBoundsViscosity: 0.0
     }).setView([38.632, 34.912], 13);
+
+    mapState.map = map;
 
         // Add base layers
         addBaseLayers(map);
@@ -11060,6 +10999,7 @@ async function initializeEmptyMap() {
     // Clear existing markers
     markers.forEach(marker => marker.remove());
     markers = [];
+    mapState.markers = markers;
 
     // If only low score results exist, focus and open the top one
     if (showLowByDefault && recommendationData.lowScore.length > 0) {
@@ -11117,11 +11057,14 @@ async function initializeMap(recommendationData) {
     }
 
     // Add loading state to map container
-    mapContainer.classList.add('loading');
+    if (mapContainer) {
+        mapContainer.classList.add('loading');
+    }
 
     // Clear existing map
     if (map) {
         map.remove();
+        mapState.map = null;
     }
 
     // Initialize map with better options
@@ -11136,6 +11079,8 @@ async function initializeMap(recommendationData) {
         worldCopyJump: false,
         maxBoundsViscosity: 0.0
     }).setView([38.632, 34.912], 13);
+
+    mapState.map = map;
 
     // Add base layers
     addBaseLayers(map);
@@ -11159,8 +11104,10 @@ async function initializeMap(recommendationData) {
             }
         });
         map.addLayer(poiCluster);
+        mapState.poiCluster = poiCluster;
     } catch (e) {
         console.warn('MarkerCluster init failed or not available:', e);
+        mapState.poiCluster = poiCluster;
     }
 
     // Add map controls
@@ -11367,12 +11314,12 @@ async function initializeMap(recommendationData) {
 
     // Remove loading state after map is fully loaded
     setTimeout(() => {
-        mapContainer.classList.remove('loading');
-        // Fix map size issues
+        if (mapContainer) {
+            mapContainer.classList.remove('loading');
+        }
         if (map) {
             map.invalidateSize();
         }
-        // Log removed for cleaner console
     }, 1000);
 }
 function focusOnMap(lat, lng) {
@@ -11725,8 +11672,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const resultsSection = document.getElementById('resultsSection');
         const loadingIndicator = document.getElementById('loadingIndicator');
 
-        if (loadingIndicator) {
+        if (window.loadingManager && typeof window.loadingManager.safeHideIndicator === 'function') {
+            window.loadingManager.safeHideIndicator(loadingIndicator || 'loadingIndicator', { fadeDuration: 0 });
+        } else if (loadingIndicator) {
             loadingIndicator.style.display = 'none';
+            loadingIndicator.style.visibility = 'hidden';
+            loadingIndicator.style.opacity = '';
+            loadingIndicator.style.transition = '';
+            loadingIndicator.classList.remove('d-none');
+            loadingIndicator.removeAttribute('hidden');
         }
 
         if (resultsSection) {
@@ -12841,45 +12795,17 @@ async function showAllPOIs() {
     try {
         // Log removed for cleaner console
         
-        // Fetch all POIs from the API
-        const response = await fetch(`${apiBase}/pois`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        
-        if (!response.ok) {
-            let errorText;
-            try {
-                errorText = await response.text();
-                console.error('❌ API Error Response:', errorText);
-            } catch (e) {
-                console.error('❌ Could not read error response:', e);
-                errorText = 'Unknown error';
-            }
-            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        if (!window.POIClient) {
+            throw new Error('POIClient module is not available');
         }
-        
-        const poisData = await response.json();
-        // Log removed for cleaner console
 
-        // Transform the data structure - flatten all categories
-        const allPOIs = [];
-        Object.keys(poisData).forEach(category => {
-            if (Array.isArray(poisData[category])) {
-                poisData[category].forEach(poi => {
-                    allPOIs.push({
-                        ...poi,
-                        category: category,
-                        recommendationScore: 75 // Default score for all POIs
-                    });
-                });
-            }
-        });
+        const poisData = await window.POIClient.getAllPOIs({ normalize: true, refresh: true });
+
+        const allPOIs = (Array.isArray(poisData) ? poisData : []).map(poi => ({
+            ...poi,
+            category: poi.category || (Array.isArray(poi.categories) ? poi.categories[0] : poi.primary_category) || 'diger',
+            recommendationScore: typeof poi.recommendationScore === 'number' ? poi.recommendationScore : 75
+        }));
 
         // Log removed for cleaner console
 
@@ -13020,135 +12946,33 @@ async function displayAllPOIs(allPOIs) {
 
 // Update map with all POIs
 function updateMapWithPOIs(allPOIs) {
-    // Log removed for cleaner console
-    
-    if (!map) {
-        console.error('❌ Map not initialized');
+    if (!window.MapControllerImpl) {
+        console.error('MapControllerImpl module is not available');
         return;
     }
 
-    // Clear existing markers
-    markers.forEach(marker => {
-        try {
-            if (poiCluster && poiCluster.hasLayer && poiCluster.hasLayer(marker)) {
-                poiCluster.removeLayer(marker);
-            } else if (marker && marker.remove) {
-                marker.remove();
-            }
-        } catch (_) {}
-    });
-    markers = [];
+    window.MapControllerImpl.updateMapWithPOIsImpl(mapState, {
+        L,
+        createCustomIcon,
+        getCategoryDisplayName,
+        showPOIDetail,
+        openInGoogleMaps,
+        addToRoute,
+    }, allPOIs);
 
-    // Clear cluster group
-    if (poiCluster) {
-        try { poiCluster.clearLayers(); } catch (_) {}
-    }
-
-    // Add markers for all POIs
-    allPOIs.forEach((poi, index) => {
-        try {
-            if (!poi.latitude || !poi.longitude) {
-                console.warn('⚠️ POI missing coordinates:', poi.name);
-                return;
-            }
-
-            const customIcon = createCustomIcon(poi.category, poi.recommendationScore || 75, false);
-            const marker = L.marker([poi.latitude, poi.longitude], { icon: customIcon });
-            if (poiCluster) {
-                poiCluster.addLayer(marker);
-            } else {
-                marker.addTo(map);
-            }
-
-            // Create popup content
-            const categoryDisplayName = getCategoryDisplayName(poi.category);
-            const popupContent = `
-                <div class="poi-popup">
-                    <div class="poi-popup-header">
-                        <h4>${poi.name}</h4>
-                        <span class="poi-category-badge">${categoryDisplayName}</span>
-                    </div>
-                    ${poi.description ? `<p class="poi-description">${poi.description}</p>` : ''}
-                    <div class="poi-popup-actions">
-                        <button onclick="showPOIDetail('${poi._id || poi.id}', ${JSON.stringify(poi).replace(/"/g, '&quot;')})" class="popup-btn">
-                            <i class="fas fa-info-circle"></i> Detaylar
-                        </button>
-                        <button onclick="openInGoogleMaps(${poi.lat || poi.latitude}, ${poi.lon || poi.lng || poi.longitude}, '${poi.name.replace(/'/g, "\\'")}')" class="popup-btn">
-                            <i class="fas fa-external-link-alt"></i> Google Maps
-                        </button>
-                        <button onclick="addToRoute(${JSON.stringify(poi).replace(/"/g, '&quot;')})" class="popup-btn">
-                            <i class="fas fa-plus"></i> Rotaya Ekle
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            marker.bindPopup(popupContent);
-            // Attach searchable metadata
-            marker.poiName = poi.name || '';
-            marker.poiNameLower = (poi.name || '').toLowerCase();
-            marker.poiCategory = poi.category || '';
-            marker.poiTags = Array.isArray(poi.tags) ? poi.tags.join(' ').toLowerCase() : (poi.tags || '').toLowerCase();
-            marker.poiData = poi;
-            markers.push(marker);
-
-        } catch (error) {
-            console.error('❌ Error creating marker for POI:', poi.name, error);
-        }
-    });
-
-    // Fit map to show all markers if there are any
-    if (markers.length > 0) {
-        try {
-            if (poiCluster && poiCluster.getLayers && poiCluster.getLayers().length) {
-                map.fitBounds(poiCluster.getBounds().pad(0.1));
-            } else {
-                const group = new L.featureGroup(markers);
-                map.fitBounds(group.getBounds().pad(0.1));
-            }
-
-            // If the automatic fit zoomed out too far, focus on Ürgüp region instead
-            const MIN_ZOOM_FOR_REGION = 11; // avoid world view
-            if (typeof map.getZoom === 'function' && map.getZoom() < MIN_ZOOM_FOR_REGION) {
-                // Ürgüp center
-                map.setView([38.6436, 34.8128], 13);
-            }
-        } catch (error) {
-            console.error('❌ Error fitting map bounds:', error);
-            // Fallback to Ürgüp center
-            map.setView([38.6436, 34.8128], 13);
-        }
-    } else {
-        // No markers, center on Ürgüp
-        map.setView([38.6436, 34.8128], 13);
-    }
-
-    // Log removed for cleaner console
+    map = mapState.map;
+    markers = mapState.markers;
+    poiCluster = mapState.poiCluster;
 }
 
 // Ensure the dynamic map section is visible and focused
 function switchToDynamicMapView() {
-    try {
-        const mapSection = document.getElementById('mapSection');
-        if (mapSection) {
-            mapSection.style.display = 'block';
-            // Scroll into view smoothly
-            setTimeout(() => {
-                mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                if (map && map.invalidateSize) {
-                    setTimeout(() => map.invalidateSize(), 300);
-                }
-                // Ensure panoramas are visible when map becomes visible
-                try {
-                    if (typeof window.loadPanoramasLayer === 'function') {
-                        window.loadPanoramasLayer();
-                    }
-                } catch (_) {}
-            }, 50);
-        }
-    } catch (e) {
-        console.warn('switchToDynamicMapView failed:', e);
+    if (!window.MapControllerImpl) {
+        console.error('MapControllerImpl module is not available');
+        return;
     }
+
+    window.MapControllerImpl.switchToDynamicMapViewImpl(mapState, { addTimeout });
 }
 
 // Create a simple search UI to filter POI markers on the map

@@ -5,15 +5,14 @@ Business logic layer for POI operations.
 
 import logging
 import json
-# uuid - used for ID generation in create_poi
 import unicodedata
-import re
 import math
-from typing import Dict, List, Any, Optional, Tuple
-# datetime - used for timestamp operations
+import uuid
+from datetime import datetime
+from typing import Dict, List, Any, Optional
 
 from app.config.database import get_db_connection
-from app.middleware.error_handler import APIError, bad_request, not_found, internal_error
+from app.middleware.error_handler import APIError, bad_request, not_found
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +186,8 @@ class POIService:
                 poi['ratings'] = {}
             if not isinstance(poi.get('scores'), dict):
                 poi['scores'] = {}
+            if not isinstance(poi.get('attributes'), dict):
+                poi['attributes'] = poi.get('attributes') or {}
             # Ensure lat/lng aliases exist for mapping code paths that use either
             lat = poi.get('lat') if poi.get('lat') is not None else poi.get('latitude')
             lng = poi.get('lng') if poi.get('lng') is not None else poi.get('longitude')
@@ -216,6 +217,36 @@ class POIService:
                 poi['lat'] = poi['latitude']
             if 'longitude' in poi and 'lng' not in poi:
                 poi['lng'] = poi['longitude']
+        return poi
+
+    def _map_poi_record(self, record: Any) -> Dict[str, Any]:
+        """Normalize database record structures before returning to clients."""
+        if record is None:
+            return {}
+
+        poi = dict(record)
+
+        created_at = poi.get('created_at')
+        if isinstance(created_at, datetime):
+            poi['created_at'] = created_at.isoformat() + ('Z' if created_at.tzinfo is None else '')
+
+        updated_at = poi.get('updated_at')
+        if isinstance(updated_at, datetime):
+            poi['updated_at'] = updated_at.isoformat() + ('Z' if updated_at.tzinfo is None else '')
+
+        poi.setdefault('short_description', '')
+        poi.setdefault('altitude', None)
+
+        attributes = poi.get('attributes')
+        if isinstance(attributes, str):
+            try:
+                poi['attributes'] = json.loads(attributes)
+            except json.JSONDecodeError:
+                poi['attributes'] = {}
+        else:
+            poi.setdefault('attributes', {})
+        poi.setdefault('is_active', True)
+
         return poi
     
     def list_pois(self, search: str = None, category: str = None, page: int = 1, limit: int = 20, sort: str = 'name_asc') -> Dict[str, Any]:
@@ -296,9 +327,18 @@ class POIService:
 
                 # Get POIs - adapt to actual database schema
                 query = f"""
-                    SELECT id, name, description, category,
-                           ST_Y(location::geometry) as latitude, ST_X(location::geometry) as longitude,
-                           0 as rating, '[]'::text as images, created_at, updated_at
+                    SELECT id,
+                           name,
+                           description,
+                           short_description,
+                           category,
+                           altitude,
+                           ST_Y(location::geometry) as latitude,
+                           ST_X(location::geometry) as longitude,
+                           attributes,
+                           is_active,
+                           created_at,
+                           updated_at
                     FROM pois
                     WHERE {where_clause} AND is_active = true
                     ORDER BY {order_clause}
@@ -310,12 +350,8 @@ class POIService:
                 # Convert to list of dicts
                 poi_list = []
                 for poi in pois:
-                    poi_dict = dict(poi)
-                    if poi_dict.get('created_at'):
-                        poi_dict['created_at'] = poi_dict['created_at'].isoformat() + 'Z'
-                    if poi_dict.get('updated_at'):
-                        poi_dict['updated_at'] = poi_dict['updated_at'].isoformat() + 'Z'
-                    poi_list.append(self._ensure_client_compat(poi_dict))
+                    mapped = self._map_poi_record(poi)
+                    poi_list.append(self._ensure_client_compat(mapped))
                 
                 total_pages = math.ceil(total / limit) if limit > 0 else 1
                 
@@ -358,8 +394,12 @@ class POIService:
         
         # Pagination
         total = len(pois)
-        pois = [self._ensure_client_compat(dict(p)) if isinstance(p, dict) else self._ensure_client_compat(p) for p in pois]
-        pois = pois[offset:offset + limit]
+        normalized = []
+        for poi in pois:
+            mapped = self._map_poi_record(poi)
+            normalized.append(self._ensure_client_compat(mapped))
+
+        pois = normalized[offset:offset + limit]
         total_pages = math.ceil(total / limit) if limit > 0 else 1
         
         return {
@@ -415,9 +455,18 @@ class POIService:
                 where_clause = " AND ".join(where_conditions)
                 
                 search_query = f"""
-                    SELECT id, name, description, category, 
-                           ST_Y(location::geometry) as latitude, ST_X(location::geometry) as longitude,
-                           0 as rating, '[]'::text as images, created_at, updated_at
+                    SELECT id,
+                           name,
+                           description,
+                           short_description,
+                           category,
+                           altitude,
+                           ST_Y(location::geometry) as latitude,
+                           ST_X(location::geometry) as longitude,
+                           attributes,
+                           is_active,
+                           created_at,
+                           updated_at
                     FROM pois 
                     WHERE {where_clause} AND is_active = true
                     ORDER BY 
@@ -436,12 +485,8 @@ class POIService:
                 # Convert to list of dicts
                 poi_list = []
                 for poi in results:
-                    poi_dict = dict(poi)
-                    if poi_dict.get('created_at'):
-                        poi_dict['created_at'] = poi_dict['created_at'].isoformat() + 'Z'
-                    if poi_dict.get('updated_at'):
-                        poi_dict['updated_at'] = poi_dict['updated_at'].isoformat() + 'Z'
-                    poi_list.append(self._ensure_client_compat(poi_dict))
+                    mapped = self._map_poi_record(poi)
+                    poi_list.append(self._ensure_client_compat(mapped))
                 
                 return {
                     'results': poi_list,
@@ -473,7 +518,8 @@ class POIService:
         # Remove score and limit results
         results = []
         for poi in scored_pois[:limit]:
-            poi_copy = self._ensure_client_compat(poi.copy())
+            poi_copy = self._map_poi_record(poi.copy())
+            poi_copy = self._ensure_client_compat(poi_copy)
             poi_copy.pop('_relevance_score', None)
             results.append(poi_copy)
         
@@ -512,9 +558,18 @@ class POIService:
         with conn_context as conn:
             with conn.cursor() as cursor:
                 query = """
-                    SELECT id, name, description, category, 
-                           ST_Y(location::geometry) as latitude, ST_X(location::geometry) as longitude,
-                           0 as rating, '[]'::text as images, created_at, updated_at
+                    SELECT id,
+                           name,
+                           description,
+                           short_description,
+                           category,
+                           altitude,
+                           ST_Y(location::geometry) as latitude,
+                           ST_X(location::geometry) as longitude,
+                           attributes,
+                           is_active,
+                           created_at,
+                           updated_at
                     FROM pois 
                     WHERE id = %s AND is_active = true
                 """
@@ -524,12 +579,8 @@ class POIService:
                 if not result:
                     raise not_found(f"POI with ID {poi_id} not found")
                 
-                poi_dict = dict(result)
-                if poi_dict.get('created_at'):
-                    poi_dict['created_at'] = poi_dict['created_at'].isoformat() + 'Z'
-                if poi_dict.get('updated_at'):
-                    poi_dict['updated_at'] = poi_dict['updated_at'].isoformat() + 'Z'
-                return self._ensure_client_compat(poi_dict)
+                mapped = self._map_poi_record(result)
+                return self._ensure_client_compat(mapped)
     
     def _get_poi_json(self, poi_id: str) -> Dict[str, Any]:
         """Get POI from JSON fallback."""
@@ -538,7 +589,8 @@ class POIService:
         
         for poi in pois:
             if poi.get('id') == poi_id:
-                return self._ensure_client_compat(poi)
+                mapped = self._map_poi_record(poi)
+                return self._ensure_client_compat(mapped)
         
         raise not_found(f"POI with ID {poi_id} not found")
     
@@ -565,74 +617,362 @@ class POIService:
         except (ValueError, TypeError):
             raise bad_request("Invalid latitude or longitude format")
         
-        # Generate ID and timestamps
-        poi_id = str(uuid.uuid4())
-        now = datetime.utcnow()
-        
-        poi_data['id'] = poi_id
-        poi_data['created_at'] = now.isoformat() + 'Z'
-        poi_data['updated_at'] = now.isoformat() + 'Z'
-        
-        # Set defaults
-        poi_data.setdefault('description', '')
-        poi_data.setdefault('category', 'other')
-        poi_data.setdefault('rating', 0)
-        poi_data.setdefault('images', [])
-        
+        category = poi_data.get('category') or 'other'
+        description = poi_data.get('description', '')
+        short_description = poi_data.get('short_description', '')
+        altitude = poi_data.get('altitude')
+        if altitude is not None:
+            try:
+                altitude = float(altitude)
+            except (TypeError, ValueError):
+                raise bad_request("Invalid altitude format")
+
+        attributes = poi_data.get('attributes')
+        if attributes is None:
+            attributes = {}
+        elif not isinstance(attributes, dict):
+            raise bad_request("Attributes must be an object")
+
+        sanitized = {
+            'name': poi_data['name'].strip() if isinstance(poi_data['name'], str) else poi_data['name'],
+            'category': category,
+            'description': description,
+            'short_description': short_description,
+            'latitude': float(poi_data['latitude']),
+            'longitude': float(poi_data['longitude']),
+            'altitude': altitude,
+            'attributes': attributes,
+            'is_active': bool(poi_data.get('is_active', True))
+        }
+
         try:
             if self.json_fallback:
-                return self._create_poi_json(poi_data)
+                return self._create_poi_json(sanitized)
             else:
-                return self._create_poi_database(poi_data)
+                return self._create_poi_database(sanitized)
         except Exception as e:
             logger.error(f"Error creating POI: {e}")
             raise APIError("Failed to create POI", "POI_CREATE_ERROR")
-    
+
     def _create_poi_database(self, poi_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create POI in database."""
         conn_context = self._get_database_connection()
         if conn_context is None:
             # Fallback to JSON if database not available
             return self._create_poi_json(poi_data)
-        
+
         with conn_context as conn:
             with conn.cursor() as cursor:
+                now = datetime.utcnow()
                 query = """
-                    INSERT INTO pois (id, name, description, category, latitude, longitude, rating, images, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    RETURNING *
+                    INSERT INTO pois (
+                        name,
+                        category,
+                        description,
+                        short_description,
+                        location,
+                        altitude,
+                        attributes,
+                        is_active,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES (
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography,
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s
+                    )
+                    RETURNING id,
+                              name,
+                              description,
+                              short_description,
+                              category,
+                              altitude,
+                              ST_Y(location::geometry) as latitude,
+                              ST_X(location::geometry) as longitude,
+                              attributes,
+                              is_active,
+                              created_at,
+                              updated_at
                 """
                 cursor.execute(query, (
-                    poi_data['id'], poi_data['name'], poi_data['description'],
-                    poi_data['category'], poi_data['latitude'], poi_data['longitude'],
-                    poi_data['rating'], json.dumps(poi_data['images']),
-                    poi_data['created_at'], poi_data['updated_at']
+                    poi_data['name'],
+                    poi_data['category'],
+                    poi_data['description'],
+                    poi_data['short_description'],
+                    poi_data['longitude'],
+                    poi_data['latitude'],
+                    poi_data['altitude'],
+                    json.dumps(poi_data['attributes']),
+                    poi_data['is_active'],
+                    now,
+                    now
                 ))
-                
+
                 result = cursor.fetchone()
                 conn.commit()
-                
-                poi_dict = dict(result)
-                if poi_dict.get('created_at'):
-                    poi_dict['created_at'] = poi_dict['created_at'].isoformat() + 'Z'
-                if poi_dict.get('updated_at'):
-                    poi_dict['updated_at'] = poi_dict['updated_at'].isoformat() + 'Z'
-                
-                return poi_dict
-    
+
+                mapped = self._map_poi_record(result)
+                return self._ensure_client_compat(mapped)
+
     def _create_poi_json(self, poi_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create POI in JSON fallback."""
         data = self._load_test_data()
-        
+
         # Check for duplicate IDs
         existing_ids = {poi.get('id') for poi in data.get('pois', [])}
-        if poi_data['id'] in existing_ids:
-            poi_data['id'] = str(uuid.uuid4())  # Generate new ID
-        
-        data.setdefault('pois', []).append(poi_data)
+        poi_id = str(uuid.uuid4())
+        while poi_id in existing_ids:
+            poi_id = str(uuid.uuid4())
+
+        now = datetime.utcnow().isoformat() + 'Z'
+
+        json_record = {
+            'id': poi_id,
+            'name': poi_data['name'],
+            'category': poi_data['category'],
+            'description': poi_data['description'],
+            'short_description': poi_data.get('short_description', ''),
+            'latitude': poi_data['latitude'],
+            'longitude': poi_data['longitude'],
+            'altitude': poi_data.get('altitude'),
+            'attributes': poi_data.get('attributes', {}),
+            'is_active': poi_data.get('is_active', True),
+            'created_at': now,
+            'updated_at': now
+        }
+
+        data.setdefault('pois', []).append(json_record)
         self._save_test_data(data)
-        
-        return poi_data
+
+        return self._ensure_client_compat(json_record)
+
+    def update_poi(self, poi_id: str, poi_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update existing POI."""
+        if not poi_id:
+            raise bad_request("POI ID is required")
+        if not poi_data:
+            raise bad_request("Update payload is required")
+
+        try:
+            if not self.json_fallback:
+                try:
+                    return self._update_poi_database(poi_id, poi_data)
+                except Exception as db_error:
+                    logger.warning(f"Database update failed, falling back to JSON: {db_error}")
+                    self.json_fallback = True
+            return self._update_poi_json(poi_id, poi_data)
+        except APIError:
+            raise
+        except Exception as e:
+            logger.error(f"Error updating POI {poi_id}: {e}")
+            raise APIError("Failed to update POI", "POI_UPDATE_ERROR")
+
+    def _update_poi_database(self, poi_id: str, poi_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update POI in database and return updated record."""
+        conn_context = self._get_database_connection()
+        if conn_context is None:
+            return self._update_poi_json(poi_id, poi_data)
+
+        try:
+            poi_id_int = int(poi_id)
+        except (TypeError, ValueError):
+            raise bad_request("POI ID must be an integer")
+
+        fields = []
+        values: List[Any] = []
+
+        if 'name' in poi_data and poi_data['name']:
+            fields.append('name = %s')
+            values.append(poi_data['name'].strip() if isinstance(poi_data['name'], str) else poi_data['name'])
+
+        if 'category' in poi_data and poi_data['category']:
+            fields.append('category = %s')
+            values.append(poi_data['category'])
+
+        if 'description' in poi_data:
+            fields.append('description = %s')
+            values.append(poi_data.get('description', ''))
+
+        if 'short_description' in poi_data:
+            fields.append('short_description = %s')
+            values.append(poi_data.get('short_description', ''))
+
+        if 'altitude' in poi_data:
+            altitude = poi_data.get('altitude')
+            if altitude is not None:
+                try:
+                    altitude = float(altitude)
+                except (TypeError, ValueError):
+                    raise bad_request("Invalid altitude format")
+            fields.append('altitude = %s')
+            values.append(altitude)
+
+        attributes = poi_data.get('attributes')
+        if attributes is not None:
+            if not isinstance(attributes, dict):
+                raise bad_request("Attributes must be an object")
+            fields.append('attributes = %s')
+            values.append(json.dumps(attributes))
+
+        if 'is_active' in poi_data:
+            fields.append('is_active = %s')
+            values.append(bool(poi_data['is_active']))
+
+        latitude = poi_data.get('latitude', poi_data.get('lat'))
+        longitude = poi_data.get('longitude', poi_data.get('lng'))
+        if latitude is not None or longitude is not None:
+            if latitude is None or longitude is None:
+                raise bad_request("Both latitude and longitude are required to update location")
+            try:
+                latitude = float(latitude)
+                longitude = float(longitude)
+            except (TypeError, ValueError):
+                raise bad_request("Invalid latitude or longitude format")
+            fields.append('location = ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography')
+            values.extend([longitude, latitude])
+
+        if not fields:
+            raise bad_request("No valid fields provided for update")
+
+        updated_at = datetime.utcnow()
+        fields.append('updated_at = %s')
+        values.append(updated_at)
+        values.append(poi_id_int)
+
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                query = f"""
+                    UPDATE pois
+                    SET {', '.join(fields)}
+                    WHERE id = %s
+                    RETURNING id,
+                              name,
+                              description,
+                              short_description,
+                              category,
+                              altitude,
+                              ST_Y(location::geometry) as latitude,
+                              ST_X(location::geometry) as longitude,
+                              attributes,
+                              is_active,
+                              created_at,
+                              updated_at
+                """
+                cursor.execute(query, values)
+                result = cursor.fetchone()
+
+                if not result:
+                    raise not_found(f"POI with ID {poi_id} not found")
+
+        mapped = self._map_poi_record(result)
+        return self._ensure_client_compat(mapped)
+
+    def _update_poi_json(self, poi_id: str, poi_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update POI in JSON fallback store."""
+        data = self._load_test_data()
+        pois = data.get('pois', [])
+
+        for poi in pois:
+            if str(poi.get('id')) == str(poi_id):
+                if 'name' in poi_data and poi_data['name']:
+                    poi['name'] = poi_data['name']
+                if 'category' in poi_data and poi_data['category']:
+                    poi['category'] = poi_data['category']
+                if 'description' in poi_data:
+                    poi['description'] = poi_data.get('description', '')
+                if 'short_description' in poi_data:
+                    poi['short_description'] = poi_data.get('short_description', '')
+                if 'altitude' in poi_data:
+                    altitude = poi_data.get('altitude')
+                    if altitude is not None:
+                        try:
+                            altitude = float(altitude)
+                        except (TypeError, ValueError):
+                            raise bad_request("Invalid altitude format")
+                    poi['altitude'] = altitude
+                if 'attributes' in poi_data:
+                    attributes = poi_data.get('attributes')
+                    if attributes is not None and not isinstance(attributes, dict):
+                        raise bad_request("Attributes must be an object")
+                    poi['attributes'] = attributes or {}
+                if 'is_active' in poi_data:
+                    poi['is_active'] = bool(poi_data['is_active'])
+
+                latitude = poi_data.get('latitude', poi_data.get('lat'))
+                longitude = poi_data.get('longitude', poi_data.get('lng'))
+                if latitude is not None or longitude is not None:
+                    if latitude is None or longitude is None:
+                        raise bad_request("Both latitude and longitude are required to update location")
+                    try:
+                        poi['latitude'] = float(latitude)
+                        poi['longitude'] = float(longitude)
+                    except (TypeError, ValueError):
+                        raise bad_request("Invalid latitude or longitude format")
+
+                poi['updated_at'] = datetime.utcnow().isoformat() + 'Z'
+                self._save_test_data(data)
+                return self._ensure_client_compat(poi)
+
+        raise not_found(f"POI with ID {poi_id} not found")
+
+    def delete_poi(self, poi_id: str) -> None:
+        """Delete POI from primary store."""
+        if not poi_id:
+            raise bad_request("POI ID is required")
+
+        try:
+            if not self.json_fallback:
+                try:
+                    self._delete_poi_database(poi_id)
+                    return
+                except Exception as db_error:
+                    logger.warning(f"Database delete failed, falling back to JSON: {db_error}")
+                    self.json_fallback = True
+            self._delete_poi_json(poi_id)
+        except APIError:
+            raise
+        except Exception as e:
+            logger.error(f"Error deleting POI {poi_id}: {e}")
+            raise APIError("Failed to delete POI", "POI_DELETE_ERROR")
+
+    def _delete_poi_database(self, poi_id: str) -> None:
+        """Delete POI in database."""
+        conn_context = self._get_database_connection()
+        if conn_context is None:
+            self._delete_poi_json(poi_id)
+            return
+
+        try:
+            poi_id_int = int(poi_id)
+        except (TypeError, ValueError):
+            raise bad_request("POI ID must be an integer")
+
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DELETE FROM pois WHERE id = %s RETURNING id", (poi_id_int,))
+                result = cursor.fetchone()
+                if not result:
+                    raise not_found(f"POI with ID {poi_id} not found")
+
+    def _delete_poi_json(self, poi_id: str) -> None:
+        """Delete POI in JSON fallback store."""
+        data = self._load_test_data()
+        pois = data.get('pois', [])
+        initial_count = len(pois)
+        data['pois'] = [poi for poi in pois if str(poi.get('id')) != str(poi_id)]
+
+        if len(data['pois']) == initial_count:
+            raise not_found(f"POI with ID {poi_id} not found")
+
+        self._save_test_data(data)
 
 
 # Global service instance

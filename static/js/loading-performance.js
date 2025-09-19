@@ -224,6 +224,67 @@ class LoadingManager {
     }
 
     /**
+     * Gracefully hide a loading indicator with optional fade-out
+     */
+    safeHideIndicator(elementOrId, options = {}) {
+        const indicator = typeof elementOrId === 'string'
+            ? document.getElementById(elementOrId)
+            : elementOrId;
+
+        if (!indicator) {
+            return;
+        }
+
+        const id = typeof elementOrId === 'string' ? elementOrId : indicator.id;
+        const { fadeDuration = 300 } = options;
+
+        if (id && this.loadingStates.has(id)) {
+            try {
+                this.hideLoading(id);
+            } catch (err) {
+                console.warn('LoadingManager.hideLoading failed:', err);
+            }
+        }
+
+        const cleanup = () => {
+            indicator.style.display = 'none';
+            indicator.style.visibility = 'hidden';
+            indicator.style.opacity = '';
+            indicator.style.transition = '';
+            indicator.classList.remove('d-none');
+            indicator.removeAttribute('hidden');
+        };
+
+        if (fadeDuration > 0) {
+            indicator.style.transition = `opacity ${fadeDuration}ms ease-out`;
+            indicator.style.opacity = '0';
+            window.setTimeout(cleanup, fadeDuration);
+        } else {
+            cleanup();
+        }
+    }
+
+    /**
+     * Reset indicator styles so it can be shown again cleanly
+     */
+    resetIndicator(elementOrId) {
+        const indicator = typeof elementOrId === 'string'
+            ? document.getElementById(elementOrId)
+            : elementOrId;
+
+        if (!indicator) {
+            return;
+        }
+
+        indicator.style.display = '';
+        indicator.style.visibility = '';
+        indicator.style.opacity = '';
+        indicator.style.transition = '';
+        indicator.classList.remove('d-none');
+        indicator.removeAttribute('hidden');
+    }
+
+    /**
      * Setup intersection observer for lazy loading
      */
     setupIntersectionObserver() {
@@ -1305,8 +1366,9 @@ class PerformanceMonitor {
  * Lazy Loading Utilities
  */
 class LazyLoader {
-    constructor() {
-        this.loadingManager = new LoadingManager();
+    constructor(manager) {
+        const existingManager = manager || window.loadingManager;
+        this.loadingManager = existingManager instanceof LoadingManager ? existingManager : new LoadingManager();
     }
 
     /**
@@ -1329,13 +1391,12 @@ class LazyLoader {
                 });
             }
 
-            // Simulate progressive loading
-            const apiBase = window.apiBase || '/api';
-            // Log removed for cleaner console
-            const response = await fetch(`${apiBase}/pois`);
-            if (!response.ok) throw new Error('Failed to fetch POI data');
+            if (!window.POIClient) {
+                throw new Error('POIClient module is not available');
+            }
 
-            const poisData = await response.json();
+            // Simulate progressive loading
+            const poisData = await window.POIClient.getAllPOIs({ normalize: true, refresh: false });
             
             if (config.showProgress) {
                 this.loadingManager.updateProgress('recommendationResults', 50);
@@ -1391,8 +1452,12 @@ class LazyLoader {
 // Log removed for cleaner console
 
 try {
-    window.loadingManager = new LoadingManager();
-    window.lazyLoader = new LazyLoader();
+    const existingManager = window.loadingManager instanceof LoadingManager
+        ? window.loadingManager
+        : new LoadingManager();
+
+    window.loadingManager = existingManager;
+    window.lazyLoader = new LazyLoader(existingManager);
     // Log removed for cleaner console
     
     // Dispatch a custom event to notify that loading manager is ready
@@ -1405,6 +1470,28 @@ try {
         hideLoading: () => console.warn('Loading manager not available'),
         showPOISkeletons: () => console.warn('Loading manager not available'),
         updateProgress: () => console.warn('Loading manager not available'),
+        safeHideIndicator: (elementId) => {
+            const el = typeof elementId === 'string' ? document.getElementById(elementId) : elementId;
+            if (el) {
+                el.style.display = 'none';
+                el.style.visibility = 'hidden';
+                el.style.opacity = '';
+                el.style.transition = '';
+                el.classList.remove('d-none');
+                el.removeAttribute('hidden');
+            }
+        },
+        resetIndicator: (elementId) => {
+            const el = typeof elementId === 'string' ? document.getElementById(elementId) : elementId;
+            if (el) {
+                el.style.display = '';
+                el.style.visibility = '';
+                el.style.opacity = '';
+                el.style.transition = '';
+                el.classList.remove('d-none');
+                el.removeAttribute('hidden');
+            }
+        },
         animateList: () => console.warn('Loading manager not available'),
         performanceMonitor: {
             measureRender: (name, fn) => fn()
@@ -1413,7 +1500,11 @@ try {
     window.lazyLoader = {
         setupImageLazyLoading: () => console.warn('Lazy loader not available'),
         loadPOIData: async (preferences) => {
-            // Fallback to regular fetch
+            if (window.POIClient && typeof window.POIClient.getAllPOIs === 'function') {
+                return window.POIClient.getAllPOIs({ normalize: true, refresh: false });
+            }
+
+            // Fallback to regular fetch if client unavailable
             const apiBase = window.apiBase || '/api';
             const response = await fetch(`${apiBase}/pois`);
             if (!response.ok) throw new Error('Failed to fetch POI data');

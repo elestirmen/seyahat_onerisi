@@ -178,12 +178,8 @@ def update_poi(poi_id):
         if not poi_data:
             raise bad_request("Request body is required")
         
-        # Call service (to be implemented)
-        # result = poi_service.update_poi(poi_id, poi_data)
-        
-        # Temporary placeholder - return existing POI
-        result = poi_service.get_poi(poi_id)
-        
+        result = poi_service.update_poi(poi_id, poi_data)
+
         return jsonify(result), 200
         
     except APIError:
@@ -206,13 +202,11 @@ def delete_poi(poi_id):
         if not poi_id:
             raise bad_request("POI ID is required")
         
-        # Call service (to be implemented)
-        # poi_service.delete_poi(poi_id)
-        
-        # Temporary placeholder
+        poi_service.delete_poi(poi_id)
+
         return jsonify({
             'success': True,
-            'message': f'POI {poi_id} would be deleted'
+            'message': f'POI {poi_id} deleted'
         }), 200
         
     except APIError:

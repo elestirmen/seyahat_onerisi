@@ -6,163 +6,56 @@ Bu script POI adlarını, açıklamalarını ve kategorilerini analiz ederek
 her POI için uygun slider değerlerini akıllı bir şekilde hesaplar (0-100 arası)
 """
 
+
 import os
 import sys
 from datetime import datetime
 import argparse
 import re
+import json
+from pathlib import Path
 from collections import defaultdict
 
-# Anahtar kelime tabanlı puanlama sistemi
-KEYWORD_MAPPING = {
-    # Tarihi ve kültürel anahtar kelimeler
-    "tarihi": {
-        "keywords": ["tarihi", "tarih", "antik", "eski", "arkeolojik", "müze", "kale", "saray", "cami", "kilise", "manastır", "mezar", "anıt", "yapı", "binası", "köprü", "kapı", "duvar", "sur", "tapınak", "mağara", "kilise", "havra", "çarşı"],
-        "weight": 1.0
-    },
-    "sanat_kultur": {
-        "keywords": ["sanat", "kültür", "galeri", "müze", "tiyatro", "sergi", "resim", "heykel", "el sanatı", "halı", "kilim", "çini", "mozaik", "minyatür", "hat", "tezhip", "ebru", "çömlek", "seramik", "müzik", "folklor", "dans", "festival"],
-        "weight": 1.0
-    },
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / 'static' / 'config' / 'poi_slider_config.json'
 
-    # Doğa anahtar kelimeler
-    "doga": {
-        "keywords": ["doğa", "orman", "dağ", "tepe", "vadi", "göl", "nehir", "dere", "şelale", "kanyon", "kanyon", "ova", "çayır", "çim", "orman", "ağaç", "çiçek", "bitki", "hayvan", "kuş", "balık", "güzellik", "manzara", "görünüm", "panorama", "güneş", "güneş doğuşu", "güneş batışı"],
-        "weight": 1.0
-    },
+KEYWORD_MAPPING = {}
+CATEGORY_BASE_RATINGS = {}
+CURRENT_CONFIG_PATH = DEFAULT_CONFIG_PATH
 
-    # Yemek anahtar kelimeler
-    "yemek": {
-        "keywords": ["yemek", "restoran", "lokanta", "kafe", "kahve", "mutfak", "lezzet", "yemek", "içecek", "kahvaltı", "öğle", "akşam", "sofra", "masa", "menü", "porsiyon", "tabak", "çorba", "et", "tavuk", "balık", "sebze", "meyve", "tatlı", "içecek", "çay", "kahve", "şarap", "rakı", "bir"],
-        "weight": 1.0
-    },
 
-    # Eğlence anahtar kelimeler
-    "eglence": {
-        "keywords": ["eğlence", "eğlen", "oyun", "dans", "müzik", "konser", "festival", "şenlik", "parti", "gece", "bar", "kulüp", "diskotek", "tiyatro", "sinema", "sahne", "performans", "gösteri", "oyun", "spor", "maç", "yarışma", "etkinlik", "aktivit"],
-        "weight": 1.0
-    },
+def load_slider_configuration(config_path=None):
+    """Load slider configuration JSON file and return dictionaries."""
+    path = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
+    try:
+        with path.open('r', encoding='utf-8') as handle:
+            data = json.load(handle)
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"Slider configuration file not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Slider configuration contains invalid JSON: {path}") from exc
 
-    # Spor anahtar kelimeler
-    "spor": {
-        "keywords": ["spor", "sporcu", "futbol", "basketbol", "voleybol", "tenis", "yüzme", "koşu", "bisiklet", "dağcılık", "kamp", "trekking", "hiking", "yürüyüş", "doğa yürüyüşü", "fitness", "salon", "stadyum", "saha", "halı saha", "kort", "pist"],
-        "weight": 1.0
-    },
+    keyword_mapping = data.get('keywordMapping') or {}
+    category_base_ratings = data.get('categoryBaseRatings') or {}
 
-    # Macera anahtar kelimeler
-    "macera": {
-        "keywords": ["macera", "heyecan", "tırmanış", "dağcılık", "kamp", "çadır", "trekking", "zipline", "atv", "jeep", "safari", "yaban hayatı", "orman", "kanyon", "nehir", "rafting", "kayak", "snowboard", "uçurtma", "delta", "dalış", "scuba", "sörf", "kitesurf"],
-        "weight": 1.0
-    },
+    if not isinstance(keyword_mapping, dict) or not isinstance(category_base_ratings, dict):
+        raise ValueError(f"Slider configuration has unexpected structure: {path}")
 
-    # Rahatlatıcı anahtar kelimeler
-    "rahatlatici": {
-        "keywords": ["rahat", "dinlen", "spa", "masaj", "terapi", "meditasyon", "yoga", "wellness", "hamam", "kaplıca", "termal", "havuz", "sauna", "jakuzi", "masaj", "bakım", "güzellik", "huzur", "sessizlik", "barış", "sakin", "dingin"],
-        "weight": 1.0
-    },
+    return keyword_mapping, category_base_ratings, path
 
-    # Alışveriş anahtar kelimeler
-    "alisveris": {
-        "keywords": ["alışveriş", "çarşı", "pazar", "market", "mağaza", "dükkan", "boutique", "avm", "sokak", "el sanatı", "hediyelik", "takı", "giysi", "ayakkabı", "çant", "aksesuar", "dekorasyon", "ev eşyası"],
-        "weight": 1.0
-    },
 
-    # Gece hayatı anahtar kelimeler
-    "gece_hayati": {
-        "keywords": ["gece", "bar", "kulüp", "diskotek", "pub", "meyhane", "restoran", "cafe", "kahve", "dans", "müzik", "konser", "live", "dj", "party", "eğlence", "içecek", "alkol", "şarap", "rakı", "kokteyl"],
-        "weight": 1.0
-    }
-}
+def apply_slider_configuration(config_path=None):
+    """Apply configuration globally so helper functions can access it."""
+    global KEYWORD_MAPPING, CATEGORY_BASE_RATINGS, CURRENT_CONFIG_PATH
+    keyword_mapping, category_base_ratings, resolved_path = load_slider_configuration(config_path)
+    KEYWORD_MAPPING = keyword_mapping
+    CATEGORY_BASE_RATINGS = category_base_ratings
+    CURRENT_CONFIG_PATH = resolved_path
+    return resolved_path
 
-# Kategori bazlı temel puanlama
-CATEGORY_BASE_RATINGS = {
-    "kulturel_miras": {
-        "tarihi": 85,
-        "sanat_kultur": 70,
-        "doga": 40,
-        "yemek": 20,
-        "eglence": 30,
-        "spor": 15,
-        "macera": 20,
-        "rahatlatici": 25,
-        "alisveris": 25,
-        "gece_hayati": 20
-    },
-    "yasayan_kultur": {
-        "sanat_kultur": 75,
-        "eglence": 60,
-        "tarihi": 50,
-        "yemek": 40,
-        "gece_hayati": 45,
-        "rahatlatici": 35,
-        "alisveris": 50,
-        "doga": 25,
-        "spor": 20,
-        "macera": 15
-    },
-    "konaklama_hizmet": {
-        "rahatlatici": 80,
-        "gece_hayati": 40,
-        "doga": 50,
-        "yemek": 30,
-        "eglence": 35,
-        "alisveris": 25,
-        "tarihi": 30,
-        "sanat_kultur": 20,
-        "spor": 25,
-        "macera": 20
-    },
-    "dogal_miras": {
-        "doga": 90,
-        "macera": 70,
-        "spor": 60,
-        "rahatlatici": 50,
-        "tarihi": 40,
-        "sanat_kultur": 25,
-        "yemek": 15,
-        "eglence": 20,
-        "alisveris": 10,
-        "gece_hayati": 15
-    },
-    "gastronomi": {
-        "yemek": 95,
-        "eglence": 60,
-        "gece_hayati": 70,
-        "rahatlatici": 40,
-        "alisveris": 30,
-        "sanat_kultur": 25,
-        "tarihi": 20,
-        "doga": 15,
-        "spor": 10,
-        "macera": 10
-    },
-    "macera_spor": {
-        "macera": 90,
-        "spor": 85,
-        "doga": 75,
-        "rahatlatici": 30,
-        "eglence": 40,
-        "tarihi": 20,
-        "sanat_kultur": 15,
-        "yemek": 25,
-        "alisveris": 10,
-        "gece_hayati": 15
-    },
-    "seyir_noktalari": {
-        "doga": 80,
-        "rahatlatici": 60,
-        "tarihi": 50,
-        "macera": 40,
-        "sanat_kultur": 30,
-        "eglence": 35,
-        "yemek": 20,
-        "spor": 25,
-        "alisveris": 15,
-        "gece_hayati": 20
-    }
-}
 
-# Özel POI'ler için özel değerler
+# Load default configuration at import time
+apply_slider_configuration()
+
 SPECIAL_POI_VALUES = {
     "Ürgüp Müzesi": {
         "tarihi": 95,
@@ -636,10 +529,23 @@ Yeni algoritma özellikleri:
         help="Test modu: Veritabanını değiştirmez, sadece hesaplanan değerleri gösterir"
     )
 
+    parser.add_argument(
+        "--config",
+        default=str(DEFAULT_CONFIG_PATH),
+        help="Slider konfigürasyon JSON dosyası (varsayılan: %(default)s)"
+    )
+
     args = parser.parse_args()
+
+    try:
+        resolved_config = apply_slider_configuration(args.config)
+    except (FileNotFoundError, ValueError) as config_error:
+        print(f"❌ Konfigürasyon yüklenemedi: {config_error}")
+        sys.exit(1)
 
     print("🚀 Akıllı POI slider değerleri güncelleniyor...")
     print("📊 Algoritma: Anahtar kelime analizi + Kategori optimizasyonu")
+    print(f"📁 Kullanılan konfigürasyon: {resolved_config}")
     print("=" * 60)
 
     success = update_poi_ratings(args.connection_string, dry_run=args.dry_run)

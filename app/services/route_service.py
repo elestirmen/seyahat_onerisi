@@ -11,14 +11,14 @@ import time
 import uuid
 import os
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
 from app.config.database import get_db_connection
-from app.middleware.error_handler import APIError, bad_request, not_found, internal_error
+from app.middleware.error_handler import APIError, bad_request, not_found
 from app.services.media_service import media_service
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class RouteService:
     
     def __init__(self):
         self.json_fallback = False
-        self.cache = {}  # Simple in-memory cache
+        self.cache: Dict[str, Any] = {}  # Simple in-memory cache
         self.cache_ttl = 300  # 5 minutes
     
     def _get_database_connection(self):
@@ -102,6 +102,68 @@ class RouteService:
     def _cache_set(self, key: str, value: Any):
         """Set value in cache with timestamp."""
         self.cache[key] = (value, time.time())
+
+    def _map_route_record(self, record: Any) -> Dict[str, Any]:
+        """Normalize raw database/json route record for API consumers."""
+        if record is None:
+            return {}
+
+        route = dict(record)
+
+        created_at = route.get('created_at')
+        if isinstance(created_at, datetime):
+            route['created_at'] = created_at.isoformat() + ('Z' if created_at.tzinfo is None else '')
+
+        updated_at = route.get('updated_at')
+        if isinstance(updated_at, datetime):
+            route['updated_at'] = updated_at.isoformat() + ('Z' if updated_at.tzinfo is None else '')
+
+        if 'season_availability' in route and isinstance(route['season_availability'], str):
+            try:
+                route['season_availability'] = json.loads(route['season_availability'])
+            except json.JSONDecodeError:
+                route['season_availability'] = []
+
+        if 'waypoints' in route and isinstance(route['waypoints'], str):
+            try:
+                route['waypoints'] = json.loads(route['waypoints'])
+            except json.JSONDecodeError:
+                route['waypoints'] = []
+
+        if 'tags' in route and isinstance(route['tags'], str):
+            route['tags'] = [tag.strip() for tag in route['tags'].split(',') if tag.strip()]
+
+        total_distance = route.get('total_distance')
+        if total_distance is None and route.get('distance_km') is not None:
+            total_distance = route.get('distance_km')
+        if total_distance is not None:
+            try:
+                total_distance = float(total_distance)
+            except (TypeError, ValueError):
+                total_distance = None
+        route['total_distance'] = total_distance
+        route['distance_km'] = round(total_distance, 2) if isinstance(total_distance, float) else total_distance
+
+        duration_minutes = route.get('estimated_duration')
+        if duration_minutes is None and route.get('duration_minutes') is not None:
+            duration_minutes = route.get('duration_minutes')
+        if duration_minutes is not None:
+            try:
+                duration_minutes = int(duration_minutes)
+            except (TypeError, ValueError):
+                duration_minutes = None
+        route['estimated_duration'] = duration_minutes
+        if isinstance(duration_minutes, int):
+            route['duration_minutes'] = duration_minutes
+            route['duration_hours'] = round(duration_minutes / 60, 2)
+        else:
+            route['duration_minutes'] = duration_minutes
+            route['duration_hours'] = None
+
+        route.setdefault('difficulty_level', 1)
+        route.setdefault('is_active', True)
+
+        return route
     
     def list_routes(self, page: int = 1, limit: int = 20, search: str = None, 
                    route_type: str = None, is_active: bool = None) -> Dict[str, Any]:
@@ -176,9 +238,19 @@ class RouteService:
                 
                 # Get routes
                 query = f"""
-                    SELECT id, name, description, route_type, 
-                           distance_km, duration_hours, difficulty_level,
-                           is_active, created_at, updated_at
+                    SELECT id,
+                           name,
+                           description,
+                           route_type,
+                           total_distance,
+                           estimated_duration,
+                           difficulty_level,
+                           elevation_gain,
+                           is_active,
+                           season_availability,
+                           tags,
+                           created_at,
+                           updated_at
                     FROM routes 
                     WHERE {where_clause}
                     ORDER BY name
@@ -190,13 +262,8 @@ class RouteService:
                 # Convert to list of dicts
                 route_list = []
                 for route in routes:
-                    route_dict = dict(route)
-                    # Convert datetime objects to ISO strings
-                    if route_dict.get('created_at'):
-                        route_dict['created_at'] = route_dict['created_at'].isoformat()
-                    if route_dict.get('updated_at'):
-                        route_dict['updated_at'] = route_dict['updated_at'].isoformat()
-                    route_list.append(route_dict)
+                    mapped = self._map_route_record(route)
+                    route_list.append(mapped)
                 
                 return {
                     'routes': route_list,
@@ -234,8 +301,10 @@ class RouteService:
         
         # Apply pagination
         total = len(filtered_routes)
-        paginated_routes = filtered_routes[offset:offset + limit]
-        
+        paginated_routes = []
+        for route in filtered_routes[offset:offset + limit]:
+            paginated_routes.append(self._map_route_record(route))
+
         return {
             'routes': paginated_routes,
             'total': total,
@@ -277,10 +346,23 @@ class RouteService:
         with conn_context as conn:
             with conn.cursor() as cursor:
                 query = """
-                    SELECT id, name, description, route_type, 
-                           distance_km, duration_hours, difficulty_level,
-                           is_active, created_at, updated_at,
-                           geometry, elevation_profile, elevation_resolution
+                    SELECT id,
+                           name,
+                           description,
+                           route_type,
+                           total_distance,
+                           estimated_duration,
+                           difficulty_level,
+                           elevation_gain,
+                           is_active,
+                           season_availability,
+                           tags,
+                           waypoints,
+                           geometry,
+                           elevation_profile,
+                           elevation_resolution,
+                           created_at,
+                           updated_at
                     FROM routes 
                     WHERE id = %s
                 """
@@ -290,14 +372,7 @@ class RouteService:
                 if not result:
                     raise not_found(f"Route with ID {route_id} not found")
                 
-                route_dict = dict(result)
-                # Convert datetime objects to ISO strings
-                if route_dict.get('created_at'):
-                    route_dict['created_at'] = route_dict['created_at'].isoformat()
-                if route_dict.get('updated_at'):
-                    route_dict['updated_at'] = route_dict['updated_at'].isoformat()
-                
-                return route_dict
+                return self._map_route_record(result)
     
     def _get_route_json(self, route_id: int) -> Dict[str, Any]:
         """Get route from JSON fallback."""
@@ -306,7 +381,7 @@ class RouteService:
         
         for route in routes:
             if route.get('id') == route_id:
-                return route
+                return self._map_route_record(route)
         
         raise not_found(f"Route with ID {route_id} not found")
     
@@ -361,9 +436,19 @@ class RouteService:
                 where_clause = " AND ".join(where_conditions)
                 
                 search_query = f"""
-                    SELECT id, name, description, route_type, 
-                           distance_km, duration_hours, difficulty_level,
-                           is_active, created_at, updated_at
+                    SELECT id,
+                           name,
+                           description,
+                           route_type,
+                           total_distance,
+                           estimated_duration,
+                           difficulty_level,
+                           elevation_gain,
+                           is_active,
+                           season_availability,
+                           tags,
+                           created_at,
+                           updated_at
                     FROM routes 
                     WHERE {where_clause} AND (name ILIKE %s OR description ILIKE %s)
                     ORDER BY 
@@ -382,13 +467,7 @@ class RouteService:
                 # Convert to list of dicts
                 route_list = []
                 for route in routes:
-                    route_dict = dict(route)
-                    # Convert datetime objects to ISO strings
-                    if route_dict.get('created_at'):
-                        route_dict['created_at'] = route_dict['created_at'].isoformat()
-                    if route_dict.get('updated_at'):
-                        route_dict['updated_at'] = route_dict['updated_at'].isoformat()
-                    route_list.append(route_dict)
+                    route_list.append(self._map_route_record(route))
                 
                 return {
                     'results': route_list,
@@ -420,10 +499,10 @@ class RouteService:
             if name_match or desc_match:
                 # Add relevance score (name matches are more relevant)
                 relevance = 2 if name_match else 1
-                route_result = route.copy()
+                route_result = self._map_route_record(route)
                 route_result['relevance_score'] = relevance
                 results.append(route_result)
-        
+
         # Sort by relevance and limit results
         results.sort(key=lambda x: x.get('relevance_score', 0), reverse=True)
         results = results[:limit]

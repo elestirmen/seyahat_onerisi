@@ -70,6 +70,26 @@
     }
   };
 
+  let sliderConfiguration = null;
+
+  async function loadSliderConfiguration() {
+    if (sliderConfiguration) {
+      return sliderConfiguration;
+    }
+
+    if (window.POIClient && typeof window.POIClient.getSliderConfig === 'function') {
+      try {
+        sliderConfiguration = await window.POIClient.getSliderConfig();
+        return sliderConfiguration;
+      } catch (configError) {
+        console.warn('Slider configuration could not be loaded:', configError);
+      }
+    }
+
+    sliderConfiguration = null;
+    return sliderConfiguration;
+  }
+
   // Initialize enhanced preference system
   function initializeEnhancedPreferences() {
     console.warn('Initializing enhanced preference system...');
@@ -952,6 +972,37 @@
   function initializeSliders() {
     const sliders = document.querySelectorAll('.preference-slider');
 
+    loadSliderConfiguration()
+      .then(config => {
+        if (!config || !config.keywordMapping) {
+          return;
+        }
+
+        sliders.forEach(slider => {
+          const mapping = config.keywordMapping[slider.id];
+          if (!mapping) {
+            return;
+          }
+
+          const keywords = Array.isArray(mapping.keywords) ? mapping.keywords.slice(0, 4) : [];
+          if (!keywords.length) {
+            return;
+          }
+
+          const tooltip = `Örnek anahtar kelimeler: ${keywords.join(', ')}`;
+          slider.setAttribute('title', tooltip);
+
+          const infoBlock = slider.closest('.preference-item')?.querySelector('.preference-info');
+          if (infoBlock && !infoBlock.querySelector('.preference-keyword-hint')) {
+            const hint = document.createElement('span');
+            hint.className = 'preference-keyword-hint';
+            hint.textContent = `Örnek: ${keywords.join(', ')}`;
+            infoBlock.appendChild(hint);
+          }
+        });
+      })
+      .catch(err => console.warn('Slider configuration not available:', err));
+
     sliders.forEach(slider => {
       const valueDisplay = document.getElementById(slider.id + '-value');
 
@@ -1318,20 +1369,15 @@
       return;
     }
 
-    if (window.loadingManager && typeof window.loadingManager.hideLoading === 'function') {
-      try {
-        window.loadingManager.hideLoading('loadingIndicator');
-      } catch (managerError) {
-        console.warn('Loading manager hide failed:', managerError);
-      }
+    if (window.loadingManager && typeof window.loadingManager.safeHideIndicator === 'function') {
+      window.loadingManager.safeHideIndicator(indicator, { fadeDuration: 0 });
+      return;
     }
 
     indicator.style.display = 'none';
-
-    if (indicator.style.opacity) {
-      indicator.style.opacity = '';
-    }
-
+    indicator.style.visibility = 'hidden';
+    indicator.style.opacity = '';
+    indicator.style.transition = '';
     indicator.classList.remove('d-none');
     indicator.removeAttribute('hidden');
   }
@@ -1339,52 +1385,11 @@
   // Load all POIs for exploration
   async function loadAllPOIs() {
     try {
-      // Use the existing API endpoint to get all POIs
-      const apiBase = window.apiBase || '/api';
-      const response = await fetch(`${apiBase}/pois`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (!window.POIClient) {
+        throw new Error('POIClient module is not available');
       }
-      
-      const data = await response.json();
 
-      // Handle different response formats
-      let pois = [];
-      if (Array.isArray(data)) {
-        // Direct array
-        pois = data;
-      } else if (data && Array.isArray(data.pois)) {
-        // Paginated list { pois: [...] }
-        pois = data.pois;
-      } else if (data && Array.isArray(data.data)) {
-        // Generic data container { data: [...] }
-        pois = data.data;
-      } else if (data && data.results && Array.isArray(data.results)) {
-        // Alternative { results: [...] }
-        pois = data.results;
-      } else if (data && typeof data === 'object') {
-        // Categorized object: { categoryName: [ ...pois ], ... }
-        // Flatten all category arrays
-        try {
-          const flattened = [];
-          for (const [category, list] of Object.entries(data)) {
-            if (Array.isArray(list)) {
-              for (const poi of list) {
-                // Preserve existing poi fields and ensure category is set
-                flattened.push({ ...poi, category: poi.category || category });
-              }
-            }
-          }
-          pois = flattened;
-        } catch (e) {
-          console.warn('Failed to flatten categorized POIs:', e);
-          pois = [];
-        }
-      } else {
-        console.warn('Unexpected API response format:', data);
-        pois = [];
-      }
+      const pois = await window.POIClient.getAllPOIs({ normalize: true, refresh: true });
       
       console.warn(`Loaded ${pois.length} POIs for exploration`);
       

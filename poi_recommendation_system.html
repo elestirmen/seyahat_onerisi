@@ -4,9 +4,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: blob: http://localhost:5560 https://*; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' http://localhost:5560 https://harita.urgup.keenetic.link https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org https://*.tile.openstreetmap.org https://*.opentopomap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://api.open-elevation.com https://router.project-osrm.org;" />
   <title>Seyahat Öneri Sistemi</title>
   <!-- Centralized POI Category Configuration (keeps icons/names/colors consistent) -->
   <script src="static/js/poi-categories.js"></script>
+  <script src="static/js/poi-api-client.js"></script>
+  <script type="module" src="static/js/modules/map-controller.js"></script>
   <style>
     :root {
       --tab-h: 60px;
@@ -97,10 +101,10 @@
   </nav>
   <section class="panes">
     <div class="pane active" id="pane-personal">
-      <iframe src="personal_routes.html"></iframe>
+      <iframe src="personal_routes.html" allow="geolocation; fullscreen"></iframe>
     </div>
     <div class="pane" id="pane-predef">
-      <iframe src="predefined_routes.html" loading="lazy"></iframe>
+      <iframe src="predefined_routes.html" loading="lazy" allow="geolocation; fullscreen"></iframe>
     </div>
   </section>
   <script>

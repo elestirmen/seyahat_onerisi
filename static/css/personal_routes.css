@@ -157,6 +157,13 @@
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.3);
 }
 
+.preference-keyword-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .quick-selection-buttons {
@@ -424,4 +431,3 @@
     font-size: 1.3rem;
   }
 }
-
