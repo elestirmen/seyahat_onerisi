@@ -47,6 +47,105 @@ const AppState = {
     intervals: new Set()
 };
 
+// Map utility helpers
+const scheduledMapResizes = new WeakMap();
+const MAP_RESIZE_FOLLOWUP_DELAY = 160;
+
+function scheduleMapResize(mapInstance, delay = 0) {
+    if (!mapInstance) {
+        return;
+    }
+
+    let state = scheduledMapResizes.get(mapInstance);
+    if (!state) {
+        state = {
+            immediateScheduled: false,
+            timeouts: new Set()
+        };
+        scheduledMapResizes.set(mapInstance, state);
+    }
+
+    const run = () => {
+        try {
+            mapInstance.invalidateSize();
+        } catch (error) {
+            console.warn('Map resize failed:', error);
+        }
+    };
+
+    const cleanup = () => {
+        if (!state.immediateScheduled && state.timeouts.size === 0) {
+            scheduledMapResizes.delete(mapInstance);
+        }
+    };
+
+    if (delay === 0) {
+        if (state.immediateScheduled) {
+            return;
+        }
+        state.immediateScheduled = true;
+        requestAnimationFrame(() => {
+            run();
+            state.immediateScheduled = false;
+            cleanup();
+        });
+        return;
+    }
+
+    const timeoutId = setTimeout(() => {
+        state.timeouts.delete(timeoutId);
+        run();
+        cleanup();
+    }, delay);
+    state.timeouts.add(timeoutId);
+}
+
+function refreshMapSize(mapInstance) {
+    scheduleMapResize(mapInstance);
+    scheduleMapResize(mapInstance, MAP_RESIZE_FOLLOWUP_DELAY);
+}
+
+function createLeafletMap(containerId, mapOptions = {}, tileLayerOptions = {}, initialView = null) {
+    if (typeof L === 'undefined') {
+        throw new Error('Leaflet library not loaded');
+    }
+
+    const container = document.getElementById(containerId);
+    if (!container) {
+        throw new Error(`Map container '${containerId}' not found`);
+    }
+
+    const defaultMapOptions = {
+        zoomControl: true,
+        scrollWheelZoom: true,
+        doubleClickZoom: true,
+        touchZoom: true,
+        dragging: true,
+        tap: true,
+        tapTolerance: 15,
+        worldCopyJump: false,
+        maxBoundsViscosity: 0.0
+    };
+
+    const mapInstance = L.map(containerId, { ...defaultMapOptions, ...mapOptions });
+
+    const defaultTileLayerOptions = {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    };
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        ...defaultTileLayerOptions,
+        ...tileLayerOptions
+    }).addTo(mapInstance);
+
+    if (initialView && Array.isArray(initialView.center)) {
+        mapInstance.setView(initialView.center, initialView.zoom ?? 13);
+    }
+
+    return mapInstance;
+}
+
 // Rating categories with their display names and icons
 const ratingCategories = {
     'doga': { name: 'Doğa', icon: 'fas fa-tree' },
@@ -4331,11 +4430,7 @@ function switchTab(tabName) {
         if (mapSection && map && (markers.length > 0 || selectedPOIs.length > 0)) {
             mapSection.style.display = 'block';
             // Refresh map size in case it was hidden
-            setTimeout(() => {
-                if (map) {
-                    map.invalidateSize();
-                }
-            }, 100);
+            addTimeout(() => refreshMapSize(map), 80);
         }
     } else if (tabName === 'predefined-routes') {
         predefinedTab.classList.add('active');
@@ -4353,11 +4448,7 @@ function switchTab(tabName) {
                 await initializePredefinedMap();
             } else if (predefinedMap) {
                 // Refresh map size in case it was hidden
-                addTimeout(() => {
-                    if (predefinedMap) {
-                        predefinedMap.invalidateSize();
-                    }
-                }, 100);
+                addTimeout(() => refreshMapSize(predefinedMap), 80);
             }
         }, 100);
     }
@@ -4451,19 +4542,13 @@ async function initializePredefinedMap() {
         
         // Create map if it doesn't exist
         if (!predefinedMap) {
-            predefinedMap = L.map('predefinedRoutesMap', {
-                center: [38.6436, 34.8128], // Ürgüp center
-                zoom: 12,
-                zoomControl: true,
-                attributionControl: true
-            });
-            
-            // Add tile layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 18
-            }).addTo(predefinedMap);
-            
+            predefinedMap = createLeafletMap(
+                'predefinedRoutesMap',
+                {},
+                { maxZoom: 18 },
+                { center: [38.6436, 34.8128], zoom: 12 }
+            );
+
             console.log('✅ Predefined map created successfully');
         }
         
@@ -4478,12 +4563,8 @@ async function initializePredefinedMap() {
             }
             mapContainer.classList.remove('loading');
             mapContainer.classList.add('loaded');
-            
-            // Invalidate size to ensure proper rendering
-            if (predefinedMap) {
-                predefinedMap.invalidateSize();
-            }
-        }, 500);
+            refreshMapSize(predefinedMap);
+        }, 350);
         
         return true;
         
@@ -4529,7 +4610,7 @@ function displayRouteOnMap(route) {
         mapContainer.style.display = 'block';
         mapContainer.style.visibility = 'visible';
         mapContainer.style.opacity = '1';
-        predefinedMap.invalidateSize();
+        refreshMapSize(predefinedMap);
         console.log('🔄 Map container visibility and size refreshed');
         console.log('🔍 Map container dimensions:', {
             width: mapContainer.offsetWidth,
@@ -5117,7 +5198,7 @@ function displayRouteOnMapFallback(route) {
     try {
         // Force map refresh
         if (predefinedMap) {
-            predefinedMap.invalidateSize();
+            refreshMapSize(predefinedMap);
             predefinedMap.setView([38.6436, 34.8128], 12);
         }
         
@@ -6262,10 +6343,8 @@ async function selectPredefinedRoute(route) {
                 
                 // Force map size refresh
                 if (predefinedMap) {
-                    predefinedMap.invalidateSize();
-                    setTimeout(() => predefinedMap.invalidateSize(), 100);
-                    setTimeout(() => predefinedMap.invalidateSize(), 500);
-                    console.log('🔄 Map size invalidated multiple times');
+                    refreshMapSize(predefinedMap);
+                    console.log('🔄 Map size refresh scheduled');
                 }
                 
                 // Display route
@@ -6582,11 +6661,7 @@ function fitMapToRoutePOIs(pois) {
         }
         
         // Force map to update
-        setTimeout(() => {
-            if (map) {
-                map.invalidateSize();
-            }
-        }, 100);
+        addTimeout(() => refreshMapSize(map), 80);
         
     } catch (error) {
         console.error('❌ Error fitting map to POIs:', error);
@@ -6603,7 +6678,7 @@ async function initializeMainMap() {
     // Check if map is already initialized and valid
     if (map && map._container && mapInitialized) {
         console.log('✅ Main map already initialized');
-        map.invalidateSize(); // Ensure proper sizing
+        refreshMapSize(map); // Ensure proper sizing
         return true;
     }
     
@@ -6656,44 +6731,30 @@ async function performMainMapInitialization() {
         }
         
         // Initialize map with performance optimizations
-        map = L.map('mapContainer', {
-            zoomControl: true,
-            scrollWheelZoom: true,
-            doubleClickZoom: true,
-            touchZoom: true,
-            dragging: true,
-            tap: true,
-            tapTolerance: 15,
-            worldCopyJump: false,
-            maxBoundsViscosity: 0.0,
-            preferCanvas: true, // Use Canvas renderer for better performance
-            renderer: L.canvas(), // Explicit canvas renderer
-            zoomAnimation: true, // Enable zoom animations
-            fadeAnimation: true, // Enable fade animations
-            markerZoomAnimation: true // Enable marker zoom animations
-        }).setView([38.632, 34.912], 13);
-        
-        // Add optimized tile layer
-        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19,
-            subdomains: ['a', 'b', 'c'], // Use multiple subdomains for faster loading
-            keepBuffer: 2, // Keep tiles in buffer for smoother panning
-            updateWhenZooming: false, // Don't update tiles while zooming
-            updateWhenIdle: true // Update tiles when interaction stops
-        });
-        
-        tileLayer.addTo(map);
+        map = createLeafletMap(
+            'mapContainer',
+            {
+                preferCanvas: true,
+                renderer: L.canvas(),
+                zoomAnimation: true,
+                fadeAnimation: true,
+                markerZoomAnimation: true
+            },
+            {
+                maxZoom: 19,
+                subdomains: ['a', 'b', 'c'],
+                keepBuffer: 2,
+                updateWhenZooming: false,
+                updateWhenIdle: true
+            },
+            { center: [38.632, 34.912], zoom: 13 }
+        );
         
         // Clear markers array
         markers = [];
         
         // Force map to resize after initialization
-        addTimeout(() => {
-            if (map) {
-                map.invalidateSize();
-            }
-        }, 200);
+        addTimeout(() => refreshMapSize(map), 120);
         
         console.log('✅ Main map initialized successfully');
         return true;
@@ -8477,23 +8538,13 @@ async function initializeEmptyMap() {
         map.remove();
     }
 
-    // Initialize map with better options
-    map = L.map('mapContainer', {
-        zoomControl: true,
-        scrollWheelZoom: true,
-        doubleClickZoom: true,
-        touchZoom: true,
-        dragging: true,
-        tap: true,
-        tapTolerance: 15,
-        worldCopyJump: false,
-        maxBoundsViscosity: 0.0
-    }).setView([38.632, 34.912], 13);
-
-    // Add tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+    // Initialize map with shared helper
+    map = createLeafletMap(
+        'mapContainer',
+        {},
+        {},
+        { center: [38.632, 34.912], zoom: 13 }
+    );
 
     // Add map controls
     if (L.Control.Fullscreen) {
@@ -8507,12 +8558,9 @@ async function initializeEmptyMap() {
     // Remove loading state after map is fully loaded
     setTimeout(() => {
         mapContainer.classList.remove('loading');
-        // Fix map size issues
-        if (map) {
-            map.invalidateSize();
-        }
+        refreshMapSize(map);
         console.log('🗺️ Empty map initialized and ready');
-    }, 1000);
+    }, 240);
 }
 
 async function initializeMap(recommendationData) {
@@ -8546,23 +8594,13 @@ async function initializeMap(recommendationData) {
         map.remove();
     }
 
-    // Initialize map with better options
-    map = L.map('mapContainer', {
-        zoomControl: true,
-        scrollWheelZoom: true,
-        doubleClickZoom: true,
-        touchZoom: true,
-        dragging: true,
-        tap: true,
-        tapTolerance: 15,
-        worldCopyJump: false,
-        maxBoundsViscosity: 0.0
-    }).setView([38.632, 34.912], 13);
-
-    // Add tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+    // Initialize map with shared helper
+    map = createLeafletMap(
+        'mapContainer',
+        {},
+        {},
+        { center: [38.632, 34.912], zoom: 13 }
+    );
 
     // Add map controls
     if (L.Control.Fullscreen) {
@@ -8725,12 +8763,9 @@ async function initializeMap(recommendationData) {
     // Remove loading state after map is fully loaded
     setTimeout(() => {
         mapContainer.classList.remove('loading');
-        // Fix map size issues
-        if (map) {
-            map.invalidateSize();
-        }
+        refreshMapSize(map);
         console.log('🗺️ Map fully loaded and displayed');
-    }, 1000);
+    }, 240);
 }
 function focusOnMap(lat, lng) {
     if (map) {

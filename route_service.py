@@ -32,6 +32,7 @@ import logging
 import time
 import hashlib
 from functools import wraps
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -41,23 +42,27 @@ class SimpleCache:
         self.cache = {}
         self.timestamps = {}
         self.ttl = ttl
+        self._lock = threading.Lock()
     
     def get(self, key):
-        if key in self.cache:
-            if time.time() - self.timestamps[key] < self.ttl:
-                return self.cache[key]
-            else:
-                del self.cache[key]
-                del self.timestamps[key]
+        with self._lock:
+            if key in self.cache:
+                if time.time() - self.timestamps[key] < self.ttl:
+                    return self.cache[key]
+                else:
+                    self.cache.pop(key, None)
+                    self.timestamps.pop(key, None)
         return None
     
     def set(self, key, value):
-        self.cache[key] = value
-        self.timestamps[key] = time.time()
+        with self._lock:
+            self.cache[key] = value
+            self.timestamps[key] = time.time()
     
     def clear(self):
-        self.cache.clear()
-        self.timestamps.clear()
+        with self._lock:
+            self.cache.clear()
+            self.timestamps.clear()
 
 # Global cache instance
 _route_cache = SimpleCache(ttl=300)
@@ -68,7 +73,8 @@ def cache_result(ttl=300):
         @wraps(func)
         def wrapper(*args, **kwargs):
             # Generate cache key
-            cache_key = f"{func.__name__}_{hash(str(args) + str(sorted(kwargs.items())))}"
+            cache_key_source = repr((args, sorted(kwargs.items())))
+            cache_key = f"{func.__name__}_{hashlib.sha256(cache_key_source.encode('utf-8')).hexdigest()}"
             
             # Try cache first
             cached = _route_cache.get(cache_key)
@@ -110,27 +116,56 @@ class RouteService:
                 
                 self.connection_string = f"postgresql://{user}:{password}@{host}:{port}/{database}"
         
+        self._connection_lock = threading.Lock()
+        self._local = threading.local()
         self.conn = None
+
+    @property
+    def conn(self):
+        return getattr(self._local, 'conn', None)
+
+    @conn.setter
+    def conn(self, value):
+        if value is None:
+            if hasattr(self._local, 'conn'):
+                delattr(self._local, 'conn')
+        else:
+            self._local.conn = value
     
     def connect(self):
         """Veritabanına bağlan"""
         if psycopg2 is None:  # pragma: no cover - handled in tests
             logger.error("psycopg2 is not installed. Database operations are unavailable.")
             return False
-        try:
-            self.conn = psycopg2.connect(self.connection_string)
-            logger.info("Route service database connection established")
+        existing_conn = self.conn
+        if existing_conn and getattr(existing_conn, 'closed', 1) == 0:
             return True
-        except Exception as e:
-            logger.error(f"Database connection failed: {e}")
-            return False
+
+        with self._connection_lock:
+            existing_conn = self.conn
+            if existing_conn and getattr(existing_conn, 'closed', 1) == 0:
+                return True
+            try:
+                new_conn = psycopg2.connect(self.connection_string)
+                self.conn = new_conn
+                logger.info("Route service database connection established")
+                return True
+            except Exception as e:
+                logger.error(f"Database connection failed: {e}")
+                self.conn = None
+                return False
     
     def disconnect(self):
         """Veritabanı bağlantısını kapat"""
-        if self.conn:
-            self.conn.close()
-            self.conn = None
-            logger.info("Route service database connection closed")
+        connection = self.conn
+        if connection:
+            try:
+                connection.close()
+            except Exception as error:  # pragma: no cover - defensive close
+                logger.warning(f"Error closing database connection: {error}")
+            finally:
+                self.conn = None
+                logger.info("Route service database connection closed")
     
     def _execute_query(self, query: str, params: tuple = None, fetch_one: bool = False, fetch_all: bool = True):
         """

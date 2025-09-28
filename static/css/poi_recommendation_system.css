@@ -4187,10 +4187,11 @@ nhanced Segment Highlighting */
         }
 
         /* Highlighted route line styling */
-        .highlighted-segment {
-            filter: drop-shadow(0 0 8px rgba(255, 107, 53, 0.6)) !important;
-            z-index: 1000 !important;
-        }
+.highlighted-segment {
+    stroke-width: 10px !important;
+    opacity: 0.95 !important;
+    z-index: 1000 !important;
+}
 
         /* Segment item hover enhancement */
         .segment-item:hover {
@@ -5682,12 +5683,13 @@ ute Preview Map Styles */
 
 /* Enhanced Predefined Route Line Styles */
 .predefined-route-line {
-    transition: all 0.3s ease;
+    transition: stroke-width 0.2s ease, opacity 0.2s ease;
+    cursor: pointer;
 }
 
 .predefined-route-line:hover {
-    filter: drop-shadow(0 3px 8px rgba(44, 90, 160, 0.3));
-    cursor: pointer;
+    stroke-width: 6px !important;
+    opacity: 0.85;
 }
 
 /* Route Context Menu Styles */

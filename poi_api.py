@@ -12,7 +12,8 @@ import unicodedata
 import re
 import secrets
 from datetime import datetime
-from werkzeug.utils import secure_filename
+from werkzeug.utils import secure_filename, safe_join
+from werkzeug.exceptions import NotFound
 from auth_middleware import auth_middleware
 from auth_config import auth_config
 from session_config import configure_session
@@ -2466,10 +2467,15 @@ def serve_static_html(filename):
             return jsonify({'error': 'File not found'}), 404
         
         # Dosya var mı kontrol et
-        if not os.path.exists(filename):
+        try:
+            safe_path = safe_join(app.root_path, filename)
+        except (NotFound, ValueError):
+            return jsonify({'error': 'File not found'}), 404
+
+        if not safe_path or not os.path.exists(safe_path):
             return jsonify({'error': 'File not found'}), 404
             
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(safe_path, 'r', encoding='utf-8') as f:
             return f.read()
     except Exception as e:
         return jsonify({'error': f'Error serving file: {str(e)}'}), 500
@@ -2483,12 +2489,16 @@ def serve_maps_html(filename):
         if not filename.endswith('.html'):
             return jsonify({'error': 'File not found'}), 404
         
-        # Dosya var mı kontrol et
-        if not os.path.exists(filename):
+        maps_directory = os.path.join(app.root_path, 'maps')
+        try:
+            safe_path = safe_join(maps_directory, filename)
+        except (NotFound, ValueError):
             return jsonify({'error': 'File not found'}), 404
-            
-        with open(filename, 'r', encoding='utf-8') as f:
-            return f.read()
+
+        if not safe_path or not os.path.exists(safe_path):
+            return jsonify({'error': 'File not found'}), 404
+
+        return send_from_directory(maps_directory, filename)
     except Exception as e:
         return jsonify({'error': f'Error serving file: {str(e)}'}), 500
 
