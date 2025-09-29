@@ -2677,12 +2677,30 @@ def serve_poi_media(filename):
 def serve_poi_image(filename):
     """Geriye uyumluluk için POI görsellerini serve et"""
     try:
-        # Önce eski klasörde ara
-        if os.path.exists(os.path.join('poi_images', filename)):
-            return send_from_directory('poi_images', filename)
-        # Yoksa yeni medya klasöründe ara
-        else:
-            return send_from_directory('poi_media', filename)
+        from werkzeug.utils import safe_join
+        from werkzeug.exceptions import NotFound
+
+        poi_images_dir = os.path.join(app.root_path, 'poi_images')
+        poi_media_dir = os.path.join(app.root_path, 'poi_media')
+
+        safe_poi_image_path = None
+        try:
+            safe_poi_image_path = safe_join(poi_images_dir, filename)
+        except (NotFound, ValueError):
+            safe_poi_image_path = None
+
+        if safe_poi_image_path and os.path.exists(safe_poi_image_path):
+            return send_from_directory(poi_images_dir, filename)
+
+        try:
+            safe_media_path = safe_join(poi_media_dir, filename)
+        except (NotFound, ValueError):
+            return jsonify({'error': 'Image not found'}), 404
+
+        if safe_media_path and os.path.exists(safe_media_path):
+            return send_from_directory(poi_media_dir, filename)
+
+        return jsonify({'error': 'Image not found'}), 404
     except FileNotFoundError:
         return jsonify({'error': 'Image not found'}), 404
 
@@ -2696,10 +2714,17 @@ def serve_static_html(filename):
             return jsonify({'error': 'File not found'}), 404
         
         # Dosya var mı kontrol et
-        if not os.path.exists(filename):
+        from werkzeug.utils import safe_join
+        from werkzeug.exceptions import NotFound
+        try:
+            safe_path = safe_join(app.root_path, filename)
+        except (NotFound, ValueError):
+            return jsonify({'error': 'File not found'}), 404
+
+        if not safe_path or not os.path.exists(safe_path):
             return jsonify({'error': 'File not found'}), 404
             
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(safe_path, 'r', encoding='utf-8') as f:
             return f.read()
     except Exception as e:
         return jsonify({'error': f'Error serving file: {str(e)}'}), 500
@@ -2709,16 +2734,22 @@ def serve_static_html(filename):
 def serve_maps_html(filename):
     """Maps klasörü altındaki HTML dosyalarını serve et"""
     try:
+        from werkzeug.utils import safe_join
+        from werkzeug.exceptions import NotFound
         # Güvenlik kontrolü - sadece HTML dosyalarına izin ver
         if not filename.endswith('.html'):
             return jsonify({'error': 'File not found'}), 404
         
-        # Dosya var mı kontrol et
-        if not os.path.exists(filename):
+        maps_directory = os.path.join(app.root_path, 'maps')
+        try:
+            safe_path = safe_join(maps_directory, filename)
+        except (NotFound, ValueError):
+            return jsonify({'error': 'File not found'}), 404
+
+        if not safe_path or not os.path.exists(safe_path):
             return jsonify({'error': 'File not found'}), 404
             
-        with open(filename, 'r', encoding='utf-8') as f:
-            return f.read()
+        return send_from_directory(maps_directory, filename)
     except Exception as e:
         return jsonify({'error': f'Error serving file: {str(e)}'}), 500
 

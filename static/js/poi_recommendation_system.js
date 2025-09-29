@@ -2014,14 +2014,21 @@ function createMediaGallery(media, poi = {}) {
         galleryHTML += '<div style="display: flex; gap: 4px; overflow-x: auto; padding: 2px;">';
 
         media.images.slice(0, 3).forEach((image, index) => {
-            const imagePath = image.preview_path || image.path || `poi_media/${image.filename}`;
-            const finalImagePath = normalizeMediaPath(imagePath);
+            const fullPath = normalizeMediaPath(image.path || image.filename || '');
+            const previewPath = image.preview_path ? normalizeMediaPath(image.preview_path) : '';
+            const finalImagePath = previewPath || fullPath;
             const mediaItemIndex = allMediaItems.findIndex(item =>
                 item.type === 'image' && item.originalIndex === index
             );
 
+            const dataAttrs = [fullPath ? `data-full-src="${fullPath}"` : ''];
+            if (previewPath && previewPath !== fullPath) {
+                dataAttrs.push(`data-preview-src="${previewPath}"`);
+            }
+            const dataAttrStr = dataAttrs.filter(Boolean).length ? ` ${dataAttrs.filter(Boolean).join(' ')}` : '';
+
             galleryHTML += `
-                        <img src="${finalImagePath}"
+                        <img src="${finalImagePath}"${dataAttrStr}
                              style="width: 60px; height: 45px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
                              onclick="showPOIMediaFromCache('${poiCacheKey}', ${mediaItemIndex})"
                              title="${image.description || 'Görsel'}" />
@@ -10835,8 +10842,13 @@ async function displayRecommendations(recommendationData) {
                 if (media.images && media.images.length > 0) {
                     const mainImage = media.images[0];
                     const img = document.createElement('img');
-                    const mainImagePath = mainImage.preview_path || mainImage.path || `poi_media/${mainImage.filename}`;
-                    img.dataset.src = normalizeMediaPath(mainImagePath);
+                    const fullSrc = normalizeMediaPath(mainImage.path || mainImage.filename || '');
+                    const previewSrc = mainImage.preview_path ? normalizeMediaPath(mainImage.preview_path) : '';
+                    // Prefer preview for initial lazy load if available
+                    const displaySrc = previewSrc || fullSrc;
+                    if (displaySrc) img.dataset.src = displaySrc;
+                    if (fullSrc) img.dataset.fullSrc = fullSrc;
+                    if (previewSrc && previewSrc !== fullSrc) img.dataset.previewSrc = previewSrc;
                     img.className = 'poi-card__image lazy-image';
                     img.alt = poi.name;
                     img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+';
@@ -10853,9 +10865,12 @@ async function displayRecommendations(recommendationData) {
 
                 if (media.images) {
                     media.images.forEach((image, idx) => {
+                        const imgFull = normalizeMediaPath(image.path || image.filename || '');
+                        const imgPreview = image.preview_path ? normalizeMediaPath(image.preview_path) : '';
                         allMediaItems.push({
                             type: 'image',
-                            path: image.preview_path || image.path || `/poi_media/${image.filename}`,
+                            path: imgFull,
+                            previewPath: imgPreview,
                             title: image.description || `Görsel ${idx + 1}`,
                             originalIndex: idx
                         });
@@ -10866,7 +10881,8 @@ async function displayRecommendations(recommendationData) {
                     media.videos.forEach((video, idx) => {
                         allMediaItems.push({
                             type: 'video',
-                            path: video.path || `/poi_media/${video.filename}`,
+                            path: normalizeMediaPath(video.path || video.filename || ''),
+                            previewPath: '',
                             title: video.description || `Video ${idx + 1}`,
                             originalIndex: idx
                         });
@@ -10877,7 +10893,8 @@ async function displayRecommendations(recommendationData) {
                     media.audio.forEach((audio, idx) => {
                         allMediaItems.push({
                             type: 'audio',
-                            path: audio.path || `/poi_media/${audio.filename}`,
+                            path: normalizeMediaPath(audio.path || audio.filename || ''),
+                            previewPath: '',
                             title: audio.description || `Ses ${idx + 1}`,
                             originalIndex: idx
                         });
@@ -10892,8 +10909,13 @@ async function displayRecommendations(recommendationData) {
 
                     previewItems.forEach((item, idx) => {
                         if (item.type === 'image') {
-                            const imagePath = item.path.startsWith('/') ? item.path : `/${item.path}`;
-                            mediaPreviewHTML += `<img data-src="${imagePath}" class="poi-media-thumb lazy-image" onclick="showPOIMediaFromCache('${cacheKey}', ${idx})" title="${item.title}" alt="${item.title}" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj4uLi48L3RleHQ+PC9zdmc+" />`;
+                            const thumb = (item.previewPath && item.previewPath.startsWith('/')) ? item.previewPath
+                                         : (item.previewPath ? `/${item.previewPath}` : (item.path.startsWith('/') ? item.path : `/${item.path}`));
+                            const ds = [];
+                            if (item.path) ds.push(`data-full-src="${item.path}"`);
+                            if (item.previewPath && item.previewPath !== item.path) ds.push(`data-preview-src="${item.previewPath}"`);
+                            const dsStr = ds.length ? ` ${ds.join(' ')}` : '';
+                            mediaPreviewHTML += `<img data-src="${thumb}"${dsStr} class="poi-media-thumb lazy-image" onclick="showPOIMediaFromCache('${cacheKey}', ${idx})" title="${item.title}" alt="${item.title}" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj4uLi48L3RleHQ+PC9zdmc+" />`;
                         } else {
                             const icon = item.type === 'video' ? '🎥' : '🎵';
                             mediaPreviewHTML += `<div class="poi-media-count" onclick="showPOIMediaFromCache('${cacheKey}', ${idx})" title="${item.title}">${icon}</div>`;

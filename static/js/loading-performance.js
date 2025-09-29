@@ -1041,26 +1041,30 @@ class PerformanceMonitor {
         const images = document.querySelectorAll('img');
         images.forEach(img => {
             if (!img.src) return;
-            const url = new URL(img.src, window.location.href);
-            const path = url.pathname || '';
 
-            // Already a preview – skip
-            if (path.includes('/poi_media/previews/')) return;
+            // Prefer explicit preview hint via data attributes
+            const previewSrc = img.dataset.previewSrc;
+            const originalSrc = img.dataset.fullSrc || img.dataset.originalSrc || img.src;
 
-            // Save original once
-            if (!img.dataset.originalSrc) img.dataset.originalSrc = img.src;
-
-            // Only remap POI media assets
-            if (!path.includes('/poi_media/')) return;
-
-            // Try to remap to generated preview naming schema
-            // Expected original: /poi_media/by_route_id/<route_folder>/<type>/<filename>
-            const m = path.match(/\/poi_media\/by_route_id\/([^/]+)\/(images|videos|audio|3d_models)\/([^/]+)$/);
-            if (!m) {
-                // Fallback: simple directory switch (may 404, but better than doing nothing)
-                img.src = img.src.replace('/poi_media/', '/poi_media/previews/');
+            if (previewSrc && previewSrc !== img.src) {
+                if (!img.dataset.originalSrc) img.dataset.originalSrc = originalSrc;
+                if (img.dataset.src && !img.dataset.originalLazySrc) {
+                    img.dataset.originalLazySrc = img.dataset.src;
+                }
+                img.src = previewSrc;
+                if (img.dataset.src) img.dataset.src = previewSrc;
                 return;
             }
+
+            // If no hint, only remap route-based media that has a known preview layout
+            const url = new URL(img.src, window.location.href);
+            const path = url.pathname || '';
+            if (!path.includes('/poi_media/')) return;
+            if (path.includes('/poi_media/previews/')) return;
+
+            // Expected original: /poi_media/by_route_id/<route_folder>/<type>/<filename>
+            const m = path.match(/\/poi_media\/by_route_id\/([^/]+)\/(images|videos|audio|3d_models)\/([^/]+)$/);
+            if (!m) return; // do not blindly remap unknown structures like by_poi_id
 
             const routeFolder = m[1];
             const mediaType = m[2];
@@ -1074,6 +1078,8 @@ class PerformanceMonitor {
             const previewFile = `preview_${stem}.${previewExt}`;
             const previewPath = `/poi_media/previews/by_route_id/${routeFolder}/${mediaType}/${previewFile}`;
 
+            // Save original once and switch
+            if (!img.dataset.originalSrc) img.dataset.originalSrc = img.src;
             url.pathname = previewPath;
             img.src = url.toString();
         });
@@ -1088,6 +1094,10 @@ class PerformanceMonitor {
             if (img.dataset.originalSrc) {
                 img.src = img.dataset.originalSrc;
                 delete img.dataset.originalSrc;
+            }
+            if (img.dataset.originalLazySrc) {
+                img.dataset.src = img.dataset.originalLazySrc;
+                delete img.dataset.originalLazySrc;
             }
         });
     }
