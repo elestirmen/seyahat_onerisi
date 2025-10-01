@@ -3360,6 +3360,10 @@
     flex-shrink: 0;
     image-orientation: from-image;
 }
+/* Orientation fix for media thumbs */
+.poi-media-thumb[data-orientation='3'] { transform: rotate(180deg); }
+.poi-media-thumb[data-orientation='6'] { transform: rotate(90deg); }
+.poi-media-thumb[data-orientation='8'] { transform: rotate(-90deg); }
 
         .poi-media-thumb:hover {
             transform: scale(1.1);
@@ -9091,6 +9095,15 @@ odern Recommendations UX Styles */
 .modern-poi-card:hover .poi-card__image {
     transform: scale(1.05);
 }
+/* EXIF orientation-aware transforms for card images */
+.poi-card__image[data-orientation='3'] { transform: rotate(180deg); }
+.poi-card__image[data-orientation='6'] { transform: rotate(90deg); }
+.poi-card__image[data-orientation='8'] { transform: rotate(-90deg); }
+
+/* Keep hover scale while respecting rotation */
+.modern-poi-card:hover .poi-card__image[data-orientation='3'] { transform: rotate(180deg) scale(1.05); }
+.modern-poi-card:hover .poi-card__image[data-orientation='6'] { transform: rotate(90deg) scale(1.05); }
+.modern-poi-card:hover .poi-card__image[data-orientation='8'] { transform: rotate(-90deg) scale(1.05); }
 
 .poi-card__image-overlay {
     position: absolute;

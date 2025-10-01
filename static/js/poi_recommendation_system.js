@@ -1939,6 +1939,34 @@ function normalizeMediaPath(p) {
     return `/poi_media/${p.replace(/^\/+/, '')}`;
 }
 
+// Attach EXIF-based orientation fix to an <img> element. Works after lazy load as well.
+function attachEXIFOrientationFix(imgEl) {
+    if (!imgEl) return;
+    const isPlaceholder = (src) => typeof src === 'string' && src.startsWith('data:image');
+
+    const applyOrientation = () => {
+        try {
+            if (typeof EXIF === 'undefined') return;
+            EXIF.getData(imgEl, function () {
+                const orientation = EXIF.getTag(this, 'Orientation');
+                if (orientation && (orientation === 3 || orientation === 6 || orientation === 8)) {
+                    imgEl.setAttribute('data-orientation', String(orientation));
+                }
+            });
+        } catch (_) { /* no-op */ }
+    };
+
+    // If image already loaded with real src
+    if (imgEl.complete && imgEl.naturalWidth > 0 && !isPlaceholder(imgEl.src)) {
+        applyOrientation();
+    }
+
+    // On load (after lazy loader swaps src)
+    imgEl.addEventListener('load', () => {
+        if (!isPlaceholder(imgEl.src)) applyOrientation();
+    }, { passive: true });
+}
+
 // Create media gallery HTML
 function createMediaGallery(media, poi = {}) {
     // Log removed for cleaner console
@@ -10844,16 +10872,20 @@ async function displayRecommendations(recommendationData) {
                     const img = document.createElement('img');
                     const fullSrc = normalizeMediaPath(mainImage.path || mainImage.filename || '');
                     const previewSrc = mainImage.preview_path ? normalizeMediaPath(mainImage.preview_path) : '';
-                    // Prefer preview for initial lazy load if available
-                    const displaySrc = previewSrc || fullSrc;
+                    // Prefer full image for correct orientation; keep preview as fallback
+                    const displaySrc = fullSrc || previewSrc;
                     if (displaySrc) img.dataset.src = displaySrc;
                     if (fullSrc) img.dataset.fullSrc = fullSrc;
                     if (previewSrc && previewSrc !== fullSrc) img.dataset.previewSrc = previewSrc;
                     img.className = 'poi-card__image lazy-image';
                     img.alt = poi.name;
+                    img.loading = 'lazy';
+                    img.decoding = 'async';
                     img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+';
                     imageContainer.insertBefore(img, placeholder);
                     placeholder.style.display = 'none';
+                    // Orientation fallback using EXIF (run when real image loads)
+                    try { attachEXIFOrientationFix(img); } catch (_) {}
                     if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
                         window.lazyLoader.setupImageLazyLoading();
                     }
@@ -10927,6 +10959,11 @@ async function displayRecommendations(recommendationData) {
                     }
 
                     previewContainer.innerHTML = mediaPreviewHTML;
+                    // Apply EXIF orientation fix to thumbs once they load
+                    try {
+                        const thumbs = previewContainer.querySelectorAll('img.poi-media-thumb');
+                        thumbs.forEach(t => attachEXIFOrientationFix(t));
+                    } catch (_) {}
                     if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
                         window.lazyLoader.setupImageLazyLoading();
                     }
