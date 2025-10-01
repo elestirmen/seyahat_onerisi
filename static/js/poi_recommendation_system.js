@@ -11421,7 +11421,15 @@ function createModernPOICards(pois, type = 'primary') {
         const icon = getCategoryIcon(poi.category);
         const iconElement = icon.includes('<i') ? icon : `<span>${icon}</span>`;
         return `
-        <div class="modern-poi-card ${type}" data-poi-id="${poi.id || poi._id}" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
+        <div class="modern-poi-card poi-card ${type}" data-poi-id="${poi.id || poi._id}" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
+            <div class="poi-card__image-container">
+                <div class="poi-card__image-placeholder loading__skeleton">
+                    <i class="fas fa-image"></i>
+                </div>
+                <div class="poi-card__image-overlay"></div>
+                <span class="poi-card__category">${getCategoryDisplayName(poi.category)}</span>
+            </div>
+            
             <div class="poi-card-header">
                 <div class="poi-category-badge">
                     ${iconElement}
@@ -11443,6 +11451,7 @@ function createModernPOICards(pois, type = 'primary') {
                         `<span class="feature-tag">${feature}</span>`
                     ).join('') : ''}
                 </div>
+                <div class="poi-media-preview"></div>
             </div>
 
             <div class="poi-card-actions">

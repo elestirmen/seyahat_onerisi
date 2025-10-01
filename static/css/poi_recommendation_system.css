@@ -3138,12 +3138,13 @@
             justify-content: center;
         }
 
-        .poi-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.4s ease;
-        }
+.poi-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+    image-orientation: from-image;
+}
 
         .poi-card:hover .poi-image {
             transform: scale(1.05);
@@ -3347,17 +3348,18 @@
             padding: 4px 0;
         }
 
-        .poi-media-thumb {
-            width: 60px;
-            height: 45px;
-            border-radius: 8px;
-            object-fit: cover;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            flex-shrink: 0;
-        }
+.poi-media-thumb {
+    width: 60px;
+    height: 45px;
+    border-radius: 8px;
+    object-fit: cover;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    image-orientation: from-image;
+}
 
         .poi-media-thumb:hover {
             transform: scale(1.1);
@@ -4793,13 +4795,14 @@
             padding: 20px;
         }
 
-        .media-display img {
-            max-width: 100%;
-            max-height: 70vh;
-            object-fit: contain;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        }
+.media-display img {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    image-orientation: from-image;
+}
 
         .media-display video {
             max-width: 100%;
@@ -9052,6 +9055,66 @@ odern Recommendations UX Styles */
 
 .modern-poi-card.secondary::before {
     background: #6c757d;
+}
+
+/* POI Card Image Container */
+.poi-card__image-container {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.poi-card__image-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    color: #a0aec0;
+    font-size: 3rem;
+}
+
+.poi-card__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+    image-orientation: from-image;
+}
+
+.modern-poi-card:hover .poi-card__image {
+    transform: scale(1.05);
+}
+
+.poi-card__image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+    pointer-events: none;
+}
+
+.poi-card__category {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    color: #2d3748;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 1;
 }
 
 .poi-card-header {
