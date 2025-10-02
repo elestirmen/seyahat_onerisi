@@ -834,6 +834,8 @@ def get_db():
             database_name=database_name
         )
         db.connect()
+        # Ensure we don't stick to JSON fallback after a transient failure
+        JSON_FALLBACK = False
         return db
     except Exception as e:
         print(f"⚠️  Veritabanına bağlanılamadı, JSON verileri kullanılacak: {e}")
