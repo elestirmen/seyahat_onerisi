@@ -56,7 +56,7 @@
 - **360° Panorama Görüntüleme**: Google Model Viewer ile panorama desteği
 
 #### Veritabanı Desteği
-- **Çoklu Veritabanı**: JSON (hızlı başlangıç), MongoDB (esnek şema), PostgreSQL + PostGIS (üretim)
+- **Çoklu Veritabanı**: JSON (hızlı başlangıç), PostgreSQL + PostGIS (üretim)
 - **Coğrafi Sorgular**: PostGIS ile gelişmiş coğrafi veri işleme
 - **Performans Optimizasyonu**: İndeksleme, connection pooling, sorgu optimizasyonu
 - **Veri Migrasyonu**: Veritabanları arası kolay geçiş araçları
@@ -135,7 +135,7 @@ Kurulum scripti şunları otomatik olarak yapar:
 - Sistem bağımlılıklarını kontrol eder ve kurar
 - Python sanal ortamı oluşturur
 - Python paketlerini kurar
-- Veritabanı seçimi ve kurulumu (JSON/MongoDB/PostgreSQL)
+- Veritabanı seçimi ve kurulumu (JSON/PostgreSQL)
 - Temel yapılandırmayı oluşturur
 - Kurulum testlerini çalıştırır
 
@@ -162,16 +162,6 @@ pip install -r requirements.txt
 **JSON (Hızlı Başlangıç)**
 ```bash
 python setup_poi_database.py json
-```
-
-**MongoDB**
-```bash
-# MongoDB servisini başlatın
-sudo systemctl start mongod  # Linux
-brew services start mongodb-community  # macOS
-
-# Veritabanını kurun
-python setup_poi_database.py mongodb "mongodb://localhost:27017/" --db-name poi_cappadocia
 ```
 
 **PostgreSQL + PostGIS (Önerilen)**
@@ -201,7 +191,7 @@ python setup_poi_database.py postgresql "postgresql://poi_user:your_password@loc
 
 ```bash
 # Veritabanı Yapılandırması
-POI_DB_TYPE=postgresql  # json, mongodb, postgresql
+POI_DB_TYPE=postgresql  # json, postgresql
 POI_DB_HOST=localhost
 POI_DB_PORT=5432
 POI_DB_NAME=poi_db
@@ -248,11 +238,6 @@ Tarayıcıda açın: `http://localhost:5505/poi_recommendation_system.html`
 - **Avantajlar**: Kurulum gerektirmez, hızlı başlangıç, taşınabilir
 - **Dezavantajlar**: Sınırlı performans, eşzamanlı erişim yok, büyük veri setleri için uygun değil
 - **Kullanım**: Küçük projeler, test ortamları, demo
-
-#### MongoDB
-- **Avantajlar**: Esnek şema, JSON benzeri veri yapısı, kolay ölçeklenebilirlik
-- **Dezavantajlar**: Coğrafi sorgular için ek kurulum gerekir, ACID garantileri sınırlı
-- **Kullanım**: Orta ölçekli projeler, hızlı prototipleme
 
 #### PostgreSQL + PostGIS (Önerilen)
 - **Avantajlar**: Güçlü coğrafi sorgular, ACID uyumluluğu, yüksek performans, endüstri standardı
@@ -838,9 +823,6 @@ python -c "from poi_database_adapter import test_connection; test_connection()"
 
 # PostgreSQL servisini kontrol et
 sudo systemctl status postgresql
-
-# MongoDB servisini kontrol et
-sudo systemctl status mongod
 
 # Bağlantı string'ini kontrol et
 echo $POI_DB_CONNECTION
