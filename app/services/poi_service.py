@@ -7,11 +7,10 @@ import logging
 import json
 import unicodedata
 import math
-import uuid
+import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
-from app.config.database import get_db_connection
 from app.middleware.error_handler import APIError, bad_request, not_found
 
 logger = logging.getLogger(__name__)
@@ -21,11 +20,10 @@ class POIService:
     """Service class for POI business logic operations."""
     
     def __init__(self):
-        self.json_fallback = False
-        self.test_data_file = 'test_data.json'
+        pass
     
     def _get_database_connection(self):
-        """Get database connection or fall back to JSON."""
+        """Get database connection or raise an API error."""
         try:
             # Try the new database pool first
             from app.config.database import get_database_pool
@@ -33,9 +31,11 @@ class POIService:
             if pool is not None:
                 return pool.get_connection()
             
-            # Fallback to direct connection using existing env vars
+        except Exception as e:
+            logger.debug(f"Database pool unavailable: {e}")
+        
+        try:
             import psycopg2
-            import os
             from psycopg2.extras import RealDictCursor
             
             conn = psycopg2.connect(
@@ -47,9 +47,8 @@ class POIService:
                 cursor_factory=RealDictCursor
             )
             
-            logger.info("Using direct database connection (fallback)")
+            logger.info("Using direct database connection")
             
-            # Return a context manager wrapper
             class DirectConnectionContext:
                 def __init__(self, connection):
                     self.connection = connection
@@ -63,32 +62,9 @@ class POIService:
                     self.connection.close()
             
             return DirectConnectionContext(conn)
-            
-        except Exception as e:
-            logger.warning(f"Database connection failed, using JSON fallback: {e}")
-            self.json_fallback = True
-            return None
-    
-    def _load_test_data(self) -> Dict[str, Any]:
-        """Load test data from JSON file."""
-        try:
-            with open(self.test_data_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            logger.warning(f"Test data file {self.test_data_file} not found")
-            return {'pois': []}
-        except Exception as e:
-            logger.error(f"Error loading test data: {e}")
-            return {'pois': []}
-    
-    def _save_test_data(self, data: Dict[str, Any]) -> None:
-        """Save test data to JSON file."""
-        try:
-            with open(self.test_data_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            logger.error(f"Error saving test data: {e}")
-            raise APIError("Failed to save data", "DATA_SAVE_ERROR")
+        except Exception as exc:
+            logger.error(f"Database connection failed: {exc}")
+            raise APIError("Database connection failed", "DB_CONN_ERROR", 503)
     
     def _normalize_turkish_text(self, text: str) -> str:
         """Normalize Turkish text for search."""
@@ -271,16 +247,9 @@ class POIService:
         offset = (page - 1) * limit
         
         try:
-            # Always try database first, then fallback to JSON
-            if not self.json_fallback:
-                try:
-                    return self._list_pois_database(search, category, offset, limit, page, sort)
-                except Exception as db_error:
-                    logger.warning(f"Database failed, falling back to JSON: {db_error}")
-                    self.json_fallback = True
-            
-            # Use JSON fallback
-            return self._list_pois_json(search, category, offset, limit, page, sort)
+            return self._list_pois_database(search, category, offset, limit, page, sort)
+        except APIError:
+            raise
         except Exception as e:
             logger.error(f"Error listing POIs: {e}")
             raise APIError("Failed to list POIs", "POI_LIST_ERROR")
@@ -288,9 +257,6 @@ class POIService:
     def _list_pois_database(self, search: str, category: str, offset: int, limit: int, page: int, sort: str = 'name_asc') -> Dict[str, Any]:
         """List POIs from database."""
         conn_context = self._get_database_connection()
-        if conn_context is None:
-            # Fallback to JSON if database not available
-            return self._list_pois_json(search, category, offset, limit, page, sort)
         
         with conn_context as conn:
             with conn.cursor() as cursor:
@@ -362,53 +328,6 @@ class POIService:
                     'total_pages': total_pages
                 }
     
-    def _list_pois_json(self, search: str, category: str, offset: int, limit: int, page: int, sort: str = 'name_asc') -> Dict[str, Any]:
-        """List POIs from JSON fallback."""
-        data = self._load_test_data()
-        pois = data.get('pois', [])
-        
-        # Filter by search
-        if search:
-            filtered_pois = []
-            for poi in pois:
-                if self._fuzzy_search_match(search, poi.get('name', '')) or \
-                   self._fuzzy_search_match(search, poi.get('description', '')):
-                    filtered_pois.append(poi)
-            pois = filtered_pois
-        
-        # Filter by category
-        if category:
-            pois = [poi for poi in pois if poi.get('category', '').lower() == category.lower()]
-        
-        # Sort results
-        if sort == 'name_desc':
-            pois.sort(key=lambda x: x.get('name', ''), reverse=True)
-        elif sort == 'category_asc':
-            pois.sort(key=lambda x: (x.get('category', ''), x.get('name', '')))
-        elif sort == 'created_desc':
-            pois.sort(key=lambda x: x.get('createdAt') or x.get('created_at') or '', reverse=True)
-        elif sort == 'created_asc':
-            pois.sort(key=lambda x: x.get('createdAt') or x.get('created_at') or '')
-        else:
-            pois.sort(key=lambda x: x.get('name', ''))
-        
-        # Pagination
-        total = len(pois)
-        normalized = []
-        for poi in pois:
-            mapped = self._map_poi_record(poi)
-            normalized.append(self._ensure_client_compat(mapped))
-
-        pois = normalized[offset:offset + limit]
-        total_pages = math.ceil(total / limit) if limit > 0 else 1
-        
-        return {
-            'pois': pois,
-            'total': total,
-            'page': page,
-            'total_pages': total_pages
-        }
-    
     def search_pois(self, query: str, category: str = None, limit: int = 50) -> Dict[str, Any]:
         """
         Advanced POI search with relevance scoring.
@@ -428,10 +347,9 @@ class POIService:
             limit = 100
         
         try:
-            if self.json_fallback:
-                return self._search_pois_json(query, category, limit)
-            else:
-                return self._search_pois_database(query, category, limit)
+            return self._search_pois_database(query, category, limit)
+        except APIError:
+            raise
         except Exception as e:
             logger.error(f"Error searching POIs: {e}")
             raise APIError("Search failed", "POI_SEARCH_ERROR")
@@ -439,9 +357,6 @@ class POIService:
     def _search_pois_database(self, query: str, category: str, limit: int) -> Dict[str, Any]:
         """Search POIs in database with relevance scoring."""
         conn_context = self._get_database_connection()
-        if conn_context is None:
-            # Fallback to JSON if database not available
-            return self._search_pois_json(query, category, limit)
         
         with conn_context as conn:
             with conn.cursor() as cursor:
@@ -494,41 +409,6 @@ class POIService:
                     'query': query
                 }
     
-    def _search_pois_json(self, query: str, category: str, limit: int) -> Dict[str, Any]:
-        """Search POIs in JSON with relevance scoring."""
-        data = self._load_test_data()
-        pois = data.get('pois', [])
-        
-        # Filter by category first
-        if category:
-            pois = [poi for poi in pois if poi.get('category', '').lower() == category.lower()]
-        
-        # Calculate relevance scores
-        scored_pois = []
-        for poi in pois:
-            score = self._calculate_relevance_score(query, poi)
-            if score > 0:
-                poi_with_score = poi.copy()
-                poi_with_score['_relevance_score'] = score
-                scored_pois.append(poi_with_score)
-        
-        # Sort by relevance score descending
-        scored_pois.sort(key=lambda x: x['_relevance_score'], reverse=True)
-        
-        # Remove score and limit results
-        results = []
-        for poi in scored_pois[:limit]:
-            poi_copy = self._map_poi_record(poi.copy())
-            poi_copy = self._ensure_client_compat(poi_copy)
-            poi_copy.pop('_relevance_score', None)
-            results.append(poi_copy)
-        
-        return {
-            'results': results,
-            'total': len(results),
-            'query': query
-        }
-    
     def get_poi(self, poi_id: str) -> Dict[str, Any]:
         """
         Get single POI by ID.
@@ -540,10 +420,9 @@ class POIService:
             POI data dict
         """
         try:
-            if self.json_fallback:
-                return self._get_poi_json(poi_id)
-            else:
-                return self._get_poi_database(poi_id)
+            return self._get_poi_database(poi_id)
+        except APIError:
+            raise
         except Exception as e:
             logger.error(f"Error getting POI {poi_id}: {e}")
             raise APIError("Failed to get POI", "POI_GET_ERROR")
@@ -551,9 +430,6 @@ class POIService:
     def _get_poi_database(self, poi_id: str) -> Dict[str, Any]:
         """Get POI from database."""
         conn_context = self._get_database_connection()
-        if conn_context is None:
-            # Fallback to JSON if database not available
-            return self._get_poi_json(poi_id)
         
         with conn_context as conn:
             with conn.cursor() as cursor:
@@ -581,18 +457,6 @@ class POIService:
                 
                 mapped = self._map_poi_record(result)
                 return self._ensure_client_compat(mapped)
-    
-    def _get_poi_json(self, poi_id: str) -> Dict[str, Any]:
-        """Get POI from JSON fallback."""
-        data = self._load_test_data()
-        pois = data.get('pois', [])
-        
-        for poi in pois:
-            if poi.get('id') == poi_id:
-                mapped = self._map_poi_record(poi)
-                return self._ensure_client_compat(mapped)
-        
-        raise not_found(f"POI with ID {poi_id} not found")
     
     def create_poi(self, poi_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -646,10 +510,9 @@ class POIService:
         }
 
         try:
-            if self.json_fallback:
-                return self._create_poi_json(sanitized)
-            else:
-                return self._create_poi_database(sanitized)
+            return self._create_poi_database(sanitized)
+        except APIError:
+            raise
         except Exception as e:
             logger.error(f"Error creating POI: {e}")
             raise APIError("Failed to create POI", "POI_CREATE_ERROR")
@@ -657,9 +520,6 @@ class POIService:
     def _create_poi_database(self, poi_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create POI in database."""
         conn_context = self._get_database_connection()
-        if conn_context is None:
-            # Fallback to JSON if database not available
-            return self._create_poi_json(poi_data)
 
         with conn_context as conn:
             with conn.cursor() as cursor:
@@ -722,38 +582,6 @@ class POIService:
                 mapped = self._map_poi_record(result)
                 return self._ensure_client_compat(mapped)
 
-    def _create_poi_json(self, poi_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Create POI in JSON fallback."""
-        data = self._load_test_data()
-
-        # Check for duplicate IDs
-        existing_ids = {poi.get('id') for poi in data.get('pois', [])}
-        poi_id = str(uuid.uuid4())
-        while poi_id in existing_ids:
-            poi_id = str(uuid.uuid4())
-
-        now = datetime.utcnow().isoformat() + 'Z'
-
-        json_record = {
-            'id': poi_id,
-            'name': poi_data['name'],
-            'category': poi_data['category'],
-            'description': poi_data['description'],
-            'short_description': poi_data.get('short_description', ''),
-            'latitude': poi_data['latitude'],
-            'longitude': poi_data['longitude'],
-            'altitude': poi_data.get('altitude'),
-            'attributes': poi_data.get('attributes', {}),
-            'is_active': poi_data.get('is_active', True),
-            'created_at': now,
-            'updated_at': now
-        }
-
-        data.setdefault('pois', []).append(json_record)
-        self._save_test_data(data)
-
-        return self._ensure_client_compat(json_record)
-
     def update_poi(self, poi_id: str, poi_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update existing POI."""
         if not poi_id:
@@ -762,13 +590,7 @@ class POIService:
             raise bad_request("Update payload is required")
 
         try:
-            if not self.json_fallback:
-                try:
-                    return self._update_poi_database(poi_id, poi_data)
-                except Exception as db_error:
-                    logger.warning(f"Database update failed, falling back to JSON: {db_error}")
-                    self.json_fallback = True
-            return self._update_poi_json(poi_id, poi_data)
+            return self._update_poi_database(poi_id, poi_data)
         except APIError:
             raise
         except Exception as e:
@@ -778,8 +600,6 @@ class POIService:
     def _update_poi_database(self, poi_id: str, poi_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update POI in database and return updated record."""
         conn_context = self._get_database_connection()
-        if conn_context is None:
-            return self._update_poi_json(poi_id, poi_data)
 
         try:
             poi_id_int = int(poi_id)
@@ -875,68 +695,13 @@ class POIService:
         mapped = self._map_poi_record(result)
         return self._ensure_client_compat(mapped)
 
-    def _update_poi_json(self, poi_id: str, poi_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Update POI in JSON fallback store."""
-        data = self._load_test_data()
-        pois = data.get('pois', [])
-
-        for poi in pois:
-            if str(poi.get('id')) == str(poi_id):
-                if 'name' in poi_data and poi_data['name']:
-                    poi['name'] = poi_data['name']
-                if 'category' in poi_data and poi_data['category']:
-                    poi['category'] = poi_data['category']
-                if 'description' in poi_data:
-                    poi['description'] = poi_data.get('description', '')
-                if 'short_description' in poi_data:
-                    poi['short_description'] = poi_data.get('short_description', '')
-                if 'altitude' in poi_data:
-                    altitude = poi_data.get('altitude')
-                    if altitude is not None:
-                        try:
-                            altitude = float(altitude)
-                        except (TypeError, ValueError):
-                            raise bad_request("Invalid altitude format")
-                    poi['altitude'] = altitude
-                if 'attributes' in poi_data:
-                    attributes = poi_data.get('attributes')
-                    if attributes is not None and not isinstance(attributes, dict):
-                        raise bad_request("Attributes must be an object")
-                    poi['attributes'] = attributes or {}
-                if 'is_active' in poi_data:
-                    poi['is_active'] = bool(poi_data['is_active'])
-
-                latitude = poi_data.get('latitude', poi_data.get('lat'))
-                longitude = poi_data.get('longitude', poi_data.get('lng'))
-                if latitude is not None or longitude is not None:
-                    if latitude is None or longitude is None:
-                        raise bad_request("Both latitude and longitude are required to update location")
-                    try:
-                        poi['latitude'] = float(latitude)
-                        poi['longitude'] = float(longitude)
-                    except (TypeError, ValueError):
-                        raise bad_request("Invalid latitude or longitude format")
-
-                poi['updated_at'] = datetime.utcnow().isoformat() + 'Z'
-                self._save_test_data(data)
-                return self._ensure_client_compat(poi)
-
-        raise not_found(f"POI with ID {poi_id} not found")
-
     def delete_poi(self, poi_id: str) -> None:
         """Delete POI from primary store."""
         if not poi_id:
             raise bad_request("POI ID is required")
 
         try:
-            if not self.json_fallback:
-                try:
-                    self._delete_poi_database(poi_id)
-                    return
-                except Exception as db_error:
-                    logger.warning(f"Database delete failed, falling back to JSON: {db_error}")
-                    self.json_fallback = True
-            self._delete_poi_json(poi_id)
+            self._delete_poi_database(poi_id)
         except APIError:
             raise
         except Exception as e:
@@ -946,9 +711,6 @@ class POIService:
     def _delete_poi_database(self, poi_id: str) -> None:
         """Delete POI in database."""
         conn_context = self._get_database_connection()
-        if conn_context is None:
-            self._delete_poi_json(poi_id)
-            return
 
         try:
             poi_id_int = int(poi_id)
@@ -961,19 +723,6 @@ class POIService:
                 result = cursor.fetchone()
                 if not result:
                     raise not_found(f"POI with ID {poi_id} not found")
-
-    def _delete_poi_json(self, poi_id: str) -> None:
-        """Delete POI in JSON fallback store."""
-        data = self._load_test_data()
-        pois = data.get('pois', [])
-        initial_count = len(pois)
-        data['pois'] = [poi for poi in pois if str(poi.get('id')) != str(poi_id)]
-
-        if len(data['pois']) == initial_count:
-            raise not_found(f"POI with ID {poi_id} not found")
-
-        self._save_test_data(data)
-
 
 # Global service instance
 poi_service = POIService()
