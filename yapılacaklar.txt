@@ -1,2 +1,3 @@
 -dil modeli ile yazılı giriş yapılabilisin. örneğin pide yapılan yer var mı ürgüpte dendiği zaman poi bilgilerinden  yola çıkarak buna uygun yerler gelsin.
+-bulunduğunuz konumu çeksin ve en yakın poileri tavsiye olarak getirsin size
 

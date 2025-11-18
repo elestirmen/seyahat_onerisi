@@ -21,7 +21,9 @@ window.modalJitterFix = {
     routePatched: false,
     poiPatched: false,
     // Reference to centralized modal manager
-    modalManager: null
+    modalManager: null,
+    // Mutation observer for active defense
+    mutationObserver: null
 };
 
 /**
@@ -48,9 +50,97 @@ function ensureCoreInitialized() {
         addGlobalCleanupHandlers();
     }
     setupHardwareAccelerationMonitoring();
+    
+    // Setup active defense against jitter
+    setupActiveJitterDefense();
 
     window.modalJitterFix.coreInitialized = true;
     console.warn('✅ Modal jitter fix core initialized');
+}
+
+/**
+ * Setup active defense against jitter using MutationObserver
+ */
+function setupActiveJitterDefense() {
+    console.warn('🛡️ Setting up active jitter defense');
+    
+    const observerConfig = {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+    };
+    
+    const observerCallback = (mutations) => {
+        let shouldSanitize = false;
+        
+        for (const mutation of mutations) {
+            // Ignore changes we made ourselves to avoid loops
+            if (mutation.target.classList.contains('jitter-sanitized')) continue;
+            
+            // Check for added nodes
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                shouldSanitize = true;
+                break;
+            }
+            
+            // Check for style changes involving transform
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                const transform = mutation.target.style.transform;
+                if (transform && transform.includes('scale') && !mutation.target.classList.contains('media-image-zoomed')) {
+                    shouldSanitize = true;
+                    break;
+                }
+            }
+        }
+        
+        if (shouldSanitize) {
+            requestAnimationFrame(() => {
+                sanitizeTransforms();
+            });
+        }
+    };
+    
+    window.modalJitterFix.mutationObserver = new MutationObserver(observerCallback);
+    
+    // Observe body for modal additions/removals
+    window.modalJitterFix.mutationObserver.observe(document.body, observerConfig);
+}
+
+/**
+ * Sanitize transforms to prevent jitter
+ */
+function sanitizeTransforms() {
+    // Sanitize modal containers
+    const modals = document.querySelectorAll('.route-details-modal, .media-viewer-modal, .route-details-panel');
+    modals.forEach(modal => {
+        if (!modal.classList.contains('jitter-sanitized')) {
+            modal.style.transform = 'translateZ(0)'; // Force GPU
+            modal.classList.add('jitter-sanitized');
+        }
+    });
+    
+    // Sanitize hoverable elements (except active zoomed images)
+    const hoverables = document.querySelectorAll('.route-media-item, .media-thumbnail, .media-nav-btn, .route-details-modal-close');
+    hoverables.forEach(el => {
+        // If element has inline scale transform, remove it (unless it's a deliberate animation we control differently)
+        // We let CSS handle the hover effects properly
+        if (el.style.transform && el.style.transform.includes('scale') && !el.classList.contains('media-image-zoomed')) {
+            // Remove inline transform to let CSS take over
+            el.style.transform = '';
+        }
+    });
+    
+    // Sanitize Leaflet map pane if it exists
+    const mapPanes = document.querySelectorAll('.leaflet-map-pane');
+    mapPanes.forEach(pane => {
+        if (!pane.classList.contains('jitter-sanitized')) {
+            // Leaflet uses translate3d, we just ensure backface-visibility
+            pane.style.backfaceVisibility = 'hidden';
+            pane.style.webkitBackfaceVisibility = 'hidden';
+            pane.classList.add('jitter-sanitized');
+        }
+    });
 }
 
 // Initialize with options to enable specific patches without interfering

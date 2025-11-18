@@ -21,8 +21,8 @@
 
 /* Map Container Stabilization - Prevent size changes during hover */
 .route-map-container {
-    /* Size and layout containment to lock dimensions */
-    contain: size layout;
+    /* Use layout containment but NOT size to allow responsive sizing */
+    contain: layout style;
     /* Isolation to prevent interference */
     isolation: isolate;
     /* Avoid forcing GPU layer to prevent subpixel jitter */
@@ -166,6 +166,8 @@
 .route-details-modal-body {
     /* Reserve space for scrollbars to prevent layout shifts */
     scrollbar-gutter: stable both-edges;
+    /* Allow vertical scrolling */
+    overflow-y: auto;
     /* Prevent horizontal shifts */
     overflow-x: hidden;
     /* Smooth scrolling */
@@ -188,8 +190,8 @@
 
 /* Elevation chart hover stability */
 .elevation-chart-container {
-    /* Lock container dimensions */
-    contain: size layout;
+    /* Use layout containment but NOT size to allow responsive sizing */
+    contain: layout style;
     /* Hardware acceleration */
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
