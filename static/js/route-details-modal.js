@@ -457,7 +457,7 @@ class RouteDetailsModal {
 
         // Determine preferred initial tab (remember last or default to overview)
         const savedTab = localStorage.getItem('rdm:lastTab');
-        if (savedTab && ['overview','map','pois','media'].includes(savedTab) && savedTab !== this.currentTab) {
+        if (savedTab && ['overview', 'map', 'pois', 'media'].includes(savedTab) && savedTab !== this.currentTab) {
             // Initialize UI to saved tab
             await this.switchTab(savedTab);
         }
@@ -466,8 +466,8 @@ class RouteDetailsModal {
         const isMobile = window.innerWidth <= 768;
         const delay = isMobile ? 500 : 100;
 
-            setTimeout(async () => {
-                await this.loadTabContent(this.currentTab);
+        setTimeout(async () => {
+            await this.loadTabContent(this.currentTab);
 
             // ALWAYS pre-load map content on mobile (critical fix)
             if (isMobile) {
@@ -493,15 +493,15 @@ class RouteDetailsModal {
             }
 
             // Initialize elevation chart if we're on the map tab with additional mobile delay
-                if (this.currentTab === 'map') {
-                    const chartDelay = isMobile ? 1200 : 200;
-                    setTimeout(() => {
-                        this.initializeElevationChart();
-                    }, chartDelay);
-                    // Lock map container layout to integer px after initial content
-                    setTimeout(() => { this.lockMapContainerLayout(); }, chartDelay + 50);
-                }
-            }, delay);
+            if (this.currentTab === 'map') {
+                const chartDelay = isMobile ? 1200 : 200;
+                setTimeout(() => {
+                    this.initializeElevationChart();
+                }, chartDelay);
+                // Lock map container layout to integer px after initial content
+                setTimeout(() => { this.lockMapContainerLayout(); }, chartDelay + 50);
+            }
+        }, delay);
 
         // Add resize listener for responsive behavior
         this.addResizeListener();
@@ -517,7 +517,7 @@ class RouteDetailsModal {
         ScrollLock.disable();
 
         // Remove visibility listener and unlock layout
-        try { document.removeEventListener('visibilitychange', this.handleVisibilityChange); } catch (_) {}
+        try { document.removeEventListener('visibilitychange', this.handleVisibilityChange); } catch (_) { }
         this.unlockMapContainerLayout();
 
         // Clean up resize listener
@@ -594,7 +594,7 @@ class RouteDetailsModal {
         if (!(this.isVisible && this.currentTab === 'map' && this.mapInstance)) return;
         // On tab return, lock container to integer px and only invalidate size.
         this.lockMapContainerLayout();
-        try { this.mapInstance.invalidateSize(); } catch (_) {}
+        try { this.mapInstance.invalidateSize(); } catch (_) { }
         // Do not refit unless initial fit missing
         if (!this.hasFittedBounds && !this.userHasInteracted) {
             this.fitMapToRoute(true);
@@ -755,7 +755,7 @@ class RouteDetailsModal {
                                 this.fitMapToRoute(true);
                             }
                         }, 200);
-                }
+                    }
                 }
 
                 // Initialize elevation chart if elevation container exists but chart doesn't
@@ -773,7 +773,7 @@ class RouteDetailsModal {
         }
 
         // Persist last selected tab for next open
-        try { localStorage.setItem('rdm:lastTab', this.currentTab); } catch (_) {}
+        try { localStorage.setItem('rdm:lastTab', this.currentTab); } catch (_) { }
     }
 
     async loadTabContent(tabName) {
@@ -1224,6 +1224,9 @@ class RouteDetailsModal {
             // Initialize media navigation
             this.initializeMediaNavigation();
 
+            // Attach click listeners to media items (replacing inline onclicks)
+            this.attachMediaItemListeners();
+
         } catch (error) {
             console.error('❌ Error loading media content:', error);
             const mediaContainer = document.getElementById('routeMediaGrid');
@@ -1297,22 +1300,22 @@ class RouteDetailsModal {
             const mediaInfo = `${media.media_type || 'image'} • ${this.formatFileSize(media.file_size)}`;
 
             return `
-                <div class="route-media-item" data-media-index="${index}" onclick="window.routeDetailsModalInstance.showMediaViewer('${mediaUrl}', '${media.media_type || 'image'}', ${index})">
+                <div class="route-media-item" data-media-index="${index}" data-media-url="${mediaUrl}" data-media-type="${media.media_type || 'image'}">
                     ${isVideo ?
                     `<video src="${mediaUrl}" muted preload="metadata" onloadeddata="this.classList.add('loaded')" onerror="console.error('Failed to load video:', '${mediaUrl}'); this.parentElement.style.display='none';"></video>
                      <div class="route-media-play-btn">
                          <i class="fas fa-play"></i>
                      </div>` :
                     isAudio ?
-                    `<div class="route-media-audio-placeholder">
+                        `<div class="route-media-audio-placeholder">
                          <i class="fas fa-music"></i>
                      </div>` :
-                    is3D ?
-                    `<div class="route-media-3d-placeholder">
+                        is3D ?
+                            `<div class="route-media-3d-placeholder">
                          <i class="fas fa-cube"></i>
                      </div>` :
-                    `<img src="${mediaUrl}" alt="${media.alt_text || 'Rota medyası'}" loading="lazy" onload="this.classList.add('loaded')" onerror="console.error('Failed to load image:', '${mediaUrl}'); this.parentElement.style.display='none';">`
-                    }
+                            `<img src="${mediaUrl}" alt="${media.alt_text || 'Rota medyası'}" loading="lazy" onload="this.classList.add('loaded')" onerror="console.error('Failed to load image:', '${mediaUrl}'); this.parentElement.style.display='none';">`
+                }
                     <div class="route-media-type-icon">
                         <i class="${typeIcon}"></i>
                     </div>
@@ -1326,6 +1329,45 @@ class RouteDetailsModal {
                 </div>
             `;
         }).join('');
+    }
+
+    attachMediaItemListeners() {
+        const mediaGrid = document.getElementById('routeMediaGrid');
+        if (!mediaGrid) return;
+
+        // Remove existing listeners if any (though creating a new anonymous function makes this hard, 
+        // but since we re-render the grid innerHTML, the old grid is gone if it was inside the container. 
+        // Wait, routeMediaGrid is created in loadMediaContent.
+
+        mediaGrid.addEventListener('click', (e) => {
+            console.log('🖱️ Media grid clicked', e.target);
+            const item = e.target.closest('.route-media-item');
+            if (!item) {
+                console.log('❌ Click was not on a media item');
+                return;
+            }
+
+            console.log('✅ Clicked media item:', item);
+
+            // Don't trigger if clicking on buttons inside (like play button) if they have their own handlers,
+            // but here we want the whole card to be clickable.
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const url = item.dataset.mediaUrl;
+            const type = item.dataset.mediaType;
+            const index = parseInt(item.dataset.mediaIndex, 10);
+
+            console.log('📊 Media Item Data:', { url, type, index });
+
+            if (url) {
+                console.log('🚀 Calling showMediaViewer...');
+                this.showMediaViewer(url, type, index);
+            } else {
+                console.error('❌ No URL found in dataset');
+            }
+        });
     }
 
     initializeMediaNavigation() {
@@ -1456,13 +1498,13 @@ class RouteDetailsModal {
 
             let markersAdded = 0;
             pois.forEach((poi, index) => {
-                console.warn(`📍 Processing POI ${index + 1}:`, poi.name || `POI ${index + 1}`);
+                console.warn(`📍 Processing POI ${index + 1}: `, poi.name || `POI ${index + 1} `);
 
                 // More flexible coordinate detection
                 const lat = poi.latitude || poi.lat || poi.coords?.[1] || poi.location?.lat || poi.position?.lat;
                 const lng = poi.longitude || poi.lng || poi.lon || poi.coords?.[0] || poi.location?.lng || poi.position?.lng;
 
-                console.warn(`📍 POI ${index + 1} coordinates:`, {
+                console.warn(`📍 POI ${index + 1} coordinates: `, {
                     lat, lng,
                     hasLat: !!lat,
                     hasLng: !!lng,
@@ -1471,7 +1513,7 @@ class RouteDetailsModal {
                 });
 
                 if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
-                    console.warn(`✅ Creating marker for POI ${index + 1}: ${poi.name} at [${lat}, ${lng}]`);
+                    console.warn(`✅ Creating marker for POI ${index + 1}: ${poi.name} at[${lat}, ${lng}]`);
                     const categoryStyle = this.getCategoryStyle(poi.category);
 
                     try {
@@ -1482,7 +1524,7 @@ class RouteDetailsModal {
                                     <div class="poi-marker-container" style="background-color: ${categoryStyle.color}; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
                                         <i class="${categoryStyle.iconClass}"></i>
                                     </div>
-                                    <div class="poi-marker-score" style="position: absolute; top: -6px; right: -6px; background: #2563eb; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 10;">${index + 1}</div>
+            <div class="poi-marker-score" style="position: absolute; top: -6px; right: -6px; background: #2563eb; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 10;">${index + 1}</div>
                                 `,
                                 iconSize: [32, 32],
                                 iconAnchor: [16, 16],
@@ -1504,10 +1546,10 @@ class RouteDetailsModal {
                         markersAdded++;
                         console.warn(`✅ POI marker ${index + 1} added successfully`);
                     } catch (markerError) {
-                        console.error(`❌ Error creating marker for POI ${index + 1}:`, markerError);
+                        console.error(`❌ Error creating marker for POI ${index + 1}: `, markerError);
                     }
                 } else {
-                    console.warn(`⚠️ Skipping POI ${index + 1} - invalid coordinates:`, { lat, lng });
+                    console.warn(`⚠️ Skipping POI ${index + 1} - invalid coordinates: `, { lat, lng });
                 }
             });
 
@@ -1580,7 +1622,7 @@ class RouteDetailsModal {
                     </button>
                 </div>
             </div>
-        `;
+    `;
 
         return popupHTML;
     }
@@ -1602,7 +1644,7 @@ class RouteDetailsModal {
             }
 
             const apiBase = window.apiBase || '/api';
-            console.warn('📡 Fetching media from:', `${apiBase}/admin/routes/${routeId}/media`);
+            console.warn('📡 Fetching media from:', `${apiBase} /admin/routes / ${routeId}/media`);
 
             const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
                 credentials: 'include'
@@ -2088,7 +2130,7 @@ class RouteDetailsModal {
         try {
             if (!this.currentRoute) {
                 console.warn('❌ No route to share');
-                try { (window.showNotification || window.notificationSystem?.show)?.('Paylaşılacak rota bulunamadı', 'warning'); } catch (_) {}
+                try { (window.showNotification || window.notificationSystem?.show)?.('Paylaşılacak rota bulunamadı', 'warning'); } catch (_) { }
                 return;
             }
 
@@ -2183,7 +2225,7 @@ class RouteDetailsModal {
             }
         } catch (error) {
             console.error('❌ Error in shareRoute:', error);
-            try { (window.showNotification || window.notificationSystem?.show)?.('Paylaşım sırasında hata oluştu', 'error'); } catch (_) {}
+            try { (window.showNotification || window.notificationSystem?.show)?.('Paylaşım sırasında hata oluştu', 'error'); } catch (_) { }
         }
     }
 
@@ -2680,15 +2722,15 @@ class RouteDetailsModal {
                                 ctx.beginPath();
                                 const r = 6;
                                 // rounded rect
-                                ctx.moveTo(bx - w/2 + r, by - h/2);
-                                ctx.lineTo(bx + w/2 - r, by - h/2);
-                                ctx.quadraticCurveTo(bx + w/2, by - h/2, bx + w/2, by - h/2 + r);
-                                ctx.lineTo(bx + w/2, by + h/2 - r);
-                                ctx.quadraticCurveTo(bx + w/2, by + h/2, bx + w/2 - r, by + h/2);
-                                ctx.lineTo(bx - w/2 + r, by + h/2);
-                                ctx.quadraticCurveTo(bx - w/2, by + h/2, bx - w/2, by + h/2 - r);
-                                ctx.lineTo(bx - w/2, by - h/2 + r);
-                                ctx.quadraticCurveTo(bx - w/2, by - h/2, bx - w/2 + r, by - h/2);
+                                ctx.moveTo(bx - w / 2 + r, by - h / 2);
+                                ctx.lineTo(bx + w / 2 - r, by - h / 2);
+                                ctx.quadraticCurveTo(bx + w / 2, by - h / 2, bx + w / 2, by - h / 2 + r);
+                                ctx.lineTo(bx + w / 2, by + h / 2 - r);
+                                ctx.quadraticCurveTo(bx + w / 2, by + h / 2, bx + w / 2 - r, by + h / 2);
+                                ctx.lineTo(bx - w / 2 + r, by + h / 2);
+                                ctx.quadraticCurveTo(bx - w / 2, by + h / 2, bx - w / 2, by + h / 2 - r);
+                                ctx.lineTo(bx - w / 2, by - h / 2 + r);
+                                ctx.quadraticCurveTo(bx - w / 2, by - h / 2, bx - w / 2 + r, by - h / 2);
                                 ctx.closePath();
                                 ctx.fill();
                                 ctx.stroke();
@@ -2732,7 +2774,7 @@ class RouteDetailsModal {
                                 ctx.fill();
                                 ctx.stroke();
                             }
-                        } catch (_) {}
+                        } catch (_) { }
                         ctx.restore();
                     }
 
@@ -2783,7 +2825,7 @@ class RouteDetailsModal {
                         if (!pt) return;
                         const x = pt.x;
                         const y = pt.y - 12;
-                        const type = (mp.media && (mp.media.media_type || (mp.media.url||mp.media.path))) ? self.getMediaTypeFromUrl(mp.media.url || mp.media.path || '') : 'image';
+                        const type = (mp.media && (mp.media.media_type || (mp.media.url || mp.media.path))) ? self.getMediaTypeFromUrl(mp.media.url || mp.media.path || '') : 'image';
                         screenPoints.push({ x, y, media: mp.media, type });
                         mediaPositions.push({ x, y, media: mp.media, type });
                     });
@@ -2929,7 +2971,7 @@ class RouteDetailsModal {
             const currentX = Math.round(x / 5) * 5; // Round to nearest 5px
             if (this.lastElevationDrawnX !== currentX) {
                 this.lastElevationDrawnX = currentX;
-                
+
                 // Save for crosshair rendering
                 this._elevMouseX = x;
                 if (this.elevationChartInstance) this.elevationChartInstance.draw();
@@ -2937,7 +2979,7 @@ class RouteDetailsModal {
 
             // Check if mouse is within chart area
             const chart = this.elevationChartInstance;
-            const area = chart && chart.chartArea ? chart.chartArea : {left: 40, right: rect.width - 40, top: 20, bottom: rect.height - 20};
+            const area = chart && chart.chartArea ? chart.chartArea : { left: 40, right: rect.width - 40, top: 20, bottom: rect.height - 20 };
             if (x < area.left || x > area.right || y < area.top || y > area.bottom) {
                 this.removeMapMarker();
                 return;
@@ -2966,7 +3008,7 @@ class RouteDetailsModal {
                 const pointKey = `${closestPoint.lat.toFixed(4)},${closestPoint.lng.toFixed(4)}`;
                 if (this.lastElevationMarkerPoint !== pointKey) {
                     this.lastElevationMarkerPoint = pointKey;
-                    
+
                     // Update map marker
                     this.updateMapMarkerForElevation(closestPoint);
                 }
@@ -2998,7 +3040,7 @@ class RouteDetailsModal {
                 const hitPoi = this.elevationPoiScreenPoints.find(p => {
                     const dx = p.x - cx;
                     const dy = p.y - cy;
-                    return (dx*dx + dy*dy) <= (10*10); // 10px radius
+                    return (dx * dx + dy * dy) <= (10 * 10); // 10px radius
                 });
                 if (hitPoi && hitPoi.poi) {
                     const poi = hitPoi.poi;
@@ -3016,7 +3058,7 @@ class RouteDetailsModal {
                 const hit = this.elevationMediaScreenPoints.find(p => {
                     const dx = p.x - cx;
                     const dy = p.y - cy;
-                    return (dx*dx + dy*dy) <= (14*14); // 14px radius
+                    return (dx * dx + dy * dy) <= (14 * 14); // 14px radius
                 });
                 if (hit && hit.media) {
                     const media = hit.media;
@@ -3538,22 +3580,27 @@ class RouteDetailsModal {
         // Store current media index for navigation
         this.currentMediaIndex = mediaIndex;
 
+        console.log('📍 Step 1: Testing media URL...');
         // Test the media URL to see if it's accessible (only on first open)
         this.testMediaUrl(mediaUrl).then(isAccessible => {
+            console.log('📍 Step 2: Test result:', isAccessible);
             if (!isAccessible) {
                 console.warn('⚠️ Media URL not accessible, trying alternative patterns...');
                 return this.findWorkingMediaUrl(mediaUrl);
             }
             return mediaUrl;
         }).then(workingUrl => {
+            console.log('📍 Step 3: Working URL found:', workingUrl);
             if (workingUrl) {
+                console.log('📍 Step 4: Creating media viewer modal...');
                 this.createMediaViewerModal(workingUrl, mediaType, mediaIndex);
+                console.log('✅ Media viewer modal created');
             } else {
                 console.error('❌ Could not find working media URL');
                 alert('Medya dosyası yüklenemiyor. Lütfen daha sonra tekrar deneyin.');
             }
         }).catch(error => {
-            console.error('❌ Error testing media URL:', error);
+            console.error('❌ Error in promise chain:', error);
             alert('Medya görüntülenirken hata oluştu.');
         });
     }
@@ -3610,6 +3657,7 @@ class RouteDetailsModal {
         // Create enhanced media viewer modal with navigation
         const viewerModal = document.createElement('div');
         viewerModal.className = 'media-viewer-modal';
+        viewerModal.style.zIndex = '10001'; // Ensure it's above the route modal (9999)
         viewerModal.innerHTML = `
             <div class="media-viewer-overlay" onclick="this.parentElement.remove()"></div>
             <div class="media-viewer-content">
@@ -3628,7 +3676,7 @@ class RouteDetailsModal {
                         <button class="media-viewer-tool" title="İndir" aria-label="İndir" onclick="window.routeDetailsModalInstance.downloadCurrentMedia()">
                             <i class="fas fa-download"></i>
                         </button>
-                        <button class="media-viewer-close" onclick="this.parentElement.parentElement.remove()">
+                        <button class="media-viewer-close" onclick="this.closest('.media-viewer-modal').remove()">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -3667,18 +3715,29 @@ class RouteDetailsModal {
         // Store reference for navigation
         this.currentMediaViewer = viewerModal;
 
-        // Prefer to contain the viewer within the media tab content so tabs remain clickable
-        const mediaTab = this.modal.querySelector('.route-details-tab-content[data-tab="media"]');
-        if (mediaTab) {
-            mediaTab.appendChild(viewerModal);
-        } else {
-            document.body.appendChild(viewerModal);
-        }
+        // Always append to body to avoid stacking context issues and ensure it's on top
+        document.body.appendChild(viewerModal);
+        
+        // Trigger animation
+        requestAnimationFrame(() => {
+            viewerModal.classList.add('show');
+        });
 
         // Add keyboard navigation
         this.addMediaViewerKeyboardNavigation(viewerModal);
 
         console.warn('✅ Enhanced media viewer modal created with URL:', mediaUrl);
+
+        // CRITICAL FIX: Show content immediately instead of waiting for load event
+        setTimeout(() => {
+            const loadingDiv = viewerModal.querySelector('.media-viewer-loading');
+            const contentWrapper = viewerModal.querySelector('.media-viewer-content-wrapper');
+            if (loadingDiv && contentWrapper) {
+                loadingDiv.style.display = 'none';
+                contentWrapper.style.display = 'flex';
+                console.log('🎨 Media viewer content displayed');
+            }
+        }, 100);
 
         // Build/stash current media list for fast navigation
         this.currentMediaList = this.buildCurrentMediaList();
@@ -3942,7 +4001,7 @@ class RouteDetailsModal {
                 viewerModal.classList.add('controls-hidden');
             }, 2000);
         };
-        ['mousemove','touchstart','keydown'].forEach(evt => {
+        ['mousemove', 'touchstart', 'keydown'].forEach(evt => {
             viewerModal.addEventListener(evt, resetTimer, { passive: true });
         });
         resetTimer();
@@ -4070,7 +4129,7 @@ class RouteDetailsModal {
         };
 
         document.addEventListener('keydown', handleKeydown);
-        
+
         // Clean up event listener when modal is removed
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
@@ -4084,7 +4143,7 @@ class RouteDetailsModal {
                 }
             });
         });
-        
+
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
@@ -4354,7 +4413,7 @@ const ScrollLock = (() => {
     };
     const keydownHandler = (e) => {
         if (!lockEl) return;
-        const keys = ['ArrowUp','ArrowDown','PageUp','PageDown','Home','End','Space',' '];
+        const keys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Space', ' '];
         if (keys.includes(e.key)) {
             // If focus is inside modal, allow; else prevent
             if (document.activeElement && lockEl.contains(document.activeElement)) return;
@@ -4502,8 +4561,8 @@ window.showRouteDetails = async function (routeIdOrData) {
 
             const data = await response.json();
             routeData = data.route || data;
-        // Listen tab visibility to re-stabilize layout when returning from another tab
-        try { document.addEventListener('visibilitychange', this.handleVisibilityChange); } catch (_) {}
+            // Listen tab visibility to re-stabilize layout when returning from another tab
+            try { document.addEventListener('visibilitychange', this.handleVisibilityChange); } catch (_) { }
             console.warn('✅ Route data fetched successfully:', routeData.name);
         }
         // If it's already an object, use it directly

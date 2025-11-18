@@ -5452,11 +5452,32 @@ function cleanupTabState(tabName) {
 function initializePredefinedRoutes() {
     // Log removed for cleaner console
     
+    // Initialize filter chips if available
+    if (typeof initializeFilterChips === 'function') {
+        initializeFilterChips();
+    }
+
     // Initialize filter event listeners
+    const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', applyRouteFilters);
+    }
+    
+    if (clearFiltersBtn) {
+        // Determine which clear function to use based on what UI elements exist
+        if (document.getElementById('routeTypeChips')) {
+            clearFiltersBtn.addEventListener('click', clearAllFilters);
+        } else {
+            clearFiltersBtn.addEventListener('click', clearRouteFilters);
+        }
+    }
+
+    // Legacy filter listeners (fallback)
     const routeTypeFilter = document.getElementById('routeTypeFilter');
     const difficultyFilter = document.getElementById('difficultyFilter');
     const durationFilter = document.getElementById('durationFilter');
-    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
     
     if (routeTypeFilter) {
         routeTypeFilter.addEventListener('change', applyRouteFilters);
@@ -5466,9 +5487,6 @@ function initializePredefinedRoutes() {
     }
     if (durationFilter) {
         durationFilter.addEventListener('change', applyRouteFilters);
-    }
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', clearRouteFilters);
     }
     
     // Initialize map control event listeners
@@ -14942,29 +14960,4 @@ document.addEventListener('DOMContentLoaded', function() {
         console.warn('Available elements with "modal" in id:', 
             Array.from(document.querySelectorAll('[id*="modal"]')).map(el => el.id));
     }
-});// Rate limiting bilgilendirme mesajı
-// Test function to verify category mappings - REMOVED
-
-// Test function to verify category consistency - REMOVED
-
-// Test function to verify API categories - REMOVED
-
-if (window.rateLimiter) {
-    // Log removed for cleaner console
-}
-
-// Debug: Test geometry API endpoint - REMOVED
-
-// Test function for debugging predefined routes media - REMOVED
-
-// Debug function to inspect POI recommendation data - REMOVED
-
-// Simplified test function - REMOVED
-
-// Test function for category system - REMOVED
-
-// Test markers on map - REMOVED
-
-// Visual category preview function - REMOVED
-
-// Test function for debugging - REMOVED
+});
