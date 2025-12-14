@@ -7,8 +7,8 @@
 
 **Ürgüp Seyahat Öneri Sistemi**, Kapadokya bölgesi (özellikle Ürgüp) için geliştirilmiş kapsamlı bir seyahat planlama ve öneri platformudur. Sistem, turistlerin bölgedeki ilgi çekici noktaları (POI - Points of Interest) keşfetmelerine, kişiselleştirilmiş rotalar oluşturmalarına ve hazır rotaları keşfetmelerine yardımcı olur.
 
-**Versiyon**: 2.1.0  
-**Son Güncelleme**: Ocak 2024
+**Versiyon**: 2.2.0  
+**Son Güncelleme**: Aralık 2024
 
 ---
 
@@ -42,6 +42,7 @@
 - **Medya Yönetimi**: POI'lar için fotoğraf, video ve 360° panorama desteği
 - **Değerlendirme Sistemi**: Çok boyutlu rating sistemi (her kategori için ayrı puanlama)
 - **Akıllı Öneriler**: Makine öğrenmesi tabanlı kişiselleştirilmiş POI önerileri
+- **Gelişmiş Arama**: Türkçe karakter desteği ile tam metin arama
 
 #### 🗺️ Rota Planlama
 - **Dinamik Rota Oluşturma**: Kullanıcı tercihlerine göre otomatik rota oluşturma
@@ -50,6 +51,7 @@
 - **Yükseklik Profili**: Rota boyunca yükseklik değişimlerini görselleştirme
 - **Çoklu Ulaşım Modu**: Yürüyüş, bisiklet, araç rotaları desteği
 - **Rota Optimizasyonu**: Mesafe ve süre bazlı otomatik optimizasyon
+- **Rota İçe Aktarma**: GPX, KML, KMZ dosya formatları desteği
 
 #### 🗺️ Harita ve Navigasyon
 - **OpenStreetMap Entegrasyonu**: Folium ve Leaflet tabanlı interaktif haritalar
@@ -60,7 +62,7 @@
 - **360° Panorama Görüntüleme**: Google Model Viewer ile panorama desteği
 
 #### 🗄️ Veritabanı Desteği
-- **Çoklu Veritabanı**: JSON (hızlı başlangıç), PostgreSQL + PostGIS (üretim)
+- **PostgreSQL + PostGIS**: Güçlü coğrafi veri işleme ve sorgulama
 - **Coğrafi Sorgular**: PostGIS ile gelişmiş coğrafi veri işleme
 - **Performans Optimizasyonu**: İndeksleme, connection pooling, sorgu optimizasyonu
 - **Veri Migrasyonu**: Veritabanları arası kolay geçiş araçları
@@ -71,12 +73,19 @@
 - **Admin Paneli**: Gelişmiş POI ve rota yönetim arayüzü
 - **Responsive Tasarım**: Mobil ve masaüstü uyumlu modern arayüz
 - **Performans Optimizasyonları**: Lazy loading, caching, debouncing
+- **Modüler Mimari**: Flask App Factory pattern ile temiz kod yapısı
 
 #### 🤖 AI ve Öneri Sistemi
 - **Akıllı POI Önerileri**: Kullanıcı tercihlerine göre normalize edilmiş ağırlıklandırma
 - **Yakınlık Ağırlıklandırması**: Konum bazlı mesafe faktörü
 - **Kategori Optimizasyonu**: Otomatik kategori sınıflandırması ve eşleştirme
 - **Performans Optimizasyonu**: Veritabanı sorgu optimizasyonları ve caching stratejileri
+
+#### 🔐 Güvenlik ve Kimlik Doğrulama
+- **Session Yönetimi**: Flask-Session ile güvenli oturum yönetimi
+- **Admin Kimlik Doğrulama**: Bcrypt ile şifre hashleme
+- **Rate Limiting**: API endpoint'leri için rate limiting koruması
+- **CORS Yapılandırması**: Esnek CORS ayarları
 
 ### 1.3 Sistem Mimarisi
 
@@ -86,13 +95,26 @@
 │   (HTML/CSS/JS) │◄──►│   (Python)      │◄──►│   + PostGIS     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-                    ┌─────────────────┐
-                    │   Media Files  │
-                    │   (Images/Vids)│
-                    └─────────────────┘
+         │              ┌────────┴────────┐             │
+         │              │                 │             │
+         └──────────────┼─────────────────┼─────────────┘
+                    ┌───▼───┐      ┌──────▼──────┐
+                    │ Media │      │   Cache    │
+                    │ Files │      │  (Optional)│
+                    └───────┘      └────────────┘
 ```
+
+### 1.4 Web Arayüzleri
+
+Sistem aşağıdaki web sayfalarını içerir:
+
+- **`poi_recommendation_system.html`**: Ana sayfa - POI önerileri ve rota planlama
+- **`personal_routes.html`**: Kişiselleştirilmiş rota oluşturma arayüzü
+- **`predefined_routes.html`**: Hazır rotaları görüntüleme ve filtreleme
+- **`poi_manager_ui.html`**: POI yönetim paneli (admin)
+- **`poi_manager_enhanced.html`**: Gelişmiş POI yönetim paneli
+- **`route_manager_enhanced.html`**: Rota yönetim paneli (admin)
+- **`file_import_manager.html`**: Rota dosyası içe aktarma arayüzü
 
 ---
 
@@ -151,9 +173,18 @@ wsl --install Ubuntu
 Ana bağımlılıklar (`requirements.txt`):
 ```
 Flask==2.3.3
-psycopg2==2.9.10
+Werkzeug==2.3.7
+flask-cors==6.0.1
+Flask-Session==0.8.0
+Flask-SocketIO==5.5.1
 folium==0.20.0
+networkx==3.5
+numpy==2.3.2
+osmnx==2.0.5
 Pillow==11.3.0
+psycopg2==2.9.10
+python-dotenv==1.1.1
+bcrypt==4.2.0
 requests==2.32.4
 scikit-learn==1.7.1
 ```
@@ -181,7 +212,7 @@ Kurulum scripti şunları otomatik olarak yapar:
 - Sistem bağımlılıklarını kontrol eder ve kurar
 - Python sanal ortamı oluşturur
 - Python paketlerini kurar
-- Veritabanı seçimi ve kurulumu (JSON/PostgreSQL)
+- Veritabanı seçimi ve kurulumu (PostgreSQL)
 - Temel yapılandırmayı oluşturur
 - Kurulum testlerini çalıştırır
 
@@ -203,12 +234,7 @@ pip install -r requirements.txt
 
 #### Adım 3: Veritabanını Yapılandırın
 
-**Seçenek 1: JSON (Hızlı Başlangıç)**
-```bash
-python setup_poi_database.py json
-```
-
-**Seçenek 2: PostgreSQL + PostGIS (Önerilen)**
+**PostgreSQL + PostGIS Kurulumu**
 
 Ubuntu/Debian:
 ```bash
@@ -248,9 +274,9 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 \q
 ```
 
-Veritabanını hazırlayın:
+Veritabanı şemasını oluşturun:
 ```bash
-python setup_poi_database.py postgresql "postgresql://poi_user:your_secure_password@localhost/poi_db"
+python setup_basic_tables.py
 ```
 
 #### Adım 4: Çevre Değişkenlerini Ayarlayın
@@ -258,7 +284,7 @@ python setup_poi_database.py postgresql "postgresql://poi_user:your_secure_passw
 `.env` dosyası oluşturun:
 ```bash
 # Veritabanı Yapılandırması
-POI_DB_TYPE=postgresql  # json, postgresql
+POI_DB_TYPE=postgresql
 POI_DB_HOST=localhost
 POI_DB_PORT=5432
 POI_DB_NAME=poi_db
@@ -273,7 +299,11 @@ SECRET_KEY=your_secret_key_here
 
 # Sunucu Yapılandırması
 HOST=0.0.0.0
-PORT=5505
+PORT=5560
+
+# Admin Kimlik Doğrulama
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD_HASH=your_bcrypt_hashed_password
 
 # Cache Yapılandırması
 CACHE_TYPE=simple
@@ -281,7 +311,8 @@ CACHE_DEFAULT_TIMEOUT=300
 
 # Medya Yapılandırması
 MAX_CONTENT_LENGTH=16777216
-UPLOAD_FOLDER=poi_media
+UPLOAD_FOLDER=temp_uploads
+POI_MEDIA_FOLDER=poi_media
 ALLOWED_EXTENSIONS=jpg,jpeg,png,gif,mp4,mov,avi
 ```
 
@@ -290,24 +321,24 @@ Güçlü şifre oluşturma:
 # Python ile
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
-# OpenSSL ile
-openssl rand -base64 32
+# Admin şifresi hash'i oluşturma
+python generate_password_hash.py
 ```
 
 #### Adım 5: Sistemi Başlatın
 ```bash
-# Geliştirme sunucusu
+# Geliştirme sunucusu (poi_api.py)
 python poi_api.py
 
-# veya WSGI ile
+# veya WSGI ile (modüler yapı)
 python wsgi.py
 
 # Üretim için Gunicorn
 pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:5505 wsgi:application
+gunicorn -w 4 -b 0.0.0.0:5560 wsgi:application
 ```
 
-Tarayıcıda açın: `http://localhost:5505/poi_recommendation_system.html`
+Tarayıcıda açın: `http://localhost:5560/poi_recommendation_system.html`
 
 ### 3.3 Kurulum Testi
 
@@ -327,39 +358,41 @@ pip list
 #### Veritabanı Testi
 ```bash
 # Bağlantıyı test edin
-python -c "from poi_database_adapter import test_connection; test_connection()"
+python -c "from poi_database_adapter import POIDatabaseFactory; db = POIDatabaseFactory.create(); db.connect(); print('✅ Bağlantı başarılı'); db.disconnect()"
 
 # Veritabanı şemasını kontrol edin
-python check_db_schema.py
+python check_db_constraints.py
 ```
 
 #### Uygulama Testi
 ```bash
-# Basit rota testi
-python category_route_planner.py gastronomik --no-elevation --radius 2
+# Smoke testleri çalıştırın
+python smoke_test.py
+
+# Health check endpoint'i test edin
+curl http://localhost:5560/health
 
 # API testi
-python -c "from poi_api import app; print('✅ API modülü yüklenebiliyor')"
-
-# Test suite'i çalıştırın
-python run_all_tests.py
+python -c "from app import create_app; app = create_app(); print('✅ Uygulama yüklenebiliyor')"
 ```
 
 ---
 
 ## 4. Yapılandırma
 
-### 4.1 Veritabanı Seçenekleri
+### 4.1 Veritabanı Yapılandırması
 
-#### JSON Dosyası (Hızlı Başlangıç)
-- **Avantajlar**: Kurulum gerektirmez, hızlı başlangıç, taşınabilir
-- **Dezavantajlar**: Sınırlı performans, eşzamanlı erişim yok, büyük veri setleri için uygun değil
-- **Kullanım**: Küçük projeler, test ortamları, demo
+Sistem PostgreSQL + PostGIS kullanır. Veritabanı bağlantı bilgileri `.env` dosyasında veya ortam değişkenlerinde tanımlanır.
 
-#### PostgreSQL + PostGIS (Önerilen)
-- **Avantajlar**: Güçlü coğrafi sorgular, ACID uyumluluğu, yüksek performans, endüstri standardı
-- **Dezavantajlar**: Kurulum karmaşıklığı, daha fazla kaynak gereksinimi
-- **Kullanım**: Üretim ortamları, büyük projeler, coğrafi veri yoğun uygulamalar
+```bash
+POI_DB_TYPE=postgresql
+POI_DB_HOST=localhost
+POI_DB_PORT=5432
+POI_DB_NAME=poi_db
+POI_DB_USER=poi_user
+POI_DB_PASSWORD=your_password
+POI_DB_CONNECTION=postgresql://poi_user:password@localhost/poi_db
+```
 
 ### 4.2 Flask Yapılandırması
 
@@ -402,20 +435,20 @@ DEFAULT_MAP_ZOOM=13
 
 ```bash
 # Güvenlik
-SESSION_TIMEOUT=3600
-RATE_LIMIT_REQUESTS=100
-RATE_LIMIT_WINDOW=60
+SESSION_LIFETIME=86400  # 24 saat
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_REQUESTS_PER_MINUTE=100
 ```
 
 Dosya izinleri:
 ```bash
 # Hassas dosyaları koruyun
 chmod 600 .env
-chmod 600 config.py
+chmod 600 app/config/settings.py
 
 # Medya klasörlerini yapılandırın
 chmod 755 poi_media/
-chmod 755 poi_images/
+chmod 755 temp_uploads/
 ```
 
 ---
@@ -425,15 +458,17 @@ chmod 755 poi_images/
 ### 5.1 Sistem Erişimi
 
 #### Ana Arayüzler
-- **Ana Sayfa / POI Öneri Sistemi**: `http://localhost:5505/poi_recommendation_system.html`
-- **Keşfedilecek Yerler**: `http://localhost:5505/personal_routes.html`
-- **Hazır Rotalar**: `http://localhost:5505/predefined_routes.html`
-- **Admin Paneli**: `http://localhost:5505/poi_manager_ui.html`
+- **Ana Sayfa / POI Öneri Sistemi**: `http://localhost:5560/poi_recommendation_system.html`
+- **Keşfedilecek Yerler**: `http://localhost:5560/personal_routes.html`
+- **Hazır Rotalar**: `http://localhost:5560/predefined_routes.html`
+- **Admin Paneli**: `http://localhost:5560/poi_manager_ui.html`
+- **Rota Yönetimi**: `http://localhost:5560/route_manager_enhanced.html`
+- **Dosya İçe Aktarma**: `http://localhost:5560/file_import_manager.html`
 
 ### 5.2 POI Keşfi ve Önerileri
 
 #### Adım 1: Ana Sayfaya Erişim
-1. Tarayıcınızda `http://localhost:5505/poi_recommendation_system.html` adresini açın
+1. Tarayıcınızda `http://localhost:5560/poi_recommendation_system.html` adresini açın
 2. Sistem otomatik olarak haritayı yükler ve Ürgüp bölgesini gösterir
 
 #### Adım 2: Konum İzinleri
@@ -506,7 +541,7 @@ POI detay penceresinde şunları görebilirsiniz:
 
 #### Adım 1: Hazır Rotalar Sayfasına Gidin
 1. Ana sayfada "Hazır Rotalar" sekmesine tıklayın
-2. Veya doğrudan `http://localhost:5505/predefined_routes.html` adresine gidin
+2. Veya doğrudan `http://localhost:5560/predefined_routes.html` adresine gidin
 
 #### Adım 2: Rotaları Filtreleyin
 Sol panelde filtreleme seçenekleri:
@@ -539,11 +574,26 @@ Sol panelde filtreleme seçenekleri:
 2. Format seçin (GPX, KML, GeoJSON)
 3. Dosya otomatik olarak indirilecektir
 
-#### Adım 6: Google Maps'te Açın
-1. Rota detay penceresinde "Google Maps'te Aç" butonuna tıklayın
-2. Google Maps yeni sekmede açılacak ve rotayı gösterecektir
+### 5.5 Admin Paneli Kullanımı
 
-### 5.5 Mobil Kullanım
+#### Giriş Yapma
+1. `http://localhost:5560/auth/login` adresine gidin
+2. Admin kullanıcı adı ve şifresi ile giriş yapın
+3. Giriş başarılı olduktan sonra admin paneline yönlendirileceksiniz
+
+#### POI Yönetimi
+1. `http://localhost:5560/poi_manager_ui.html` veya `poi_manager_enhanced.html` adresine gidin
+2. POI ekleme, düzenleme, silme işlemlerini yapabilirsiniz
+3. POI'lere medya dosyaları (fotoğraf, video) yükleyebilirsiniz
+4. POI rating'lerini yönetebilirsiniz
+
+#### Rota Yönetimi
+1. `http://localhost:5560/route_manager_enhanced.html` adresine gidin
+2. Yeni rota oluşturabilir, mevcut rotaları düzenleyebilirsiniz
+3. Rota dosyalarını (GPX, KML) içe aktarabilirsiniz
+4. Rota medya dosyalarını yönetebilirsiniz
+
+### 5.6 Mobil Kullanım
 
 Sistem responsive tasarımla mobil cihazlarda da tam fonksiyonel çalışır:
 
@@ -559,7 +609,7 @@ Sistem responsive tasarımla mobil cihazlarda da tam fonksiyonel çalışır:
 3. **Veri Kullanımı**: Harita verileri internet bağlantısı gerektirir
 4. **Pil Tasarrufu**: GPS kullanımı pil tüketimini artırabilir
 
-### 5.6 İpuçları ve Püf Noktaları
+### 5.7 İpuçları ve Püf Noktaları
 
 #### POI Keşfi İpuçları
 - **Tercih Slider'ları**: Daha spesifik sonuçlar için slider'ları ayarlayın
@@ -589,48 +639,53 @@ Sistem responsive tasarımla mobil cihazlarda da tam fonksiyonel çalışır:
 seyahat_onerisi/
 ├── 📋 requirements.txt              # Python bağımlılıkları
 ├── 🐍 poi_api.py                   # Ana Flask uygulaması (legacy routes)
-├── 🐍 wsgi.py                      # WSGI entry point
+├── 🐍 wsgi.py                      # WSGI entry point (modüler yapı)
 ├── 🐍 category_route_planner.py    # Komut satırı rota planlayıcı
 ├── 🐍 poi_database_adapter.py      # Veritabanı adaptörü
-├── 🐍 route_service.py            # Rota servis katmanı
+├── 🐍 route_service.py            # Rota servis katmanı (legacy)
 ├── 🐍 route_file_parser.py         # GPX/KML dosya işleyici
-├── 🐍 poi_media_manager.py        # Medya yönetim sistemi
+├── 🐍 poi_media_manager.py        # Medya yönetim sistemi (legacy)
 ├── 🐍 elevation_service.py        # Yükseklik servisleri
 ├── 🐍 auth_middleware.py          # Kimlik doğrulama sistemi
+├── 🐍 session_config.py           # Session yapılandırması
+├── 🐍 smoke_test.py               # Smoke test scripti
 │
 ├── 📁 app/                         # Modüler uygulama yapısı
 │   ├── __init__.py                # Flask app factory
 │   ├── 📁 config/                 # Yapılandırma
 │   │   ├── __init__.py
 │   │   ├── settings.py            # Ana ayarlar
-│   │   └── database.py           # Veritabanı yapılandırması
-│   ├── 📁 routes/                # API route'ları
+│   │   └── database.py             # Veritabanı yapılandırması
+│   ├── 📁 routes/                 # API route'ları
 │   │   ├── __init__.py
-│   │   ├── poi.py                # POI endpoints
-│   │   ├── route.py              # Rota endpoints
-│   │   └── route_import.py       # Rota import endpoints
-│   ├── 📁 services/              # İş mantığı katmanı
+│   │   ├── poi.py                 # POI endpoints
+│   │   ├── route.py                # Rota endpoints
+│   │   ├── route_import.py        # Rota import endpoints
+│   │   ├── auth.py                # Kimlik doğrulama endpoints
+│   │   └── health.py              # Health check endpoint
+│   ├── 📁 services/               # İş mantığı katmanı
 │   │   ├── __init__.py
-│   │   ├── poi_service.py       # POI iş mantığı
-│   │   ├── route_service.py     # Rota iş mantığı
-│   │   ├── media_service.py      # Medya iş mantığı
-│   │   ├── auth_service.py       # Kimlik doğrulama
-│   │   └── route_planning_service.py  # Rota planlama
-│   ├── 📁 middleware/           # Middleware'ler
+│   │   ├── poi_service.py         # POI iş mantığı
+│   │   ├── route_service.py       # Rota iş mantığı
+│   │   ├── route_planning_service.py  # Rota planlama
+│   │   ├── route_import_service.py   # Rota içe aktarma
+│   │   ├── media_service.py       # Medya iş mantığı
+│   │   └── auth_service.py        # Kimlik doğrulama
+│   ├── 📁 middleware/             # Middleware'ler
 │   │   ├── __init__.py
-│   │   └── error_handler.py     # Hata yönetimi
-│   └── 📁 utils/                 # Yardımcı fonksiyonlar
+│   │   └── error_handler.py       # Hata yönetimi
+│   └── 📁 utils/                  # Yardımcı fonksiyonlar
 │
 ├── 📁 static/                     # Statik dosyalar
-│   ├── 📁 css/                   # Stil dosyaları
+│   ├── 📁 css/                    # Stil dosyaları
 │   │   ├── poi_recommendation_system.css
 │   │   ├── predefined_routes.css
-│   │   └── 📁 poi-tabs/          # Sekme stilleri
-│   ├── 📁 js/                    # JavaScript dosyaları
+│   │   └── 📁 poi-tabs/           # Sekme stilleri
+│   ├── 📁 js/                     # JavaScript dosyaları
 │   │   ├── poi_recommendation_system.js
 │   │   ├── predefined_routes.js
-│   │   └── 📁 poi-tabs/          # Sekme JavaScript'leri
-│   └── 📁 config/                # Yapılandırma dosyaları
+│   │   └── 📁 poi-tabs/           # Sekme JavaScript'leri
+│   └── 📁 config/                  # Yapılandırma dosyaları
 │
 ├── 📁 templates/                  # HTML şablonları (varsa)
 │
@@ -639,22 +694,18 @@ seyahat_onerisi/
 │   ├── 📁 videos/                # Videolar
 │   └── 📁 by_panorama/           # 360° panoramalar
 │
+├── 📁 temp_uploads/              # Geçici yükleme dosyaları
+│
 ├── 📁 cache/                      # Cache dosyaları
 │
 ├── 📁 tests/                      # Test dosyaları
 │   ├── conftest.py               # pytest yapılandırması
-│   ├── run_all.py                # Tüm testleri çalıştır
+│   ├── smoke.py                  # Smoke testleri
 │   └── 📁 api/                   # API testleri
-│       ├── test_pois.py
-│       ├── test_routes.py
-│       └── test_admin.py
 │
 ├── 📁 scripts/                    # Yardımcı scriptler
 │   ├── install.sh                # Otomatik kurulum
-│   ├── start_poi_api.sh          # Sunucu başlatma
 │   └── backup_poi_ratings.py     # Yedekleme scriptleri
-│
-├── 📁 perf/                       # Performans testleri
 │
 ├── 📁 .env                        # Çevre değişkenleri (gitignore)
 └── 📖 README.md                   # Bu dosya
@@ -665,9 +716,15 @@ seyahat_onerisi/
 - **`poi_api.py`**: Ana Flask uygulaması, legacy route'lar ve tüm endpoint'ler
 - **`wsgi.py`**: Üretim için WSGI entry point, modüler app factory kullanır
 - **`app/__init__.py`**: Flask app factory, modüler yapı için
+- **`app/config/settings.py`**: Ortam bazlı yapılandırma yönetimi
 - **`category_route_planner.py`**: Komut satırı rota planlama aracı
-- **`poi_database_adapter.py`**: Çoklu veritabanı desteği için adaptör
-- **`route_service.py`**: Rota hesaplama ve optimizasyon servisleri
+- **`poi_database_adapter.py`**: Veritabanı adaptörü (PostgreSQL/PostGIS)
+- **`route_service.py`**: Rota hesaplama ve optimizasyon servisleri (legacy)
+- **`app/services/route_service.py`**: Modüler rota servisi
+- **`poi_media_manager.py`**: Medya yönetim sistemi (legacy)
+- **`app/services/media_service.py`**: Modüler medya servisi
+- **`auth_middleware.py`**: Kimlik doğrulama middleware'i
+- **`smoke_test.py`**: Sistem smoke testleri
 
 ### 6.3 Kod Standartları
 
@@ -691,23 +748,76 @@ seyahat_onerisi/
 - **Responsive design** ilkeleri
 - **Performance optimization**
 
+### 6.4 Modüler Mimari
+
+Sistem Flask App Factory pattern kullanarak modüler bir yapıya sahiptir:
+
+```python
+# app/__init__.py
+def create_app(config_name=None):
+    app = Flask(__name__)
+    config = get_config(config_name)
+    app.config.from_object(config)
+    
+    # Middleware'leri başlat
+    configure_session(app)
+    auth_middleware.init_app(app)
+    
+    # Blueprint'leri kaydet
+    register_blueprints(app)
+    
+    return app
+```
+
+Bu yapı sayesinde:
+- Test edilebilirlik artar
+- Kod organizasyonu iyileşir
+- Farklı ortamlar için farklı yapılandırmalar kullanılabilir
+- Kod tekrarı azalır
+
 ---
 
 ## 7. API Dokümantasyonu
 
 ### 7.1 Temel Endpoint'ler
 
+#### Health Check
+
+| Method | Endpoint | Açıklama | Auth |
+|--------|----------|----------|------|
+| GET | `/health` | Sistem sağlık kontrolü | Hayır |
+
+**Örnek:**
+```bash
+curl http://localhost:5560/health
+```
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-12-01T10:00:00Z",
+  "database": {
+    "status": "healthy",
+    "type": "postgresql"
+  }
+}
+```
+
 #### POI Endpoints
 
 | Method | Endpoint | Açıklama | Auth |
 |--------|----------|----------|------|
 | GET | `/api/pois` | Tüm POI'ları listele | Hayır |
-| GET | `/api/pois/{id}` | POI detayı | Hayır |
-| POST | `/api/pois` | Yeni POI oluştur | Evet |
-| PUT | `/api/pois/{id}` | POI güncelle | Evet |
-| DELETE | `/api/pois/{id}` | POI sil | Evet |
-| GET | `/api/pois/{id}/media` | POI medya listesi | Hayır |
-| POST | `/api/pois/{id}/media` | Medya yükle | Evet |
+| GET | `/api/poi/{id}` | POI detayı | Hayır |
+| GET | `/api/search?q={query}` | POI arama | Hayır |
+| POST | `/api/poi` | Yeni POI oluştur | Evet |
+| PUT | `/api/poi/{id}` | POI güncelle | Evet |
+| DELETE | `/api/poi/{id}` | POI sil | Evet |
+| GET | `/api/poi/{id}/media` | POI medya listesi | Hayır |
+| POST | `/api/poi/{id}/media` | Medya yükle | Evet |
+| GET | `/api/poi/{id}/ratings` | POI rating'leri | Hayır |
+| PUT | `/api/poi/{id}/ratings` | POI rating'leri güncelle | Evet |
 
 #### Rota Endpoints
 
@@ -715,9 +825,19 @@ seyahat_onerisi/
 |--------|----------|----------|------|
 | GET | `/api/routes` | Tüm rotaları listele | Hayır |
 | GET | `/api/routes/{id}` | Rota detayı | Hayır |
+| GET | `/api/routes/{id}/geometry` | Rota geometrisi | Hayır |
 | POST | `/api/route/smart` | Akıllı rota oluştur | Hayır |
 | POST | `/api/route/walking` | Yürüyüş rotası hesapla | Hayır |
-| GET | `/api/routes/{id}/geometry` | Rota geometrisi | Hayır |
+| POST | `/api/routes` | Yeni rota oluştur | Evet |
+| PUT | `/api/routes/{id}` | Rota güncelle | Evet |
+| DELETE | `/api/routes/{id}` | Rota sil | Evet |
+
+#### Rota İçe Aktarma Endpoints
+
+| Method | Endpoint | Açıklama | Auth |
+|--------|----------|----------|------|
+| POST | `/api/routes/import` | Rota dosyası içe aktar (GPX/KML/KMZ) | Evet |
+| GET | `/api/routes/import/status/{job_id}` | İçe aktarma durumu | Evet |
 
 #### Öneri Endpoints
 
@@ -725,30 +845,40 @@ seyahat_onerisi/
 |--------|----------|----------|------|
 | POST | `/api/recommendations` | POI önerileri al | Hayır |
 
+#### Kimlik Doğrulama Endpoints
+
+| Method | Endpoint | Açıklama | Auth |
+|--------|----------|----------|------|
+| GET | `/auth/login` | Login sayfası | Hayır |
+| POST | `/auth/login` | Kullanıcı girişi | Hayır |
+| POST | `/auth/logout` | Kullanıcı çıkışı | Evet |
+| GET | `/auth/status` | Oturum durumu | Hayır |
+
 ### 7.2 Örnek API Çağrıları
 
 #### POI Arama
 ```bash
 # Tüm POI'ları listele
-curl http://localhost:5505/api/pois
+curl http://localhost:5560/api/pois
 
 # Belirli POI detayı
-curl http://localhost:5505/api/pois/1
+curl http://localhost:5560/api/poi/1
 
 # Kategoriye göre filtrele
-curl http://localhost:5505/api/pois?category=gastronomik
+curl http://localhost:5560/api/pois?category=gastronomik
 
 # Konum bazlı arama
-curl "http://localhost:5505/api/pois?lat=38.642&lng=34.831&radius=5"
+curl "http://localhost:5560/api/pois?lat=38.642&lng=34.831&radius=5"
 
 # Metin arama
-curl "http://localhost:5505/api/search?q=ürgüp"
+curl "http://localhost:5560/api/search?q=ürgüp"
 ```
 
 #### POI Oluşturma (Admin)
 ```bash
-curl -X POST http://localhost:5505/api/pois \
+curl -X POST http://localhost:5560/api/poi \
   -H "Content-Type: application/json" \
+  -H "Cookie: session=your_session_cookie" \
   -d '{
     "name": "Yeni Restoran",
     "category": "gastronomik",
@@ -760,7 +890,7 @@ curl -X POST http://localhost:5505/api/pois \
 
 #### Akıllı Rota Oluşturma
 ```bash
-curl -X POST http://localhost:5505/api/route/smart \
+curl -X POST http://localhost:5560/api/route/smart \
   -H "Content-Type: application/json" \
   -d '{
     "preferences": {
@@ -775,7 +905,7 @@ curl -X POST http://localhost:5505/api/route/smart \
 
 #### POI Önerileri
 ```bash
-curl -X POST http://localhost:5505/api/recommendations \
+curl -X POST http://localhost:5560/api/recommendations \
   -H "Content-Type: application/json" \
   -d '{
     "preferences": {
@@ -795,13 +925,24 @@ curl -X POST http://localhost:5505/api/recommendations \
 #### Medya Yükleme
 ```bash
 # Fotoğraf yükle
-curl -X POST http://localhost:5505/api/pois/1/media \
+curl -X POST http://localhost:5560/api/poi/1/media \
+  -H "Cookie: session=your_session_cookie" \
   -F "file=@photo.jpg"
 
 # Çoklu fotoğraf yükle
-curl -X POST http://localhost:5505/api/pois/1/media \
+curl -X POST http://localhost:5560/api/poi/1/media \
+  -H "Cookie: session=your_session_cookie" \
   -F "files[]=@photo1.jpg" \
   -F "files[]=@photo2.jpg"
+```
+
+#### Rota İçe Aktarma
+```bash
+curl -X POST http://localhost:5560/api/routes/import \
+  -H "Cookie: session=your_session_cookie" \
+  -F "file=@route.gpx" \
+  -F "name=Yeni Rota" \
+  -F "description=Rota açıklaması"
 ```
 
 ### 7.3 API Response Formatları
@@ -832,6 +973,18 @@ curl -X POST http://localhost:5505/api/pois/1/media \
 }
 ```
 
+#### Paginated Response
+```json
+{
+  "success": true,
+  "routes": [...],
+  "total": 100,
+  "page": 1,
+  "limit": 20,
+  "has_more": true
+}
+```
+
 ---
 
 ## 8. Veritabanı Yapısı
@@ -842,7 +995,7 @@ curl -X POST http://localhost:5505/api/pois/1/media \
 - **Coğrafi Uzantı**: PostGIS 3.0+
 - **Koordinat Sistemi**: WGS84 (EPSG:4326)
 - **ORM**: Yok (Raw SQL - performans için)
-- **Connection Pooling**: psycopg2
+- **Connection Pooling**: psycopg2 connection pool
 
 ### 8.2 Ana Tablolar
 
@@ -931,6 +1084,18 @@ CREATE TABLE route_media (
     caption TEXT,
     is_primary BOOLEAN DEFAULT FALSE,
     media_type VARCHAR(20) DEFAULT 'photo',
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### POI Medya Dosyaları (`poi_media`)
+```sql
+CREATE TABLE poi_media (
+    id SERIAL PRIMARY KEY,
+    poi_id INTEGER NOT NULL REFERENCES pois(id) ON DELETE CASCADE,
+    file_path VARCHAR(255) NOT NULL,
+    thumbnail_path VARCHAR(255),
+    media_type VARCHAR(20) DEFAULT 'image',
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
@@ -1026,6 +1191,7 @@ git checkout -b feature/yeni-ozellik
 ```bash
 python -m pytest tests/
 python -m pytest --cov=app tests/
+python smoke_test.py
 ```
 
 #### 4. Commit ve Push
@@ -1042,20 +1208,21 @@ git push origin feature/yeni-ozellik
 #### Unit Test Örneği
 ```python
 import pytest
-from poi_api import app
-from poi_database_adapter import POIDatabaseAdapter
+from app import create_app
+from app.services.poi_service import POIService
 
 class TestPOIAPI:
     def setup_method(self):
-        self.app = app.test_client()
-        self.db = POIDatabaseAdapter()
+        self.app = create_app('testing')
+        self.client = self.app.test_client()
+        self.service = POIService()
         
     def test_get_pois_success(self):
         """Test successful POI retrieval"""
-        response = self.app.get('/api/pois')
+        response = self.client.get('/api/pois')
         assert response.status_code == 200
-        data = json.loads(response.data)
-        assert 'pois' in data
+        data = response.get_json()
+        assert 'data' in data or 'pois' in data
         
     def test_create_poi_validation(self):
         """Test POI creation with validation"""
@@ -1063,7 +1230,7 @@ class TestPOIAPI:
             'name': '',  # Invalid: empty name
             'category': 'invalid_category'
         }
-        response = self.app.post('/api/pois', json=invalid_poi)
+        response = self.client.post('/api/poi', json=invalid_poi)
         assert response.status_code == 400
 ```
 
@@ -1109,40 +1276,51 @@ def calculate_route_distance(route_points: List[Tuple[float, float]]) -> float:
 
 #### Özel Exception Sınıfları
 ```python
-class POIException(Exception):
-    """Base exception for POI-related errors"""
-    pass
+class APIError(Exception):
+    """Base exception for API-related errors"""
+    def __init__(self, message, code="INTERNAL_ERROR", status_code=500):
+        self.message = message
+        self.code = code
+        self.status_code = status_code
+        super().__init__(self.message)
 
-class POINotFoundError(POIException):
+class POINotFoundError(APIError):
     """Raised when a POI is not found"""
     def __init__(self, poi_id):
+        super().__init__(
+            f"POI with id {poi_id} not found",
+            "POI_NOT_FOUND",
+            404
+        )
         self.poi_id = poi_id
-        super().__init__(f"POI with id {poi_id} not found")
 
-class RouteCreationError(POIException):
+class RouteCreationError(APIError):
     """Raised when route creation fails"""
     def __init__(self, message, details=None):
+        super().__init__(message, "ROUTE_CREATION_ERROR", 400)
         self.details = details
-        super().__init__(message)
 ```
 
 #### Error Handling Middleware
 ```python
-@app.errorhandler(POIException)
-def handle_poi_exception(error):
-    """Handle POI-specific exceptions"""
+from app.middleware.error_handler import error_handler
+
+@error_handler.app_errorhandler(APIError)
+def handle_api_error(error):
+    """Handle API-specific exceptions"""
     response = {
         'success': False,
         'error': {
             'type': error.__class__.__name__,
-            'message': str(error)
+            'message': error.message,
+            'code': error.code
         }
     }
     
     if hasattr(error, 'details'):
         response['error']['details'] = error.details
     
-    return jsonify(response), 400
+    return jsonify(response), error.status_code
 ```
 
 ---
@@ -1158,7 +1336,7 @@ def handle_poi_exception(error):
 **Çözüm**:
 ```bash
 # Bağlantı bilgilerini kontrol et
-python -c "from poi_database_adapter import test_connection; test_connection()"
+python -c "from poi_database_adapter import POIDatabaseFactory; db = POIDatabaseFactory.create(); db.connect(); print('✅ Bağlantı başarılı'); db.disconnect()"
 
 # PostgreSQL servisini kontrol et
 sudo systemctl status postgresql
@@ -1197,12 +1375,12 @@ sudo apt-get install -y python3-dev build-essential
 **Çözüm**:
 ```bash
 # Kullanılan portları kontrol et
-sudo netstat -tulpn | grep :5505
+sudo netstat -tulpn | grep :5560
 # veya
-sudo lsof -i :5505
+sudo lsof -i :5560
 
 # Farklı port kullan
-export PORT=5506
+export PORT=5561
 python poi_api.py
 ```
 
@@ -1254,10 +1432,10 @@ sudo tail -f /var/log/nginx/error.log
 
 ```bash
 # Veritabanı sorgu analizi
-python check_db_schema.py
+python check_db_constraints.py
 
-# Performans testleri çalıştır
-python -m pytest perf/
+# Smoke testleri çalıştır
+python smoke_test.py
 
 # Cache durumunu kontrol et
 ls -lh cache/
@@ -1278,7 +1456,7 @@ pip install gunicorn
 
 # Gunicorn yapılandırma dosyası
 cat > gunicorn.conf.py << EOF
-bind = "127.0.0.1:5505"
+bind = "127.0.0.1:5560"
 workers = 4
 worker_class = "sync"
 worker_connections = 1000
@@ -1304,9 +1482,9 @@ Requires=postgresql.service
 Type=exec
 User=www-data
 Group=www-data
-WorkingDirectory=/opt/urgup-seyahat-onerisi
-Environment="PATH=/opt/urgup-seyahat-onerisi/venv/bin"
-ExecStart=/opt/urgup-seyahat-onerisi/venv/bin/gunicorn --config gunicorn.conf.py wsgi:application
+WorkingDirectory=/opt/rehber/seyahat_onerisi
+Environment="PATH=/opt/rehber/seyahat_onerisi/venv/bin"
+ExecStart=/opt/rehber/seyahat_onerisi/venv/bin/gunicorn --config gunicorn.conf.py wsgi:application
 Restart=always
 RestartSec=3
 StandardOutput=journal
@@ -1341,21 +1519,21 @@ server {
 
     # Static files
     location /static/ {
-        alias /opt/urgup-seyahat-onerisi/static/;
+        alias /opt/rehber/seyahat_onerisi/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
 
     # Media files
     location /media/ {
-        alias /opt/urgup-seyahat-onerisi/poi_media/;
+        alias /opt/rehber/seyahat_onerisi/poi_media/;
         expires 30d;
         add_header Cache-Control "public";
     }
 
     # Main application
     location / {
-        proxy_pass http://127.0.0.1:5505;
+        proxy_pass http://127.0.0.1:5560;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -1390,7 +1568,7 @@ mkdir -p \$BACKUP_DIR
 pg_dump -U poi_user poi_db > \$BACKUP_DIR/poi_db.sql
 
 # Medya dosyaları yedekle
-tar -czf \$BACKUP_DIR/media_backup.tar.gz /opt/urgup-seyahat-onerisi/poi_media/
+tar -czf \$BACKUP_DIR/media_backup.tar.gz /opt/rehber/seyahat_onerisi/poi_media/
 
 # Eski yedekleri temizle (7 günden eski)
 find /backup -name "*.sql" -mtime +7 -delete
@@ -1418,14 +1596,14 @@ df -h
 free -h
 
 # Ağ bağlantılarını izle
-netstat -tlnp | grep :5505
+netstat -tlnp | grep :5560
 ```
 
 #### Log Yönetimi
 ```bash
 # Logrotate yapılandırması
 sudo tee /etc/logrotate.d/urgup-seyahat > /dev/null << EOF
-/opt/urgup-seyahat-onerisi/logs/*.log {
+/opt/rehber/seyahat_onerisi/logs/*.log {
     daily
     missingok
     rotate 52
@@ -1461,10 +1639,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Port
-EXPOSE 5505
+EXPOSE 5560
 
 # Çalıştırma
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5505", "wsgi:application"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5560", "wsgi:application"]
 ```
 
 #### Docker Compose
@@ -1475,7 +1653,7 @@ services:
   web:
     build: .
     ports:
-      - "5505:5505"
+      - "5560:5560"
     environment:
       - POI_DB_TYPE=postgresql
       - POI_DB_CONNECTION=postgresql://poi_user:password@db/poi_db
@@ -1523,24 +1701,11 @@ python category_route_planner.py dogal --elevation
 python category_route_planner.py gastronomik -o rota.html
 ```
 
-### B. Veritabanı Migrasyonları
+### B. Test Komutları
 
 ```bash
-# Yeni migrasyon oluştur
-python database_migration.py create migration_name
-
-# Migrasyonu uygula
-python database_migration.py upgrade
-
-# Migrasyonu geri al
-python database_migration.py downgrade
-```
-
-### C. Test Komutları
-
-```bash
-# Tüm testleri çalıştır
-python run_all_tests.py
+# Smoke testleri çalıştır
+python smoke_test.py
 
 # veya pytest ile
 python -m pytest tests/
@@ -1552,9 +1717,24 @@ python -m pytest tests/api/test_pois.py
 python -m pytest --cov=app tests/
 ```
 
+### C. Veritabanı Yardımcı Scriptleri
+
+```bash
+# Veritabanı şemasını oluştur
+python setup_basic_tables.py
+
+# Veritabanı kısıtlamalarını kontrol et
+python check_db_constraints.py
+
+# Rota yükseklik verilerini güncelle
+python recalculate_route_elevation.py
+
+# POI verilerini içe aktar
+python import_poi_data.py
+```
+
 ### D. İletişim ve Destek
 
-- **E-posta**: support@urgup-seyahat.com
 - **GitHub**: [Proje Sayfası](https://github.com/username/seyahat_onerisi)
 - **Dokümantasyon**: [Wiki](https://github.com/username/seyahat_onerisi/wiki)
 - **Issues**: [GitHub Issues](https://github.com/username/seyahat_onerisi/issues)
@@ -1568,3 +1748,6 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICE
 ---
 
 **Not**: Bu dokümantasyon sürekli güncellenmektedir. En güncel sürüm için GitHub repository'sini kontrol edin.
+
+**Versiyon**: 2.2.0  
+**Son Güncelleme**: Aralık 2024
