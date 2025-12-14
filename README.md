@@ -1,14 +1,14 @@
 # 🗺️ Ürgüp Seyahat Öneri Sistemi
 
-[![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Flask](https://img.shields.io/badge/Flask-2.3.3-green.svg)](https://flask.palletsprojects.com/)
 [![PostGIS](https://img.shields.io/badge/PostGIS-3.0+-orange.svg)](https://postgis.net/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-TBD-lightgrey.svg)](#lisans)
 
 **Ürgüp Seyahat Öneri Sistemi**, Kapadokya bölgesi (özellikle Ürgüp) için geliştirilmiş kapsamlı bir seyahat planlama ve öneri platformudur. Sistem, turistlerin bölgedeki ilgi çekici noktaları (POI - Points of Interest) keşfetmelerine, kişiselleştirilmiş rotalar oluşturmalarına ve hazır rotaları keşfetmelerine yardımcı olur.
 
 **Versiyon**: 2.2.0  
-**Son Güncelleme**: Aralık 2024
+**Son Güncelleme**: Aralık 2025
 
 ---
 
@@ -122,14 +122,14 @@ Sistem aşağıdaki web sayfalarını içerir:
 
 ### 2.1 Minimum Gereksinimler
 - **İşletim Sistemi**: Linux (Ubuntu 18.04+), macOS (10.14+), Windows 10+
-- **Python**: 3.7 veya üzeri
+- **Python**: 3.12
 - **RAM**: 4GB (önerilen 8GB+)
 - **Disk**: 2GB boş alan
 - **İnternet**: Kurulum sırasında gerekli
 
 ### 2.2 Önerilen Gereksinimler (Üretim)
 - **İşletim Sistemi**: Ubuntu 20.04 LTS, macOS 11+, Windows 11
-- **Python**: 3.9 veya üzeri
+- **Python**: 3.12
 - **RAM**: 16GB+
 - **Disk**: SSD, 10GB+ boş alan
 - **CPU**: 4+ çekirdek
@@ -327,18 +327,19 @@ python generate_password_hash.py
 
 #### Adım 5: Sistemi Başlatın
 ```bash
-# Geliştirme sunucusu (poi_api.py)
+# Web arayüzü + legacy API (poi_api.py)
 python poi_api.py
 
-# veya WSGI ile (modüler yapı)
-python wsgi.py
+# Sadece API (modüler yapı / wsgi.py)
+PORT=5560 python wsgi.py
 
-# Üretim için Gunicorn
+# Üretim için Gunicorn (modüler)
 pip install gunicorn
 gunicorn -w 4 -b 0.0.0.0:5560 wsgi:application
 ```
 
-Tarayıcıda açın: `http://localhost:5560/poi_recommendation_system.html`
+Web arayüzü (poi_api.py): `http://localhost:5560/poi_recommendation_system.html`  
+Health check (wsgi.py veya poi_api.py): `http://localhost:5560/health`
 
 ### 3.3 Kurulum Testi
 
@@ -638,9 +639,10 @@ Sistem responsive tasarımla mobil cihazlarda da tam fonksiyonel çalışır:
 ```
 seyahat_onerisi/
 ├── 📋 requirements.txt              # Python bağımlılıkları
+├── 🐚 install.sh                   # Otomatik kurulum
 ├── 🐍 poi_api.py                   # Ana Flask uygulaması (legacy routes)
 ├── 🐍 wsgi.py                      # WSGI entry point (modüler yapı)
-├── 🐍 category_route_planner.py    # Komut satırı rota planlayıcı
+├── 🐍 category_route_planner_with_db.py # Komut satırı rota planlayıcı
 ├── 🐍 poi_database_adapter.py      # Veritabanı adaptörü
 ├── 🐍 route_service.py            # Rota servis katmanı (legacy)
 ├── 🐍 route_file_parser.py         # GPX/KML dosya işleyici
@@ -704,8 +706,9 @@ seyahat_onerisi/
 │   └── 📁 api/                   # API testleri
 │
 ├── 📁 scripts/                    # Yardımcı scriptler
-│   ├── install.sh                # Otomatik kurulum
-│   └── backup_poi_ratings.py     # Yedekleme scriptleri
+│   ├── backup_poi_ratings.py     # Yedekleme scriptleri
+│   ├── bench.sh                  # Basit benchmark
+│   └── restore_safe_delete.sh    # Güvenli geri yükleme
 │
 ├── 📁 .env                        # Çevre değişkenleri (gitignore)
 └── 📖 README.md                   # Bu dosya
@@ -717,7 +720,7 @@ seyahat_onerisi/
 - **`wsgi.py`**: Üretim için WSGI entry point, modüler app factory kullanır
 - **`app/__init__.py`**: Flask app factory, modüler yapı için
 - **`app/config/settings.py`**: Ortam bazlı yapılandırma yönetimi
-- **`category_route_planner.py`**: Komut satırı rota planlama aracı
+- **`category_route_planner_with_db.py`**: Komut satırı rota planlama aracı
 - **`poi_database_adapter.py`**: Veritabanı adaptörü (PostgreSQL/PostGIS)
 - **`route_service.py`**: Rota hesaplama ve optimizasyon servisleri (legacy)
 - **`app/services/route_service.py`**: Modüler rota servisi
@@ -780,6 +783,7 @@ Bu yapı sayesinde:
 ## 7. API Dokümantasyonu
 
 ### 7.1 Temel Endpoint'ler
+> Not: Bu repo iki farklı çalıştırma modu içerir: `poi_api.py` (legacy + web arayüzü) ve `wsgi.py` (modüler API). Bazı admin/import uçları modüler tarafta aşamalı olarak taşınmaktadır.
 
 #### Health Check
 
@@ -828,16 +832,19 @@ curl http://localhost:5560/health
 | GET | `/api/routes/{id}/geometry` | Rota geometrisi | Hayır |
 | POST | `/api/route/smart` | Akıllı rota oluştur | Hayır |
 | POST | `/api/route/walking` | Yürüyüş rotası hesapla | Hayır |
-| POST | `/api/routes` | Yeni rota oluştur | Evet |
-| PUT | `/api/routes/{id}` | Rota güncelle | Evet |
-| DELETE | `/api/routes/{id}` | Rota sil | Evet |
+| POST | `/api/admin/routes` | Yeni rota oluştur | Evet |
+| PUT | `/api/admin/routes/{id}` | Rota güncelle | Evet |
+| DELETE | `/api/admin/routes/{id}` | Rota sil | Evet |
 
 #### Rota İçe Aktarma Endpoints
 
 | Method | Endpoint | Açıklama | Auth |
 |--------|----------|----------|------|
 | POST | `/api/routes/import` | Rota dosyası içe aktar (GPX/KML/KMZ) | Evet |
-| GET | `/api/routes/import/status/{job_id}` | İçe aktarma durumu | Evet |
+| GET | `/api/routes/import/progress/{upload_id}` | İçe aktarma ilerlemesi | Evet |
+| POST | `/api/routes/import/confirm` | İçe aktarmayı onayla | Evet |
+| POST | `/api/routes/import/cancel` | İçe aktarmayı iptal et | Evet |
+| POST | `/api/routes/import/validate` | Dosyayı sadece doğrula (modüler) | Evet |
 
 #### Öneri Endpoints
 
@@ -851,8 +858,9 @@ curl http://localhost:5560/health
 |--------|----------|----------|------|
 | GET | `/auth/login` | Login sayfası | Hayır |
 | POST | `/auth/login` | Kullanıcı girişi | Hayır |
-| POST | `/auth/logout` | Kullanıcı çıkışı | Evet |
+| POST | `/auth/logout` | Kullanıcı çıkışı | Hayır |
 | GET | `/auth/status` | Oturum durumu | Hayır |
+| GET | `/auth/csrf-token` | CSRF token al | Hayır |
 
 ### 7.2 Örnek API Çağrıları
 
@@ -1622,7 +1630,7 @@ EOF
 
 #### Dockerfile
 ```dockerfile
-FROM python:3.9-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -1682,23 +1690,23 @@ volumes:
 #### Rota Planlayıcı
 ```bash
 # Tüm kategorilerde rota oluştur
-python category_route_planner.py
+python category_route_planner_with_db.py
 
 # Belirli kategoride rota oluştur
-python category_route_planner.py gastronomik
-python category_route_planner.py kulturel
+python category_route_planner_with_db.py gastronomik
+python category_route_planner_with_db.py kulturel
 
 # Başlangıç noktası belirle
-python category_route_planner.py kulturel --start "Ürgüp Müzesi"
+python category_route_planner_with_db.py kulturel --start "Ürgüp Müzesi"
 
 # Maksimum mesafe belirle (km)
-python category_route_planner.py aktivite --radius 5
+python category_route_planner_with_db.py aktivite --radius 5
 
 # Yükseklik verilerini dahil et
-python category_route_planner.py dogal --elevation
+python category_route_planner_with_db.py dogal --elevation
 
 # Çıktı formatını belirle
-python category_route_planner.py gastronomik -o rota.html
+python category_route_planner_with_db.py gastronomik -o rota.html
 ```
 
 ### B. Test Komutları
@@ -1743,11 +1751,11 @@ python import_poi_data.py
 
 ## Lisans
 
-Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+Bu repo içinde henüz bir `LICENSE` dosyası bulunmuyor. Lisans bilgisi netleştiğinde bu bölüm güncellenecektir.
 
 ---
 
 **Not**: Bu dokümantasyon sürekli güncellenmektedir. En güncel sürüm için GitHub repository'sini kontrol edin.
 
 **Versiyon**: 2.2.0  
-**Son Güncelleme**: Aralık 2024
+**Son Güncelleme**: Aralık 2025
