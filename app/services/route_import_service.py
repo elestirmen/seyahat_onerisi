@@ -104,6 +104,8 @@ class RouteImportService:
                 file.seek(0)  # Reset position
                 file_hash = hashlib.sha256(file_content).hexdigest()
                 file_info['sha256_hash'] = file_hash
+                # Frontend expects file_hash
+                file_info['file_hash'] = file_hash
             except Exception as e:
                 warnings.append(f"Could not generate file hash: {str(e)}")
             
@@ -162,17 +164,68 @@ class RouteImportService:
             Parsed route data with metadata and coordinates
         """
         try:
-            ext = file_info.get('extension', '').lower()
-            
-            if ext == 'gpx':
-                return self._parse_gpx_file(file_path)
-            elif ext == 'kml':
-                return self._parse_kml_file(file_path)
-            elif ext == 'kmz':
-                return self._parse_kmz_file(file_path)
+            from route_file_parser import RouteFileParser, RouteParserError  # legacy, stdlib-only parser
+
+            ext = (file_info.get('extension') or '').lower()
+            parser = RouteFileParser()
+            parsed = parser.parse_file(file_path, file_type=ext or None)
+
+            metadata = parser.extract_metadata(parsed)
+
+            coords = [
+                {
+                    'lat': p.latitude,
+                    'lng': p.longitude,
+                    'elevation': p.elevation,
+                    'time': p.time.isoformat() if p.time else None,
+                    'name': p.name,
+                    'description': p.description,
+                }
+                for p in parsed.points
+            ]
+
+            waypoints = [
+                {
+                    'lat': p.latitude,
+                    'lng': p.longitude,
+                    'elevation': p.elevation,
+                    'time': p.time.isoformat() if p.time else None,
+                    'name': p.name,
+                    'description': p.description,
+                }
+                for p in parsed.waypoints
+            ]
+
+            # Map preview: cap points to keep UI responsive
+            max_preview = 250
+            if len(coords) <= max_preview:
+                coords_preview = coords
             else:
-                raise APIError(f"Unsupported file type: {ext}", "UNSUPPORTED_FILE_TYPE")
-                
+                step = max(1, len(coords) // max_preview)
+                coords_preview = coords[::step][:max_preview]
+
+            bounds = None
+            if coords:
+                lats = [p['lat'] for p in coords if isinstance(p.get('lat'), (int, float))]
+                lngs = [p['lng'] for p in coords if isinstance(p.get('lng'), (int, float))]
+                if lats and lngs:
+                    bounds = {
+                        'north': max(lats),
+                        'south': min(lats),
+                        'east': max(lngs),
+                        'west': min(lngs),
+                    }
+
+            return {
+                'metadata': metadata,
+                'coordinates': coords,
+                'coordinates_preview': coords_preview,
+                'points_count': len(coords),
+                'waypoints': waypoints,
+                'waypoints_count': len(waypoints),
+                'bounds': bounds,
+            }
+
         except APIError:
             raise
         except Exception as e:
@@ -352,7 +405,15 @@ class RouteImportService:
             parsed_data = self.parse_route_file(file_path, validation_result['file_info'])
             
             # Complete
-            self.update_progress(upload_id, 'completed', 100, 'Import completed successfully')
+            self.update_progress(
+                upload_id,
+                'completed',
+                100,
+                'Import completed successfully',
+                file_info=validation_result.get('file_info') or {},
+                route_data=parsed_data,
+                temp_file_path=file_path,
+            )
             
             return {
                 'success': True,

@@ -25,6 +25,7 @@ MANIFEST
 
 # Virtual Environment
 venv/
+poi_env/
 env/
 ENV/
 env.bak/

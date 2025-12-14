@@ -62,6 +62,34 @@ def list_pois():
         raise APIError("Internal server error", "INTERNAL_ERROR", 500)
 
 
+@poi_bp.route('/pois', methods=['POST'])
+@auth_middleware.require_auth
+def create_poi_collection():
+    """
+    Create new POI (collection-style endpoint).
+
+    This keeps OpenAPI and common REST conventions aligned:
+    - GET  /api/pois  -> list
+    - POST /api/pois  -> create
+    """
+    try:
+        if not request.is_json:
+            raise bad_request("Request must be JSON")
+
+        poi_data = request.get_json()
+        if not poi_data:
+            raise bad_request("Request body is required")
+
+        result = poi_service.create_poi(poi_data)
+        return jsonify(result), 201
+
+    except APIError:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in create_poi_collection: {e}")
+        raise APIError("Internal server error", "INTERNAL_ERROR", 500)
+
+
 @poi_bp.route('/search', methods=['GET'])
 def search_pois():
     """

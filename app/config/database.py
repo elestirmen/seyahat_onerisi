@@ -95,48 +95,75 @@ class DatabasePool:
         
         connection = None
         retries = 0
-        
+        close_connection = False
+
+        # Acquire a healthy connection (with retry)
+        while retries < self.max_retries:
+            try:
+                with self.pool_lock:
+                    connection = self.pool.getconn()
+
+                if not connection:
+                    raise ConnectionError("No connection available from pool")
+
+                # Lightweight validation of the connection
+                with connection.cursor() as test_cursor:
+                    test_cursor.execute(self.health_check_query)
+                    test_cursor.fetchone()
+
+                # Ensure we're not leaking a transaction opened by the health check
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
+
+                break
+
+            except Exception as e:
+                logger.warning(f"Database connection attempt {retries + 1} failed: {e}")
+
+                if connection:
+                    try:
+                        with self.pool_lock:
+                            self.pool.putconn(connection, close=True)
+                    except Exception:
+                        pass
+                    connection = None
+
+                retries += 1
+                if retries < self.max_retries:
+                    time.sleep(self.retry_delay * retries)  # Exponential backoff
+                else:
+                    raise ConnectionError(
+                        f"Failed to get database connection after {self.max_retries} attempts"
+                    )
+
+        if not connection:
+            raise ConnectionError("Failed to get database connection")
+
         try:
-            while retries < self.max_retries:
-                try:
-                    with self.pool_lock:
-                        connection = self.pool.getconn()
-                    
-                    if connection:
-                        # Test connection before yielding
-                        with connection.cursor() as test_cursor:
-                            test_cursor.execute(self.health_check_query)
-                            test_cursor.fetchone()
-                        
-                        yield connection
-                        break
-                    else:
-                        raise ConnectionError("No connection available from pool")
-                        
-                except Exception as e:
-                    logger.warning(f"Database connection attempt {retries + 1} failed: {e}")
-                    
-                    if connection:
-                        try:
-                            with self.pool_lock:
-                                self.pool.putconn(connection, close=True)
-                        except Exception:
-                            pass
-                        connection = None
-                    
-                    retries += 1
-                    if retries < self.max_retries:
-                        time.sleep(self.retry_delay * retries)  # Exponential backoff
-                    else:
-                        raise ConnectionError(f"Failed to get database connection after {self.max_retries} attempts")
-        
+            yield connection
+            try:
+                connection.commit()
+            except Exception:
+                close_connection = True
+                raise
+        except Exception:
+            try:
+                connection.rollback()
+            except Exception:
+                close_connection = True
+            raise
         finally:
-            if connection:
+            try:
+                with self.pool_lock:
+                    self.pool.putconn(connection, close=close_connection)
+            except Exception as e:
+                logger.error(f"Error returning connection to pool: {e}")
                 try:
-                    with self.pool_lock:
-                        self.pool.putconn(connection)
-                except Exception as e:
-                    logger.error(f"Error returning connection to pool: {e}")
+                    connection.close()
+                except Exception:
+                    pass
     
     def health_check(self) -> dict:
         """

@@ -8,11 +8,13 @@ import logging
 import uuid
 
 from app.services.route_import_service import route_import_service
+from app.services.route_service import route_service
 from app.middleware.error_handler import APIError, bad_request
 
 def not_found(message, details=None):
     raise APIError(message, "NOT_FOUND", 404, details)
 from auth_middleware import auth_middleware
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -128,30 +130,67 @@ def confirm_route_import():
         
         if progress.get('status') != 'completed':
             raise bad_request("Import must be completed before confirmation")
-        
-        # TODO: Implement actual route saving to database
-        # This would involve:
-        # 1. Create route record in database
-        # 2. Save geometry data
-        # 3. Associate with POIs if specified
-        # 4. Clean up temporary files
-        
-        # For now, return success response
-        confirmation_result = {
-            'success': True,
-            'message': 'Route import confirmed successfully',
-            'upload_id': upload_id,
-            'route_name': route_name,
-            'route_description': data.get('route_description', ''),
-            'route_type': data.get('route_type', 'hiking'),
-            'associate_pois': data.get('associate_pois', []),
-            'confirmed_at': route_import_service.progress_tracking[upload_id]['timestamp'] if upload_id in route_import_service.progress_tracking else None
+
+        route_data = progress.get('route_data') or {}
+        file_info = progress.get('file_info') or {}
+        temp_file_path = progress.get('temp_file_path')
+
+        if not route_data or not isinstance(route_data, dict):
+            raise APIError(
+                "Imported route data is not available (server may have restarted). Please re-upload the file.",
+                "IMPORT_STATE_LOST",
+                409,
+            )
+
+        metadata = route_data.get('metadata') or {}
+        coordinates = route_data.get('coordinates') or []
+        waypoints = route_data.get('waypoints') or []
+
+        # Convert parsed metadata.distance (meters) -> routes.total_distance (km)
+        distance_km = None
+        try:
+            distance_m = metadata.get('distance')
+            if distance_m is not None:
+                distance_km = float(distance_m) / 1000.0
+        except (TypeError, ValueError):
+            distance_km = None
+
+        create_payload = {
+            'name': route_name,
+            'description': (data.get('route_description') or metadata.get('description') or ''),
+            'route_type': (data.get('route_type') or metadata.get('route_type') or 'walking'),
+            'total_distance': distance_km,
+            'elevation_gain': metadata.get('elevation_gain'),
+            # Store the full coordinate list as waypoints for legacy UI expectations
+            'waypoints': coordinates,
+            'coordinates': coordinates,
+            # Import metadata (optional fields; written only if schema supports them)
+            'import_source': metadata.get('original_format') or file_info.get('extension'),
+            'original_filename': file_info.get('original_filename'),
+            'import_metadata': metadata,
+            'file_waypoints': waypoints,
+            'import_date': datetime.now(timezone.utc),
         }
-        
-        # Clean up progress tracking (but keep temp file for now in real implementation)
-        # route_import_service.cleanup_upload(upload_id)
-        
-        return jsonify(confirmation_result), 200
+
+        created_route = route_service.create_route(create_payload)
+        route_id = created_route.get('id')
+
+        association_result = {'associated': 0, 'table': None}
+        associate_pois = data.get('associate_pois') or []
+        if route_id and associate_pois:
+            association_result = route_service.associate_pois(int(route_id), associate_pois)
+
+        # Cleanup temp file and progress tracking
+        route_import_service.cleanup_upload(upload_id, temp_file_path)
+
+        return jsonify({
+            'success': True,
+            'message': 'Route import confirmed and saved successfully',
+            'upload_id': upload_id,
+            'route_id': route_id,
+            'route': created_route,
+            'poi_associations': association_result,
+        }), 200
         
     except APIError:
         raise

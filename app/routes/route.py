@@ -350,15 +350,8 @@ def admin_create_route():
         if not route_data:
             raise bad_request("Request body is required")
         
-        # TODO: Implement route creation in service
-        # result = route_service.create_route(route_data)
-        
-        # Temporary placeholder
-        return jsonify({
-            'success': True,
-            'message': 'Route creation endpoint - implementation pending',
-            'data': route_data
-        }), 201
+        result = route_service.create_route(route_data)
+        return jsonify(result), 201
         
     except APIError:
         raise
@@ -390,12 +383,7 @@ def admin_update_route(route_id):
         if not route_data:
             raise bad_request("Request body is required")
         
-        # TODO: Implement route update in service
-        # result = route_service.update_route(route_id, route_data)
-        
-        # Temporary placeholder - return existing route
-        result = route_service.get_route(route_id)
-        
+        result = route_service.update_route(route_id, route_data)
         return jsonify(result), 200
         
     except APIError:
@@ -418,14 +406,8 @@ def admin_delete_route(route_id):
         if not route_id:
             raise bad_request("Route ID is required")
         
-        # TODO: Implement route deletion in service
-        # route_service.delete_route(route_id)
-        
-        # Temporary placeholder
-        return jsonify({
-            'success': True,
-            'message': f'Route {route_id} would be deleted'
-        }), 200
+        route_service.delete_route(route_id)
+        return jsonify({'success': True, 'message': f'Route {route_id} deleted'}), 200
         
     except APIError:
         raise

@@ -1,7 +1,7 @@
 # Makefile for POI Travel Recommendation API
 # SAFE REFACTOR PLAN compatible targets
 
-.PHONY: help quick contract full bench lint format setup run clean install
+.PHONY: help quick contract full bench lint format setup run run-api run-web clean install
 
 # Tool commands (fallback-friendly)
 PYTHON ?= python3
@@ -24,7 +24,9 @@ help:
 	@echo "  lint       - Run all linters with auto-fix"
 	@echo "  format     - Format code (black + isort)"
 	@echo "  setup      - Set up development environment"
-	@echo "  run        - Start the application"
+	@echo "  run        - Start the application (legacy web+api)"
+	@echo "  run-web    - Start legacy web+api (poi_api.py)"
+	@echo "  run-api    - Start modular API only (wsgi.py)"
 	@echo "  clean      - Clean temporary files"
 	@echo "  install    - Install dependencies"
 
@@ -132,8 +134,14 @@ setup:
 
 # Start application
 run:
-	@echo "🚀 Starting POI API application..."
+	@echo "🚀 Starting legacy web+api application..."
 	@$(PYTHON) poi_api.py
+
+run-web: run
+
+run-api:
+	@echo "🚀 Starting modular API application..."
+	@$(PYTHON) wsgi.py
 
 # Clean temporary files
 clean:

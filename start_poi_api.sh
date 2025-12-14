@@ -16,7 +16,15 @@ echo "   POI_DB_NAME: $POI_DB_NAME"
 
 # Activate virtual environment
 echo "🔧 Activating virtual environment..."
-source poi_env/bin/activate
+if [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate
+elif [ -f "poi_env/bin/activate" ]; then
+    # Backward compatibility (legacy venv name)
+    source poi_env/bin/activate
+else
+    echo "❌ Virtual environment not found. Run ./install.sh or create one with: python3 -m venv venv"
+    exit 1
+fi
 
 # Test database connection first
 echo "🔍 Testing database connection..."
