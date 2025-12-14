@@ -107,7 +107,7 @@ class AuthConfig:
     
     def _get_secret_key(self) -> str:
         """Get or generate session secret key with validation."""
-        secret_key = os.getenv('POI_SESSION_SECRET_KEY')
+        secret_key = os.getenv('POI_SESSION_SECRET_KEY') or os.getenv('SECRET_KEY')
         
         if not secret_key:
             secret_key = self._generate_secret_key()
@@ -120,7 +120,7 @@ class AuthConfig:
     
     def _get_password_hash(self) -> str:
         """Get or generate password hash with validation."""
-        password_hash = os.getenv('POI_ADMIN_PASSWORD_HASH')
+        password_hash = os.getenv('POI_ADMIN_PASSWORD_HASH') or os.getenv('ADMIN_PASSWORD_HASH')
         
         if not password_hash:
             password_hash = self._generate_default_password_hash()
@@ -133,12 +133,24 @@ class AuthConfig:
     
     def validate_configuration(self) -> bool:
         """Validate all configuration values."""
+        existing_warnings = list(self.warnings)
         self.validation_errors = []
-        self.warnings = []
+        self.warnings = existing_warnings
         
         # Validate each configuration value
+        value_map = {
+            'POI_MAX_LOGIN_ATTEMPTS': self.MAX_LOGIN_ATTEMPTS,
+            'POI_LOCKOUT_DURATION': self.LOCKOUT_DURATION,
+            'POI_BCRYPT_ROUNDS': self.BCRYPT_ROUNDS,
+            'POI_SESSION_TIMEOUT': self.SESSION_TIMEOUT,
+            'POI_REMEMBER_TIMEOUT': self.REMEMBER_TIMEOUT,
+            'POI_SESSION_SECRET_KEY': self.SECRET_KEY,
+            'POI_ADMIN_PASSWORD_HASH': self.PASSWORD_HASH,
+            'POI_SESSION_SECURE': str(self.SESSION_COOKIE_SECURE),
+        }
+
         for key, rules in self.validation_rules.items():
-            value = os.getenv(key)
+            value = value_map.get(key)
             
             # Check required fields
             if rules.get('required', False) and not value:
@@ -160,15 +172,16 @@ class AuthConfig:
                     self.validation_errors.append(f"{key} must be a valid integer")
             
             elif rules['type'] == str:
-                if 'min_length' in rules and len(value) < rules['min_length']:
+                str_value = str(value)
+                if 'min_length' in rules and len(str_value) < rules['min_length']:
                     self.validation_errors.append(f"{key} must be at least {rules['min_length']} characters long")
                 
                 if 'pattern' in rules:
                     import re
-                    if not re.match(rules['pattern'], value):
+                    if not re.match(rules['pattern'], str_value):
                         self.validation_errors.append(f"{key} does not match required pattern")
                 
-                if 'values' in rules and value not in rules['values']:
+                if 'values' in rules and str_value not in rules['values']:
                     self.validation_errors.append(f"{key} must be one of: {', '.join(rules['values'])}")
         
         # Additional validation logic
@@ -196,16 +209,21 @@ class AuthConfig:
         for warning in self.warnings:
             logger.warning(f"Configuration warning: {warning}")
         
-        # Handle errors
         if self.validation_errors:
             error_msg = "Configuration validation failed:\n" + "\n".join(f"  - {error}" for error in self.validation_errors)
             logger.error(error_msg)
-            
-            # In production, fail fast
-            if os.getenv('DEBUG', 'False').lower() != 'true':
+
+            flask_env = (os.getenv('FLASK_ENV') or '').lower()
+            flask_debug = (os.getenv('FLASK_DEBUG') or '').lower() == 'true'
+            debug = (os.getenv('DEBUG') or '').lower() == 'true'
+
+            is_production = flask_env in ('production', 'prod')
+            is_debug_like = flask_debug or debug or flask_env in ('development', 'dev', 'testing', 'test')
+
+            if is_production and not is_debug_like:
                 raise ConfigurationError(error_msg)
-            else:
-                logger.warning("Running in debug mode, continuing with invalid configuration")
+
+            logger.warning("Continuing with invalid configuration (non-production mode)")
     
     def get_configuration_summary(self) -> Dict[str, Any]:
         """Get a summary of current configuration (excluding sensitive data)."""

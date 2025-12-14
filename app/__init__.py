@@ -96,10 +96,14 @@ def register_blueprints(app):
     # This will be done gradually to maintain compatibility
     
     # Register new modular blueprints FIRST (higher priority)
+    from .routes.health import health_bp
+    from .routes.auth import auth_bp
     from .routes.poi import poi_bp
     from .routes.route import route_bp
     from .routes.route_import import route_import_bp
     
+    app.register_blueprint(health_bp)
+    app.register_blueprint(auth_bp)
     app.register_blueprint(poi_bp)
     app.register_blueprint(route_bp)
     app.register_blueprint(route_import_bp)

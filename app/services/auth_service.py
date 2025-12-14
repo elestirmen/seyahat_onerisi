@@ -8,6 +8,7 @@ import time
 import secrets
 import hashlib
 import logging
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, Tuple
 from flask import session, request, g
@@ -339,16 +340,7 @@ class AuthService:
             True if password is correct
         """
         try:
-            # Get stored password hash from auth config
-            stored_hash = auth_config.get_password_hash()
-            if not stored_hash:
-                logger.error("No password hash found in auth config")
-                return False
-            
-            # Hash the provided password and compare
-            password_hash = hashlib.sha256(password.encode()).hexdigest()
-            return secrets.compare_digest(password_hash, stored_hash)
-            
+            return auth_config.validate_password(password)
         except Exception as e:
             logger.error(f"Password verification error: {e}")
             return False
@@ -364,12 +356,38 @@ class AuthService:
             True if successful
         """
         try:
-            # Hash new password
-            password_hash = hashlib.sha256(new_password.encode()).hexdigest()
-            
-            # Update auth config
-            return auth_config.update_password_hash(password_hash)
-            
+            password_hash = auth_config.hash_password(new_password)
+
+            # Update in-memory configuration for this process
+            auth_config.PASSWORD_HASH = password_hash
+
+            # Best-effort persistence to .env for local deployments
+            env_path = os.path.join(os.getcwd(), ".env")
+            if os.path.exists(env_path):
+                lines = Path(env_path).read_text(encoding="utf-8").splitlines()
+                updated = []
+                seen_poi = False
+                seen_admin = False
+                for line in lines:
+                    if line.startswith("POI_ADMIN_PASSWORD_HASH="):
+                        updated.append(f"POI_ADMIN_PASSWORD_HASH={password_hash}")
+                        seen_poi = True
+                        continue
+                    if line.startswith("ADMIN_PASSWORD_HASH="):
+                        updated.append(f"ADMIN_PASSWORD_HASH={password_hash}")
+                        seen_admin = True
+                        continue
+                    updated.append(line)
+
+                if not seen_poi:
+                    updated.append(f"POI_ADMIN_PASSWORD_HASH={password_hash}")
+                if not seen_admin:
+                    updated.append(f"ADMIN_PASSWORD_HASH={password_hash}")
+
+                Path(env_path).write_text("\n".join(updated) + "\n", encoding="utf-8")
+
+            return True
+
         except Exception as e:
             logger.error(f"Password update error: {e}")
             return False

@@ -37,15 +37,25 @@ class POIService:
         try:
             import psycopg2
             from psycopg2.extras import RealDictCursor
-            
-            conn = psycopg2.connect(
-                host=os.environ.get('DB_HOST', 'localhost'),
-                port=int(os.environ.get('DB_PORT', 5432)),
-                database=os.environ.get('DB_NAME', 'poi_db'),
-                user=os.environ.get('DB_USER', 'poi_user'),
-                password=os.environ.get('DB_PASSWORD', 'poi_password'),
-                cursor_factory=RealDictCursor
-            )
+
+            conn_str = os.environ.get("POI_DB_CONNECTION")
+            if conn_str:
+                conn = psycopg2.connect(conn_str, cursor_factory=RealDictCursor)
+            else:
+                host = os.environ.get("DB_HOST") or os.environ.get("POI_DB_HOST", "localhost")
+                port = int(os.environ.get("DB_PORT") or os.environ.get("POI_DB_PORT") or 5432)
+                database = os.environ.get("DB_NAME") or os.environ.get("POI_DB_NAME", "poi_db")
+                user = os.environ.get("DB_USER") or os.environ.get("POI_DB_USER", "poi_user")
+                password = os.environ.get("DB_PASSWORD") or os.environ.get("POI_DB_PASSWORD", "poi_password")
+
+                conn = psycopg2.connect(
+                    host=host,
+                    port=port,
+                    database=database,
+                    user=user,
+                    password=password,
+                    cursor_factory=RealDictCursor,
+                )
             
             logger.info("Using direct database connection")
             

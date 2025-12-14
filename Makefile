@@ -6,6 +6,7 @@
 # Tool commands (fallback-friendly)
 PYTHON ?= python3
 PIP ?= pip3
+API_BASE_URL ?= http://localhost:5000
 
 # Prefer project venv if available
 ifneq (,$(wildcard venv/bin/python))
@@ -38,17 +39,22 @@ quick:
 	fi
 	@echo "2️⃣ Running ESLint..."
 	@if command -v eslint >/dev/null 2>&1; then \
-		eslint static/js/*.js static/js/**/*.js --max-warnings=0 || (echo "❌ ESLint failed" && exit 1); \
+		ESLINT_MAJOR=$$(eslint -v 2>/dev/null | sed 's/^v//' | cut -d. -f1); \
+		if [ -n "$$ESLINT_MAJOR" ] && [ "$$ESLINT_MAJOR" -lt 8 ]; then \
+			echo "⚠️  ESLint $$ESLINT_MAJOR.x is too old for modern JS syntax, skipping"; \
+		else \
+			eslint static/js/*.js static/js/**/*.js --max-warnings=0 || (echo "❌ ESLint failed" && exit 1); \
+		fi; \
 	else \
 		echo "⚠️  ESLint not available, skipping"; \
 	fi
 	@echo "3️⃣ Running smoke tests..."
 	$(PYTHON) tests/smoke.py || (echo "❌ Smoke tests failed" && exit 1)
 	@echo "4️⃣ Testing health endpoint..."
-	@if curl -s http://localhost:5000/health >/dev/null 2>&1; then \
+	@if curl -s $(API_BASE_URL)/health >/dev/null 2>&1; then \
 		echo "✅ Health endpoint accessible"; \
 	else \
-		echo "⚠️  Health endpoint not accessible (app may not be running)"; \
+		echo "⚠️  Health endpoint not accessible at $(API_BASE_URL)/health (app may not be running)"; \
 	fi
 	@echo "✅ All quick checks passed!"
 
@@ -127,12 +133,7 @@ setup:
 # Start application
 run:
 	@echo "🚀 Starting POI API application..."
-	@if [ -f .env ]; then \
-		export $(shell cat .env | grep -v '^#' | xargs) && $(PYTHON) poi_api.py; \
-	else \
-		echo "⚠️  .env file not found, using defaults"; \
-		$(PYTHON) poi_api.py; \
-	fi
+	@$(PYTHON) poi_api.py
 
 # Clean temporary files
 clean:

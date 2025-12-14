@@ -3,10 +3,11 @@
 WebSocket endpoint for real-time route import progress tracking
 """
 
-from flask import Flask
+from flask import Flask, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_cors import CORS
 import json
+import os
 import time
 import threading
 from datetime import datetime
@@ -14,7 +15,7 @@ from auth_middleware import auth_middleware
 
 # Create Flask app for WebSocket
 websocket_app = Flask(__name__)
-websocket_app.config['SECRET_KEY'] = 'your-secret-key-here'
+websocket_app.config['SECRET_KEY'] = os.environ.get('POI_SESSION_SECRET_KEY') or os.environ.get('SECRET_KEY') or 'change-me'
 CORS(websocket_app, origins=["*"], supports_credentials=True)
 
 # Initialize SocketIO

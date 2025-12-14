@@ -49,6 +49,11 @@ Thumbs.db
 # Logs
 *.log
 logs/
+cookies.txt
+api_log.txt
+reports/junit.xml
+reports/summary.txt
+reports/fallback-summary.txt
 
 # Flask
 instance/

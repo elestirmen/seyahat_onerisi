@@ -59,6 +59,34 @@ configure_session(app)
 # Initialize authentication middleware
 auth_middleware.init_app(app)
 
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for CI/benchmarks."""
+    response = {
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat() + 'Z'
+    }
+
+    # Best-effort database status (never hard-fail health)
+    try:
+        if 'JSON_FALLBACK' in globals() and JSON_FALLBACK:
+            response['database'] = {'status': 'healthy', 'mode': 'json'}
+        else:
+            db = get_db()
+            if db is None:
+                response['database'] = {'status': 'unhealthy'}
+            else:
+                response['database'] = {
+                    'status': 'healthy',
+                    'type': os.environ.get('POI_DB_TYPE', 'postgresql')
+                }
+                db.disconnect()
+    except Exception as e:
+        response['database'] = {'status': 'unhealthy', 'error': str(e)}
+
+    return jsonify(response), 200
+
 # Rate limiting for admin endpoints
 admin_rate_limits = {}
 
@@ -6628,5 +6656,11 @@ if __name__ == '__main__':
         print("❌ Veritabanı bağlantısı başarısız")
     
     port = int(os.environ.get('PORT', 5560))
-    print(f"🔌 Server starting on port {port}")
-    app.run(debug=True, host='0.0.0.0', port=port)
+    host = os.environ.get('HOST', '0.0.0.0')
+    debug = (
+        os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+        or os.environ.get('DEBUG', 'False').lower() == 'true'
+        or os.environ.get('FLASK_ENV', '').lower() in ('development', 'dev')
+    )
+    print(f"🔌 Server starting on {host}:{port} (debug={debug})")
+    app.run(debug=debug, host=host, port=port)

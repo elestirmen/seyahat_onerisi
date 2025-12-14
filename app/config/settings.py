@@ -11,20 +11,20 @@ class Config:
     """Base configuration class with common settings."""
     
     # Flask Core Settings
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    SECRET_KEY = os.environ.get('SECRET_KEY') or os.environ.get('POI_SESSION_SECRET_KEY') or 'dev-secret-key-change-in-production'
     
     # Database Configuration
-    DB_HOST = os.environ.get('DB_HOST', 'localhost')
-    DB_PORT = int(os.environ.get('DB_PORT', 5432))
-    DB_NAME = os.environ.get('DB_NAME', 'poi_database')
-    DB_USER = os.environ.get('DB_USER', 'postgres')
-    DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
+    DB_HOST = os.environ.get('DB_HOST') or os.environ.get('POI_DB_HOST', 'localhost')
+    DB_PORT = int(os.environ.get('DB_PORT') or os.environ.get('POI_DB_PORT') or 5432)
+    DB_NAME = os.environ.get('DB_NAME') or os.environ.get('POI_DB_NAME', 'poi_database')
+    DB_USER = os.environ.get('DB_USER') or os.environ.get('POI_DB_USER', 'postgres')
+    DB_PASSWORD = os.environ.get('DB_PASSWORD') or os.environ.get('POI_DB_PASSWORD', '')
     DB_POOL_SIZE = int(os.environ.get('DB_POOL_SIZE', 10))
     DB_TIMEOUT = int(os.environ.get('DB_TIMEOUT', 30))
     
     # Authentication Configuration
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
-    ADMIN_PASSWORD_HASH = os.environ.get('ADMIN_PASSWORD_HASH', '')
+    ADMIN_PASSWORD_HASH = os.environ.get('ADMIN_PASSWORD_HASH') or os.environ.get('POI_ADMIN_PASSWORD_HASH', '')
     SESSION_LIFETIME = int(os.environ.get('SESSION_LIFETIME', 86400))  # 24 hours
     
     # CORS Configuration

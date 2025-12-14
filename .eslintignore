@@ -1,0 +1,6 @@
+**/*.backup
+**/*.min.js
+**/vendor/**
+**/dist/**
+**/node_modules/**
+
