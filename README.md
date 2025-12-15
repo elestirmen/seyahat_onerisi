@@ -327,6 +327,16 @@ python generate_password_hash.py
 
 #### Adım 5: Sistemi Başlatın
 ```bash
+# Makefile ile (önerilen)
+make setup
+
+# Legacy web arayüzü + legacy API (poi_api.py) — varsayılan port: 5560
+make run-web
+
+# Modüler API (wsgi.py) — varsayılan port: 5000 (5560 için PORT=5560 verin)
+PORT=5560 make run-api
+
+# (İsterseniz manuel da çalıştırabilirsiniz)
 # Web arayüzü + legacy API (poi_api.py)
 python poi_api.py
 
@@ -367,6 +377,11 @@ python check_db_constraints.py
 
 #### Uygulama Testi
 ```bash
+# (Önerilen) Birleştirilmiş test koşucusu
+make validate
+make test
+make contract
+
 # Smoke testleri çalıştırın
 python smoke_test.py
 
@@ -783,7 +798,7 @@ Bu yapı sayesinde:
 ## 7. API Dokümantasyonu
 
 ### 7.1 Temel Endpoint'ler
-> Not: Bu repo iki farklı çalıştırma modu içerir: `poi_api.py` (legacy + web arayüzü) ve `wsgi.py` (modüler API). Bazı admin/import uçları modüler tarafta aşamalı olarak taşınmaktadır.
+> Not: Bu repo iki farklı çalıştırma modu içerir: `poi_api.py` (web arayüzü + legacy API) ve `wsgi.py` (modüler API). Modüler API çekirdek CRUD + rota import + admin rota yönetimi uçlarını hedefler; `/api/route/*` ve `/api/recommendations` gibi gelişmiş uçlar legacy modda bulunur.
 
 #### Health Check
 
@@ -815,7 +830,8 @@ curl http://localhost:5560/health
 | GET | `/api/pois` | Tüm POI'ları listele | Hayır |
 | GET | `/api/poi/{id}` | POI detayı | Hayır |
 | GET | `/api/search?q={query}` | POI arama | Hayır |
-| POST | `/api/poi` | Yeni POI oluştur | Evet |
+| POST | `/api/pois` | Yeni POI oluştur (modüler/önerilen) | Evet |
+| POST | `/api/poi` | Yeni POI oluştur (legacy uyumluluk) | Evet |
 | PUT | `/api/poi/{id}` | POI güncelle | Evet |
 | DELETE | `/api/poi/{id}` | POI sil | Evet |
 | GET | `/api/poi/{id}/media` | POI medya listesi | Hayır |
@@ -830,8 +846,8 @@ curl http://localhost:5560/health
 | GET | `/api/routes` | Tüm rotaları listele | Hayır |
 | GET | `/api/routes/{id}` | Rota detayı | Hayır |
 | GET | `/api/routes/{id}/geometry` | Rota geometrisi | Hayır |
-| POST | `/api/route/smart` | Akıllı rota oluştur | Hayır |
-| POST | `/api/route/walking` | Yürüyüş rotası hesapla | Hayır |
+| POST | `/api/route/smart` | Akıllı rota oluştur (legacy/poi_api.py) | Hayır |
+| POST | `/api/route/walking` | Yürüyüş rotası hesapla (legacy/poi_api.py) | Hayır |
 | POST | `/api/admin/routes` | Yeni rota oluştur | Evet |
 | PUT | `/api/admin/routes/{id}` | Rota güncelle | Evet |
 | DELETE | `/api/admin/routes/{id}` | Rota sil | Evet |
@@ -846,11 +862,13 @@ curl http://localhost:5560/health
 | POST | `/api/routes/import/cancel` | İçe aktarmayı iptal et | Evet |
 | POST | `/api/routes/import/validate` | Dosyayı sadece doğrula (modüler) | Evet |
 
+> Not: Import sırasında `upload_id` durum bilgisi RAM'de tutulur; sunucu yeniden başlarsa aynı `upload_id` ile `/confirm` yapılamaz, dosyayı yeniden yüklemek gerekir.
+
 #### Öneri Endpoints
 
 | Method | Endpoint | Açıklama | Auth |
 |--------|----------|----------|------|
-| POST | `/api/recommendations` | POI önerileri al | Hayır |
+| POST | `/api/recommendations` | POI önerileri al (legacy/poi_api.py) | Hayır |
 
 #### Kimlik Doğrulama Endpoints
 
