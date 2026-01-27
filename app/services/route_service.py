@@ -975,7 +975,15 @@ class RouteService:
             
             # Add fields that the frontend expects
             item['filename'] = Path(item['file_path']).name if item.get('file_path') else ''
-            item['file_size'] = Path(item['file_path']).stat().st_size if item.get('file_path') and Path(item['file_path']).exists() else 0
+            try:
+                file_path = item.get('file_path')
+                if file_path:
+                    path = Path(file_path)
+                    item['file_size'] = path.stat().st_size if path.exists() else 0
+                else:
+                    item['file_size'] = 0
+            except Exception:
+                item['file_size'] = 0
             item['media_type'] = 'image' if item.get('media_type') == 'photo' else item.get('media_type', 'image')
             item['latitude'] = item.get('lat')
             item['longitude'] = item.get('lng')

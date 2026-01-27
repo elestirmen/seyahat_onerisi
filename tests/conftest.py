@@ -2,8 +2,7 @@ import os
 import sys
 import importlib
 from pathlib import Path
-from datetime import datetime, timezone
-import secrets
+from datetime import datetime
 import pytest
 
 # Ensure project root is on sys.path (so 'app' package can be imported)
@@ -15,6 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 @pytest.fixture()
 def app(monkeypatch):
     os.environ.setdefault("FLASK_ENV", "testing")
+    monkeypatch.setenv("POI_ADMIN_TOKEN", "test-admin-token-1234567890")
     # Import the application module
     app_pkg = importlib.import_module("app")
     app_module = importlib.import_module("app.__init__")
@@ -89,12 +89,6 @@ def client(app):
 
 @pytest.fixture()
 def authed_client(client):
-    # Simulate an authenticated session that passes AuthMiddleware checks
-    with client.session_transaction() as sess:
-        now = datetime.now(timezone.utc).isoformat()
-        sess['authenticated'] = True
-        sess['login_time'] = now
-        sess['last_activity'] = now
-        sess['remember_me'] = False
-        sess['csrf_token'] = secrets.token_hex(16)
+    token = os.environ.get("POI_ADMIN_TOKEN", "")
+    client.environ_base["HTTP_X_ADMIN_TOKEN"] = token
     return client

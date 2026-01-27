@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for, Blueprint, abort
+from flask import Flask, request, jsonify, send_from_directory, redirect, url_for, Blueprint, abort
 from flask_cors import CORS
 from poi_database_adapter import POIDatabaseFactory
 from poi_media_manager import POIMediaManager
@@ -12,12 +12,10 @@ import json
 import uuid
 import unicodedata
 import re
-import secrets
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from auth_middleware import auth_middleware
 from auth_config import auth_config
-from session_config import configure_session
 import time
 from functools import wraps
 import tempfile
@@ -51,10 +49,13 @@ def get_db_conn():
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
-CORS(app, origins=["*"], supports_credentials=True)
-
-# Configure session management
-configure_session(app)
+CORS(
+    app,
+    origins=["*"],
+    supports_credentials=False,
+    allow_headers=["Content-Type", "Authorization", "X-Admin-Token"],
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+)
 
 # Initialize authentication middleware
 auth_middleware.init_app(app)
@@ -133,7 +134,7 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 @auth_bp.route('/login', methods=['GET'])
 def login_page():
-    """Serve the login page."""
+    """Serve the admin-token login page."""
     if auth_middleware.is_authenticated():
         # Respect optional next parameter for post-login redirect
         next_url = request.args.get('next')
@@ -145,6 +146,120 @@ def login_page():
         except Exception:
             pass
         return redirect('/')
+
+    # New (stateless) admin-token login UI
+    return """
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Girişi</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0b1220; color: #e5e7eb; }
+      .card { width: 100%; max-width: 520px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 24px; box-shadow: 0 18px 40px rgba(0,0,0,0.35); }
+      h1 { font-size: 18px; margin: 0 0 6px; }
+      p { margin: 0 0 14px; opacity: 0.85; line-height: 1.4; }
+      label { display:block; font-size: 13px; margin: 14px 0 6px; opacity: 0.95; }
+      input { width: 100%; padding: 12px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: #fff; }
+      button { margin-top: 16px; width: 100%; padding: 12px; border-radius: 10px; border: 0; background: #4f46e5; color: #fff; font-weight: 600; cursor: pointer; }
+      button[disabled] { opacity: 0.6; cursor: not-allowed; }
+      .msg { margin-top: 12px; font-size: 13px; }
+      .msg.err { color: #fecaca; }
+      .msg.ok { color: #bbf7d0; }
+      code { background: rgba(0,0,0,0.25); padding: 2px 6px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Admin Token</h1>
+      <p>Devam etmek için <code>POI_ADMIN_TOKEN</code> değerini girin.</p>
+      <form id="loginForm">
+        <label for="token">Token</label>
+        <input id="token" type="password" autocomplete="off" required />
+        <button id="submitBtn" type="submit">Giriş Yap</button>
+        <div id="msg" class="msg"></div>
+      </form>
+    </div>
+    <script>
+      const TOKEN_KEY = 'poi_admin_token';
+      const form = document.getElementById('loginForm');
+      const msg = document.getElementById('msg');
+      const btn = document.getElementById('submitBtn');
+      const tokenInput = document.getElementById('token');
+
+      function setLoading(loading) {
+        btn.disabled = loading;
+        btn.textContent = loading ? 'Kontrol ediliyor...' : 'Giriş Yap';
+      }
+
+      function show(text, ok) {
+        msg.textContent = text;
+        msg.className = 'msg ' + (ok ? 'ok' : 'err');
+      }
+
+      function getNext() {
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get('next') || '/';
+        if (next.startsWith('/') && !next.includes('://') && !next.includes('\\\\')) return next;
+        return '/';
+      }
+
+      async function validateToken(candidate) {
+        const res = await fetch('/auth/status', {
+          headers: { 'X-Admin-Token': candidate, 'Accept': 'application/json' }
+        });
+        const data = await res.json().catch(() => ({}));
+        return Boolean(data && data.authenticated);
+      }
+
+      async function autoLoginIfPresent() {
+        const existing = localStorage.getItem(TOKEN_KEY) || '';
+        if (!existing) return;
+        try {
+          setLoading(true);
+          const ok = await validateToken(existing);
+          if (ok) {
+            window.location.href = getNext();
+          } else {
+            localStorage.removeItem(TOKEN_KEY);
+          }
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = (tokenInput.value || '').trim();
+        if (!token) return;
+        setLoading(true);
+        show('', true);
+        try {
+          const ok = await validateToken(token);
+          if (ok) {
+            localStorage.setItem(TOKEN_KEY, token);
+            show('✅ Token doğrulandı', true);
+            setTimeout(() => window.location.href = getNext(), 200);
+          } else {
+            localStorage.removeItem(TOKEN_KEY);
+            show('❌ Token geçersiz veya sunucu yapılandırılmadı', false);
+            tokenInput.value = '';
+            tokenInput.focus();
+          }
+        } catch (_) {
+          show('❌ Bağlantı hatası', false);
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      tokenInput.focus();
+      autoLoginIfPresent();
+    </script>
+  </body>
+</html>
+"""
     
     # Serve embedded login page
     login_html = '''<!DOCTYPE html>
@@ -383,136 +498,57 @@ def debug_page():
 
 @auth_bp.route('/login', methods=['POST', 'OPTIONS'])
 def login():
-    """Handle user login."""
-    # Handle preflight OPTIONS request
+    """Validate admin token (stateless)."""
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
         response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Token')
         response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response
-    
+
+    if not auth_config.is_admin_token_configured():
+        return jsonify({'success': False, 'error': 'Admin token not configured'}), 503
+
+    data = request.get_json(silent=True) if request.is_json else request.form
+    token = ''
+
     try:
-        # Get client IP for rate limiting
-        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
-        
-        # Check rate limiting
-        is_allowed, remaining_attempts, lockout_time, delay_seconds = auth_middleware.check_rate_limit(client_ip)
-        
-        if not is_allowed:
-            if lockout_time:
-                return jsonify({
-                    'error': 'Too many failed attempts. Account temporarily locked.',
-                    'lockout_time': lockout_time,
-                    'remaining_attempts': 0
-                }), 429
-            elif delay_seconds > 0:
-                return jsonify({
-                    'error': f'Please wait {int(delay_seconds)} seconds before trying again.',
-                    'delay_seconds': int(delay_seconds),
-                    'remaining_attempts': remaining_attempts
-                }), 429
-        
-        # Get form data
-        data = request.get_json() if request.is_json else request.form
-        password = data.get('password', '').strip()
-        remember_me = data.get('remember_me', False)
-        csrf_token = data.get('csrf_token', '')
-        
-        # Basic validation
-        if not password:
-            return jsonify({'error': 'Password is required'}), 400
-        
-        # Validate CSRF token if session exists (for subsequent login attempts)
-        # Skip CSRF validation for initial login attempt when no session exists
-        if session.get('csrf_token') and csrf_token and not auth_middleware.validate_csrf_token(csrf_token):
-            return jsonify({'error': 'Invalid CSRF token'}), 403
-        
-        # Validate password
-        if not auth_middleware.validate_password(password):
-            # Record failed attempt with user agent for security tracking
-            user_agent = request.headers.get('User-Agent', 'Unknown')
-            auth_middleware.record_failed_attempt(client_ip, user_agent)
-            
-            # Get updated rate limit info
-            _, remaining_attempts, _, _ = auth_middleware.check_rate_limit(client_ip)
-            
-            return jsonify({
-                'error': 'Invalid password',
-                'remaining_attempts': remaining_attempts
-            }), 401
-        
-        # Clear failed attempts on successful login
-        auth_middleware.clear_failed_attempts(client_ip)
-        
-        # Create session
-        if auth_middleware.create_session(remember_me):
-            response_data = {
-                'success': True,
-                'message': 'Login successful',
-                'csrf_token': auth_middleware.get_csrf_token(),
-                'session_info': auth_middleware.get_session_info()
-            }
-            
-            response = jsonify(response_data)
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-            return response
-        else:
-            error_response = jsonify({'error': 'Failed to create session'})
-            error_response.headers.add('Access-Control-Allow-Origin', '*')
-            return error_response, 500
-            
-    except Exception as e:
-        print(f"Login error: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+        token = (data.get('token') or data.get('password') or '').strip()  # type: ignore[union-attr]
+    except Exception:
+        token = ''
+
+    if not token:
+        token = (request.headers.get('X-Admin-Token') or '').strip()
+
+    if not token:
+        authz = request.headers.get('Authorization') or ''
+        if authz.lower().startswith('bearer '):
+            token = authz[7:].strip()
+
+    if not auth_config.validate_admin_token(token):
+        return jsonify({'success': False, 'error': 'Invalid token'}), 401
+
+    return jsonify({
+        'success': True,
+        'message': 'Login successful',
+        'csrf_token': '',
+        'session_info': {'authenticated': True, 'expires_at': None},
+    }), 200
 
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     """Handle user logout."""
-    try:
-        # Validate CSRF token
-        data = request.get_json() if request.is_json else request.form
-        csrf_token = data.get('csrf_token', '')
-        
-        if not auth_middleware.validate_csrf_token(csrf_token):
-            return jsonify({'error': 'Invalid CSRF token'}), 403
-        
-        # Destroy session
-        if auth_middleware.destroy_session():
-            return jsonify({
-                'success': True,
-                'message': 'Logout successful'
-            })
-        else:
-            return jsonify({'error': 'Failed to logout'}), 500
-            
-    except Exception as e:
-        print(f"Logout error: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+    return jsonify({'success': True, 'message': 'Logout successful'}), 200
 
 @auth_bp.route('/status', methods=['GET'])
 def auth_status():
     """Check authentication status."""
-    try:
-        if auth_middleware.is_authenticated():
-            session_info = auth_middleware.get_session_info()
-            response_data = {
-                'authenticated': True,
-                'session_info': session_info,
-                'csrf_token': auth_middleware.get_csrf_token()
-            }
-        else:
-            response_data = {
-                'authenticated': False,
-                'csrf_token': None
-            }
-        
-        return jsonify(response_data)
-        
-    except Exception as e:
-        print(f"Auth status error: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+    authenticated = auth_middleware.is_authenticated()
+    return jsonify({
+        'authenticated': authenticated,
+        'session_info': {'authenticated': authenticated, 'expires_at': None},
+        'csrf_token': '',
+    }), 200
 
 @auth_bp.route('/clear-rate-limits', methods=['POST'])
 @auth_middleware.require_auth
@@ -528,202 +564,21 @@ def clear_rate_limits():
 @auth_bp.route('/csrf-token', methods=['GET'])
 def csrf_token():
     """Get CSRF token for forms."""
-    try:
-        # Generate a CSRF token even for non-authenticated users (for login form)
-        if not session.get('csrf_token'):
-            session['csrf_token'] = secrets.token_hex(16)
-        
-        return jsonify({
-            'csrf_token': session.get('csrf_token')
-        })
-        
-    except Exception as e:
-        print(f"CSRF token error: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+    return jsonify({'csrf_token': ''}), 200
 
 @auth_bp.route('/change-password', methods=['POST'])
 @auth_middleware.require_auth
 def change_password():
     """Handle password change for authenticated users."""
-    try:
-        # Get form data
-        data = request.get_json() if request.is_json else request.form
-        current_password = data.get('current_password', '').strip()
-        new_password = data.get('new_password', '').strip()
-        confirm_password = data.get('confirm_password', '').strip()
-        csrf_token = data.get('csrf_token', '')
-        
-        # Validate CSRF token
-        if not auth_middleware.validate_csrf_token(csrf_token):
-            return jsonify({'error': 'Invalid CSRF token'}), 403
-        
-        # Basic validation
-        if not current_password:
-            return jsonify({'error': 'Current password is required'}), 400
-        
-        if not new_password:
-            return jsonify({'error': 'New password is required'}), 400
-        
-        if not confirm_password:
-            return jsonify({'error': 'Password confirmation is required'}), 400
-        
-        # Check if new password matches confirmation
-        if new_password != confirm_password:
-            return jsonify({'error': 'New password and confirmation do not match'}), 400
-        
-        # Validate current password
-        if not auth_middleware.validate_password(current_password):
-            return jsonify({'error': 'Current password is incorrect'}), 401
-        
-        # Password strength validation
-        password_validation = validate_password_strength(new_password)
-        if not password_validation['valid']:
-            return jsonify({'error': password_validation['message']}), 400
-        
-        # Check if new password is different from current
-        if current_password == new_password:
-            return jsonify({'error': 'New password must be different from current password'}), 400
-        
-        # Hash the new password
-        new_password_hash = auth_config.hash_password(new_password)
-        
-        # Update password hash in configuration
-        # Note: In a production system, this would update a database
-        # For this implementation, we'll update the environment variable approach
-        if not update_password_hash(new_password_hash):
-            return jsonify({'error': 'Failed to update password'}), 500
-        
-        # Terminate all active sessions (force re-login)
-        terminate_all_sessions()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Password changed successfully. Please log in again.'
-        })
-        
-    except Exception as e:
-        print(f"Change password error: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
-
-def validate_password_strength(password):
-    """
-    Validate password strength according to security requirements.
-    
-    Args:
-        password: Password to validate
-        
-    Returns:
-        dict: {'valid': bool, 'message': str}
-    """
-    if len(password) < 8:
-        return {'valid': False, 'message': 'Password must be at least 8 characters long'}
-    
-    if len(password) > 128:
-        return {'valid': False, 'message': 'Password must be less than 128 characters long'}
-    
-    # Check for at least one uppercase letter
-    if not any(c.isupper() for c in password):
-        return {'valid': False, 'message': 'Password must contain at least one uppercase letter'}
-    
-    # Check for at least one lowercase letter
-    if not any(c.islower() for c in password):
-        return {'valid': False, 'message': 'Password must contain at least one lowercase letter'}
-    
-    # Check for at least one digit
-    if not any(c.isdigit() for c in password):
-        return {'valid': False, 'message': 'Password must contain at least one number'}
-    
-    # Check for at least one special character
-    special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
-    if not any(c in special_chars for c in password):
-        return {'valid': False, 'message': 'Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)'}
-    
-    # Check for common weak passwords
-    weak_passwords = [
-        'password', '12345678', 'qwerty123', 'admin123', 'password123',
-        'letmein123', 'welcome123', 'changeme123'
-    ]
-    if password.lower() in weak_passwords:
-        return {'valid': False, 'message': 'Password is too common. Please choose a stronger password'}
-    
-    return {'valid': True, 'message': 'Password is strong'}
-
-def update_password_hash(new_password_hash):
-    """
-    Update the password hash in the system.
-    
-    Args:
-        new_password_hash: New bcrypt password hash
-        
-    Returns:
-        bool: True if update successful, False otherwise
-    """
-    try:
-        # Update the auth_config instance
-        auth_config.PASSWORD_HASH = new_password_hash
-        
-        # In a production system, you would update a database here
-        # For this implementation, we'll write to a config file
-        config_file_path = '.env.local'
-        
-        # Read existing config
-        existing_config = {}
-        if os.path.exists(config_file_path):
-            with open(config_file_path, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and '=' in line and not line.startswith('#'):
-                        key, value = line.split('=', 1)
-                        existing_config[key] = value
-        
-        # Update password hash
-        existing_config['POI_ADMIN_PASSWORD_HASH'] = new_password_hash
-        
-        # Write updated config
-        with open(config_file_path, 'w') as f:
-            f.write("# POI Authentication Configuration\n")
-            f.write("# This file is automatically updated when password is changed\n\n")
-            for key, value in existing_config.items():
-                f.write(f"{key}={value}\n")
-        
-        print(f"Password hash updated in {config_file_path}")
-        return True
-        
-    except Exception as e:
-        print(f"Error updating password hash: {e}")
-        return False
-
-def terminate_all_sessions():
-    """
-    Terminate all active sessions to force re-authentication.
-    This is called after password change for security.
-    """
-    try:
-        # Clear current session
-        session.clear()
-        
-        # In a production system with multiple servers, you would:
-        # 1. Update a session blacklist in database
-        # 2. Increment a global session version number
-        # 3. Use Redis to invalidate all sessions
-        
-        # For this file-based session system, we'll clean up session files
-        import tempfile
-        import glob
-        
-        session_dir = os.path.join(tempfile.gettempdir(), 'poi_sessions')
-        if os.path.exists(session_dir):
-            session_files = glob.glob(os.path.join(session_dir, 'session:*'))
-            for session_file in session_files:
-                try:
-                    os.remove(session_file)
-                except Exception as e:
-                    print(f"Error removing session file {session_file}: {e}")
-        
-        print("All sessions terminated after password change")
-        
-    except Exception as e:
-        print(f"Error terminating sessions: {e}")
+    return (
+        jsonify(
+            {
+                'success': False,
+                'error': 'Password auth is disabled. Rotate by changing POI_ADMIN_TOKEN.',
+            }
+        ),
+        501,
+    )
 
 # Register authentication blueprint
 app.register_blueprint(auth_bp)
@@ -5782,7 +5637,7 @@ def confirm_route_import():
                 'points_count': len(parsed_route.points),
                 'waypoints_count': len(parsed_route.waypoints),
                 'imported_at': datetime.now().isoformat(),
-                'imported_by': session.get('user_id', 'unknown'),
+                'imported_by': request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr) or 'unknown',
                 'original_filename': temp_files[0].split('_', 1)[1],  # Remove upload_id prefix
                 'import_source': parsed_route.original_format
             }

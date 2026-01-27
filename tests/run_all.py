@@ -43,11 +43,11 @@ def run_pytest():
 def run_fallback_smoke():
     print("⚠️  Pytest not available. Running fallback API smoke tests...", flush=True)
     from datetime import datetime, timezone
-    import secrets
     import importlib
 
     try:
         os.environ.setdefault("FLASK_ENV", "testing")
+        os.environ.setdefault("POI_ADMIN_TOKEN", "test-admin-token-1234567890")
         app_module = importlib.import_module("app.__init__")
     except Exception as e:
         print(f"❌ Failed to import app: {e}")
@@ -137,16 +137,11 @@ def run_fallback_smoke():
     resp = client.get("/api/admin/routes", headers={"Content-Type": "application/json"})
     check("GET /api/admin/routes (unauth)", resp, expected=(401,))
 
-    # Now simulate an authenticated session
-    with client.session_transaction() as sess:
-        now = datetime.now(timezone.utc).isoformat()
-        sess['authenticated'] = True
-        sess['login_time'] = now
-        sess['last_activity'] = now
-        sess['remember_me'] = False
-        sess['csrf_token'] = secrets.token_hex(16)
-
-    resp = client.get("/api/admin/routes?limit=1")
+    token = os.environ.get("POI_ADMIN_TOKEN", "")
+    resp = client.get(
+        "/api/admin/routes?limit=1",
+        headers={"Content-Type": "application/json", "X-Admin-Token": token},
+    )
     check("GET /api/admin/routes (auth)", resp)
 
     reports = ensure_reports_dir()

@@ -22,6 +22,7 @@ def build_test_app():
     import importlib
 
     os.environ.setdefault("FLASK_ENV", "testing")
+    os.environ.setdefault("POI_ADMIN_TOKEN", "test-admin-token-1234567890")
     app_module = importlib.import_module("app.__init__")
 
     # Prevent real DB pool initialization
@@ -113,4 +114,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

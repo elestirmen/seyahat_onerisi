@@ -301,9 +301,9 @@ SECRET_KEY=your_secret_key_here
 HOST=0.0.0.0
 PORT=5560
 
-# Admin Kimlik Doğrulama
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD_HASH=your_bcrypt_hashed_password
+# Admin Yetkilendirme (tek token)
+# Not: Üretimde `POI_ADMIN_TOKEN` zorunludur (min 16 karakter).
+POI_ADMIN_TOKEN=your_long_random_token_here
 
 # Cache Yapılandırması
 CACHE_TYPE=simple
@@ -316,13 +316,10 @@ POI_MEDIA_FOLDER=poi_media
 ALLOWED_EXTENSIONS=jpg,jpeg,png,gif,mp4,mov,avi
 ```
 
-Güçlü şifre oluşturma:
+Güçlü token oluşturma:
 ```bash
 # Python ile
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"
-
-# Admin şifresi hash'i oluşturma
-python generate_password_hash.py
 ```
 
 #### Adım 5: Sistemi Başlatın

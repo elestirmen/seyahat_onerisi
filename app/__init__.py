@@ -6,15 +6,13 @@ Modular application structure with proper configuration management.
 from flask import Flask
 from flask_cors import CORS
 import logging
-import os
 
 # Import configuration
 from .config.settings import get_config
-from .config.database import init_database_pool, close_database_pool
+from .config.database import init_database_pool
 
 # Import middleware and extensions
 from auth_middleware import auth_middleware
-from session_config import configure_session
 from .middleware.error_handler import error_handler
 
 # Global logger
@@ -41,22 +39,34 @@ def create_app(config_name=None):
     # Load configuration
     config = get_config(config_name)
     app.config.from_object(config)
+    # Apply config-specific validation/hooks (e.g. production checks)
+    try:
+        config.init_app(app)
+    except Exception as e:
+        logger.error(f"Config initialization failed: {e}")
+        raise
     
     # Initialize CORS
     cors_origins = app.config.get('CORS_ORIGINS', ["*"])
     if isinstance(cors_origins, str):
         cors_origins = [origin.strip() for origin in cors_origins.split(',')]
     
-    CORS(app, origins=cors_origins, supports_credentials=True)
-    
-    # Configure session management
-    configure_session(app)
+    CORS(
+        app,
+        origins=cors_origins,
+        supports_credentials=False,
+        allow_headers=["Content-Type", "Authorization", "X-Admin-Token"],
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    )
     
     # Initialize authentication middleware
     auth_middleware.init_app(app)
     
     # Initialize database pool
-    init_database_pool(config)
+    try:
+        init_database_pool(config)
+    except Exception as _db_err:
+        logger.error(f"Database pool initialization failed: {_db_err}")
     
     # Initialize error handler
     error_handler.init_app(app)

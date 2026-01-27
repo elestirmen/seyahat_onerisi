@@ -22,10 +22,8 @@ class Config:
     DB_POOL_SIZE = int(os.environ.get('DB_POOL_SIZE', 10))
     DB_TIMEOUT = int(os.environ.get('DB_TIMEOUT', 30))
     
-    # Authentication Configuration
-    ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
-    ADMIN_PASSWORD_HASH = os.environ.get('ADMIN_PASSWORD_HASH') or os.environ.get('POI_ADMIN_PASSWORD_HASH', '')
-    SESSION_LIFETIME = int(os.environ.get('SESSION_LIFETIME', 86400))  # 24 hours
+    # Admin Token (stateless auth)
+    ADMIN_TOKEN = os.environ.get('POI_ADMIN_TOKEN', '')
     
     # CORS Configuration
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*')
@@ -99,12 +97,10 @@ class ProductionConfig(Config):
         """Production-specific initialization."""
         Config.init_app(app)
         
-        # Ensure critical settings are configured
-        if not app.config.get('SECRET_KEY') or app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production':
-            raise ValueError("SECRET_KEY must be set in production")
-        
-        if not app.config.get('ADMIN_PASSWORD_HASH'):
-            raise ValueError("ADMIN_PASSWORD_HASH must be set in production")
+        # Ensure admin token is configured in production
+        token = (os.environ.get("POI_ADMIN_TOKEN") or "").strip()
+        if len(token) < 16:
+            raise ValueError("POI_ADMIN_TOKEN must be set (min 16 chars) in production")
 
 
 class TestingConfig(Config):

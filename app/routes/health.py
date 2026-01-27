@@ -19,12 +19,13 @@ def health():
 
     Returns 200 if the web service is up; includes best-effort DB status.
     """
+    db_status = database_health_check()
     return (
         jsonify(
             {
                 "status": "healthy",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "database": database_health_check(),
+                "database": db_status,
             }
         ),
         200,
@@ -32,4 +33,3 @@ def health():
 
 
 __all__ = ["health_bp"]
-
