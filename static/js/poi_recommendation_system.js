@@ -11426,48 +11426,88 @@ function focusOnMap(lat, lng) {
             map.setView([lat, lng], 16);
 
             // Find and open the popup for this location
-            markers.forEach(marker => {
-                const markerLatLng = marker.getLatLng();
-                if (Math.abs(markerLatLng.lat - lat) < 0.0001 && Math.abs(markerLatLng.lng - lng) < 0.0001) {
-                    marker.openPopup();
-                }
-            });
+            let popupOpened = false;
+            try {
+                (markers || []).forEach(marker => {
+                    const markerLatLng = marker.getLatLng();
+                    if (Math.abs(markerLatLng.lat - lat) < 0.0001 && Math.abs(markerLatLng.lng - lng) < 0.0001) {
+                        marker.openPopup();
+                        popupOpened = true;
+                    }
+                });
+            } catch (_) {}
+
+            // Also try nearby-layer markers (Yakınımda POIs)
+            if (!popupOpened) {
+                try {
+                    if (typeof nearbyPOIState !== 'undefined' && nearbyPOIState && nearbyPOIState.layer && typeof nearbyPOIState.layer.getLayers === 'function') {
+                        nearbyPOIState.layer.getLayers().forEach(layerMarker => {
+                            if (popupOpened || !layerMarker || typeof layerMarker.getLatLng !== 'function') return;
+                            const p = layerMarker.getLatLng();
+                            if (Math.abs(p.lat - lat) < 0.0001 && Math.abs(p.lng - lng) < 0.0001) {
+                                try { layerMarker.openPopup(); } catch (_) {}
+                                popupOpened = true;
+                            }
+                        });
+                    }
+                } catch (_) {}
+            }
         }, 500);
     }
 }
 
 // Helper function to create POI cards HTML
-function createPOICards(pois) {
-    return pois.map(poi => `
-        <div class="poi-card poi-card--interactive" data-poi-id="${poi.id || poi._id}">
+function createPOICards(pois, options = {}) {
+    const formatDistance = (meters) => {
+        const m = typeof meters === 'number' ? meters : parseFloat(meters);
+        if (isNaN(m)) return '';
+        if (m >= 1000) return `${(m / 1000).toFixed(2)} km`;
+        return `${Math.round(m)} m`;
+    };
+
+    return pois.map(poi => {
+        const poiId = poi.poi_id || poi.id || poi._id;
+        const lat = poi.lat || poi.latitude;
+        const lng = poi.lon || poi.lng || poi.longitude;
+        const categoryKey = poi.category || 'diger';
+        const score = (typeof poi.recommendationScore === 'number') ? poi.recommendationScore : null;
+        const distanceLabel = (options.showDistance || score === null) ? formatDistance(poi.distance_m) : '';
+
+        const scoreHtml = (score !== null)
+            ? `<div class="poi-card__score ${score >= 45 ? 'high-score' : 'low-score'}">${score}% Uygun</div>`
+            : (distanceLabel ? `<div class="poi-card__score high-score">${distanceLabel} uzaklık</div>` : '');
+
+        return `
+        <div class="poi-card poi-card--interactive" data-poi-id="${poiId}" data-poi-category="${String(categoryKey).replace(/"/g, '&quot;')}">
             <div class="poi-card__image-container">
                 <div class="poi-card__image-placeholder loading__skeleton">
                     <i class="fas fa-image"></i>
                 </div>
                 <div class="poi-card__image-overlay"></div>
-                <span class="poi-card__category">${getCategoryDisplayName(poi.category)}</span>
+                <span class="poi-card__category">${getCategoryDisplayName(categoryKey)}</span>
             </div>
 
             <div class="poi-card__content">
                 <div class="poi-card__header">
                     <h3 class="poi-card__title">${poi.name}</h3>
-                    <div class="poi-card__score ${poi.recommendationScore >= 45 ? 'high-score' : 'low-score'}">${poi.recommendationScore}% Uygun</div>
+                    ${scoreHtml}
                 </div>
                 <div class="poi-media-preview"></div>
                 <div class="poi-card__actions">
-                    <button class="btn btn--info btn--sm" onclick="event.stopPropagation(); showPOIDetail('${poi.poi_id || poi.id || poi._id}')">
+                    <button class="btn btn--info btn--sm" onclick="event.stopPropagation(); showPOIDetail('${poiId}')">
                         <i class="fas fa-info-circle"></i> Detaylar
                     </button>
-                    <button class="btn btn--secondary btn--sm" onclick="event.stopPropagation(); focusOnMap(${poi.latitude}, ${poi.longitude})">
+                    <button class="btn btn--secondary btn--sm" onclick="event.stopPropagation(); focusOnMap(${lat}, ${lng})">
                         <i class="fas fa-map-marker-alt"></i> Haritada Göster
                     </button>
-                    <button class="btn btn--success btn--sm" onclick="event.stopPropagation(); addToRoute({id: '${poi.poi_id || poi.id || poi._id}', name: '${poi.name.replace(/'/g, "\\'")}', latitude: ${poi.lat || poi.latitude}, longitude: ${poi.lon || poi.lng || poi.longitude}, category: '${poi.category}'})">
+                    <button class="btn btn--success btn--sm" onclick="event.stopPropagation(); addToRoute({id: '${poiId}', name: '${String(poi.name || '').replace(/'/g, "\\'")}', latitude: ${lat}, longitude: ${lng}, category: '${String(categoryKey).replace(/'/g, "\\'")}'})">
                         <i class="fas fa-plus"></i> Rotaya Ekle
                     </button>
                 </div>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 // Modern POI Cards for improved UX
@@ -12602,27 +12642,16 @@ function initializeNearbyPOIsUI() {
 
         setStatus(`${pois.length} POI bulundu (mesafeye göre sıralı).`, 'success');
 
-        resultsEl.innerHTML = pois.map(poi => {
-            const id = poi._id || poi.id || poi.poi_id || '';
-            const distanceChip = formatDistance(poi.distance_m);
-            const category = poi.category ? getCategoryDisplayName(poi.category) : 'POI';
+        // Reuse the same POI card UI used elsewhere (recommendations / all POIs)
+        resultsEl.innerHTML = `
+            <div class="poi-grid">
+                ${createPOICards(pois, { showDistance: true })}
+            </div>
+        `;
 
-            return `
-                <div class="nearby-poi-card" data-nearby-poi-id="${String(id).replace(/"/g, '&quot;')}"
-                     data-nearby-lat="${poi.latitude}" data-nearby-lng="${poi.longitude}">
-                    <h4 class="nearby-poi-card-title">${escapeHtml(poi.name || 'POI')}</h4>
-                    <div class="nearby-poi-card-meta">
-                        <span class="nearby-poi-chip"><i class="fas fa-route"></i> ${distanceChip}</span>
-                        <span class="nearby-poi-chip secondary"><i class="fas fa-tag"></i> ${escapeHtml(category)}</span>
-                    </div>
-                    <div class="nearby-poi-actions">
-                        <button class="nearby-poi-action-btn" type="button" data-nearby-focus="1">
-                            <i class="fas fa-map-marker-alt"></i> Haritada Göster
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        // Ensure card media and click handlers are wired (same behavior as other lists)
+        try { initializePOICardsMedia(); } catch (_) {}
+        try { updatePOICardClickHandlers(); } catch (_) {}
     };
 
     const findExistingMarker = (poi) => {
@@ -12763,23 +12792,7 @@ function initializeNearbyPOIsUI() {
         try { map.setView([lat, lng], 15, { animate: true }); } catch (_) { map.setView([lat, lng], 15); }
     };
 
-    // Delegated click for result cards
-    resultsEl.addEventListener('click', async (e) => {
-        const card = e.target.closest('.nearby-poi-card');
-        if (!card) return;
-        if (e.target.closest('[data-nearby-focus="1"]') || card) {
-            const lat = parseFloat(card.dataset.nearbyLat);
-            const lng = parseFloat(card.dataset.nearbyLng);
-            const pid = card.dataset.nearbyPoiId;
-            const poi = { _id: pid, id: pid, latitude: lat, longitude: lng, name: card.querySelector('.nearby-poi-card-title')?.textContent || 'POI' };
-            // Best effort: try to enrich from stored marker data
-            const mk = nearbyPOIState.poiMarkersById.get(String(pid));
-            if (mk && mk.poiData) {
-                Object.assign(poi, mk.poiData);
-            }
-            await focusPOIOnMap(poi);
-        }
-    });
+    // (Results are rendered with the shared POI card UI; card buttons already call focusOnMap/showPOIDetail.)
 
     // Radius change: re-run search if we have an active location
     radiusSelect.addEventListener('change', async () => {
@@ -13670,6 +13683,9 @@ function initializePOICardsMedia() {
     poiCards.forEach((card, index) => {
         const poiId = card.dataset.poiId;
         if (!poiId) return;
+
+        // Ensure we always show a decent cover even if there is no image media
+        try { applyPOICardFallbackCover(card); } catch (_) {}
         
         // Make card clickable to open detail modal
         card.style.cursor = 'pointer';
@@ -13695,6 +13711,7 @@ async function loadPOICardMedia(poiId, cardElement) {
         
         // Check if media is already cached
         if (mediaCache[poiId]) {
+            try { applyPOICardMainImage(mediaCache[poiId], cardElement); } catch (_) {}
             displayPOICardMedia(mediaCache[poiId], mediaPreview);
             return;
         }
@@ -13712,7 +13729,11 @@ async function loadPOICardMedia(poiId, cardElement) {
         if (mediaItems.length > 0) {
             // Cache the media
             mediaCache[poiId] = mediaItems;
+            try { applyPOICardMainImage(mediaItems, cardElement); } catch (_) {}
             displayPOICardMedia(mediaItems, mediaPreview);
+        } else {
+            // No media: keep fallback cover
+            try { applyPOICardFallbackCover(cardElement); } catch (_) {}
         }
         
     } catch (error) {
@@ -13750,6 +13771,103 @@ function displayPOICardMedia(mediaItems, previewElement) {
             </div>
         `;
     }
+}
+
+// Apply first image as the main card image (fills the big image area)
+function applyPOICardMainImage(mediaItems, cardElement) {
+    if (!cardElement) return;
+    const imageContainer = cardElement.querySelector('.poi-card__image-container');
+    if (!imageContainer) return;
+
+    // Don't duplicate if an image is already applied
+    if (imageContainer.querySelector('img.poi-card__image')) return;
+
+    const placeholder = imageContainer.querySelector('.poi-card__image-placeholder');
+    const firstImage = (mediaItems || []).find(item =>
+        item.type === 'image' ||
+        (item.filename && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.filename))
+    );
+    if (!firstImage) {
+        try { applyPOICardFallbackCover(cardElement); } catch (_) {}
+        return;
+    }
+
+    const imagePath = firstImage.path || firstImage.preview_path || firstImage.thumbnail_path || firstImage.filename || '';
+    const finalImagePath = normalizeMediaPath(imagePath);
+    if (!finalImagePath) return;
+
+    const img = document.createElement('img');
+    img.className = 'poi-card__image lazy-image';
+    img.alt = (cardElement.querySelector('.poi-card__title')?.textContent || 'POI');
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    // Use dataset for existing lazy loader infra (if present)
+    img.dataset.src = finalImagePath;
+    img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+';
+
+    imageContainer.insertBefore(img, placeholder || imageContainer.firstChild);
+    if (placeholder) placeholder.style.display = 'none';
+
+    try { if (typeof attachEXIFOrientationFix === 'function') attachEXIFOrientationFix(img); } catch (_) {}
+    try {
+        if (window.lazyLoader && typeof window.lazyLoader.setupImageLazyLoading === 'function') {
+            window.lazyLoader.setupImageLazyLoading();
+        } else {
+            // Fallback: if no lazy loader, set src directly
+            img.src = finalImagePath;
+        }
+    } catch (_) {
+        img.src = finalImagePath;
+    }
+}
+
+function applyPOICardFallbackCover(cardElement) {
+    if (!cardElement) return;
+    const imageContainer = cardElement.querySelector('.poi-card__image-container');
+    if (!imageContainer) return;
+
+    // If a real image exists, do nothing
+    if (imageContainer.querySelector('img.poi-card__image')) return;
+
+    const placeholder = imageContainer.querySelector('.poi-card__image-placeholder');
+    if (!placeholder) return;
+    if (placeholder.dataset && placeholder.dataset.coverApplied === '1') return;
+
+    const categoryKey = (cardElement.dataset && cardElement.dataset.poiCategory) ? cardElement.dataset.poiCategory : 'diger';
+    let categoryStyle = { color: '#64748b', iconClass: 'fas fa-map-marker-alt' };
+    try {
+        if (typeof getCategoryStyle === 'function') {
+            categoryStyle = getCategoryStyle(categoryKey) || categoryStyle;
+        }
+    } catch (_) {}
+
+    const categoryLabel = (typeof getCategoryDisplayName === 'function') ? getCategoryDisplayName(categoryKey) : 'POI';
+
+    placeholder.classList.remove('loading__skeleton');
+    placeholder.style.display = 'flex';
+    placeholder.style.alignItems = 'center';
+    placeholder.style.justifyContent = 'center';
+    placeholder.style.flexDirection = 'column';
+    placeholder.style.gap = '8px';
+    placeholder.style.background = `linear-gradient(135deg, ${categoryStyle.color}33 0%, rgba(255,255,255,0.0) 100%)`;
+    placeholder.style.color = '#0f172a';
+
+    placeholder.innerHTML = `
+        <div style="
+            width: 54px; height: 54px; border-radius: 16px;
+            display:flex; align-items:center; justify-content:center;
+            background: ${categoryStyle.color};
+            color: white;
+            box-shadow: 0 10px 26px rgba(0,0,0,0.18);
+        ">
+            <i class="${categoryStyle.iconClass}" style="font-size: 20px;"></i>
+        </div>
+        <div style="font-weight: 800; font-size: 12px; opacity: 0.95; text-align:center; padding: 0 10px;">
+            ${escapeHtml(categoryLabel)}
+        </div>
+    `;
+
+    placeholder.dataset.coverApplied = '1';
 }
 
 // POI Detail Modal System
