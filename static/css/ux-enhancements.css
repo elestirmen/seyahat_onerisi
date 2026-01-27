@@ -42,10 +42,18 @@
 }
 
 /* No Hover Effects Mode */
+/*
+ * NOTE: Leaflet positions tiles/markers using inline `transform`.
+ * A global `*:hover { transform: none !important; }` breaks the map (hover jitter).
+ * Keep the "no hover effects" behavior, but don't override transforms inside Leaflet.
+ */
 .no-hover-effects *:hover {
-    transform: none !important;
     box-shadow: none !important;
     filter: none !important;
+}
+
+.no-hover-effects *:hover:not(.leaflet-container):not(.leaflet-container *) {
+    transform: none !important;
 }
 
 /* Reduced Motion Support */
