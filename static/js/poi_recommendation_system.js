@@ -12390,6 +12390,13 @@ async function initializeApp() {
         }
     }
 
+    // Initialize "Nearby POIs" UI (only on pages that include the section)
+    try {
+        initializeNearbyPOIsUI();
+    } catch (err) {
+        console.warn('Nearby POIs initialization skipped:', err);
+    }
+
     if (document.getElementById('routeTypeChips')) {
         try {
             initializeEnhancedFilters();
@@ -12451,6 +12458,438 @@ async function initializeApp() {
     }
 
     // Log removed for cleaner console
+}
+
+// -------------------- Nearby POIs ("Yakınımda") --------------------
+const nearbyPOIState = {
+    activeLatLng: null,
+    pendingLatLng: null,
+    pickingMode: false,
+    mapClickHandler: null,
+    centerMarker: null,
+    pendingMarker: null,
+    radiusCircle: null,
+    layer: null,
+    poiMarkersById: new Map(),
+};
+
+function initializeNearbyPOIsUI() {
+    const section = document.getElementById('nearbyPOISection');
+    if (!section) return;
+
+    const locateBtn = document.getElementById('nearbyLocateBtn');
+    const pickBtn = document.getElementById('nearbyPickBtn');
+    const useBtn = document.getElementById('nearbyUseLocationBtn');
+    const radiusSelect = document.getElementById('nearbyRadiusKm');
+    const statusEl = document.getElementById('nearbyStatus');
+    const resultsEl = document.getElementById('nearbyResults');
+
+    if (!locateBtn || !pickBtn || !useBtn || !radiusSelect || !statusEl || !resultsEl) return;
+
+    const setStatus = (text, kind = '') => {
+        statusEl.textContent = text || '';
+        statusEl.classList.remove('error', 'success');
+        if (kind) statusEl.classList.add(kind);
+    };
+
+    const getRadiusMeters = () => {
+        const km = parseFloat(radiusSelect.value);
+        if (isNaN(km) || km <= 0) return 1000;
+        return Math.round(km * 1000);
+    };
+
+    const ensureMapReadyAndVisible = async () => {
+        const resultsSection = document.getElementById('resultsSection');
+        const mapSection = document.getElementById('mapSection');
+        if (resultsSection && (resultsSection.style.display === 'none')) {
+            resultsSection.style.display = 'block';
+        }
+        if (mapSection) {
+            mapSection.style.display = 'block';
+        }
+
+        try {
+            if ((!map || !map._loaded) && (typeof window.initializeMainMap === 'function' || typeof initializeMainMap === 'function')) {
+                await (window.initializeMainMap || initializeMainMap)();
+            }
+        } catch (e) {
+            console.warn('Map init failed:', e);
+        }
+
+        if (!map || !window.L) {
+            throw new Error('Harita hazır değil');
+        }
+
+        // Best-effort: fix sizing when section was previously hidden
+        try { setTimeout(() => map.invalidateSize(), 50); } catch (_) {}
+
+        if (!nearbyPOIState.layer) {
+            nearbyPOIState.layer = L.layerGroup().addTo(map);
+        }
+    };
+
+    const clearPickingMode = () => {
+        nearbyPOIState.pickingMode = false;
+        if (nearbyPOIState.mapClickHandler && map) {
+            try { map.off('click', nearbyPOIState.mapClickHandler); } catch (_) {}
+        }
+        nearbyPOIState.mapClickHandler = null;
+        pickBtn.classList.remove('active');
+        pickBtn.innerHTML = '<i class="fas fa-hand-pointer"></i> Haritadan Seç';
+    };
+
+    const setCenterOverlays = (lat, lng, { pending = false } = {}) => {
+        const latlng = L.latLng(lat, lng);
+        const radiusM = getRadiusMeters();
+
+        if (pending) {
+            if (!nearbyPOIState.pendingMarker) {
+                const icon = L.divIcon({
+                    className: 'nearby-pending-location-marker',
+                    html: `<div style="background:#2563eb;width:28px;height:28px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 14px rgba(37,99,235,0.35);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;">◎</div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14],
+                });
+                nearbyPOIState.pendingMarker = L.marker(latlng, { icon }).addTo(map);
+            } else {
+                nearbyPOIState.pendingMarker.setLatLng(latlng);
+            }
+            return;
+        }
+
+        // Active center marker
+        if (!nearbyPOIState.centerMarker) {
+            const icon = L.divIcon({
+                className: 'nearby-center-location-marker',
+                html: `<div style="background:#111827;width:28px;height:28px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 14px rgba(17,24,39,0.30);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;">📍</div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 14],
+            });
+            nearbyPOIState.centerMarker = L.marker(latlng, { icon }).addTo(map);
+        } else {
+            nearbyPOIState.centerMarker.setLatLng(latlng);
+        }
+
+        // Radius circle
+        if (!nearbyPOIState.radiusCircle) {
+            nearbyPOIState.radiusCircle = L.circle(latlng, {
+                radius: radiusM,
+                color: '#3b82f6',
+                weight: 2,
+                fillColor: '#3b82f6',
+                fillOpacity: 0.08,
+            }).addTo(map);
+        } else {
+            nearbyPOIState.radiusCircle.setLatLng(latlng);
+            nearbyPOIState.radiusCircle.setRadius(radiusM);
+        }
+    };
+
+    const formatDistance = (meters) => {
+        const m = typeof meters === 'number' ? meters : parseFloat(meters);
+        if (isNaN(m)) return '';
+        if (m >= 1000) return `${(m / 1000).toFixed(2)} km`;
+        return `${Math.round(m)} m`;
+    };
+
+    const renderResults = (payload) => {
+        const pois = Array.isArray(payload?.pois) ? payload.pois : [];
+        if (pois.length === 0) {
+            resultsEl.innerHTML = '';
+            setStatus('Bu mesafede POI bulunamadı.', 'error');
+            return;
+        }
+
+        setStatus(`${pois.length} POI bulundu (mesafeye göre sıralı).`, 'success');
+
+        resultsEl.innerHTML = pois.map(poi => {
+            const id = poi._id || poi.id || poi.poi_id || '';
+            const distanceChip = formatDistance(poi.distance_m);
+            const category = poi.category ? getCategoryDisplayName(poi.category) : 'POI';
+
+            return `
+                <div class="nearby-poi-card" data-nearby-poi-id="${String(id).replace(/"/g, '&quot;')}"
+                     data-nearby-lat="${poi.latitude}" data-nearby-lng="${poi.longitude}">
+                    <h4 class="nearby-poi-card-title">${escapeHtml(poi.name || 'POI')}</h4>
+                    <div class="nearby-poi-card-meta">
+                        <span class="nearby-poi-chip"><i class="fas fa-route"></i> ${distanceChip}</span>
+                        <span class="nearby-poi-chip secondary"><i class="fas fa-tag"></i> ${escapeHtml(category)}</span>
+                    </div>
+                    <div class="nearby-poi-actions">
+                        <button class="nearby-poi-action-btn" type="button" data-nearby-focus="1">
+                            <i class="fas fa-map-marker-alt"></i> Haritada Göster
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    const findExistingMarker = (poi) => {
+        const pid = String(poi._id || poi.id || poi.poi_id || '');
+        if (!pid) return null;
+        return (markers || []).find(mk => {
+            const id = mk && mk.poiData && (mk.poiData.poi_id || mk.poiData.id || mk.poiData._id);
+            return id != null && String(id) === pid;
+        }) || null;
+    };
+
+    const createNearbyMarker = (poi) => {
+        const lat = parseFloat(poi.latitude || poi.lat);
+        const lng = parseFloat(poi.longitude || poi.lng || poi.lon);
+        if (isNaN(lat) || isNaN(lng)) return null;
+
+        const category = poi.category || '';
+        const style = typeof getCategoryStyle === 'function' ? getCategoryStyle(category) : { color: '#3b82f6', iconClass: 'fas fa-map-marker-alt' };
+
+        const icon = L.divIcon({
+            className: 'nearby-poi-marker',
+            html: `
+                <div style="
+                    background:${style.color};
+                    width:30px;height:30px;border-radius:50%;
+                    border:3px solid white;
+                    box-shadow:0 4px 14px rgba(0,0,0,0.25);
+                    display:flex;align-items:center;justify-content:center;
+                    color:white;
+                ">
+                    <i class="${style.iconClass}" style="font-size: 13px;"></i>
+                </div>
+            `,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+            popupAnchor: [0, -14],
+        });
+
+        const distanceLabel = formatDistance(poi.distance_m);
+        const popupHtml = `
+            <div style="min-width:220px;font-family:'Segoe UI',sans-serif;">
+                <div style="font-weight:800;margin-bottom:6px;">${escapeHtml(poi.name || 'POI')}</div>
+                <div style="color:#64748b;font-size:12px;margin-bottom:8px;">${escapeHtml(getCategoryDisplayName(category) || 'POI')}</div>
+                ${distanceLabel ? `<div style="font-size:12px;color:#111827;"><strong>Mesafe:</strong> ${escapeHtml(distanceLabel)}</div>` : ''}
+                <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
+                    <button onclick="showPOIDetail('${String(poi._id || poi.id || poi.poi_id || '').replace(/'/g, "\\'")}')" style="background:#17a2b8;color:#fff;border:none;padding:6px 10px;border-radius:12px;font-size:11px;cursor:pointer;">ℹ️ Detaylar</button>
+                    <button onclick="openInGoogleMaps(${lat}, ${lng}, '${String(poi.name || '').replace(/'/g, "\\'")}')" style="background:#4285f4;color:#fff;border:none;padding:6px 10px;border-radius:12px;font-size:11px;cursor:pointer;">🗺️ Google Maps</button>
+                    <button onclick="addToRoute({id: '${String(poi._id || poi.id || poi.poi_id || '').replace(/'/g, "\\'")}', name: '${String(poi.name || '').replace(/'/g, "\\'")}', latitude: ${lat}, longitude: ${lng}, category: '${String(category).replace(/'/g, "\\'")}'})" style="background:var(--primary-color);color:#fff;border:none;padding:6px 10px;border-radius:12px;font-size:11px;cursor:pointer;">➕ Rotaya Ekle</button>
+                </div>
+            </div>
+        `;
+
+        const marker = L.marker([lat, lng], { icon }).bindPopup(popupHtml, { maxWidth: 320, autoPan: true });
+        marker.poiData = poi;
+        return marker;
+    };
+
+    const focusPOIOnMap = async (poi) => {
+        await ensureMapReadyAndVisible();
+
+        const lat = parseFloat(poi.latitude || poi.lat);
+        const lng = parseFloat(poi.longitude || poi.lng || poi.lon);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        // Prefer existing markers if they exist (recommendations / exploration)
+        const existing = findExistingMarker(poi);
+        let marker = existing;
+
+        if (!marker) {
+            const pid = String(poi._id || poi.id || poi.poi_id || '');
+            marker = nearbyPOIState.poiMarkersById.get(pid) || null;
+            if (!marker) {
+                marker = createNearbyMarker(poi);
+                if (marker) {
+                    nearbyPOIState.layer.addLayer(marker);
+                    if (pid) nearbyPOIState.poiMarkersById.set(pid, marker);
+                }
+            }
+        }
+
+        // Focus + open popup
+        try {
+            map.setView([lat, lng], 16, { animate: true });
+        } catch (_) {
+            map.setView([lat, lng], 16);
+        }
+        try { marker && marker.openPopup(); } catch (_) {}
+
+        // Bring map into view
+        try {
+            const mapSection = document.getElementById('mapSection');
+            if (mapSection) mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (_) {}
+    };
+
+    const fetchNearby = async (lat, lng) => {
+        const radiusM = getRadiusMeters();
+        const url = `${apiBase}/pois/nearby?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}&radius_m=${encodeURIComponent(radiusM)}&limit=50`;
+        const res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(`Yakın POI API hatası: ${res.status}${text ? ` - ${text}` : ''}`);
+        }
+        return await res.json();
+    };
+
+    const runNearbySearch = async (lat, lng, { source = 'active' } = {}) => {
+        setStatus('Yakındaki POI\'ler aranıyor...', '');
+        resultsEl.innerHTML = '';
+
+        await ensureMapReadyAndVisible();
+
+        // clear layer for fresh results
+        try { nearbyPOIState.layer.clearLayers(); } catch (_) {}
+        nearbyPOIState.poiMarkersById.clear();
+
+        // keep center marker/circle on map (not inside layer)
+        if (source !== 'pending') {
+            setCenterOverlays(lat, lng, { pending: false });
+        }
+
+        const payload = await fetchNearby(lat, lng);
+        renderResults(payload);
+
+        // Add result markers (so "popup" is instant)
+        try {
+            (payload.pois || []).forEach(poi => {
+                const pid = String(poi._id || poi.id || poi.poi_id || '');
+                if (pid && findExistingMarker(poi)) return;
+                const mk = createNearbyMarker(poi);
+                if (!mk) return;
+                nearbyPOIState.layer.addLayer(mk);
+                if (pid) nearbyPOIState.poiMarkersById.set(pid, mk);
+            });
+        } catch (_) {}
+
+        // Focus on center a bit
+        try { map.setView([lat, lng], 15, { animate: true }); } catch (_) { map.setView([lat, lng], 15); }
+    };
+
+    // Delegated click for result cards
+    resultsEl.addEventListener('click', async (e) => {
+        const card = e.target.closest('.nearby-poi-card');
+        if (!card) return;
+        if (e.target.closest('[data-nearby-focus="1"]') || card) {
+            const lat = parseFloat(card.dataset.nearbyLat);
+            const lng = parseFloat(card.dataset.nearbyLng);
+            const pid = card.dataset.nearbyPoiId;
+            const poi = { _id: pid, id: pid, latitude: lat, longitude: lng, name: card.querySelector('.nearby-poi-card-title')?.textContent || 'POI' };
+            // Best effort: try to enrich from stored marker data
+            const mk = nearbyPOIState.poiMarkersById.get(String(pid));
+            if (mk && mk.poiData) {
+                Object.assign(poi, mk.poiData);
+            }
+            await focusPOIOnMap(poi);
+        }
+    });
+
+    // Radius change: re-run search if we have an active location
+    radiusSelect.addEventListener('change', async () => {
+        try {
+            if (nearbyPOIState.activeLatLng) {
+                const { lat, lng } = nearbyPOIState.activeLatLng;
+                setCenterOverlays(lat, lng, { pending: false });
+                await runNearbySearch(lat, lng);
+            }
+        } catch (e) {
+            setStatus(e.message || 'Mesafe güncellenemedi.', 'error');
+        }
+    });
+
+    locateBtn.addEventListener('click', async () => {
+        clearPickingMode();
+        useBtn.disabled = true;
+        nearbyPOIState.pendingLatLng = null;
+
+        try {
+            setStatus('Konumunuz alınıyor...', '');
+            const location = await getCurrentLocation({ enableHighAccuracy: true, timeout: 12000, maximumAge: 120000 });
+            const lat = location.latitude;
+            const lng = location.longitude;
+            nearbyPOIState.activeLatLng = { lat, lng };
+            await ensureMapReadyAndVisible();
+            setCenterOverlays(lat, lng, { pending: false });
+            await runNearbySearch(lat, lng);
+        } catch (e) {
+            const help = e && e.helpText ? ` ${e.helpText}` : '';
+            setStatus((e && e.message ? e.message : 'Konum alınamadı.') + help, 'error');
+            try { if (typeof showNotification === 'function') showNotification('❌ Konum alınamadı', 'error'); } catch (_) {}
+        }
+    });
+
+    pickBtn.addEventListener('click', async () => {
+        try {
+            await ensureMapReadyAndVisible();
+        } catch (e) {
+            setStatus(e.message || 'Harita hazır değil.', 'error');
+            return;
+        }
+
+        if (nearbyPOIState.pickingMode) {
+            clearPickingMode();
+            setStatus('Haritadan seçim iptal edildi.', '');
+            return;
+        }
+
+        nearbyPOIState.pickingMode = true;
+        pickBtn.classList.add('active');
+        pickBtn.innerHTML = '<i class="fas fa-times"></i> Seçimi İptal';
+        setStatus('Haritaya tıklayın, sonra “Bu konumu kullan”a basın.', '');
+        useBtn.disabled = true;
+        nearbyPOIState.pendingLatLng = null;
+
+        // Ensure pending marker is cleared/ready
+        if (nearbyPOIState.pendingMarker) {
+            try { map.removeLayer(nearbyPOIState.pendingMarker); } catch (_) {}
+            nearbyPOIState.pendingMarker = null;
+        }
+
+        const handler = (ev) => {
+            const latlng = ev?.latlng;
+            if (!latlng) return;
+            nearbyPOIState.pendingLatLng = { lat: latlng.lat, lng: latlng.lng };
+            setCenterOverlays(latlng.lat, latlng.lng, { pending: true });
+            useBtn.disabled = false;
+            setStatus(`Seçilen konum: ${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}. “Bu konumu kullan” ile ara.`, '');
+        };
+
+        nearbyPOIState.mapClickHandler = handler;
+        try { map.on('click', handler); } catch (_) {}
+    });
+
+    useBtn.addEventListener('click', async () => {
+        if (!nearbyPOIState.pendingLatLng) return;
+        const { lat, lng } = nearbyPOIState.pendingLatLng;
+        clearPickingMode();
+        useBtn.disabled = true;
+
+        // Move pending -> active
+        nearbyPOIState.activeLatLng = { lat, lng };
+        nearbyPOIState.pendingLatLng = null;
+        if (nearbyPOIState.pendingMarker) {
+            try { map.removeLayer(nearbyPOIState.pendingMarker); } catch (_) {}
+            nearbyPOIState.pendingMarker = null;
+        }
+
+        try {
+            await ensureMapReadyAndVisible();
+            setCenterOverlays(lat, lng, { pending: false });
+            await runNearbySearch(lat, lng);
+        } catch (e) {
+            setStatus(e.message || 'Yakın POI araması başarısız.', 'error');
+        }
+    });
+
+    // Initial hint
+    setStatus('Başlamak için “Konumumu Bul” veya “Haritadan Seç”.', '');
+}
+
+function escapeHtml(value) {
+    const s = String(value ?? '');
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 // Enhanced Filter System

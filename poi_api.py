@@ -1425,6 +1425,157 @@ def list_pois():
         db.disconnect()
         return jsonify({'error': f'Search error: {str(e)}'}), 500
 
+
+@app.route('/api/pois/nearby', methods=['GET'])
+def nearby_pois():
+    """
+    Find POIs within a radius (meters) of a given coordinate.
+
+    Query params:
+      - lat: float
+      - lng: float
+      - radius_m: int (default 1000)
+      - limit: int (default 50, max 200)
+    """
+    try:
+        lat_raw = request.args.get('lat', '').strip()
+        lng_raw = request.args.get('lng', '').strip()
+        if not lat_raw or not lng_raw:
+            return jsonify({'error': 'lat and lng query params are required'}), 400
+
+        try:
+            lat = float(lat_raw)
+            lng = float(lng_raw)
+        except Exception:
+            return jsonify({'error': 'lat and lng must be numbers'}), 400
+
+        if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+            return jsonify({'error': 'lat/lng out of range'}), 400
+
+        radius_m = request.args.get('radius_m', '1000').strip()
+        limit = request.args.get('limit', '50').strip()
+        try:
+            radius_m_i = int(float(radius_m))
+        except Exception:
+            radius_m_i = 1000
+
+        try:
+            limit_i = int(float(limit))
+        except Exception:
+            limit_i = 50
+
+        if radius_m_i < 50:
+            radius_m_i = 50
+        if radius_m_i > 50000:
+            radius_m_i = 50000
+
+        if limit_i < 1:
+            limit_i = 1
+        if limit_i > 200:
+            limit_i = 200
+
+        # JSON fallback mode (test_data.json)
+        if JSON_FALLBACK:
+            test_data = load_test_data() or {}
+            center = {'lat': lat, 'lng': lng}
+
+            results = []
+            try:
+                for cat, pois in test_data.items():
+                    if not isinstance(pois, list):
+                        continue
+                    for poi in pois:
+                        if not isinstance(poi, dict):
+                            continue
+                        if not poi.get('isActive', True):
+                            continue
+                        p_lat = poi.get('lat') or poi.get('latitude')
+                        p_lng = poi.get('lng') or poi.get('lon') or poi.get('longitude')
+                        try:
+                            p_lat_f = float(p_lat)
+                            p_lng_f = float(p_lng)
+                        except Exception:
+                            continue
+                        dist_m = haversine_distance(lat, lng, p_lat_f, p_lng_f) * 1000
+                        if dist_m <= radius_m_i:
+                            poi_id = poi.get('id') or (abs(hash(poi.get('_id', poi.get('name', '')))) % (10**9))
+                            results.append({
+                                'id': poi_id,
+                                '_id': poi.get('_id', poi_id),
+                                'name': poi.get('name'),
+                                'category': poi.get('category') or cat,
+                                'latitude': p_lat_f,
+                                'longitude': p_lng_f,
+                                'distance_m': round(dist_m),
+                            })
+            except Exception:
+                results = []
+
+            results.sort(key=lambda x: x.get('distance_m', 1e12))
+            results = results[:limit_i]
+            return jsonify({
+                'center': center,
+                'radius_m': radius_m_i,
+                'count': len(results),
+                'pois': results,
+            }), 200
+
+        db = get_db()
+        if not db:
+            return jsonify({'error': 'Database connection failed'}), 500
+
+        try:
+            # Prefer PostGIS proximity search on location column
+            query = """
+                SELECT
+                    p.id,
+                    p.name,
+                    p.category,
+                    ST_Y(p.location::geometry) as latitude,
+                    ST_X(p.location::geometry) as longitude,
+                    ST_Distance(
+                        p.location::geography,
+                        ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
+                    ) as distance_m
+                FROM pois p
+                WHERE p.is_active = true
+                  AND p.location IS NOT NULL
+                  AND ST_DWithin(
+                        p.location::geography,
+                        ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography,
+                        %s
+                      )
+                ORDER BY distance_m ASC
+                LIMIT %s
+            """
+            with db.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(query, (lng, lat, lng, lat, radius_m_i, limit_i))
+                rows = cur.fetchall() or []
+
+            pois = []
+            for row in rows:
+                d = dict(row)
+                try:
+                    d['distance_m'] = float(d.get('distance_m') or 0)
+                except Exception:
+                    d['distance_m'] = 0
+                d['distance_m'] = int(round(d['distance_m']))
+                # Compatibility for UI code expecting _id
+                d['_id'] = d.get('id')
+                pois.append(d)
+
+            return jsonify({
+                'center': {'lat': lat, 'lng': lng},
+                'radius_m': radius_m_i,
+                'count': len(pois),
+                'pois': pois,
+            }), 200
+        finally:
+            db.disconnect()
+
+    except Exception as e:
+        return jsonify({'error': f'Nearby search error: {str(e)}'}), 500
+
 def perform_database_search(db, search_query, category_filter=None):
     """
     Veritabanında Türkçe karakter desteği ile POI arama

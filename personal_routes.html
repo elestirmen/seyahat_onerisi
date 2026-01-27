@@ -343,16 +343,49 @@
           </div>
         </div>
 
-        <!-- Öneri sonuçları bölümü -->
+	        <!-- Öneri sonuçları bölümü -->
 
-        <div class="results-section" id="resultsSection">
-          <h2 class="section-title"><i class="fas fa-star"></i> Size Özel Öneriler</h2>
+	        <div class="results-section" id="resultsSection">
+	          <h2 class="section-title"><i class="fas fa-star"></i> Size Özel Öneriler</h2>
 
+	          <!-- Yakınımda gezilecek yerler -->
+	          <div class="nearby-poi-section" id="nearbyPOISection">
+	            <div class="nearby-poi-header">
+	              <h3 class="section-title" style="margin: 0;"><i class="fas fa-location-dot"></i> Yakınımda Gezilecek Yerler</h3>
+	              <p class="nearby-poi-subtitle">Konumunuzu seçin, seçtiğiniz mesafedeki POI'leri sadece mesafeye göre listeleyelim.</p>
+	            </div>
+	
+	            <div class="nearby-poi-controls">
+	              <button class="nearby-poi-btn primary" id="nearbyLocateBtn" type="button">
+	                <i class="fas fa-crosshairs"></i> Konumumu Bul
+	              </button>
+	              <button class="nearby-poi-btn" id="nearbyPickBtn" type="button">
+	                <i class="fas fa-hand-pointer"></i> Haritadan Seç
+	              </button>
+	
+	              <div class="nearby-poi-radius">
+	                <label for="nearbyRadiusKm"><i class="fas fa-ruler"></i> Mesafe</label>
+	                <select id="nearbyRadiusKm">
+	                  <option value="0.5">0.5 km</option>
+	                  <option value="1" selected>1 km</option>
+	                  <option value="2">2 km</option>
+	                  <option value="5">5 km</option>
+	                </select>
+	              </div>
+	
+	              <button class="nearby-poi-btn success" id="nearbyUseLocationBtn" type="button" disabled>
+	                <i class="fas fa-check"></i> Bu konumu kullan
+	              </button>
+	            </div>
+	
+	            <div class="nearby-poi-status" id="nearbyStatus" aria-live="polite"></div>
+	            <div class="nearby-poi-results" id="nearbyResults"></div>
+	          </div>
 
-          <div id="loadingIndicator" class="loading">
-            <div class="loading__spinner"></div>
-            <p class="loading__text">Öneriler hazırlanıyor...</p>
-          </div>
+	          <div id="loadingIndicator" class="loading">
+	            <div class="loading__spinner"></div>
+	            <p class="loading__text">Öneriler hazırlanıyor...</p>
+	          </div>
 
           <div id="recommendationResults"></div>
 
@@ -748,10 +781,10 @@
     console.log('🔧 Smart preset functions loaded');
   </script>
 
-  <style>
-    /* Akıllı preset butonları için özel stiller */
-    .smart-preset {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+	  <style>
+	    /* Akıllı preset butonları için özel stiller */
+	    .smart-preset {
+	      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
       border: 1px solid rgba(255, 255, 255, 0.2) !important;
       color: white !important;
       margin: 2px !important;
@@ -809,10 +842,160 @@
       border-top: 1px solid rgba(0,0,0,0.05);
       margin-top: 12px;
     }
-    .explore-bottom-section .explore-btn {
-      min-width: 220px;
-    }
-  </style>
+	    .explore-bottom-section .explore-btn {
+	      min-width: 220px;
+	    }
+
+	    /* Yakınımda POI bölümü */
+	    .nearby-poi-section {
+	      margin: 14px 0 18px 0;
+	      background: rgba(255, 255, 255, 0.92);
+	      border: 1px solid rgba(0, 0, 0, 0.06);
+	      border-radius: 16px;
+	      padding: 14px;
+	      backdrop-filter: blur(8px);
+	      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+	    }
+	    .nearby-poi-subtitle {
+	      margin: 6px 0 0 0;
+	      color: #64748b;
+	      font-size: 0.95rem;
+	      line-height: 1.4;
+	    }
+	    .nearby-poi-controls {
+	      margin-top: 10px;
+	      display: flex;
+	      gap: 10px;
+	      flex-wrap: wrap;
+	      align-items: center;
+	    }
+	    .nearby-poi-btn {
+	      border: 1px solid rgba(0,0,0,0.10);
+	      background: #ffffff;
+	      color: #111827;
+	      border-radius: 12px;
+	      padding: 10px 12px;
+	      cursor: pointer;
+	      display: inline-flex;
+	      align-items: center;
+	      gap: 8px;
+	      transition: all 0.2s ease;
+	      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+	    }
+	    .nearby-poi-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+	    .nearby-poi-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+	    .nearby-poi-btn.primary {
+	      background: linear-gradient(135deg, #3b82f6 0%, #22c55e 100%);
+	      color: white;
+	      border: none;
+	    }
+	    .nearby-poi-btn.success {
+	      background: linear-gradient(135deg, #10b981 0%, #22c55e 100%);
+	      color: white;
+	      border: none;
+	    }
+	    .nearby-poi-radius {
+	      display: inline-flex;
+	      align-items: center;
+	      gap: 8px;
+	      padding: 8px 10px;
+	      border-radius: 12px;
+	      background: rgba(241,245,249,0.9);
+	      border: 1px solid rgba(0,0,0,0.06);
+	    }
+	    .nearby-poi-radius label {
+	      color: #334155;
+	      font-size: 0.9rem;
+	      font-weight: 600;
+	    }
+	    .nearby-poi-radius select {
+	      border: 1px solid rgba(0,0,0,0.12);
+	      border-radius: 10px;
+	      padding: 6px 10px;
+	      background: #fff;
+	      outline: none;
+	    }
+	    .nearby-poi-status {
+	      margin-top: 10px;
+	      color: #475569;
+	      font-size: 0.9rem;
+	    }
+	    .nearby-poi-status.error { color: #b91c1c; }
+	    .nearby-poi-status.success { color: #065f46; }
+	    .nearby-poi-results {
+	      margin-top: 10px;
+	      display: grid;
+	      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	      gap: 10px;
+	    }
+	    .nearby-poi-card {
+	      border: 1px solid rgba(0,0,0,0.08);
+	      border-radius: 14px;
+	      background: #fff;
+	      padding: 12px;
+	      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+	      transition: all 0.2s ease;
+	      cursor: pointer;
+	    }
+	    .nearby-poi-card:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,0.08); }
+	    .nearby-poi-card-title {
+	      margin: 0 0 6px 0;
+	      font-weight: 700;
+	      color: #0f172a;
+	      font-size: 1rem;
+	      line-height: 1.2;
+	    }
+	    .nearby-poi-card-meta {
+	      color: #64748b;
+	      font-size: 0.9rem;
+	      display: flex;
+	      flex-wrap: wrap;
+	      gap: 8px;
+	      align-items: center;
+	    }
+	    .nearby-poi-chip {
+	      display: inline-flex;
+	      align-items: center;
+	      gap: 6px;
+	      padding: 4px 10px;
+	      border-radius: 999px;
+	      background: rgba(59, 130, 246, 0.10);
+	      color: #1d4ed8;
+	      font-weight: 700;
+	      font-size: 0.82rem;
+	    }
+	    .nearby-poi-chip.secondary {
+	      background: rgba(100,116,139,0.12);
+	      color: #334155;
+	      font-weight: 600;
+	    }
+	    .nearby-poi-actions {
+	      margin-top: 10px;
+	      display: flex;
+	      justify-content: flex-end;
+	    }
+	    .nearby-poi-action-btn {
+	      border: none;
+	      background: #111827;
+	      color: #fff;
+	      padding: 8px 10px;
+	      border-radius: 10px;
+	      cursor: pointer;
+	      font-weight: 700;
+	      font-size: 0.85rem;
+	      display: inline-flex;
+	      align-items: center;
+	      gap: 8px;
+	    }
+	    .nearby-poi-action-btn:hover { opacity: 0.92; }
+	    @media (max-width: 768px) {
+	      .nearby-poi-results { grid-template-columns: 1fr; }
+	      .nearby-poi-controls { gap: 8px; }
+	      .nearby-poi-btn { width: 100%; justify-content: center; }
+	      .nearby-poi-radius { width: 100%; justify-content: space-between; }
+	      .nearby-poi-radius select { width: 130px; }
+	    }
+	  </style>
 
 </body>
 </html>
