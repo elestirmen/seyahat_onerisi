@@ -1,0 +1,4 @@
+<resources>
+  <style name="Theme.Harita" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+</resources>
+

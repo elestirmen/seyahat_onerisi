@@ -1698,6 +1698,35 @@ volumes:
 
 ---
 
+### 11.6 Android APK (WebView)
+
+Bu repo içindeki `android_app/` klasörü, web arayüzünü Android üzerinde **WebView** ile açan basit bir sarmalayıcı uygulamadır. Uygulama açılınca varsayılan olarak şu adrese gider:
+
+- `https://harita.urgup.keenetic.link/`
+
+#### Build (Android Studio)
+- Android Studio ile `android_app/` klasörünü proje olarak açın.
+- `Run` ile cihazda çalıştırın veya APK üretin.
+
+#### Build (CLI)
+```bash
+cd android_app
+
+# Android SDK yolunu local.properties içine yazın
+echo "sdk.dir=/path/to/Android/Sdk" > local.properties
+
+# Debug APK
+./gradlew :app:assembleDebug
+```
+
+APK çıktısı:
+- `android_app/app/build/outputs/apk/debug/app-debug.apk`
+
+Başlangıç URL’i değiştirmek için:
+- `android_app/app/src/main/java/link/keenetic/urgup/harita/MainActivity.kt` içindeki `START_URL`
+
+---
+
 ## Ekler
 
 ### A. Komut Satırı Araçları

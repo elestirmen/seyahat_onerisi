@@ -50,6 +50,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+*.pid
 cookies.txt
 api_log.txt
 reports/junit.xml
@@ -122,3 +123,23 @@ celerybeat.pid
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Android (WebView wrapper)
+android_app/.gradle/
+android_app/**/build/
+android_app/local.properties
+android_app/.idea/
+android_app/.kotlin/
+android_app/**/.cxx/
+android_app/**/.externalNativeBuild/
+android_app/**/captures/
+android_app/**/*.iml
+
+# Android artifacts
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Local toolchain artifacts (optional)
+.tooling/
