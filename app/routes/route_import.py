@@ -5,7 +5,6 @@ Handles route file upload, validation, and import endpoints.
 
 from flask import Blueprint, request, jsonify
 import logging
-import uuid
 
 from app.services.route_import_service import route_import_service
 from app.services.route_service import route_service

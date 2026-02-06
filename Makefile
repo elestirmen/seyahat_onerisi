@@ -7,6 +7,12 @@
 PYTHON ?= python3
 PIP ?= pip3
 API_BASE_URL ?= http://localhost:5000
+RUFF_TARGETS ?= app tests wsgi.py
+RUFF_BIN ?= $(firstword $(wildcard venv/bin/ruff) $(shell command -v ruff 2>/dev/null))
+PYTEST_BIN ?= $(firstword $(wildcard venv/bin/pytest) $(shell command -v pytest 2>/dev/null))
+BLACK_BIN ?= $(firstword $(wildcard venv/bin/black) $(shell command -v black 2>/dev/null))
+ISORT_BIN ?= $(firstword $(wildcard venv/bin/isort) $(shell command -v isort 2>/dev/null))
+ESLINT_BIN ?= $(firstword $(wildcard node_modules/.bin/eslint) $(wildcard venv/bin/eslint) $(shell command -v eslint 2>/dev/null))
 
 # Prefer project venv if available
 ifneq (,$(wildcard venv/bin/python))
@@ -34,18 +40,18 @@ help:
 quick:
 	@echo "🚀 Running quick quality checks..."
 	@echo "1️⃣ Running ruff check..."
-	@if command -v ruff >/dev/null 2>&1; then \
-		ruff check --diff . || (echo "❌ Ruff check failed" && exit 1); \
+	@if [ -n "$(RUFF_BIN)" ]; then \
+		"$(RUFF_BIN)" check --select F --diff $(RUFF_TARGETS) || (echo "❌ Ruff check failed" && exit 1); \
 	else \
 		echo "⚠️  Ruff not available, skipping"; \
 	fi
 	@echo "2️⃣ Running ESLint..."
-	@if command -v eslint >/dev/null 2>&1; then \
-		ESLINT_MAJOR=$$(eslint -v 2>/dev/null | sed 's/^v//' | cut -d. -f1); \
+	@if [ -n "$(ESLINT_BIN)" ]; then \
+		ESLINT_MAJOR=$$("$(ESLINT_BIN)" -v 2>/dev/null | sed 's/^v//' | cut -d. -f1); \
 		if [ -n "$$ESLINT_MAJOR" ] && [ "$$ESLINT_MAJOR" -lt 8 ]; then \
 			echo "⚠️  ESLint $$ESLINT_MAJOR.x is too old for modern JS syntax, skipping"; \
 		else \
-			eslint static/js/*.js static/js/**/*.js --max-warnings=0 || (echo "❌ ESLint failed" && exit 1); \
+			"$(ESLINT_BIN)" "static/js/*.js" "static/js/**/*.js" --max-warnings=0 || (echo "❌ ESLint failed" && exit 1); \
 		fi; \
 	else \
 		echo "⚠️  ESLint not available, skipping"; \
@@ -69,8 +75,8 @@ contract:
 # Full test suite
 full:
 	@echo "🧪 Running full test suite..."
-	@if command -v pytest >/dev/null 2>&1; then \
-		pytest -q tests/ || (echo "❌ Pytest failed" && exit 1); \
+	@if [ -n "$(PYTEST_BIN)" ]; then \
+		"$(PYTEST_BIN)" -q tests/ || (echo "❌ Pytest failed" && exit 1); \
 	else \
 		echo "⚠️  Pytest not available, running Python tests manually"; \
 		$(PYTHON) -m tests.smoke || true; \
@@ -87,13 +93,13 @@ bench:
 # Linting with auto-fix
 lint:
 	@echo "🔧 Running linters with auto-fix..."
-	@if command -v ruff >/dev/null 2>&1; then \
-		ruff check --fix . || echo "⚠️  Some ruff issues could not be auto-fixed"; \
+	@if [ -n "$(RUFF_BIN)" ]; then \
+		"$(RUFF_BIN)" check --select F --fix $(RUFF_TARGETS) || echo "⚠️  Some ruff issues could not be auto-fixed"; \
 	else \
 		echo "⚠️  Ruff not available"; \
 	fi
-	@if command -v eslint >/dev/null 2>&1; then \
-		eslint static/js/*.js --fix || echo "⚠️  Some ESLint issues could not be auto-fixed"; \
+	@if [ -n "$(ESLINT_BIN)" ]; then \
+		"$(ESLINT_BIN)" "static/js/*.js" "static/js/**/*.js" --fix || echo "⚠️  Some ESLint issues could not be auto-fixed"; \
 	else \
 		echo "⚠️  ESLint not available"; \
 	fi
@@ -102,13 +108,13 @@ lint:
 # Code formatting
 format:
 	@echo "✨ Formatting code..."
-	@if command -v black >/dev/null 2>&1; then \
-		black . || echo "⚠️  Black not available"; \
+	@if [ -n "$(BLACK_BIN)" ]; then \
+		"$(BLACK_BIN)" . || echo "⚠️  Black not available"; \
 	else \
 		echo "⚠️  Black not available"; \
 	fi
-	@if command -v isort >/dev/null 2>&1; then \
-		isort . || echo "⚠️  isort not available"; \
+	@if [ -n "$(ISORT_BIN)" ]; then \
+		"$(ISORT_BIN)" . || echo "⚠️  isort not available"; \
 	else \
 		echo "⚠️  isort not available"; \
 	fi
@@ -123,7 +129,9 @@ setup:
 	$(PIP) install ruff black isort pytest || echo "⚠️  Some dev tools installation failed"
 	@echo "3️⃣ Setting up environment..."
 	@if [ ! -f .env ]; then \
-		cp env.example .env; \
+		if [ -f .env.example ]; then cp .env.example .env; \
+		elif [ -f env.example ]; then cp env.example .env; \
+		else echo "❌ No env template found (.env.example or env.example)" && exit 1; fi; \
 		echo "📄 Created .env from template"; \
 	else \
 		echo "📄 .env already exists"; \

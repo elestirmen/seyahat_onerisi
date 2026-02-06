@@ -6,12 +6,11 @@ Handles user authentication, session management, and authorization.
 import os
 import time
 import secrets
-import hashlib
 import logging
 from pathlib import Path
-from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, Tuple
-from flask import session, request, g
+from datetime import datetime
+from typing import Dict, Any
+from flask import session, request
 
 from app.middleware.error_handler import APIError, bad_request
 # Import functions directly from the module

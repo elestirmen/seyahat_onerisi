@@ -62,7 +62,6 @@ def build_test_app():
 
     def _stub_poi_list(*args, **kwargs):
         page = kwargs.get("page", 1)
-        limit = kwargs.get("limit", 20)
         return {
             "pois": [],
             "total": 0,

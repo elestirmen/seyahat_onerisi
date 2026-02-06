@@ -16,7 +16,7 @@ def app(monkeypatch):
     os.environ.setdefault("FLASK_ENV", "testing")
     monkeypatch.setenv("POI_ADMIN_TOKEN", "test-admin-token-1234567890")
     # Import the application module
-    app_pkg = importlib.import_module("app")
+    importlib.import_module("app")
     app_module = importlib.import_module("app.__init__")
 
     # Prevent real DB pool initialization during tests
@@ -57,7 +57,6 @@ def app(monkeypatch):
 
     def _stub_poi_list(*args, **kwargs):
         page = kwargs.get("page", 1)
-        limit = kwargs.get("limit", 20)
         return {
             "pois": [],
             "total": 0,

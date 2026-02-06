@@ -5,15 +5,14 @@ Handles route file upload, validation, and import operations.
 
 import logging
 import os
-import json
 import uuid
 import hashlib
 import tempfile
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from datetime import datetime
 from werkzeug.datastructures import FileStorage
 
-from app.middleware.error_handler import APIError, bad_request, not_found, internal_error
+from app.middleware.error_handler import APIError, bad_request
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +163,7 @@ class RouteImportService:
             Parsed route data with metadata and coordinates
         """
         try:
-            from route_file_parser import RouteFileParser, RouteParserError  # legacy, stdlib-only parser
+            from route_file_parser import RouteFileParser  # legacy, stdlib-only parser
 
             ext = (file_info.get('extension') or '').lower()
             parser = RouteFileParser()
@@ -237,7 +236,7 @@ class RouteImportService:
         # Simplified GPX parsing - in real implementation would use gpxpy library
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+                f.read()
             
             # Extract basic metadata (simplified)
             metadata = {
@@ -275,7 +274,7 @@ class RouteImportService:
         # Simplified KML parsing
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+                f.read()
             
             metadata = {
                 'name': 'Imported KML Route',

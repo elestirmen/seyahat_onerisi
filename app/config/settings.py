@@ -4,7 +4,6 @@ Environment-based configuration management with sensible defaults.
 """
 
 import os
-from datetime import timedelta
 
 
 class Config:

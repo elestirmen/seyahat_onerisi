@@ -9,7 +9,7 @@ import unicodedata
 import math
 import os
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
 from app.middleware.error_handler import APIError, bad_request, not_found
 

@@ -3,17 +3,14 @@ Media Service for POI Travel Recommendation API.
 Handles media file upload, processing, and management for POIs.
 """
 
-import os
-import shutil
 import hashlib
 import uuid
 import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
 from werkzeug.datastructures import FileStorage
-from werkzeug.utils import secure_filename
 
-from app.middleware.error_handler import APIError, bad_request, not_found, internal_error
+from app.middleware.error_handler import APIError, bad_request
 
 logger = logging.getLogger(__name__)
 
@@ -297,8 +294,8 @@ class MediaService:
                     'poi_id': poi_id,
                     'description': 'Beautiful view of the location',
                     'file_size': 1024000,
-                    'file_path': f'images/mock-image-1.jpg',
-                    'thumbnail_path': f'thumbnails/mock-image-1_thumb.jpg',
+                    'file_path': 'images/mock-image-1.jpg',
+                    'thumbnail_path': 'thumbnails/mock-image-1_thumb.jpg',
                     'created_at': '2024-01-15T10:00:00Z'
                 }
             ]

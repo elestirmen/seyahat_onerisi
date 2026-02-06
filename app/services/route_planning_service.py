@@ -5,10 +5,9 @@ Handles route calculation, optimization, and navigation between POIs.
 
 import math
 import logging
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime
+from typing import Dict, List, Any
 
-from app.middleware.error_handler import APIError, bad_request, internal_error
+from app.middleware.error_handler import APIError, bad_request
 
 logger = logging.getLogger(__name__)
 
