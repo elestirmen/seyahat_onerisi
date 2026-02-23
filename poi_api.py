@@ -2542,41 +2542,84 @@ def delete_poi_image_legacy(poi_id, filename):
 def upload_panorama():
     """POI'den bağımsız 360° görsel yükle, EXIF'ten konumu al ve sakla"""
     try:
-        if 'media' not in request.files:
+        files = []
+        if 'media' in request.files:
+            files.extend(request.files.getlist('media'))
+        if 'media[]' in request.files:
+            files.extend(request.files.getlist('media[]'))
+        files = [f for f in files if getattr(f, 'filename', None)]
+
+        if not files:
             return jsonify({'error': 'No media file provided'}), 400
-        file = request.files['media']
-        if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
-
-        if not allowed_file(file.filename):
-            return jsonify({'error': 'Invalid file type'}), 400
-
-        # Geçici dosya oluştur ve kaydet
-        filename = secure_filename(file.filename)
-        temp_path = f"/tmp/{uuid.uuid4()}_{filename}"
-        file.save(temp_path)
-
-        # Boyut ve tür doğrulaması (daha anlamlı hata kodu için)
-        is_valid, message, detected_type = media_manager.validate_file(temp_path, 'image')
-        if not is_valid:
-            # Geçici dosyayı temizle
-            try:
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
-            finally:
-                pass
-            return jsonify({'error': message}), 400
 
         caption = request.form.get('caption', '')
-        try:
-            result = media_manager.add_panorama_image(temp_path, caption)
-        finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+        panoramas = []
+        errors = []
 
-        if not result:
-            return jsonify({'error': 'Failed to process panorama'}), 500
-        return jsonify({'success': True, 'panorama': result}), 201
+        for idx, file in enumerate(files):
+            filename_raw = file.filename or f'panorama_{idx + 1}'
+            if not allowed_file(filename_raw):
+                errors.append({
+                    'index': idx,
+                    'filename': filename_raw,
+                    'error': 'Invalid file type'
+                })
+                continue
+
+            filename = secure_filename(filename_raw) or f'panorama_{idx + 1}'
+            temp_path = f"/tmp/{uuid.uuid4()}_{filename}"
+            try:
+                file.save(temp_path)
+                is_valid, message, detected_type = media_manager.validate_file(temp_path, 'image')
+                if not is_valid:
+                    errors.append({
+                        'index': idx,
+                        'filename': filename_raw,
+                        'error': message
+                    })
+                    continue
+
+                result = media_manager.add_panorama_image(temp_path, caption)
+                if not result:
+                    errors.append({
+                        'index': idx,
+                        'filename': filename_raw,
+                        'error': 'Failed to process panorama'
+                    })
+                    continue
+                panoramas.append(result)
+            except Exception as file_error:
+                errors.append({
+                    'index': idx,
+                    'filename': filename_raw,
+                    'error': str(file_error)
+                })
+            finally:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+
+        if not panoramas:
+            error_message = errors[0]['error'] if errors else 'Failed to process panorama'
+            return jsonify({'error': error_message, 'errors': errors}), 400
+
+        duplicate_count = sum(1 for p in panoramas if p.get('is_duplicate'))
+        uploaded_count = max(0, len(panoramas) - duplicate_count)
+        payload = {
+            'success': True,
+            'panorama': panoramas[0],
+            'panoramas': panoramas,
+            'uploaded_count': uploaded_count,
+            'duplicate_count': duplicate_count,
+            'total_requested': len(files),
+            'total_processed': len(panoramas),
+            'errors': errors
+        }
+
+        if errors:
+            return jsonify(payload), 207
+        if uploaded_count == 0 and duplicate_count > 0:
+            return jsonify(payload), 200
+        return jsonify(payload), 201
     except Exception as e:
         return jsonify({'error': f'Error uploading panorama: {str(e)}'}), 500
 

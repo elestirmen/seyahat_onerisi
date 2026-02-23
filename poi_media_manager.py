@@ -453,6 +453,77 @@ class POIMediaManager:
         except Exception:
             return None, None
 
+    def _calculate_file_sha256(self, file_path: Union[str, Path], chunk_size: int = 1024 * 1024) -> Optional[str]:
+        """Dosyanın SHA-256 özetini hesapla."""
+        try:
+            hasher = hashlib.sha256()
+            with open(Path(file_path), 'rb') as f:
+                while True:
+                    chunk = f.read(chunk_size)
+                    if not chunk:
+                        break
+                    hasher.update(chunk)
+            return hasher.hexdigest()
+        except Exception as e:
+            print(f"⚠️ Dosya hash hesaplama hatası: {e}")
+            return None
+
+    def _find_existing_panorama_by_hash(self, content_hash: str) -> Optional[Dict]:
+        """Aynı içeriğe sahip mevcut bağımsız panoramayı bul."""
+        if not content_hash:
+            return None
+
+        pano_meta = self.base_path / "by_panorama" / "meta"
+        if not pano_meta.exists():
+            return None
+
+        meta_files = sorted(
+            pano_meta.glob('*.json'),
+            key=lambda p: p.stat().st_mtime if p.exists() else 0,
+            reverse=True
+        )
+
+        for meta_file in meta_files:
+            try:
+                with open(meta_file, 'r', encoding='utf-8') as f:
+                    meta = json.load(f)
+                if not isinstance(meta, dict):
+                    continue
+
+                existing_hash = (meta.get('content_hash') or '').strip()
+                if not existing_hash:
+                    # Eski kayıtlarda hash yoksa bir kere hesaplayıp metaya yaz.
+                    candidate_rel = meta.get('original_path') or meta.get('path')
+                    if candidate_rel:
+                        rel = str(candidate_rel).lstrip('/')
+                        candidate_path = self.base_path.parent / Path(rel)
+                        if not candidate_path.exists() and Path(candidate_rel).is_absolute():
+                            candidate_path = Path(candidate_rel)
+                        if candidate_path.exists():
+                            existing_hash = self._calculate_file_sha256(candidate_path) or ''
+                            if existing_hash:
+                                meta['content_hash'] = existing_hash
+                                try:
+                                    with open(meta_file, 'w', encoding='utf-8') as wf:
+                                        json.dump(meta, wf, ensure_ascii=False, indent=2)
+                                except Exception:
+                                    pass
+
+                if existing_hash != content_hash:
+                    continue
+
+                path_rel = str(meta.get('path') or '').lstrip('/')
+                if path_rel:
+                    main_file = self.base_path.parent / Path(path_rel)
+                    if not main_file.exists():
+                        continue
+
+                return meta
+            except Exception:
+                continue
+
+        return None
+
     def _is_equirectangular_image(self, image_path: Path, min_width: int = 1000) -> bool:
         """Görselin 360 equirectangular olma olasılığını oranla belirle."""
         try:
@@ -625,6 +696,15 @@ class POIMediaManager:
                 raise ValueError("Sadece görsel dosyalar kabul edilir")
 
             original_size = os.path.getsize(image_file_path)
+            content_hash = self._calculate_file_sha256(image_file_path)
+            if content_hash:
+                existing = self._find_existing_panorama_by_hash(content_hash)
+                if existing:
+                    existing_copy = dict(existing)
+                    existing_copy['is_duplicate'] = True
+                    existing_copy['duplicate_of'] = existing_copy.get('id')
+                    existing_copy['content_hash'] = content_hash
+                    return existing_copy
 
             # EXIF'ten konum
             lat, lng = self._get_exif_location(image_file_path)
@@ -725,8 +805,10 @@ class POIMediaManager:
                 'caption': caption,
                 'lat': lat,
                 'lng': lng,
+                'content_hash': content_hash,
                 'pyramid_levels': pyramid_levels,
                 'compression_ratio': f"{size_reduction:.1f}%" if size_reduction > 0 else "0%",
+                'is_duplicate': False,
                 'created_at': datetime.utcnow().isoformat() + 'Z'
             }
 

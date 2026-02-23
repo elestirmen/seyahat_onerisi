@@ -1731,12 +1731,12 @@
                             <i class="fas fa-upload"></i>
                             360° Görsel Yükle
                         </label>
-                        <input type="file" id="panoFile" accept=".jpg,.jpeg,.png,.webp" class="filter-select">
+                        <input type="file" id="panoFile" accept=".jpg,.jpeg,.png,.webp" class="filter-select" multiple>
                         <input type="text" id="panoCaption" class="filter-select" placeholder="Açıklama (opsiyonel)">
                         <button type="button" class="btn btn-primary btn-sm" id="uploadPanoBtn">
                             <i class="fas fa-cloud-upload-alt"></i> Yükle
                         </button>
-                        <span class="form-help">Konum EXIF bilgilerinden otomatik alınır.</span>
+                        <span class="form-help">Birden çok dosya seçebilirsiniz. Konum EXIF bilgilerinden otomatik alınır, mükerrer yüklemeler atlanır.</span>
                     </div>
                 </div>
             </div>
@@ -2979,14 +2979,20 @@
                 try {
                     const fileInput = document.getElementById('panoFile');
                     const captionInput = document.getElementById('panoCaption');
+                    const uploadBtn = document.getElementById('uploadPanoBtn');
                     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
                         this.showToast('Lütfen bir 360° görsel seçin', 'error');
                         return;
                     }
-                    const file = fileInput.files[0];
+                    const files = Array.from(fileInput.files);
                     const form = new FormData();
-                    form.append('media', file);
+                    files.forEach(file => form.append('media', file));
                     if (captionInput && captionInput.value) form.append('caption', captionInput.value);
+
+                    if (uploadBtn) {
+                        uploadBtn.disabled = true;
+                        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
+                    }
 
                     const res = await this.authenticatedFetch('/api/panoramas', { method: 'POST', body: form });
                     if (!res.ok) {
@@ -2994,20 +3000,43 @@
                         throw new Error(err.error || 'Yükleme başarısız');
                     }
                     const result = await res.json();
-                    const cr = result?.panorama?.compression_ratio;
-                    this.showToast(`360° görsel yüklendi${cr && cr !== '0%' ? ` (📦 ${cr})` : ''}`, 'success');
+                    const panoramas = Array.isArray(result?.panoramas)
+                        ? result.panoramas
+                        : (result?.panorama ? [result.panorama] : []);
+                    const duplicateCount = Number.isFinite(Number(result?.duplicate_count))
+                        ? Number(result.duplicate_count)
+                        : panoramas.filter(p => p && p.is_duplicate).length;
+                    const uploadedCount = Number.isFinite(Number(result?.uploaded_count))
+                        ? Number(result.uploaded_count)
+                        : Math.max(0, panoramas.length - duplicateCount);
+                    const errorCount = Array.isArray(result?.errors) ? result.errors.length : 0;
+
+                    let summary = `360° yükleme tamamlandı: ${uploadedCount} yeni`;
+                    if (duplicateCount > 0) summary += `, ${duplicateCount} mükerrer`;
+                    if (errorCount > 0) summary += `, ${errorCount} hatalı`;
+                    this.showToast(summary, errorCount > 0 ? 'error' : 'success');
+
                     fileInput.value = '';
                     if (captionInput) captionInput.value = '';
-                    const pano = result?.panorama;
-                    if (!pano || typeof pano.lat !== 'number' || typeof pano.lng !== 'number') {
-                        this.showToast('EXIF konumu bulunamadı, haritaya eklenmedi.', 'error');
-                    } else {
-                        const toggle = document.getElementById('togglePanoramas');
-                        if (toggle && toggle.checked) await this.loadPanoramas();
+
+                    const missingGeoCount = panoramas.filter(p =>
+                        !p?.is_duplicate && !(typeof p.lat === 'number' && typeof p.lng === 'number')
+                    ).length;
+                    if (missingGeoCount > 0) {
+                        this.showToast(`${missingGeoCount} görselde EXIF konumu bulunamadı, haritaya eklenmedi.`, 'info');
                     }
+
+                    const toggle = document.getElementById('togglePanoramas');
+                    if (toggle && toggle.checked) await this.loadPanoramas();
                 } catch (e) {
                     console.error('Panorama upload error:', e);
                     this.showToast('Panorama yükleme hatası: ' + e.message, 'error');
+                } finally {
+                    const uploadBtn = document.getElementById('uploadPanoBtn');
+                    if (uploadBtn) {
+                        uploadBtn.disabled = false;
+                        uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Yükle';
+                    }
                 }
             }
 

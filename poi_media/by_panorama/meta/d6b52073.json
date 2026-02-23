@@ -1,0 +1,69 @@
+{
+  "id": "d6b52073",
+  "media_type": "image",
+  "path": "poi_media/by_panorama/images/d6b52073.webp",
+  "original_path": "poi_media/by_panorama/originals/d6b52073.jpg",
+  "preview_path": "poi_media/previews/by_panorama/images/thumb_d6b52073.webp",
+  "filename": "d6b52073.webp",
+  "format": "webp",
+  "size": 456236,
+  "original_size": 14656123,
+  "caption": "",
+  "lat": 38.66173466666667,
+  "lng": 35.00006744444445,
+  "content_hash": "1e7043986d2055b7a6eb67f500b9ced83644069cda526988dfc1007ea9804e02",
+  "pyramid_levels": [
+    {
+      "label": "lvl_1536",
+      "path": "poi_media/by_panorama/levels/d6b52073/d6b52073_lvl_1536.webp",
+      "width": 1536,
+      "height": 768,
+      "max_edge": 1536,
+      "quality": 88
+    },
+    {
+      "label": "optimized_base",
+      "path": "poi_media/by_panorama/images/d6b52073.webp",
+      "width": 2048,
+      "height": 1024,
+      "max_edge": 2048,
+      "quality": 90
+    },
+    {
+      "label": "lvl_3072",
+      "path": "poi_media/by_panorama/levels/d6b52073/d6b52073_lvl_3072.webp",
+      "width": 3072,
+      "height": 1536,
+      "max_edge": 3072,
+      "quality": 90
+    },
+    {
+      "label": "lvl_4096",
+      "path": "poi_media/by_panorama/levels/d6b52073/d6b52073_lvl_4096.webp",
+      "width": 4096,
+      "height": 2048,
+      "max_edge": 4096,
+      "quality": 92
+    },
+    {
+      "label": "lvl_6144",
+      "path": "poi_media/by_panorama/levels/d6b52073/d6b52073_lvl_6144.webp",
+      "width": 6144,
+      "height": 3072,
+      "max_edge": 6144,
+      "quality": 92
+    },
+    {
+      "label": "original",
+      "path": "poi_media/by_panorama/originals/d6b52073.jpg",
+      "width": 8192,
+      "height": 4096,
+      "max_edge": 8192,
+      "quality": null,
+      "role": "original"
+    }
+  ],
+  "compression_ratio": "96.9%",
+  "is_duplicate": false,
+  "created_at": "2026-02-23T22:39:08.782256Z"
+}
