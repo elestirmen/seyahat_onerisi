@@ -9246,7 +9246,7 @@ function openPanoramaViewer(imageUrl, caption) {
                         const deltaPx = dist - lastPinchDistance;
                         if (Math.abs(deltaPx) > 1.2) {
                             const hfov = (typeof stereoLeftViewer.getHfov === 'function') ? stereoLeftViewer.getHfov() : 100;
-                            const nextHfov = hfov - (deltaPx * 0.035);
+                            const nextHfov = hfov - (deltaPx * 0.06);
                             const yaw = (typeof stereoLeftViewer.getYaw === 'function') ? stereoLeftViewer.getYaw() : 0;
                             const pitch = (typeof stereoLeftViewer.getPitch === 'function') ? stereoLeftViewer.getPitch() : 0;
                             applyStereoLook(yaw, pitch, nextHfov);
@@ -9318,6 +9318,7 @@ function openPanoramaViewer(imageUrl, caption) {
                     officialViewer = new officialModules.Viewer({
                         container: viewerDiv,
                         panorama: imageUrl,
+                        zoomSpeed: 2.5,
                         touchmoveTwoFingers: true,
                         mousewheel: true,
                         navbar: ['zoom', 'fullscreen'],
