@@ -8875,9 +8875,10 @@ function openPanoramaViewer(imageUrl, caption) {
     try {
         const normalContainerStyle = 'position:relative;width:90vw;max-width:1200px;height:75vh;border-radius:12px;overflow:hidden;background:#000;';
         const vrContainerStyle = 'position:relative;width:100vw;max-width:none;height:100vh;border-radius:0;overflow:hidden;background:#000;';
+        const eyeOffset = 1.6;
 
         const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;';
 
         const container = document.createElement('div');
         container.style.cssText = normalContainerStyle;
@@ -8902,7 +8903,7 @@ function openPanoramaViewer(imageUrl, caption) {
         viewerDiv.style.cssText = 'width:100%;height:100%;';
 
         const hint = document.createElement('div');
-        hint.style.cssText = 'position:absolute;left:50%;bottom:12px;transform:translateX(-50%);padding:6px 10px;border-radius:999px;background:rgba(17,24,39,.78);color:#fff;font-size:12px;z-index:10000;display:none;text-align:center;max-width:90%;';
+        hint.style.cssText = 'position:absolute;left:50%;bottom:12px;transform:translateX(-50%);padding:6px 10px;border-radius:999px;background:rgba(17,24,39,.82);color:#fff;font-size:12px;z-index:10000;display:none;text-align:center;max-width:90%;';
 
         actions.appendChild(vrBtn);
         actions.appendChild(closeBtn);
@@ -8913,33 +8914,43 @@ function openPanoramaViewer(imageUrl, caption) {
         overlay.appendChild(container);
         document.body.appendChild(overlay);
 
-        let psvViewer = null;
-        let pannellumViewer = null;
-        let stereoViewers = null;
-        let stereoSyncRafId = null;
-        let hintTimer = null;
-        let isVrMode = false;
         let isClosing = false;
+        let isVrMode = false;
+        let hintTimer = null;
+        let normalViewer = null;
+        let stereoLeftViewer = null;
+        let stereoRightViewer = null;
+        let stereoSyncRafId = null;
+        let stereoGestureCleanup = null;
+        let stereoOrientationActive = false;
+        let usingOfficialStereo = false;
+        let officialViewer = null;
+        let officialStereoPlugin = null;
+        let officialModules = null;
 
         const setVrButtonState = (enabled) => {
+            isVrMode = !!enabled;
             if (enabled) {
                 vrBtn.classList.remove('btn-light');
                 vrBtn.classList.add('btn-success');
                 vrBtn.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> Normal';
                 vrBtn.title = 'Normal moda dön';
+                title.style.display = 'none';
             } else {
                 vrBtn.classList.remove('btn-success');
                 vrBtn.classList.add('btn-light');
                 vrBtn.innerHTML = '<i class="fas fa-vr-cardboard"></i> VR';
                 vrBtn.title = 'Cardboard modu';
+                title.style.display = 'block';
             }
         };
 
-        const applyContainerMode = (vrEnabled) => {
-            container.style.cssText = vrEnabled ? vrContainerStyle : normalContainerStyle;
-            title.style.display = vrEnabled ? 'none' : 'block';
-            actions.style.top = vrEnabled ? '12px' : '10px';
-            actions.style.right = vrEnabled ? '12px' : '10px';
+        const normalizeYaw = (yaw) => {
+            if (!Number.isFinite(yaw)) return yaw;
+            let out = yaw;
+            while (out > 180) out -= 360;
+            while (out < -180) out += 360;
+            return out;
         };
 
         const showHint = (text, ms = 2600) => {
@@ -8952,40 +8963,131 @@ function openPanoramaViewer(imageUrl, caption) {
             }, ms);
         };
 
-        const stopOrientation = (viewer) => {
-            if (!viewer) return;
+        const loadScript = (src) => new Promise((resolve, reject) => {
+            const existing = document.querySelector(`script[data-dynamic-src="${src}"]`);
+            if (existing) {
+                if (existing.dataset.loaded === '1') return resolve();
+                existing.addEventListener('load', () => resolve(), { once: true });
+                existing.addEventListener('error', () => reject(new Error(`script load failed: ${src}`)), { once: true });
+                return;
+            }
+            const s = document.createElement('script');
+            s.src = src;
+            s.async = true;
+            s.dataset.dynamicSrc = src;
+            s.onload = () => { s.dataset.loaded = '1'; resolve(); };
+            s.onerror = () => reject(new Error(`script load failed: ${src}`));
+            document.head.appendChild(s);
+        });
+
+        const loadCss = (href) => new Promise((resolve, reject) => {
+            const existing = document.querySelector(`link[data-dynamic-href="${href}"]`);
+            if (existing) return resolve();
+            const l = document.createElement('link');
+            l.rel = 'stylesheet';
+            l.href = href;
+            l.dataset.dynamicHref = href;
+            l.onload = resolve;
+            l.onerror = () => reject(new Error(`css load failed: ${href}`));
+            document.head.appendChild(l);
+        });
+
+        const ensurePannellum = async () => {
+            if (window.pannellum) return true;
             try {
-                if (typeof viewer.stopOrientation === 'function') viewer.stopOrientation();
-            } catch (_) {}
+                await loadCss('https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css');
+                await loadScript('https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js');
+                return !!window.pannellum;
+            } catch (_) {
+                return false;
+            }
         };
 
-        const destroyViewers = () => {
+        const ensureOfficialModules = async () => {
+            if (window.__PSV_STEREO_MODULES__) return window.__PSV_STEREO_MODULES__;
+            try {
+                await loadCss('https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core@5/index.css');
+                const [coreMod, gyroMod, stereoMod] = await Promise.all([
+                    import('https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core@5/+esm'),
+                    import('https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/gyroscope-plugin@5/+esm'),
+                    import('https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/stereo-plugin@5/+esm'),
+                ]);
+                const modules = {
+                    Viewer: coreMod.Viewer,
+                    GyroscopePlugin: gyroMod.GyroscopePlugin,
+                    StereoPlugin: stereoMod.StereoPlugin,
+                };
+                window.__PSV_STEREO_MODULES__ = modules;
+                return modules;
+            } catch (e) {
+                console.warn('Official PSV module load failed:', e);
+                return null;
+            }
+        };
+
+        const stopStereoLoop = () => {
             if (stereoSyncRafId !== null) {
                 cancelAnimationFrame(stereoSyncRafId);
                 stereoSyncRafId = null;
             }
+        };
 
-            if (stereoViewers) {
-                stopOrientation(stereoViewers.left);
-                stopOrientation(stereoViewers.right);
-                try { stereoViewers.left.destroy(); } catch (_) {}
-                try { stereoViewers.right.destroy(); } catch (_) {}
-                stereoViewers = null;
+        const stopStereoOrientation = () => {
+            stereoOrientationActive = false;
+            if (stereoLeftViewer) {
+                try { if (typeof stereoLeftViewer.stopOrientation === 'function') stereoLeftViewer.stopOrientation(); } catch (_) {}
             }
-
-            if (pannellumViewer) {
-                stopOrientation(pannellumViewer);
-                try { pannellumViewer.destroy(); } catch (_) {}
-                pannellumViewer = null;
+            if (stereoRightViewer) {
+                try { if (typeof stereoRightViewer.stopOrientation === 'function') stereoRightViewer.stopOrientation(); } catch (_) {}
             }
+        };
 
-            if (psvViewer) {
-                try { psvViewer.destroy(); } catch (_) {}
-                psvViewer = null;
+        const destroyStereo = () => {
+            stopStereoLoop();
+            stopStereoOrientation();
+            if (stereoGestureCleanup) {
+                try { stereoGestureCleanup(); } catch (_) {}
+                stereoGestureCleanup = null;
             }
+            if (stereoLeftViewer) {
+                try { stereoLeftViewer.destroy(); } catch (_) {}
+                stereoLeftViewer = null;
+            }
+            if (stereoRightViewer) {
+                try { stereoRightViewer.destroy(); } catch (_) {}
+                stereoRightViewer = null;
+            }
+        };
 
+        const destroyOfficialStereo = () => {
+            usingOfficialStereo = false;
+            if (officialStereoPlugin) {
+                try {
+                    if (typeof officialStereoPlugin.isEnabled === 'function' && officialStereoPlugin.isEnabled()) {
+                        officialStereoPlugin.stop();
+                    }
+                } catch (_) {}
+                officialStereoPlugin = null;
+            }
+            if (officialViewer) {
+                try { officialViewer.destroy(); } catch (_) {}
+                officialViewer = null;
+            }
+            officialModules = null;
+        };
+
+        const destroyNormal = () => {
+            if (normalViewer) {
+                try { normalViewer.destroy(); } catch (_) {}
+                normalViewer = null;
+            }
+        };
+
+        const destroyAllViewers = () => {
+            destroyOfficialStereo();
+            destroyStereo();
+            destroyNormal();
             viewerDiv.innerHTML = '';
-            viewerDiv.style.display = 'block';
         };
 
         const unlockOrientation = () => {
@@ -8999,7 +9101,7 @@ function openPanoramaViewer(imageUrl, caption) {
         const closeViewer = () => {
             if (isClosing) return;
             isClosing = true;
-            destroyViewers();
+            destroyAllViewers();
             if (hintTimer) {
                 clearTimeout(hintTimer);
                 hintTimer = null;
@@ -9008,12 +9110,12 @@ function openPanoramaViewer(imageUrl, caption) {
             if (document.fullscreenElement && document.exitFullscreen) {
                 document.exitFullscreen().catch(() => {});
             }
-            document.removeEventListener('keydown', cleanupOnEsc);
+            document.removeEventListener('keydown', onEsc);
             overlay.removeEventListener('click', onOverlayClick);
             try { document.body.removeChild(overlay); } catch (_) {}
         };
 
-        function cleanupOnEsc(e) {
+        function onEsc(e) {
             if (e.key === 'Escape') closeViewer();
         }
 
@@ -9022,39 +9124,42 @@ function openPanoramaViewer(imageUrl, caption) {
         }
 
         closeBtn.onclick = closeViewer;
-        document.addEventListener('keydown', cleanupOnEsc);
+        document.addEventListener('keydown', onEsc);
         overlay.addEventListener('click', onOverlayClick);
 
-        const loadScript = (src) => new Promise((resolve, reject) => {
-            const s = document.createElement('script');
-            s.src = src; s.async = true; s.onload = resolve; s.onerror = reject;
-            document.head.appendChild(s);
-        });
-        const loadCss = (href) => new Promise((resolve, reject) => {
-            const l = document.createElement('link');
-            l.rel = 'stylesheet'; l.href = href; l.onload = resolve; l.onerror = reject;
-            document.head.appendChild(l);
-        });
+        const initNormalViewer = async () => {
+            if (isClosing) return false;
+            if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+            unlockOrientation();
+            container.style.cssText = normalContainerStyle;
+            setVrButtonState(false);
+            destroyAllViewers();
 
-        const ensurePSV = async () => {
-            if (window.PhotoSphereViewer && window.THREE) return true;
-            try {
-                if (!window.THREE) await loadScript('https://unpkg.com/three@0.157.0/build/three.min.js');
-                if (!window.PhotoSphereViewer) {
-                    await loadCss('https://unpkg.com/photo-sphere-viewer@5/dist/photo-sphere-viewer.css');
-                    await loadScript('https://unpkg.com/photo-sphere-viewer@5/dist/photo-sphere-viewer.js');
+            if (await ensurePannellum()) {
+                if (isClosing) return false;
+                try {
+                    normalViewer = window.pannellum.viewer(viewerDiv, {
+                        container: viewerDiv,
+                        type: 'equirectangular',
+                        panorama: imageUrl,
+                        autoLoad: true,
+                        showZoomCtrl: true,
+                        compass: false,
+                    });
+                    return true;
+                } catch (e) {
+                    console.warn('Normal pannellum init failed:', e);
                 }
-                return !!(window.PhotoSphereViewer && window.THREE);
-            } catch (_) { return false; }
-        };
+            }
 
-        const ensurePannellum = async () => {
-            if (window.pannellum) return true;
-            try {
-                await loadCss('https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css');
-                await loadScript('https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js');
-                return !!window.pannellum;
-            } catch (_) { return false; }
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#000;';
+            viewerDiv.appendChild(img);
+            showHint('Etkileşimli panorama başlatılamadı. Statik görsel gösteriliyor.', 2800);
+            return false;
         };
 
         const requestMotionPermission = async () => {
@@ -9070,89 +9175,232 @@ function openPanoramaViewer(imageUrl, caption) {
             return true;
         };
 
-        const initMonoViewer = async () => {
-            if (isClosing) return false;
-            unlockOrientation();
-            if (document.fullscreenElement && document.exitFullscreen) {
-                document.exitFullscreen().catch(() => {});
-            }
-            applyContainerMode(false);
-            destroyViewers();
-            isVrMode = false;
-            setVrButtonState(false);
+        const applyStereoLook = (yaw, pitch, hfov) => {
+            if (!stereoLeftViewer || !stereoRightViewer) return;
+            const y = normalizeYaw(yaw);
+            const p = Math.max(-85, Math.min(85, pitch));
+            const z = Math.max(35, Math.min(120, hfov));
+            try {
+                if (typeof stereoLeftViewer.lookAt === 'function') {
+                    stereoLeftViewer.lookAt(p, y, z, false);
+                } else {
+                    if (typeof stereoLeftViewer.setPitch === 'function') stereoLeftViewer.setPitch(p, false);
+                    if (typeof stereoLeftViewer.setYaw === 'function') stereoLeftViewer.setYaw(y, false);
+                    if (typeof stereoLeftViewer.setHfov === 'function') stereoLeftViewer.setHfov(z, false);
+                }
+            } catch (_) {}
+            try {
+                const rightYaw = normalizeYaw(y + eyeOffset);
+                if (typeof stereoRightViewer.lookAt === 'function') {
+                    stereoRightViewer.lookAt(p, rightYaw, z, false);
+                } else {
+                    if (typeof stereoRightViewer.setPitch === 'function') stereoRightViewer.setPitch(p, false);
+                    if (typeof stereoRightViewer.setYaw === 'function') stereoRightViewer.setYaw(rightYaw, false);
+                    if (typeof stereoRightViewer.setHfov === 'function') stereoRightViewer.setHfov(z, false);
+                }
+            } catch (_) {}
+        };
 
-            let inited = false;
-            if (await ensurePSV()) {
+        const setupStereoGestures = (leftGesture, rightGesture) => {
+            const pointers = new Map();
+            let lastPinchDistance = null;
+            let lastSingle = null;
+
+            const getPairDistance = () => {
+                const pts = Array.from(pointers.values());
+                if (pts.length !== 2) return null;
+                const dx = pts[0].x - pts[1].x;
+                const dy = pts[0].y - pts[1].y;
+                return Math.sqrt(dx * dx + dy * dy);
+            };
+
+            const onPointerDown = (e) => {
+                if (!isVrMode) return;
+                pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                if (pointers.size === 1) lastSingle = { x: e.clientX, y: e.clientY };
+                if (pointers.size === 2) lastPinchDistance = getPairDistance();
+            };
+
+            const onPointerMove = (e) => {
+                if (!isVrMode || !pointers.has(e.pointerId)) return;
+                pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+                if (pointers.size === 1 && lastSingle && !stereoOrientationActive) {
+                    const dx = e.clientX - lastSingle.x;
+                    const dy = e.clientY - lastSingle.y;
+                    lastSingle = { x: e.clientX, y: e.clientY };
+
+                    const yaw = (typeof stereoLeftViewer.getYaw === 'function') ? stereoLeftViewer.getYaw() : 0;
+                    const pitch = (typeof stereoLeftViewer.getPitch === 'function') ? stereoLeftViewer.getPitch() : 0;
+                    const hfov = (typeof stereoLeftViewer.getHfov === 'function') ? stereoLeftViewer.getHfov() : 100;
+                    const yawDelta = (dx / Math.max(1, viewerDiv.clientWidth)) * hfov * 0.9;
+                    const pitchDelta = (dy / Math.max(1, viewerDiv.clientHeight)) * hfov * 0.65;
+                    applyStereoLook(yaw - yawDelta, pitch + pitchDelta, hfov);
+                    e.preventDefault();
+                    return;
+                }
+
+                if (pointers.size === 2) {
+                    const dist = getPairDistance();
+                    if (Number.isFinite(dist) && Number.isFinite(lastPinchDistance)) {
+                        const deltaPx = dist - lastPinchDistance;
+                        if (Math.abs(deltaPx) > 1.2) {
+                            const hfov = (typeof stereoLeftViewer.getHfov === 'function') ? stereoLeftViewer.getHfov() : 100;
+                            const nextHfov = hfov - (deltaPx * 0.035);
+                            const yaw = (typeof stereoLeftViewer.getYaw === 'function') ? stereoLeftViewer.getYaw() : 0;
+                            const pitch = (typeof stereoLeftViewer.getPitch === 'function') ? stereoLeftViewer.getPitch() : 0;
+                            applyStereoLook(yaw, pitch, nextHfov);
+                        }
+                    }
+                    lastPinchDistance = dist;
+                    e.preventDefault();
+                }
+            };
+
+            const onPointerUpOrCancel = (e) => {
+                pointers.delete(e.pointerId);
+                if (pointers.size < 2) lastPinchDistance = null;
+                if (pointers.size === 0) lastSingle = null;
+            };
+
+            const targets = [leftGesture, rightGesture];
+            targets.forEach((target) => {
+                target.addEventListener('pointerdown', onPointerDown, { passive: true });
+                target.addEventListener('pointermove', onPointerMove, { passive: false });
+                target.addEventListener('pointerup', onPointerUpOrCancel, { passive: true });
+                target.addEventListener('pointercancel', onPointerUpOrCancel, { passive: true });
+                target.addEventListener('pointerleave', onPointerUpOrCancel, { passive: true });
+            });
+
+            stereoGestureCleanup = () => {
+                targets.forEach((target) => {
+                    target.removeEventListener('pointerdown', onPointerDown);
+                    target.removeEventListener('pointermove', onPointerMove);
+                    target.removeEventListener('pointerup', onPointerUpOrCancel);
+                    target.removeEventListener('pointercancel', onPointerUpOrCancel);
+                    target.removeEventListener('pointerleave', onPointerUpOrCancel);
+                });
+            };
+        };
+
+        const startStereoSync = () => {
+            stopStereoLoop();
+            const tick = () => {
+                if (!isVrMode || !stereoLeftViewer || !stereoRightViewer) return;
                 try {
-                    psvViewer = new PhotoSphereViewer.Viewer({
+                    const yaw = (typeof stereoLeftViewer.getYaw === 'function') ? stereoLeftViewer.getYaw() : 0;
+                    const pitch = (typeof stereoLeftViewer.getPitch === 'function') ? stereoLeftViewer.getPitch() : 0;
+                    const hfov = (typeof stereoLeftViewer.getHfov === 'function') ? stereoLeftViewer.getHfov() : 100;
+                    const rightYaw = normalizeYaw(yaw + eyeOffset);
+                    if (typeof stereoRightViewer.lookAt === 'function') {
+                        stereoRightViewer.lookAt(pitch, rightYaw, hfov, false);
+                    } else {
+                        if (typeof stereoRightViewer.setPitch === 'function') stereoRightViewer.setPitch(pitch, false);
+                        if (typeof stereoRightViewer.setYaw === 'function') stereoRightViewer.setYaw(rightYaw, false);
+                        if (typeof stereoRightViewer.setHfov === 'function') stereoRightViewer.setHfov(hfov, false);
+                    }
+                } catch (_) {}
+                stereoSyncRafId = requestAnimationFrame(tick);
+            };
+            stereoSyncRafId = requestAnimationFrame(tick);
+        };
+
+        const initStereoViewer = async () => {
+            if (isClosing) return false;
+            const initOfficialStereo = async () => {
+                const modules = await ensureOfficialModules();
+                if (!modules || isClosing) return false;
+
+                destroyAllViewers();
+                container.style.cssText = vrContainerStyle;
+                try {
+                    officialModules = modules;
+                    officialViewer = new officialModules.Viewer({
                         container: viewerDiv,
                         panorama: imageUrl,
                         touchmoveTwoFingers: true,
                         mousewheel: true,
                         navbar: ['zoom', 'fullscreen'],
+                        plugins: [
+                            [officialModules.GyroscopePlugin, { touchmove: false, moveMode: 'fast' }],
+                            [officialModules.StereoPlugin, {}],
+                        ],
                     });
-                    inited = true;
+
+                    officialStereoPlugin = officialViewer.getPlugin(officialModules.StereoPlugin) || officialViewer.getPlugin('stereo');
+                    if (!officialStereoPlugin) throw new Error('Stereo plugin not available');
+
+                    const officialGyroPlugin = officialViewer.getPlugin(officialModules.GyroscopePlugin) || officialViewer.getPlugin('gyroscope');
+                    if (officialGyroPlugin && typeof officialGyroPlugin.start === 'function' && !officialGyroPlugin.__softStartPatched) {
+                        const originalGyroStart = officialGyroPlugin.start.bind(officialGyroPlugin);
+                        officialGyroPlugin.start = (...args) => {
+                            return originalGyroStart(...args).catch((err) => {
+                                console.warn('Gyroscope start failed, continuing stereo touch-only:', err);
+                                return Promise.resolve();
+                            });
+                        };
+                        officialGyroPlugin.__softStartPatched = true;
+                    }
+
+                    if (typeof officialStereoPlugin.handleEvent === 'function' && !officialStereoPlugin.__patchedNoClickExit) {
+                        const originalHandleEvent = officialStereoPlugin.handleEvent.bind(officialStereoPlugin);
+                        officialStereoPlugin.handleEvent = (evt) => {
+                            if (evt && evt.type === 'click') return;
+                            return originalHandleEvent(evt);
+                        };
+                        officialStereoPlugin.__patchedNoClickExit = true;
+                    }
+
+                    await officialStereoPlugin.start();
+                    usingOfficialStereo = true;
+                    setVrButtonState(true);
+                    showHint('Resmi Stereo plugin aktif.', 2600);
+                    return true;
                 } catch (e) {
-                    console.warn('PSV init failed, trying Pannellum:', e);
+                    console.warn('Official stereo start failed, fallback to manual stereo:', e);
+                    destroyOfficialStereo();
+                    viewerDiv.innerHTML = '';
+                    return false;
                 }
-            }
+            };
 
-            if (!inited && await ensurePannellum()) {
-                try {
-                    pannellumViewer = window.pannellum.viewer(viewerDiv, {
-                        type: 'equirectangular',
-                        panorama: imageUrl,
-                        autoLoad: true,
-                        showZoomCtrl: true,
-                        compass: false,
-                    });
-                    inited = true;
-                } catch (e) {
-                    console.warn('Pannellum init failed:', e);
-                }
-            }
-
-            if (!inited) {
-                const img = document.createElement('img');
-                img.src = imageUrl;
-                img.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#000;';
-                viewerDiv.appendChild(img);
-                showHint('Etkileşimli panorama açılamadı. Statik görsel gösteriliyor.', 2800);
-            }
-            return inited;
-        };
-
-        const initStereoViewer = async () => {
-            if (isClosing) return false;
+            if (await initOfficialStereo()) return true;
             if (!await ensurePannellum()) return false;
 
-            applyContainerMode(true);
-            destroyViewers();
+            let initialYaw = 0;
+            let initialPitch = 0;
+            let initialHfov = 100;
+            if (normalViewer) {
+                try { if (typeof normalViewer.getYaw === 'function') initialYaw = normalViewer.getYaw(); } catch (_) {}
+                try { if (typeof normalViewer.getPitch === 'function') initialPitch = normalViewer.getPitch(); } catch (_) {}
+                try { if (typeof normalViewer.getHfov === 'function') initialHfov = normalViewer.getHfov(); } catch (_) {}
+            }
+
+            destroyAllViewers();
+            container.style.cssText = vrContainerStyle;
+            viewerDiv.innerHTML = '';
             viewerDiv.style.display = 'flex';
 
-            const leftWrap = document.createElement('div');
-            leftWrap.style.cssText = 'flex:1 1 50%;height:100%;position:relative;border-right:1px solid rgba(255,255,255,.12);';
-            const rightWrap = document.createElement('div');
-            rightWrap.style.cssText = 'flex:1 1 50%;height:100%;position:relative;pointer-events:none;';
-            const leftHost = document.createElement('div');
-            leftHost.style.cssText = 'width:100%;height:100%;';
-            const rightHost = document.createElement('div');
-            rightHost.style.cssText = 'width:100%;height:100%;';
-            leftWrap.appendChild(leftHost);
-            rightWrap.appendChild(rightHost);
-            viewerDiv.appendChild(leftWrap);
-            viewerDiv.appendChild(rightWrap);
+            const makeHalf = () => {
+                const wrap = document.createElement('div');
+                wrap.style.cssText = 'position:relative;flex:1 1 50%;height:100%;overflow:hidden;';
+                const host = document.createElement('div');
+                host.style.cssText = 'width:100%;height:100%;pointer-events:none;';
+                const gesture = document.createElement('div');
+                gesture.style.cssText = 'position:absolute;inset:0;z-index:30;background:transparent;touch-action:none;';
+                wrap.appendChild(host);
+                wrap.appendChild(gesture);
+                return { wrap, host, gesture };
+            };
+
+            const left = makeHalf();
+            const right = makeHalf();
+            left.wrap.style.borderRight = '1px solid rgba(255,255,255,.12)';
+            viewerDiv.appendChild(left.wrap);
+            viewerDiv.appendChild(right.wrap);
 
             try {
-                const left = window.pannellum.viewer(leftHost, {
-                    type: 'equirectangular',
-                    panorama: imageUrl,
-                    autoLoad: true,
-                    showZoomCtrl: false,
-                    compass: false,
-                    mouseZoom: true
-                });
-                const right = window.pannellum.viewer(rightHost, {
+                stereoLeftViewer = window.pannellum.viewer(left.host, {
                     type: 'equirectangular',
                     panorama: imageUrl,
                     autoLoad: true,
@@ -9160,39 +9408,41 @@ function openPanoramaViewer(imageUrl, caption) {
                     compass: false,
                     mouseZoom: false
                 });
-                stereoViewers = { left, right };
+                stereoRightViewer = window.pannellum.viewer(right.host, {
+                    type: 'equirectangular',
+                    panorama: imageUrl,
+                    autoLoad: true,
+                    showZoomCtrl: false,
+                    compass: false,
+                    mouseZoom: false
+                });
+
+                applyStereoLook(initialYaw, initialPitch, initialHfov);
+                setupStereoGestures(left.gesture, right.gesture);
 
                 const motionGranted = await requestMotionPermission();
                 if (motionGranted) {
                     try {
-                        if (typeof left.startOrientation === 'function') {
-                            left.startOrientation();
-                        } else {
-                            showHint('Bu tarayıcıda sensör API desteği sınırlı. Parmağınla sürükleyebilirsin.', 3000);
+                        if (typeof stereoLeftViewer.startOrientation === 'function') {
+                            stereoLeftViewer.startOrientation();
+                            stereoOrientationActive = !!(
+                                typeof stereoLeftViewer.isOrientationActive === 'function'
+                                    ? stereoLeftViewer.isOrientationActive()
+                                    : true
+                            );
                         }
                     } catch (_) {
-                        showHint('Sensör başlatılamadı. Parmağınla sürükleyebilirsin.', 3000);
+                        stereoOrientationActive = false;
                     }
-                } else {
-                    showHint('Sensör izni verilmedi. Parmağınla sürükleyerek bakabilirsin.', 3000);
                 }
 
-                const syncStereo = () => {
-                    if (!stereoViewers) return;
-                    try {
-                        const yaw = left.getYaw();
-                        const pitch = left.getPitch();
-                        const hfov = left.getHfov();
-                        const eyeOffset = 1.6;
+                if (stereoOrientationActive) {
+                    showHint('VR aktif: sensör + iki tarafta pinch/zoom kullanılabilir.', 3400);
+                } else {
+                    showHint('VR aktif: sensör yok/izin verilmedi; iki tarafta dokunmatik kontrol aktif.', 3600);
+                }
 
-                        right.setPitch(pitch, false);
-                        right.setHfov(hfov, false);
-                        right.setYaw(yaw + eyeOffset, false);
-                    } catch (_) {}
-                    stereoSyncRafId = requestAnimationFrame(syncStereo);
-                };
-                stereoSyncRafId = requestAnimationFrame(syncStereo);
-
+                startStereoSync();
                 if (!document.fullscreenElement && container.requestFullscreen) {
                     container.requestFullscreen().catch(() => {});
                 }
@@ -9202,14 +9452,24 @@ function openPanoramaViewer(imageUrl, caption) {
                     }
                 } catch (_) {}
 
-                isVrMode = true;
                 setVrButtonState(true);
-                showHint('VR modu aktif: telefonu yatay yerleştirip Cardboard\'a tak.', 3200);
                 return true;
             } catch (e) {
-                console.warn('Stereo panorama init failed:', e);
+                console.warn('Stereo pannellum init failed:', e);
+                destroyStereo();
                 return false;
             }
+        };
+
+        const exitStereoViewer = async () => {
+            if (usingOfficialStereo) {
+                destroyOfficialStereo();
+            }
+            if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+            unlockOrientation();
+            await initNormalViewer();
         };
 
         vrBtn.addEventListener('click', async () => {
@@ -9217,12 +9477,12 @@ function openPanoramaViewer(imageUrl, caption) {
             vrBtn.disabled = true;
             try {
                 if (isVrMode) {
-                    await initMonoViewer();
+                    await exitStereoViewer();
                 } else {
                     const ok = await initStereoViewer();
                     if (!ok) {
-                        await initMonoViewer();
-                        showHint('VR modu açılamadı. Normal panorama kullanılıyor.', 2800);
+                        await initNormalViewer();
+                        showHint('VR modu açılamadı. Normal panoramaya dönüldü.', 2800);
                     }
                 }
             } finally {
@@ -9230,7 +9490,9 @@ function openPanoramaViewer(imageUrl, caption) {
             }
         });
 
-        initMonoViewer();
+        (async () => {
+            await initNormalViewer();
+        })();
 
     } catch (e) {
         console.warn('Panorama viewer error:', e);
