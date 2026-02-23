@@ -8803,7 +8803,7 @@ async function loadPanoramasLayer() {
                             <strong>360° Panorama</strong>
                         </div>
                         ${caption ? `<div style=\"color:#444;font-size:0.9rem;margin-bottom:6px;\">${caption}</div>` : ''}
-                        <button class="btn btn-sm btn-primary" onclick="openPanoramaViewer('${mediaPath.replace(/'/g, "\'")}', '${(caption || '').replace(/'/g, "\'")}')">
+                        <button class="btn btn-sm btn-primary" onclick="openPanoramaViewer('${mediaPath.replace(/'/g, "\\'")}', '${(caption || '').replace(/'/g, "\\'")}')">
                             <i class="fas fa-vr-cardboard"></i> Aç
                         </button>
                     </div>
@@ -8853,7 +8853,7 @@ async function loadPanoramasLayer() {
                                     <strong>360° Panorama</strong>
                                 </div>
                                 ${caption ? `<div style=\"color:#444;font-size:0.9rem;margin-bottom:6px;\">${caption}</div>` : ''}
-                                <button class="btn btn-sm btn-primary" onclick="openPanoramaViewer('${mediaPath.replace(/'/g, "\'")}', '${(caption || '').replace(/'/g, "\'")}')">
+                                <button class="btn btn-sm btn-primary" onclick="openPanoramaViewer('${mediaPath.replace(/'/g, "\\'")}', '${(caption || '').replace(/'/g, "\\'")}')">
                                     <i class="fas fa-vr-cardboard"></i> Aç
                                 </button>
                             </div>
@@ -8873,18 +8873,26 @@ window.loadPanoramasLayer = loadPanoramasLayer;
 
 function openPanoramaViewer(imageUrl, caption) {
     try {
-        // Basic overlay
+        const normalContainerStyle = 'position:relative;width:90vw;max-width:1200px;height:75vh;border-radius:12px;overflow:hidden;background:#000;';
+        const vrContainerStyle = 'position:relative;width:100vw;max-width:none;height:100vh;border-radius:0;overflow:hidden;background:#000;';
+
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
 
         const container = document.createElement('div');
-        container.style.cssText = 'position:relative;width:90vw;max-width:1200px;height:75vh;border-radius:12px;overflow:hidden;background:#000;';
+        container.style.cssText = normalContainerStyle;
+
+        const actions = document.createElement('div');
+        actions.style.cssText = 'position:absolute;top:10px;right:10px;z-index:10000;display:flex;gap:8px;';
+
+        const vrBtn = document.createElement('button');
+        vrBtn.innerHTML = '<i class="fas fa-vr-cardboard"></i> VR';
+        vrBtn.className = 'btn btn-light btn-sm';
+        vrBtn.title = 'Cardboard modu';
 
         const closeBtn = document.createElement('button');
         closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-        closeBtn.className = 'btn btn-light';
-        closeBtn.style.cssText = 'position:absolute;top:10px;right:10px;z-index:10000;';
-        closeBtn.onclick = () => document.body.removeChild(overlay);
+        closeBtn.className = 'btn btn-light btn-sm';
 
         const title = document.createElement('div');
         title.textContent = caption || '360° Panorama';
@@ -8893,21 +8901,130 @@ function openPanoramaViewer(imageUrl, caption) {
         const viewerDiv = document.createElement('div');
         viewerDiv.style.cssText = 'width:100%;height:100%;';
 
+        const hint = document.createElement('div');
+        hint.style.cssText = 'position:absolute;left:50%;bottom:12px;transform:translateX(-50%);padding:6px 10px;border-radius:999px;background:rgba(17,24,39,.78);color:#fff;font-size:12px;z-index:10000;display:none;text-align:center;max-width:90%;';
+
+        actions.appendChild(vrBtn);
+        actions.appendChild(closeBtn);
         container.appendChild(viewerDiv);
-        container.appendChild(closeBtn);
+        container.appendChild(actions);
         container.appendChild(title);
+        container.appendChild(hint);
         overlay.appendChild(container);
         document.body.appendChild(overlay);
 
-        function cleanupOnEsc(e) {
-            if (e.key === 'Escape') {
-                try { document.body.removeChild(overlay); } catch(_) {}
-                document.removeEventListener('keydown', cleanupOnEsc);
-            }
-        }
-        document.addEventListener('keydown', cleanupOnEsc);
+        let psvViewer = null;
+        let pannellumViewer = null;
+        let stereoViewers = null;
+        let stereoSyncRafId = null;
+        let hintTimer = null;
+        let isVrMode = false;
+        let isClosing = false;
 
-        // Helper loaders
+        const setVrButtonState = (enabled) => {
+            if (enabled) {
+                vrBtn.classList.remove('btn-light');
+                vrBtn.classList.add('btn-success');
+                vrBtn.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> Normal';
+                vrBtn.title = 'Normal moda dön';
+            } else {
+                vrBtn.classList.remove('btn-success');
+                vrBtn.classList.add('btn-light');
+                vrBtn.innerHTML = '<i class="fas fa-vr-cardboard"></i> VR';
+                vrBtn.title = 'Cardboard modu';
+            }
+        };
+
+        const applyContainerMode = (vrEnabled) => {
+            container.style.cssText = vrEnabled ? vrContainerStyle : normalContainerStyle;
+            title.style.display = vrEnabled ? 'none' : 'block';
+            actions.style.top = vrEnabled ? '12px' : '10px';
+            actions.style.right = vrEnabled ? '12px' : '10px';
+        };
+
+        const showHint = (text, ms = 2600) => {
+            hint.textContent = text;
+            hint.style.display = 'block';
+            if (hintTimer) clearTimeout(hintTimer);
+            hintTimer = setTimeout(() => {
+                hint.style.display = 'none';
+                hintTimer = null;
+            }, ms);
+        };
+
+        const stopOrientation = (viewer) => {
+            if (!viewer) return;
+            try {
+                if (typeof viewer.stopOrientation === 'function') viewer.stopOrientation();
+            } catch (_) {}
+        };
+
+        const destroyViewers = () => {
+            if (stereoSyncRafId !== null) {
+                cancelAnimationFrame(stereoSyncRafId);
+                stereoSyncRafId = null;
+            }
+
+            if (stereoViewers) {
+                stopOrientation(stereoViewers.left);
+                stopOrientation(stereoViewers.right);
+                try { stereoViewers.left.destroy(); } catch (_) {}
+                try { stereoViewers.right.destroy(); } catch (_) {}
+                stereoViewers = null;
+            }
+
+            if (pannellumViewer) {
+                stopOrientation(pannellumViewer);
+                try { pannellumViewer.destroy(); } catch (_) {}
+                pannellumViewer = null;
+            }
+
+            if (psvViewer) {
+                try { psvViewer.destroy(); } catch (_) {}
+                psvViewer = null;
+            }
+
+            viewerDiv.innerHTML = '';
+            viewerDiv.style.display = 'block';
+        };
+
+        const unlockOrientation = () => {
+            try {
+                if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+                    screen.orientation.unlock();
+                }
+            } catch (_) {}
+        };
+
+        const closeViewer = () => {
+            if (isClosing) return;
+            isClosing = true;
+            destroyViewers();
+            if (hintTimer) {
+                clearTimeout(hintTimer);
+                hintTimer = null;
+            }
+            unlockOrientation();
+            if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+            document.removeEventListener('keydown', cleanupOnEsc);
+            overlay.removeEventListener('click', onOverlayClick);
+            try { document.body.removeChild(overlay); } catch (_) {}
+        };
+
+        function cleanupOnEsc(e) {
+            if (e.key === 'Escape') closeViewer();
+        }
+
+        function onOverlayClick(e) {
+            if (e.target === overlay) closeViewer();
+        }
+
+        closeBtn.onclick = closeViewer;
+        document.addEventListener('keydown', cleanupOnEsc);
+        overlay.addEventListener('click', onOverlayClick);
+
         const loadScript = (src) => new Promise((resolve, reject) => {
             const s = document.createElement('script');
             s.src = src; s.async = true; s.onload = resolve; s.onerror = reject;
@@ -8940,12 +9057,34 @@ function openPanoramaViewer(imageUrl, caption) {
             } catch (_) { return false; }
         };
 
-        (async () => {
-            // Try PSV first
+        const requestMotionPermission = async () => {
+            try {
+                if (typeof DeviceOrientationEvent !== 'undefined'
+                    && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    const res = await DeviceOrientationEvent.requestPermission();
+                    return res === 'granted';
+                }
+            } catch (_) {
+                return false;
+            }
+            return true;
+        };
+
+        const initMonoViewer = async () => {
+            if (isClosing) return false;
+            unlockOrientation();
+            if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+            applyContainerMode(false);
+            destroyViewers();
+            isVrMode = false;
+            setVrButtonState(false);
+
             let inited = false;
             if (await ensurePSV()) {
                 try {
-                    new PhotoSphereViewer.Viewer({
+                    psvViewer = new PhotoSphereViewer.Viewer({
                         container: viewerDiv,
                         panorama: imageUrl,
                         touchmoveTwoFingers: true,
@@ -8958,10 +9097,9 @@ function openPanoramaViewer(imageUrl, caption) {
                 }
             }
 
-            // Fallback to Pannellum
             if (!inited && await ensurePannellum()) {
                 try {
-                    window.pannellum.viewer(viewerDiv, {
+                    pannellumViewer = window.pannellum.viewer(viewerDiv, {
                         type: 'equirectangular',
                         panorama: imageUrl,
                         autoLoad: true,
@@ -8974,14 +9112,125 @@ function openPanoramaViewer(imageUrl, caption) {
                 }
             }
 
-            // Final fallback: static image
             if (!inited) {
                 const img = document.createElement('img');
                 img.src = imageUrl;
                 img.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#000;';
                 viewerDiv.appendChild(img);
+                showHint('Etkileşimli panorama açılamadı. Statik görsel gösteriliyor.', 2800);
             }
-        })();
+            return inited;
+        };
+
+        const initStereoViewer = async () => {
+            if (isClosing) return false;
+            if (!await ensurePannellum()) return false;
+
+            applyContainerMode(true);
+            destroyViewers();
+            viewerDiv.style.display = 'flex';
+
+            const leftWrap = document.createElement('div');
+            leftWrap.style.cssText = 'flex:1 1 50%;height:100%;position:relative;border-right:1px solid rgba(255,255,255,.12);';
+            const rightWrap = document.createElement('div');
+            rightWrap.style.cssText = 'flex:1 1 50%;height:100%;position:relative;pointer-events:none;';
+            const leftHost = document.createElement('div');
+            leftHost.style.cssText = 'width:100%;height:100%;';
+            const rightHost = document.createElement('div');
+            rightHost.style.cssText = 'width:100%;height:100%;';
+            leftWrap.appendChild(leftHost);
+            rightWrap.appendChild(rightHost);
+            viewerDiv.appendChild(leftWrap);
+            viewerDiv.appendChild(rightWrap);
+
+            try {
+                const left = window.pannellum.viewer(leftHost, {
+                    type: 'equirectangular',
+                    panorama: imageUrl,
+                    autoLoad: true,
+                    showZoomCtrl: false,
+                    compass: false,
+                    mouseZoom: true
+                });
+                const right = window.pannellum.viewer(rightHost, {
+                    type: 'equirectangular',
+                    panorama: imageUrl,
+                    autoLoad: true,
+                    showZoomCtrl: false,
+                    compass: false,
+                    mouseZoom: false
+                });
+                stereoViewers = { left, right };
+
+                const motionGranted = await requestMotionPermission();
+                if (motionGranted) {
+                    try {
+                        if (typeof left.startOrientation === 'function') {
+                            left.startOrientation();
+                        } else {
+                            showHint('Bu tarayıcıda sensör API desteği sınırlı. Parmağınla sürükleyebilirsin.', 3000);
+                        }
+                    } catch (_) {
+                        showHint('Sensör başlatılamadı. Parmağınla sürükleyebilirsin.', 3000);
+                    }
+                } else {
+                    showHint('Sensör izni verilmedi. Parmağınla sürükleyerek bakabilirsin.', 3000);
+                }
+
+                const syncStereo = () => {
+                    if (!stereoViewers) return;
+                    try {
+                        const yaw = left.getYaw();
+                        const pitch = left.getPitch();
+                        const hfov = left.getHfov();
+                        const eyeOffset = 1.6;
+
+                        right.setPitch(pitch, false);
+                        right.setHfov(hfov, false);
+                        right.setYaw(yaw + eyeOffset, false);
+                    } catch (_) {}
+                    stereoSyncRafId = requestAnimationFrame(syncStereo);
+                };
+                stereoSyncRafId = requestAnimationFrame(syncStereo);
+
+                if (!document.fullscreenElement && container.requestFullscreen) {
+                    container.requestFullscreen().catch(() => {});
+                }
+                try {
+                    if (screen.orientation && typeof screen.orientation.lock === 'function') {
+                        screen.orientation.lock('landscape').catch(() => {});
+                    }
+                } catch (_) {}
+
+                isVrMode = true;
+                setVrButtonState(true);
+                showHint('VR modu aktif: telefonu yatay yerleştirip Cardboard\'a tak.', 3200);
+                return true;
+            } catch (e) {
+                console.warn('Stereo panorama init failed:', e);
+                return false;
+            }
+        };
+
+        vrBtn.addEventListener('click', async () => {
+            if (isClosing) return;
+            vrBtn.disabled = true;
+            try {
+                if (isVrMode) {
+                    await initMonoViewer();
+                } else {
+                    const ok = await initStereoViewer();
+                    if (!ok) {
+                        await initMonoViewer();
+                        showHint('VR modu açılamadı. Normal panorama kullanılıyor.', 2800);
+                    }
+                }
+            } finally {
+                vrBtn.disabled = false;
+            }
+        });
+
+        initMonoViewer();
 
     } catch (e) {
         console.warn('Panorama viewer error:', e);
