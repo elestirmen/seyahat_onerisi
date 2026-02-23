@@ -12,6 +12,7 @@ import json
 import uuid
 import unicodedata
 import re
+from pathlib import Path
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from auth_middleware import auth_middleware
@@ -2656,6 +2657,31 @@ def list_route_panoramas():
                     # ignore detection errors, keep is_pano False
                     pass
 
+            # Route panorama sidecar bilgisini oku (orijinal + pyramid seviyeleri)
+            panorama_meta: Dict[str, Any] = {}
+            if rel_path:
+                try:
+                    fs_path = Path(os.getcwd()) / rel_path
+                    sidecar_path = fs_path.with_suffix('.pano.json')
+                    if sidecar_path.is_file():
+                        with open(sidecar_path, 'r', encoding='utf-8') as sf:
+                            panorama_meta = json.load(sf) or {}
+                except Exception:
+                    panorama_meta = {}
+
+            original_path = panorama_meta.get('original_path')
+            if isinstance(original_path, str) and original_path.startswith('/'):
+                original_path = original_path.lstrip('/')
+
+            pyramid_levels = []
+            for level in panorama_meta.get('pyramid_levels', []) or []:
+                if not isinstance(level, dict):
+                    continue
+                level_path = level.get('path')
+                if isinstance(level_path, str) and level_path.startswith('/'):
+                    level = {**level, 'path': level_path.lstrip('/')}
+                pyramid_levels.append(level)
+
             # Nihai çıktı (istemci 360 tespitini yapacak)
             results.append({
                 'route_id': row.get('route_id'),
@@ -2665,7 +2691,9 @@ def list_route_panoramas():
                 'lng': float(row['lng']) if row.get('lng') is not None else None,
                 'filename': filename,
                 'media_type': 'image' if (row.get('media_type') or '').lower() in ('photo', 'image', '') else row.get('media_type'),
-                'is_pano': is_pano
+                'is_pano': is_pano,
+                'original_path': original_path,
+                'pyramid_levels': pyramid_levels
             })
 
         cur.close()

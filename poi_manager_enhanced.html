@@ -2816,6 +2816,49 @@
                 }
             }
 
+            normalizeMediaPath(path) {
+                const raw = String(path || '').trim();
+                if (!raw) return '';
+                if (/^(https?:)?\/\//i.test(raw) || raw.startsWith('blob:') || raw.startsWith('data:')) return raw;
+                return raw.startsWith('/') ? raw : `/${raw}`;
+            }
+
+            resolveBestPanoramaPath(item) {
+                const candidates = [];
+                const pushCandidate = (obj, fallbackLabel = 'level') => {
+                    if (!obj || typeof obj !== 'object') return;
+                    const p = this.normalizeMediaPath(obj.path);
+                    if (!p) return;
+                    const w = Number(obj.width) || 0;
+                    const h = Number(obj.height) || 0;
+                    const maxEdge = Number(obj.max_edge) || Math.max(w, h) || 0;
+                    candidates.push({
+                        path: p,
+                        max_edge: maxEdge,
+                        label: obj.label || fallbackLabel,
+                        role: obj.role || null,
+                    });
+                };
+
+                const levels = Array.isArray(item?.pyramid_levels) ? item.pyramid_levels : [];
+                levels.forEach((lvl) => pushCandidate(lvl, 'pyramid'));
+                if (item?.original_path) pushCandidate({ path: item.original_path, role: 'original', label: 'original' }, 'original');
+                if (item?.path) pushCandidate({ path: item.path, label: 'base' }, 'base');
+
+                if (candidates.length === 0) return '';
+
+                // Prefer the highest available resolution for admin inspection quality.
+                candidates.sort((a, b) => {
+                    const da = Number(a.max_edge) || 0;
+                    const db = Number(b.max_edge) || 0;
+                    if (da !== db) return db - da;
+                    if (a.role === 'original' && b.role !== 'original') return -1;
+                    if (b.role === 'original' && a.role !== 'original') return 1;
+                    return 0;
+                });
+                return candidates[0].path;
+            }
+
             async loadPanoramas() {
                 try {
                     const res = await this.authenticatedFetch('/api/panoramas');
@@ -2840,6 +2883,12 @@
                             popupAnchor: [0, -16]
                         });
 
+                        const mediaPath = this.resolveBestPanoramaPath(pano) || this.normalizeMediaPath(pano.path);
+                        const safeMediaPath = String(mediaPath).replace(/'/g, "\\'");
+                        const safeFilename = String(pano.filename || 'panorama').replace(/'/g, "\\'");
+                        const safePanoId = String(pano.id || '').replace(/'/g, "\\'");
+                        const canDeleteStandalone = safePanoId.length >= 6;
+
                         const marker = L.marker([pano.lat, pano.lng], { icon })
                             .bindPopup(`
                                 <div class="poi-popup">
@@ -2848,10 +2897,15 @@
                                         <strong>360° Panorama</strong>
                                     </div>
                                     ${pano.caption ? `<div class="poi-popup-description">${pano.caption}</div>` : ''}
-                                    <div style="margin-top:6px;">
-                                        <button class="btn btn-sm btn-primary" onclick="showMediaModal('/${pano.path}', '${pano.filename}', 'image')">
+                                    <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
+                                        <button class="btn btn-sm btn-primary" onclick="showMediaModal('${safeMediaPath}', '${safeFilename}', 'image')">
                                             <i class="fas fa-vr-cardboard"></i> Aç
                                         </button>
+                                        ${canDeleteStandalone ? `
+                                            <button class="btn btn-sm btn-danger" onclick="deleteStandalonePanorama('${safePanoId}')">
+                                                <i class="fas fa-trash-alt"></i> Sil
+                                            </button>
+                                        ` : ''}
                                     </div>
                                 </div>
                             `);
@@ -2884,6 +2938,12 @@
                                     popupAnchor: [0, -16]
                                 });
                                 const caption = p.caption || 'Rota Medyası 360°';
+                                const mediaPath = this.resolveBestPanoramaPath(p) || this.normalizeMediaPath(p.path);
+                                const safeMediaPath = String(mediaPath).replace(/'/g, "\\'");
+                                const rawFilename = typeof p.filename === 'string' ? p.filename : '';
+                                const safeFilename = String(rawFilename || 'route-panorama').replace(/'/g, "\\'");
+                                const routeId = Number(p.route_id);
+                                const canDeleteRoute = Number.isFinite(routeId) && routeId > 0 && rawFilename.trim().length > 0;
                                 const marker2 = L.marker([p.lat, p.lng], { icon: icon2 })
                                     .bindPopup(`
                                         <div class="poi-popup">
@@ -2892,10 +2952,15 @@
                                                 <strong>360° Panorama</strong>
                                             </div>
                                             ${caption ? `<div class=\"poi-popup-description\">${caption}</div>` : ''}
-                                            <div style="margin-top:6px;">
-                                                <button class="btn btn-sm btn-primary" onclick="showMediaModal('/${p.path}', '${p.filename}', 'image')">
+                                            <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
+                                                <button class="btn btn-sm btn-primary" onclick="showMediaModal('${safeMediaPath}', '${safeFilename}', 'image')">
                                                     <i class="fas fa-vr-cardboard"></i> Aç
                                                 </button>
+                                                ${canDeleteRoute ? `
+                                                    <button class="btn btn-sm btn-danger" onclick="deleteRoutePanorama(${routeId}, '${safeFilename}')">
+                                                        <i class="fas fa-trash-alt"></i> Sil
+                                                    </button>
+                                                ` : ''}
                                             </div>
                                         </div>
                                     `);
@@ -2943,6 +3008,67 @@
                 } catch (e) {
                     console.error('Panorama upload error:', e);
                     this.showToast('Panorama yükleme hatası: ' + e.message, 'error');
+                }
+            }
+
+            async deleteStandalonePanorama(panoId) {
+                const id = String(panoId || '').trim();
+                if (!id || id.length < 6) {
+                    this.showToast('Geçersiz panorama kimliği', 'error');
+                    return;
+                }
+                if (!confirm('Bu bağımsız 360° panoramayı silmek istediğinizden emin misiniz?')) {
+                    return;
+                }
+                try {
+                    const res = await this.authenticatedFetch(`/api/panoramas/${encodeURIComponent(id)}`, {
+                        method: 'DELETE'
+                    });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.error || 'Panorama silinemedi');
+                    }
+                    this.showToast('360° panorama silindi', 'success');
+                    const toggle = document.getElementById('togglePanoramas');
+                    if (toggle && toggle.checked) {
+                        await this.loadPanoramas();
+                    } else if (this.panoramaLayer) {
+                        this.panoramaLayer.clearLayers();
+                    }
+                } catch (e) {
+                    console.error('Standalone panorama delete error:', e);
+                    this.showToast('Panorama silme hatası: ' + e.message, 'error');
+                }
+            }
+
+            async deleteRoutePanorama(routeId, filename) {
+                const rid = Number(routeId);
+                const fname = String(filename || '').trim();
+                if (!Number.isFinite(rid) || rid <= 0 || !fname) {
+                    this.showToast('Geçersiz rota panorama bilgisi', 'error');
+                    return;
+                }
+                if (!confirm(`'${fname}' rota panoramasını silmek istediğinizden emin misiniz?`)) {
+                    return;
+                }
+                try {
+                    const res = await this.authenticatedFetch(`/api/admin/routes/${rid}/media/${encodeURIComponent(fname)}`, {
+                        method: 'DELETE'
+                    });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.error || 'Rota panoraması silinemedi');
+                    }
+                    this.showToast('Rota panoraması silindi', 'success');
+                    const toggle = document.getElementById('togglePanoramas');
+                    if (toggle && toggle.checked) {
+                        await this.loadPanoramas();
+                    } else if (this.panoramaLayer) {
+                        this.panoramaLayer.clearLayers();
+                    }
+                } catch (e) {
+                    console.error('Route panorama delete error:', e);
+                    this.showToast('Rota panoraması silme hatası: ' + e.message, 'error');
                 }
             }
 
@@ -4563,6 +4689,18 @@
         function deleteMediaFile(poiId, filename) {
             if (window.poiManager) {
                 window.poiManager.deleteMediaFile(poiId, filename);
+            }
+        }
+
+        function deleteStandalonePanorama(panoId) {
+            if (window.poiManager) {
+                window.poiManager.deleteStandalonePanorama(panoId);
+            }
+        }
+
+        function deleteRoutePanorama(routeId, filename) {
+            if (window.poiManager) {
+                window.poiManager.deleteRoutePanorama(routeId, filename);
             }
         }
 

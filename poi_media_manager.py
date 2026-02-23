@@ -74,10 +74,14 @@ class POIMediaManager:
         pano_base = self.base_path / "by_panorama"
         pano_imgs = pano_base / "images"
         pano_meta = pano_base / "meta"
+        pano_orig = pano_base / "originals"
+        pano_levels = pano_base / "levels"
         pano_prev = self.previews_path / "by_panorama" / "images"
         pano_base.mkdir(exist_ok=True)
         pano_imgs.mkdir(parents=True, exist_ok=True)
         pano_meta.mkdir(parents=True, exist_ok=True)
+        pano_orig.mkdir(parents=True, exist_ok=True)
+        pano_levels.mkdir(parents=True, exist_ok=True)
         pano_prev.mkdir(parents=True, exist_ok=True)
     
     def cleanup_unused_directories(self):
@@ -375,7 +379,8 @@ class POIMediaManager:
             return False
 
     def convert_to_webp(self, input_path: Path, output_path: Path, quality: int = 90,
-                        gps_data: Optional[Tuple[float, float]] = None) -> bool:
+                        gps_data: Optional[Tuple[float, float]] = None,
+                        max_size: Optional[int] = 2048) -> bool:
         """Görseli WebP formatına dönüştür ve mümkünse EXIF'i koru.
 
         EXIF verisi WebP'e yazılamazsa, GPS bilgisi aynı klasörde JSON olarak saklanır.
@@ -394,9 +399,8 @@ class POIMediaManager:
                     elif orientation == 8:
                         img = img.rotate(90, expand=True)
 
-                # Çok büyük görselleri yeniden boyutlandır
-                max_size = 2048
-                if img.width > max_size or img.height > max_size:
+                # Çok büyük görselleri yeniden boyutlandır (opsiyonel)
+                if max_size and max_size > 0 and (img.width > max_size or img.height > max_size):
                     img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
 
                 # RGB/RGBA moduna çevir
@@ -433,6 +437,78 @@ class POIMediaManager:
         except Exception as e:
             print(f"❌ WebP dönüşüm hatası: {e}")
             return False
+
+    def _to_relative_media_path(self, file_path: Path) -> str:
+        """Dosya yolunu proje köküne göre göreli hale getir."""
+        try:
+            return str(file_path.relative_to(self.base_path.parent))
+        except Exception:
+            return str(file_path)
+
+    def _read_image_size(self, image_path: Path) -> Tuple[Optional[int], Optional[int]]:
+        """Görsel boyutunu güvenli şekilde oku."""
+        try:
+            with Image.open(image_path) as im:
+                return int(im.width), int(im.height)
+        except Exception:
+            return None, None
+
+    def _is_equirectangular_image(self, image_path: Path, min_width: int = 1000) -> bool:
+        """Görselin 360 equirectangular olma olasılığını oranla belirle."""
+        try:
+            with Image.open(image_path) as im:
+                w, h = im.size
+                if h in (0, None):
+                    return False
+                ratio = float(w) / float(h)
+                return (1.90 <= ratio <= 2.10) and (w >= min_width)
+        except Exception:
+            return False
+
+    def _create_panorama_pyramid_levels(self, source_path: Path, levels_dir: Path,
+                                        base_name: str,
+                                        gps_data: Optional[Tuple[float, float]] = None) -> List[Dict]:
+        """Panorama için çok çözünürlüklü seviye dosyaları üret."""
+        levels: List[Dict] = []
+        width, height = self._read_image_size(source_path)
+        if not width or not height:
+            return levels
+
+        max_edge = max(width, height)
+        if max_edge <= 1536:
+            return levels
+
+        levels_dir.mkdir(parents=True, exist_ok=True)
+        # Düşük -> yüksek seviyeler. 2048 ana optimize dosya olarak ayrı tutulur.
+        targets = [1536, 3072, 4096, 6144]
+        selected = [edge for edge in targets if edge < max_edge]
+        if not selected:
+            return levels
+
+        for target in selected:
+            quality = 88 if target <= 1536 else (90 if target <= 3072 else 92)
+            level_path = levels_dir / f"{base_name}_lvl_{target}.webp"
+            converted = self.convert_to_webp(
+                source_path,
+                level_path,
+                quality=quality,
+                gps_data=gps_data,
+                max_size=target,
+            )
+            if not converted:
+                continue
+            lvl_w, lvl_h = self._read_image_size(level_path)
+            levels.append({
+                'label': f"lvl_{target}",
+                'path': self._to_relative_media_path(level_path),
+                'width': lvl_w,
+                'height': lvl_h,
+                'max_edge': max((lvl_w or 0), (lvl_h or 0)),
+                'quality': quality,
+            })
+
+        levels.sort(key=lambda x: x.get('max_edge') or 0)
+        return levels
 
     def add_poi_media(self, poi_id: str, poi_name: str, category: str, media_file_path: str,
                       media_type: str = None, caption: str = '', is_primary: bool = False,
@@ -557,18 +633,32 @@ class POIMediaManager:
             pano_imgs = self.base_path / "by_panorama" / "images"
             pano_prev = self.previews_path / "by_panorama" / "images"
             pano_meta = self.base_path / "by_panorama" / "meta"
+            pano_orig = self.base_path / "by_panorama" / "originals"
+            pano_levels_root = self.base_path / "by_panorama" / "levels"
             pano_imgs.mkdir(parents=True, exist_ok=True)
             pano_prev.mkdir(parents=True, exist_ok=True)
             pano_meta.mkdir(parents=True, exist_ok=True)
+            pano_orig.mkdir(parents=True, exist_ok=True)
+            pano_levels_root.mkdir(parents=True, exist_ok=True)
 
             # Benzersiz id ve dosya adı
             unique_id = str(uuid.uuid4())[:8]
             file_extension = Path(image_file_path).suffix.lower()
             target_path = pano_imgs / f"{unique_id}.webp"
+            original_copy_path = pano_orig / f"{unique_id}{file_extension}"
+
+            # Orijinali ayrı sakla
+            shutil.copy2(image_file_path, original_copy_path)
 
             # WebP'ye dönüştür (EXIF konumu yazar)
             gps = (lat, lng) if lat is not None and lng is not None else None
-            webp_success = self.convert_to_webp(Path(image_file_path), target_path, quality=90, gps_data=gps)
+            webp_success = self.convert_to_webp(
+                Path(image_file_path),
+                target_path,
+                quality=90,
+                gps_data=gps,
+                max_size=2048,
+            )
             if not webp_success:
                 # Orijinal uzantı ile kopyala
                 target_path = pano_imgs / f"{unique_id}{file_extension}"
@@ -581,12 +671,53 @@ class POIMediaManager:
             final_size = os.path.getsize(target_path)
             size_reduction = ((original_size - final_size) / original_size * 100) if original_size > 0 else 0
 
+            # Pyramid seviyeleri (zoom arttıkça kullanılmak üzere)
+            levels_dir = pano_levels_root / unique_id
+            pyramid_levels = self._create_panorama_pyramid_levels(
+                original_copy_path,
+                levels_dir,
+                unique_id,
+                gps_data=gps,
+            )
+            base_w, base_h = self._read_image_size(target_path)
+            base_level = {
+                'label': 'optimized_base',
+                'path': self._to_relative_media_path(target_path),
+                'width': base_w,
+                'height': base_h,
+                'max_edge': max((base_w or 0), (base_h or 0)),
+                'quality': 90,
+            }
+            pyramid_levels.append(base_level)
+            orig_w, orig_h = self._read_image_size(original_copy_path)
+            pyramid_levels.append({
+                'label': 'original',
+                'path': self._to_relative_media_path(original_copy_path),
+                'width': orig_w,
+                'height': orig_h,
+                'max_edge': max((orig_w or 0), (orig_h or 0)),
+                'quality': None,
+                'role': 'original',
+            })
+            # Yol bazlı tekilleştir ve çözünürlüğe göre sırala
+            dedup_levels: Dict[str, Dict] = {}
+            for lvl in pyramid_levels:
+                lvl_path = lvl.get('path')
+                if not lvl_path:
+                    continue
+                dedup_levels[lvl_path] = lvl
+            pyramid_levels = sorted(
+                dedup_levels.values(),
+                key=lambda x: (x.get('max_edge') or 0)
+            )
+
             # Meta oluştur ve kaydet
             meta = {
                 'id': unique_id,
                 'media_type': 'image',
-                'path': str(target_path.relative_to(self.base_path.parent)),
-                'preview_path': str(preview_path.relative_to(self.base_path.parent)) if preview_created else None,
+                'path': self._to_relative_media_path(target_path),
+                'original_path': self._to_relative_media_path(original_copy_path),
+                'preview_path': self._to_relative_media_path(preview_path) if preview_created else None,
                 'filename': target_path.name,
                 'format': Path(target_path.name).suffix[1:] if Path(target_path.name).suffix else 'unknown',
                 'size': final_size,
@@ -594,6 +725,7 @@ class POIMediaManager:
                 'caption': caption,
                 'lat': lat,
                 'lng': lng,
+                'pyramid_levels': pyramid_levels,
                 'compression_ratio': f"{size_reduction:.1f}%" if size_reduction > 0 else "0%",
                 'created_at': datetime.utcnow().isoformat() + 'Z'
             }
@@ -625,6 +757,23 @@ class POIMediaManager:
                         continue
                     if prev_rel and not (self.base_path.parent / Path(prev_rel)).exists():
                         meta['preview_path'] = None
+                    orig_rel = meta.get('original_path')
+                    if orig_rel and not (self.base_path.parent / Path(orig_rel)).exists():
+                        meta['original_path'] = None
+                    if isinstance(meta.get('pyramid_levels'), list):
+                        valid_levels: List[Dict] = []
+                        for lvl in meta.get('pyramid_levels', []):
+                            lvl_path = (lvl or {}).get('path')
+                            if not lvl_path:
+                                continue
+                            if (self.base_path.parent / Path(lvl_path)).exists():
+                                valid_levels.append(lvl)
+                        meta['pyramid_levels'] = sorted(
+                            valid_levels,
+                            key=lambda x: (x.get('max_edge') or 0)
+                        )
+                    else:
+                        meta['pyramid_levels'] = []
                     results.append(meta)
                 except Exception as e:
                     print(f"⚠️ Panorama meta okunamadı: {meta_file} - {e}")
@@ -640,6 +789,8 @@ class POIMediaManager:
             pano_imgs = self.base_path / "by_panorama" / "images"
             pano_prev = self.previews_path / "by_panorama" / "images"
             pano_meta = self.base_path / "by_panorama" / "meta"
+            pano_orig = self.base_path / "by_panorama" / "originals"
+            pano_levels = self.base_path / "by_panorama" / "levels" / pano_id
 
             deleted = False
             # Olası uzantılar
@@ -653,6 +804,14 @@ class POIMediaManager:
             (pano_prev / f"thumb_{pano_id}.webp").unlink(missing_ok=True)
             # Meta
             (pano_meta / f"{pano_id}.json").unlink(missing_ok=True)
+            # Original copy
+            for orig in pano_orig.glob(f"{pano_id}.*"):
+                orig.unlink(missing_ok=True)
+                deleted = True
+            # Pyramid levels
+            if pano_levels.exists() and pano_levels.is_dir():
+                shutil.rmtree(pano_levels, ignore_errors=True)
+                deleted = True
             return deleted
         except Exception as e:
             print(f"❌ Panorama silme hatası: {e}")
@@ -898,12 +1057,7 @@ class POIMediaManager:
             is_pano = False
             try:
                 if media_type == 'image' and destination_path.exists():
-                    with Image.open(destination_path) as im:
-                        w, h = im.size
-                        if h not in (0, None):
-                            ratio = float(w) / float(h)
-                            if 1.90 <= ratio <= 2.10 and w >= 1000:
-                                is_pano = True
+                    is_pano = self._is_equirectangular_image(destination_path)
             except Exception:
                 pass
 
@@ -913,6 +1067,70 @@ class POIMediaManager:
                 final_media_type = 'panorama'
             elif media_type == 'image' and is_pano:
                 final_media_type = 'panorama'
+
+            original_path_rel = None
+            panorama_levels: List[Dict] = []
+            panorama_meta_path_rel = None
+            if final_media_type == 'panorama' and media_type == 'image':
+                gps = (lat, lng) if lat is not None and lng is not None else None
+                pano_originals_dir = base_route_dir / "panorama_originals"
+                pano_levels_dir = base_route_dir / "panorama_levels" / destination_path.stem
+                pano_originals_dir.mkdir(parents=True, exist_ok=True)
+                pano_levels_dir.mkdir(parents=True, exist_ok=True)
+
+                original_ext = original_extension if original_extension else '.img'
+                pano_original_path = pano_originals_dir / f"{destination_path.stem}_orig{original_ext}"
+                shutil.copy2(media_file_path, pano_original_path)
+                original_path_rel = self._to_relative_media_path(pano_original_path)
+
+                panorama_levels = self._create_panorama_pyramid_levels(
+                    pano_original_path,
+                    pano_levels_dir,
+                    destination_path.stem,
+                    gps_data=gps,
+                )
+                base_w, base_h = self._read_image_size(destination_path)
+                panorama_levels.append({
+                    'label': 'optimized_base',
+                    'path': self._to_relative_media_path(destination_path),
+                    'width': base_w,
+                    'height': base_h,
+                    'max_edge': max((base_w or 0), (base_h or 0)),
+                    'quality': 90,
+                })
+                orig_w, orig_h = self._read_image_size(pano_original_path)
+                panorama_levels.append({
+                    'label': 'original',
+                    'path': original_path_rel,
+                    'width': orig_w,
+                    'height': orig_h,
+                    'max_edge': max((orig_w or 0), (orig_h or 0)),
+                    'quality': None,
+                    'role': 'original',
+                })
+                dedup_levels: Dict[str, Dict] = {}
+                for lvl in panorama_levels:
+                    lvl_path = lvl.get('path')
+                    if not lvl_path:
+                        continue
+                    dedup_levels[lvl_path] = lvl
+                panorama_levels = sorted(
+                    dedup_levels.values(),
+                    key=lambda x: (x.get('max_edge') or 0)
+                )
+
+                # Route panorama için sidecar metadata (DB migration gerektirmez)
+                panorama_meta_path = destination_path.with_suffix('.pano.json')
+                panorama_meta = {
+                    'version': 1,
+                    'created_at': datetime.utcnow().isoformat() + 'Z',
+                    'path': self._to_relative_media_path(destination_path),
+                    'original_path': original_path_rel,
+                    'pyramid_levels': panorama_levels,
+                }
+                with open(panorama_meta_path, 'w', encoding='utf-8') as f:
+                    json.dump(panorama_meta, f, ensure_ascii=False, indent=2)
+                panorama_meta_path_rel = self._to_relative_media_path(panorama_meta_path)
 
             media_info = {
                 'id': str(uuid.uuid4()),
@@ -930,7 +1148,10 @@ class POIMediaManager:
                 'lng': lng,
                 'uploaded_at': datetime.now().isoformat(),
                 'compression_ratio': self._calculate_compression_ratio(media_file_path, destination_path) if media_type == 'image' else "0%",
-                'is_pano': is_pano
+                'is_pano': is_pano,
+                'original_path': original_path_rel,
+                'pyramid_levels': panorama_levels,
+                'panorama_meta_path': panorama_meta_path_rel,
             }
             
             print(f"✅ Rota medyası başarıyla eklendi: {media_info['filename']}")
@@ -1178,6 +1399,8 @@ class POIMediaManager:
                                         for f in orig_dir.iterdir():
                                             if not f.is_file():
                                                 continue
+                                            if f.name.endswith('.pano.json') or f.suffix.lower() == '.json':
+                                                continue
                                             if f.name in existing_filenames:
                                                 continue
                                             # Detect panorama heuristic for images
@@ -1253,6 +1476,8 @@ class POIMediaManager:
                             print(f"📁 Checking {media_type} directory: {media_dir}")
                             for media_file in media_dir.iterdir():
                                 if media_file.is_file():
+                                    if media_file.name.endswith('.pano.json') or media_file.suffix.lower() == '.json':
+                                        continue
                                     print(f"  📄 Found file: {media_file.name}")
                                     # Thumbnail ve preview yollarını bul
                                     file_stem = media_file.stem
@@ -1474,6 +1699,27 @@ class POIMediaManager:
                                 print(f"✅ Original file deleted: {original_file}")
                                 deleted_any = True
                                 break
+
+                # 3b. Panorama sidecar ve pyramid/original kopyalarını temizle
+                pano_sidecar = original_dir / f"{file_stem}.pano.json"
+                if pano_sidecar.exists():
+                    pano_sidecar.unlink()
+                    print(f"✅ Panorama sidecar deleted: {pano_sidecar}")
+                    deleted_any = True
+
+                pano_originals_dir = route_folder / "panorama_originals"
+                if pano_originals_dir.exists():
+                    for pano_orig in pano_originals_dir.glob(f"{file_stem}_orig*"):
+                        if pano_orig.is_file():
+                            pano_orig.unlink()
+                            print(f"✅ Panorama original copy deleted: {pano_orig}")
+                            deleted_any = True
+
+                pano_levels_dir = route_folder / "panorama_levels" / file_stem
+                if pano_levels_dir.exists() and pano_levels_dir.is_dir():
+                    shutil.rmtree(pano_levels_dir, ignore_errors=True)
+                    print(f"✅ Panorama levels directory deleted: {pano_levels_dir}")
+                    deleted_any = True
                 
                 # 4. Also try to delete from videos folder if it exists
                 video_preview_dir = self.previews_path / "by_route_id" / route_folder.name / "videos"
