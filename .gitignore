@@ -83,6 +83,10 @@ temp/
 # poi_media/*.mov
 # poi_media/*.avi
 
+# Runtime/uploaded media (never commit)
+poi_media/
+poi_images/
+
 # Cache
 .cache/
 *.cache
