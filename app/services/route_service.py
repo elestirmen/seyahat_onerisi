@@ -904,8 +904,16 @@ class RouteService:
                     'query': query
                 }
 
-    def add_route_media(self, route_id: int, file: FileStorage, lat: float, lng: float,
-                        caption: Optional[str], is_primary: bool = False) -> Dict[str, Any]:
+    def add_route_media(
+        self,
+        route_id: int,
+        file: FileStorage,
+        lat: float,
+        lng: float,
+        caption: Optional[str],
+        is_primary: bool = False,
+        requested_media_type: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Add media file for a route."""
         if not file or not file.filename:
             raise bad_request("File is required")
@@ -926,12 +934,16 @@ class RouteService:
         if conn_context is None:
             raise APIError("Database connection failed", "DB_CONN_ERROR")
 
+        stored_media_type = requested_media_type or media_service._detect_media_type(filename) or 'image'
+        if stored_media_type == 'photo':
+            stored_media_type = 'image'
+
         with conn_context as conn:
             with conn.cursor() as cursor:
                 query = (
-                    "INSERT INTO route_media (route_id, file_path, thumbnail_path, lat, lng, caption, is_primary) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s) "
-                    "RETURNING id, route_id, file_path, thumbnail_path, lat, lng, caption, is_primary, uploaded_at"
+                    "INSERT INTO route_media (route_id, file_path, thumbnail_path, lat, lng, caption, is_primary, media_type) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
+                    "RETURNING id, route_id, file_path, thumbnail_path, lat, lng, caption, is_primary, media_type, uploaded_at"
                 )
                 cursor.execute(query, (
                     route_id,
@@ -940,13 +952,17 @@ class RouteService:
                     lat,
                     lng,
                     caption,
-                    is_primary
+                    is_primary,
+                    stored_media_type,
                 ))
                 result = cursor.fetchone()
 
         media_record = dict(result)
         if media_record.get('uploaded_at'):
             media_record['uploaded_at'] = media_record['uploaded_at'].isoformat()
+        media_record['filename'] = Path(media_record['file_path']).name if media_record.get('file_path') else unique_name
+        media_record['latitude'] = media_record.get('lat')
+        media_record['longitude'] = media_record.get('lng')
         return media_record
 
     def list_route_media(self, route_id: int) -> List[Dict[str, Any]]:

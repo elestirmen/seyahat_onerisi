@@ -131,6 +131,10 @@ def run_fallback_smoke():
     check("GET /api/pois", client.get("/api/pois?limit=2"))
     check("GET /api/routes", client.get("/api/routes?limit=2"))
     check("GET /api/routes/statistics", client.get("/api/routes/statistics"))
+    check("GET /api/categories", client.get("/api/categories"))
+    check("POST /api/recommendations", client.post("/api/recommendations", json={}), expected=(400,))
+    check("POST /api/route/smart", client.post("/api/route/smart", json={"waypoints": []}), expected=(400,))
+    check("POST /auth/change-password (unauth)", client.post("/auth/change-password", json={}), expected=(401,))
 
     # Admin requires auth; first without auth should be 401
     resp = client.get("/api/admin/routes", headers={"Content-Type": "application/json"})
@@ -142,6 +146,12 @@ def run_fallback_smoke():
         headers={"Content-Type": "application/json", "X-Admin-Token": token},
     )
     check("GET /api/admin/routes (auth)", resp)
+    resp = client.post(
+        "/auth/change-password",
+        json={"current_password": "x", "new_password": "y"},
+        headers={"Content-Type": "application/json", "X-Admin-Token": token},
+    )
+    check("POST /auth/change-password (auth)", resp, expected=(501,))
 
     reports = ensure_reports_dir()
     (reports / "fallback-summary.txt").write_text(

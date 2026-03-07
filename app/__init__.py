@@ -64,9 +64,15 @@ def create_app(config_name=None):
     
     # Initialize database pool
     try:
-        init_database_pool(config)
+        db_pool = init_database_pool(config)
+        if not app.config.get("TESTING") and getattr(db_pool, "pool", None) is None:
+            raise RuntimeError("Database pool is unavailable")
     except Exception as _db_err:
-        logger.error(f"Database pool initialization failed: {_db_err}")
+        if app.config.get("TESTING"):
+            logger.warning(f"Database pool initialization skipped in testing: {_db_err}")
+        else:
+            logger.error(f"Database pool initialization failed: {_db_err}")
+            raise
     
     # Initialize error handler
     error_handler.init_app(app)
@@ -111,12 +117,14 @@ def register_blueprints(app):
     from .routes.poi import poi_bp
     from .routes.route import route_bp
     from .routes.route_import import route_import_bp
+    from .routes.compat import compat_bp
     
     app.register_blueprint(health_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(poi_bp)
     app.register_blueprint(route_bp)
     app.register_blueprint(route_import_bp)
+    app.register_blueprint(compat_bp)
     
     # Import and register blueprints (avoiding circular imports)
     # The main routes are still in poi_api.py and will be registered automatically

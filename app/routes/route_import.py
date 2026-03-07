@@ -75,10 +75,13 @@ def get_import_progress(upload_id):
         
         if not progress:
             raise not_found(f"Upload progress not found for ID: {upload_id}")
+
+        public_progress = dict(progress)
+        public_progress.pop('temp_file_path', None)
         
         return jsonify({
             'upload_id': upload_id,
-            'progress': progress
+            'progress': public_progress
         }), 200
         
     except APIError:

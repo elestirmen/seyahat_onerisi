@@ -3,22 +3,45 @@
 
   const TOKEN_KEY = 'poi_admin_token';
 
-  function safeGetToken() {
+  function readStorage(storage) {
     try {
-      return (localStorage.getItem(TOKEN_KEY) || '').trim();
+      return (storage.getItem(TOKEN_KEY) || '').trim();
     } catch (_) {
       return '';
     }
   }
 
+  function safeGetToken() {
+    const sessionToken = readStorage(window.sessionStorage);
+    if (sessionToken) {
+      return sessionToken;
+    }
+
+    const legacyToken = readStorage(window.localStorage);
+    if (legacyToken) {
+      try {
+        sessionStorage.setItem(TOKEN_KEY, legacyToken);
+      } catch (_) {}
+      try {
+        localStorage.removeItem(TOKEN_KEY);
+      } catch (_) {}
+    }
+
+    return legacyToken;
+  }
+
   function safeSetToken(token) {
     try {
       const value = String(token || '').trim();
-      if (value) localStorage.setItem(TOKEN_KEY, value);
+      if (value) sessionStorage.setItem(TOKEN_KEY, value);
+      localStorage.removeItem(TOKEN_KEY);
     } catch (_) {}
   }
 
   function safeClearToken() {
+    try {
+      sessionStorage.removeItem(TOKEN_KEY);
+    } catch (_) {}
     try {
       localStorage.removeItem(TOKEN_KEY);
     } catch (_) {}
@@ -80,4 +103,3 @@
     clearToken: safeClearToken,
   };
 })();
-

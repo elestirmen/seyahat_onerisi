@@ -17,7 +17,7 @@ import logging
 from functools import wraps
 from urllib.parse import quote
 
-from flask import jsonify, redirect, request
+from flask import jsonify, redirect, request, session
 
 from auth_config import auth_config
 
@@ -63,7 +63,9 @@ class AuthMiddleware:
 
     def is_authenticated(self) -> bool:
         token = self._extract_token()
-        return auth_config.validate_admin_token(token)
+        if auth_config.validate_admin_token(token):
+            return True
+        return bool(session.get("poi_admin_authenticated"))
 
     def _wants_json(self) -> bool:
         if request.path.startswith("/api/"):
@@ -123,9 +125,12 @@ class AuthMiddleware:
         return {"authenticated": self.is_authenticated(), "expires_at": None}
 
     def create_session(self, remember_me=False):
+        session["poi_admin_authenticated"] = True
+        session.permanent = bool(remember_me)
         return True
 
     def destroy_session(self):
+        session.pop("poi_admin_authenticated", None)
         return True
 
     def check_rate_limit(self, ip_address):
@@ -139,4 +144,3 @@ class AuthMiddleware:
 
 
 auth_middleware = AuthMiddleware()
-

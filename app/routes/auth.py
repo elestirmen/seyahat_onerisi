@@ -38,6 +38,7 @@ def login():
         if not auth_config.validate_admin_token(token):
             return jsonify({"success": False, "error": "Invalid token"}), 401
 
+        auth_middleware.create_session()
         return jsonify({"success": True, "message": "Login successful"}), 200
 
     # GET
@@ -82,7 +83,6 @@ def login():
       </form>
     </div>
     <script>
-      const TOKEN_KEY = 'poi_admin_token';
       const form = document.getElementById('loginForm');
       const msg = document.getElementById('msg');
       const btn = document.getElementById('submitBtn');
@@ -105,24 +105,64 @@ def login():
         return '/';
       }
 
-      async function validateToken(candidate) {
+      function getStoredToken() {
+        try {
+          const sessionToken = (sessionStorage.getItem('poi_admin_token') || '').trim();
+          if (sessionToken) return sessionToken;
+        } catch (_) {}
+
+        try {
+          const legacyToken = (localStorage.getItem('poi_admin_token') || '').trim();
+          if (legacyToken) return legacyToken;
+        } catch (_) {}
+
+        return '';
+      }
+
+      function clearStoredToken() {
+        try { sessionStorage.removeItem('poi_admin_token'); } catch (_) {}
+        try { localStorage.removeItem('poi_admin_token'); } catch (_) {}
+      }
+
+      async function validateSession() {
         const res = await fetch('/auth/status', {
-          headers: { 'X-Admin-Token': candidate, 'Accept': 'application/json' }
+          headers: { 'Accept': 'application/json' }
         });
         const data = await res.json().catch(() => ({}));
         return Boolean(data && data.authenticated);
       }
 
+      async function performLogin(candidate) {
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ token: candidate })
+        });
+        const data = await res.json().catch(() => ({}));
+        return { ok: Boolean(res.ok && data && data.success), data };
+      }
+
       async function autoLoginIfPresent() {
-        const existing = localStorage.getItem(TOKEN_KEY) || '';
-        if (!existing) return;
         try {
+          const alreadyAuthenticated = await validateSession();
+          if (alreadyAuthenticated) {
+            window.location.href = getNext();
+            return;
+          }
+
+          const existing = getStoredToken();
+          if (!existing) return;
+
           setLoading(true);
-          const ok = await validateToken(existing);
-          if (ok) {
+          const result = await performLogin(existing);
+          if (result.ok) {
+            clearStoredToken();
             window.location.href = getNext();
           } else {
-            localStorage.removeItem(TOKEN_KEY);
+            clearStoredToken();
           }
         } finally {
           setLoading(false);
@@ -136,13 +176,13 @@ def login():
         setLoading(true);
         show('', true);
         try {
-          const ok = await validateToken(token);
-          if (ok) {
-            localStorage.setItem(TOKEN_KEY, token);
+          const result = await performLogin(token);
+          if (result.ok) {
+            clearStoredToken();
             show('✅ Token doğrulandı', true);
             setTimeout(() => window.location.href = getNext(), 200);
           } else {
-            localStorage.removeItem(TOKEN_KEY);
+            clearStoredToken();
             show('❌ Token geçersiz veya sunucu yapılandırılmadı', false);
             tokenInput.value = '';
             tokenInput.focus();
@@ -167,7 +207,7 @@ def login():
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
-    # Token is stored client-side; the UI clears it locally.
+    auth_middleware.destroy_session()
     return jsonify({"success": True, "message": "Logout successful"}), 200
 
 
@@ -190,6 +230,20 @@ def status():
 def csrf_token():
     # Compatibility for legacy frontends that expect this endpoint.
     return jsonify({"csrf_token": ""}), 200
+
+
+@auth_bp.route("/change-password", methods=["POST"])
+@auth_middleware.require_auth
+def change_password():
+    return (
+        jsonify(
+            {
+                "success": False,
+                "error": "Password auth is disabled. Rotate by changing POI_ADMIN_TOKEN.",
+            }
+        ),
+        501,
+    )
 
 
 __all__ = ["auth_bp"]

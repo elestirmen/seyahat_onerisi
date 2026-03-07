@@ -62,6 +62,15 @@ const AppState = {
     intervals: new Set()
 };
 
+function escapeHTML(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Hover event management system
 let poiHoverIntegration = null;
 
@@ -6147,7 +6156,7 @@ function createMediaPopupContent(media) {
     if (media.caption) {
         popupHTML += `
             <div class="media-popup-caption" style="margin-bottom: 8px;">
-                <p style="margin: 0; font-size: 13px; color: #555; line-height: 1.3;">${media.caption}</p>
+                <p style="margin: 0; font-size: 13px; color: #555; line-height: 1.3;">${escapeHTML(media.caption)}</p>
             </div>
         `;
     }
@@ -6157,7 +6166,7 @@ function createMediaPopupContent(media) {
         const imagePath = media.preview_path || media.thumbnail_path || media.file_path;
         popupHTML += `
             <div class="media-popup-preview" style="margin-bottom: 8px;">
-                <img src="/${imagePath}" alt="${media.caption || 'Medya önizlemesi'}" style="width: 100%; border-radius: 6px; max-height: 150px; object-fit: cover;" />
+                <img src="/${imagePath}" alt="${escapeHTML(media.caption || 'Medya önizlemesi')}" style="width: 100%; border-radius: 6px; max-height: 150px; object-fit: cover;" />
             </div>
         `;
     }
@@ -14917,7 +14926,7 @@ function updatePOIModalContent(poi) {
     // Update description
     const descriptionContent = document.getElementById('poiDescriptionContent');
     if (poi.description && poi.description.trim()) {
-        descriptionContent.innerHTML = `<p>${poi.description}</p>`;
+        descriptionContent.innerHTML = `<p>${escapeHTML(poi.description)}</p>`;
     } else {
         descriptionContent.innerHTML = '<p class="text-muted">Bu POI için açıklama bulunmuyor.</p>';
     }
@@ -14929,7 +14938,7 @@ function updatePOIModalContent(poi) {
     if (poi.tags && poi.tags.length > 0) {
         featuresSection.style.display = 'block';
         featuresTags.innerHTML = poi.tags.map(tag => 
-            `<span class="feature-tag">${tag}</span>`
+            `<span class="feature-tag">${escapeHTML(tag)}</span>`
         ).join('');
     } else {
         featuresSection.style.display = 'none';

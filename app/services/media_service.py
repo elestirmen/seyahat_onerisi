@@ -50,7 +50,15 @@ class MediaService:
         self.base_path = Path(base_path)
         self.thumbnails_path = self.base_path / "thumbnails"
         self.previews_path = self.base_path / "previews"
+        self._legacy_manager = None
         self._ensure_directories()
+
+    def _get_legacy_manager(self):
+        if self._legacy_manager is None:
+            from poi_media_manager import POIMediaManager
+
+            self._legacy_manager = POIMediaManager(str(self.base_path))
+        return self._legacy_manager
 
     def _ensure_directories(self):
         """Ensure all required directories exist."""
@@ -282,29 +290,19 @@ class MediaService:
             List of media files
         """
         try:
-            # TODO: Implement database query to get media files
-            # For now, return mock data
-            
-            mock_media = [
-                {
-                    'file_id': 'mock-image-1',
-                    'filename': 'poi_image_1.jpg',
-                    'original_filename': 'beautiful_view.jpg',
-                    'media_type': 'image',
-                    'poi_id': poi_id,
-                    'description': 'Beautiful view of the location',
-                    'file_size': 1024000,
-                    'file_path': 'images/mock-image-1.jpg',
-                    'thumbnail_path': 'thumbnails/mock-image-1_thumb.jpg',
-                    'created_at': '2024-01-15T10:00:00Z'
-                }
-            ]
-            
-            # Filter by media type if specified
-            if media_type:
-                mock_media = [m for m in mock_media if m['media_type'] == media_type]
-            
-            return mock_media
+            legacy_manager = self._get_legacy_manager()
+            items = legacy_manager.get_poi_media_by_id(str(poi_id), media_type)
+            normalized_items: List[Dict[str, Any]] = []
+
+            for item in items:
+                normalized = dict(item)
+                normalized.setdefault('poi_id', poi_id)
+                normalized['file_path'] = normalized.get('path')
+                normalized['thumbnail_path'] = normalized.get('preview_path')
+                normalized.setdefault('description', normalized.get('caption', ''))
+                normalized_items.append(normalized)
+
+            return normalized_items
             
         except Exception as e:
             logger.error(f"Error getting POI media: {e}")

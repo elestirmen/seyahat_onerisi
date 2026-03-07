@@ -3,6 +3,8 @@ Route Routes for POI Travel Recommendation API.
 Handles all route-related HTTP endpoints.
 """
 
+from importlib import import_module
+
 from flask import Blueprint, request, jsonify
 import logging
 
@@ -14,6 +16,11 @@ logger = logging.getLogger(__name__)
 
 # Create Route blueprint
 route_bp = Blueprint('route', __name__, url_prefix='/api')
+
+
+def _legacy_api():
+    """Load the legacy API lazily for compatibility-heavy handlers."""
+    return import_module("poi_api")
 
 
 @route_bp.route('/routes', methods=['GET'])
@@ -193,6 +200,11 @@ def list_route_media(route_id):
         if not route_id:
             raise bad_request("Route ID is required")
 
+        try:
+            return _legacy_api().get_route_media(route_id)
+        except Exception as legacy_error:
+            logger.warning(f"Legacy route media fallback failed: {legacy_error}")
+
         media = route_service.list_route_media(route_id)
         return jsonify({'route_id': route_id, 'media': media}), 200
 
@@ -285,6 +297,11 @@ def admin_list_route_media(route_id):
         if not route_id:
             raise bad_request("Route ID is required")
 
+        try:
+            return _legacy_api().get_admin_route_media(route_id)
+        except Exception as legacy_error:
+            logger.warning(f"Legacy admin route media fallback failed: {legacy_error}")
+
         media = route_service.list_route_media(route_id)
         return jsonify({'route_id': route_id, 'media': media}), 200
 
@@ -300,6 +317,11 @@ def admin_list_route_media(route_id):
 def admin_add_route_media(route_id):
     """Admin: Upload media for a route."""
     try:
+        try:
+            return _legacy_api().upload_route_media(route_id)
+        except Exception as legacy_error:
+            logger.warning(f"Legacy route media upload fallback failed: {legacy_error}")
+
         if 'file' not in request.files:
             raise bad_request("File is required")
 
@@ -323,8 +345,19 @@ def admin_add_route_media(route_id):
         else:
             lat = lng = None
 
-        result = route_service.add_route_media(route_id, file, lat, lng, caption, is_primary)
-        return jsonify(result), 201
+        requested_media_type = request.form.get('media_type')
+        result = route_service.add_route_media(
+            route_id,
+            file,
+            lat,
+            lng,
+            caption,
+            is_primary,
+            requested_media_type=requested_media_type,
+        )
+        payload = {'success': True, 'media': result}
+        payload.update(result)
+        return jsonify(payload), 201
 
     except APIError:
         raise

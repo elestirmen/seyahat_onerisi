@@ -278,9 +278,14 @@ def get_poi_media(poi_id):
         if not poi_id:
             raise bad_request("POI ID is required")
 
+        try:
+            poi_id_int = int(poi_id)
+        except (TypeError, ValueError):
+            raise bad_request("Invalid POI ID")
+
         media_type = request.args.get('type')  # optional
 
-        items = media_service.get_poi_media(int(poi_id), media_type)
+        items = media_service.get_poi_media(poi_id_int, media_type)
 
         # Group by type to match frontend expectations
         grouped = {
@@ -307,5 +312,4 @@ def get_poi_media(poi_id):
         raise
     except Exception as e:
         logger.error(f"Unexpected error in get_poi_media: {e}")
-        # Always return a safe structure to keep UI functioning
-        return jsonify({'images': [], 'videos': [], 'audio': [], 'models': []}), 200
+        raise APIError("Failed to load POI media", "MEDIA_GET_ERROR", 500)

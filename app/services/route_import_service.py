@@ -5,11 +5,13 @@ Handles route file upload, validation, and import operations.
 
 import logging
 import os
+import json
 import uuid
 import hashlib
 import tempfile
 from typing import Dict, Any, Optional
 from datetime import datetime
+from pathlib import Path
 from werkzeug.datastructures import FileStorage
 
 from app.middleware.error_handler import APIError, bad_request
@@ -25,7 +27,30 @@ class RouteImportService:
         self.max_file_size = 50 * 1024 * 1024  # 50MB
         self.min_file_size = 100  # 100 bytes
         self.upload_dir = tempfile.gettempdir()
-        self.progress_tracking = {}  # In-memory progress tracking
+        self.state_dir = Path(self.upload_dir) / "poi_route_import_state"
+        self.state_dir.mkdir(parents=True, exist_ok=True)
+        self.progress_tracking = {}
+
+    def _state_path(self, upload_id: str) -> Path:
+        return self.state_dir / f"{upload_id}.json"
+
+    def _write_progress_state(self, upload_id: str, payload: Dict[str, Any]):
+        state_path = self._state_path(upload_id)
+        temp_path = state_path.with_suffix(".tmp")
+        with open(temp_path, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False)
+        os.replace(temp_path, state_path)
+
+    def _read_progress_state(self, upload_id: str) -> Optional[Dict[str, Any]]:
+        state_path = self._state_path(upload_id)
+        if not state_path.exists():
+            return None
+        try:
+            with open(state_path, "r", encoding="utf-8") as handle:
+                return json.load(handle)
+        except Exception as exc:
+            logger.warning(f"Failed to read import state for {upload_id}: {exc}")
+            return None
     
     def validate_file(self, file: FileStorage) -> Dict[str, Any]:
         """
@@ -340,21 +365,31 @@ class RouteImportService:
     
     def update_progress(self, upload_id: str, status: str, progress: int, message: str, **kwargs):
         """Update import progress."""
-        self.progress_tracking[upload_id] = {
+        payload = {
             'status': status,
             'progress': progress,
             'message': message,
             'timestamp': datetime.now().isoformat(),
             **kwargs
         }
+        self.progress_tracking[upload_id] = payload
+        self._write_progress_state(upload_id, payload)
     
     def get_progress(self, upload_id: str) -> Optional[Dict[str, Any]]:
         """Get import progress."""
+        state = self._read_progress_state(upload_id)
+        if state is not None:
+            self.progress_tracking[upload_id] = state
+            return state
         return self.progress_tracking.get(upload_id)
     
     def cleanup_upload(self, upload_id: str, file_path: str = None):
         """Clean up upload files and progress tracking."""
         try:
+            if not file_path:
+                state = self.get_progress(upload_id) or {}
+                file_path = state.get('temp_file_path')
+
             # Remove file if exists
             if file_path and os.path.exists(file_path):
                 os.unlink(file_path)
@@ -364,6 +399,11 @@ class RouteImportService:
             if upload_id in self.progress_tracking:
                 del self.progress_tracking[upload_id]
                 logger.info(f"Cleaned up progress tracking: {upload_id}")
+
+            state_path = self._state_path(upload_id)
+            if state_path.exists():
+                state_path.unlink()
+                logger.info(f"Cleaned up persisted state: {upload_id}")
                 
         except Exception as e:
             logger.warning(f"Error during cleanup: {e}")
@@ -421,7 +461,6 @@ class RouteImportService:
                 'file_info': validation_result['file_info'],
                 'route_data': parsed_data,
                 'validation_warnings': validation_result.get('warnings', []),
-                'temp_file_path': file_path
             }
             
         except APIError:

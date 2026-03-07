@@ -15,9 +15,9 @@ class Config:
     # Database Configuration
     DB_HOST = os.environ.get('DB_HOST') or os.environ.get('POI_DB_HOST', 'localhost')
     DB_PORT = int(os.environ.get('DB_PORT') or os.environ.get('POI_DB_PORT') or 5432)
-    DB_NAME = os.environ.get('DB_NAME') or os.environ.get('POI_DB_NAME', 'poi_database')
-    DB_USER = os.environ.get('DB_USER') or os.environ.get('POI_DB_USER', 'postgres')
-    DB_PASSWORD = os.environ.get('DB_PASSWORD') or os.environ.get('POI_DB_PASSWORD', '')
+    DB_NAME = os.environ.get('DB_NAME') or os.environ.get('POI_DB_NAME', 'poi_db')
+    DB_USER = os.environ.get('DB_USER') or os.environ.get('POI_DB_USER', 'poi_user')
+    DB_PASSWORD = os.environ.get('DB_PASSWORD') or os.environ.get('POI_DB_PASSWORD', 'poi_password')
     DB_POOL_SIZE = int(os.environ.get('DB_POOL_SIZE', 10))
     DB_TIMEOUT = int(os.environ.get('DB_TIMEOUT', 30))
     
