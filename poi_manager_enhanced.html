@@ -2129,6 +2129,64 @@
                 this.setupEventListeners();
             }
 
+            getRatingCategories() {
+                return {
+                    tarihi: { icon: 'fas fa-landmark', label: 'Tarihi', displayName: '🏛️ Tarihi', color: '#8B4513' },
+                    sanat_kultur: { icon: 'fas fa-palette', label: 'Sanat & Kültür', displayName: '🎨 Sanat ve Kültür', color: '#9B59B6' },
+                    doga: { icon: 'fas fa-leaf', label: 'Doğa', displayName: '🌿 Doğa', color: '#27AE60' },
+                    eglence: { icon: 'fas fa-music', label: 'Eğlence', displayName: '🎪 Eğlence', color: '#E74C3C' },
+                    alisveris: { icon: 'fas fa-shopping-cart', label: 'Alışveriş', displayName: '🛍️ Alışveriş', color: '#F39C12' },
+                    spor: { icon: 'fas fa-dumbbell', label: 'Spor', displayName: '⚽ Spor', color: '#34495E' },
+                    macera: { icon: 'fas fa-mountain', label: 'Macera', displayName: '🏔️ Macera', color: '#D35400' },
+                    rahatlatici: { icon: 'fas fa-spa', label: 'Rahatlatıcı', displayName: '😌 Rahatlatıcı', color: '#16A085' },
+                    yemek: { icon: 'fas fa-utensils', label: 'Yemek', displayName: '🍽️ Yemek', color: '#E67E22' },
+                    gece_hayati: { icon: 'fas fa-moon', label: 'Gece Hayatı', displayName: '🌙 Gece Hayatı', color: '#8E44AD' }
+                };
+            }
+
+            getRatingKeys() {
+                return Object.keys(this.getRatingCategories());
+            }
+
+            normalizeRatingsPayload(payload) {
+                const normalizedRatings = Object.fromEntries(
+                    this.getRatingKeys().map(key => [key, 0])
+                );
+
+                const source = payload && typeof payload === 'object' && !Array.isArray(payload)
+                    ? ((payload.ratings && typeof payload.ratings === 'object' && !Array.isArray(payload.ratings))
+                        ? payload.ratings
+                        : payload)
+                    : null;
+
+                if (!source) {
+                    return normalizedRatings;
+                }
+
+                this.getRatingKeys().forEach(key => {
+                    const numericValue = Number.parseInt(source[key], 10);
+                    normalizedRatings[key] = Number.isFinite(numericValue)
+                        ? Math.max(0, Math.min(100, numericValue))
+                        : 0;
+                });
+
+                return normalizedRatings;
+            }
+
+            calculateAverageRating(ratings) {
+                let totalRating = 0;
+                let ratingCount = 0;
+
+                Object.values(this.normalizeRatingsPayload(ratings)).forEach(rating => {
+                    if (rating > 0) {
+                        totalRating += rating;
+                        ratingCount++;
+                    }
+                });
+
+                return ratingCount > 0 ? Math.round(totalRating / ratingCount) : 0;
+            }
+
             async initializeMap() {
                 this.map = L.map('map').setView([38.6431, 34.8331], 11);
 
@@ -2420,18 +2478,7 @@
                 const lat = poi.latitude ? parseFloat(poi.latitude).toFixed(6) : '0.000000';
                 const lng = poi.longitude ? parseFloat(poi.longitude).toFixed(6) : '0.000000';
 
-                // Calculate total rating if ratings exist
-                let totalRating = 0;
-                let ratingCount = 0;
-                if (poi.ratings && typeof poi.ratings === 'object') {
-                    Object.values(poi.ratings).forEach(rating => {
-                        if (typeof rating === 'number') {
-                            totalRating += rating;
-                            ratingCount++;
-                        }
-                    });
-                }
-                const averageRating = ratingCount > 0 ? Math.round(totalRating / ratingCount) : 0;
+                const averageRating = this.calculateAverageRating(poi.ratings);
 
                 element.innerHTML = `
                     <div class="poi-item-header">
@@ -3249,59 +3296,22 @@
                 try {
                     const response = await this.authenticatedFetch(`/api/poi/${poiId}/ratings`);
                     if (response.ok) {
-                        const ratings = await response.json();
-                        this.renderPOIRatings(ratings);
+                        const payload = await response.json();
+                        this.renderPOIRatings(payload);
                     }
                 } catch (error) {
                     console.error('Error loading POI ratings:', error);
                 }
             }
 
-            renderPOIRatings(ratings) {
-                const ratingsSection = document.getElementById('poiRatingsSection');
-                const ratingsContainer = document.getElementById('poiRatingsContainer');
-
-                if (!ratingsSection || !ratingsContainer) {
-                    console.warn('Ratings container elements not found');
+            renderPOIRatings(payload) {
+                const normalizedRatings = this.normalizeRatingsPayload(payload);
+                if (this.selectedPOI) {
+                    this.selectedPOI = { ...this.selectedPOI, ratings: normalizedRatings };
+                    this.displayPOIRatings(this.selectedPOI);
                     return;
                 }
-
-                if (ratings && Object.keys(ratings).length > 0) {
-                    ratingsSection.style.display = 'block';
-
-                    const ratingCategories = {
-                        tarihi: { icon: 'fas fa-landmark', label: 'Tarihi', color: '#8B4513' },
-                        sanat_kultur: { icon: 'fas fa-palette', label: 'Sanat & Kültür', color: '#9B59B6' },
-                        doga: { icon: 'fas fa-leaf', label: 'Doğa', color: '#27AE60' },
-                        eglence: { icon: 'fas fa-music', label: 'Eğlence', color: '#E74C3C' },
-                        alisveris: { icon: 'fas fa-shopping-cart', label: 'Alışveriş', color: '#F39C12' },
-                        spor: { icon: 'fas fa-dumbbell', label: 'Spor', color: '#34495E' },
-                        macera: { icon: 'fas fa-mountain', label: 'Macera', color: '#D35400' },
-                        rahatlatici: { icon: 'fas fa-spa', label: 'Rahatlatıcı', color: '#16A085' }
-                    };
-
-                    ratingsContainer.innerHTML = Object.entries(ratings)
-                        .filter(([key, value]) => value > 0)
-                        .map(([key, value]) => {
-                            const category = ratingCategories[key];
-                            if (!category) return '';
-
-                            return `
-                                <div class="rating-item">
-                                    <div class="rating-label" style="color: ${category.color}">
-                                        <i class="${category.icon}"></i>
-                                        ${category.label}
-                                    </div>
-                                    <div class="rating-value">${value}</div>
-                                    <div class="rating-bar">
-                                        <div class="rating-fill" style="width: ${value}%"></div>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('');
-                } else {
-                    ratingsSection.style.display = 'none';
-                }
+                this.displayPOIRatings({ ratings: normalizedRatings });
             }
 
             async showEditForm(poi) {
@@ -3394,8 +3404,10 @@
                         const data = await response.json();
                         console.log('Loaded ratings data:', data); // Debug log
 
-                        // Handle different response formats
-                        const ratings = data.ratings || data || {};
+                        const ratings = this.normalizeRatingsPayload(data);
+                        if (this.selectedPOI) {
+                            this.selectedPOI = { ...this.selectedPOI, ratings };
+                        }
                         this.renderEditRatings(ratings);
                     } else {
                         console.warn('Ratings API failed, using empty ratings');
@@ -3409,6 +3421,8 @@
 
             renderEditRatings(ratings) {
                 const ratingsGrid = document.getElementById('editRatingsGrid');
+                const normalizedRatings = this.normalizeRatingsPayload(ratings);
+                const ratingCategories = this.getRatingCategories();
                 console.log('Rendering edit ratings:', ratings); // Debug log
                 console.log('Ratings grid element:', ratingsGrid); // Debug log
 
@@ -3417,21 +3431,8 @@
                     return;
                 }
 
-                const ratingCategories = {
-                    tarihi: { icon: 'fas fa-landmark', label: 'Tarihi', color: '#8B4513' },
-                    sanat_kultur: { icon: 'fas fa-palette', label: 'Sanat & Kültür', color: '#9B59B6' },
-                    doga: { icon: 'fas fa-leaf', label: 'Doğa', color: '#27AE60' },
-                    eglence: { icon: 'fas fa-music', label: 'Eğlence', color: '#E74C3C' },
-                    alisveris: { icon: 'fas fa-shopping-cart', label: 'Alışveriş', color: '#F39C12' },
-                    spor: { icon: 'fas fa-dumbbell', label: 'Spor', color: '#34495E' },
-                    macera: { icon: 'fas fa-mountain', label: 'Macera', color: '#D35400' },
-                    rahatlatici: { icon: 'fas fa-spa', label: 'Rahatlatıcı', color: '#16A085' },
-                    yemek: { icon: 'fas fa-utensils', label: 'Yemek', color: '#E67E22' },
-                    gece_hayati: { icon: 'fas fa-moon', label: 'Gece Hayatı', color: '#8E44AD' }
-                };
-
                 ratingsGrid.innerHTML = Object.entries(ratingCategories).map(([key, category]) => {
-                    const value = ratings[key] || 0;
+                    const value = normalizedRatings[key] || 0;
                     return `
                         <div class="rating-item-edit">
                             <div class="rating-label" style="color: ${category.color}">
@@ -3486,8 +3487,7 @@
 
                 // Collect ratings
                 const ratings = {};
-                const ratingCategories = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'];
-                ratingCategories.forEach(category => {
+                this.getRatingKeys().forEach(category => {
                     const ratingElement = document.getElementById(`rating_${category}`);
                     if (ratingElement) {
                         ratings[category] = parseInt(ratingElement.value);
@@ -3527,7 +3527,11 @@
                     await this.loadPOIs();
 
                     // Update selected POI and show details
-                    const updatedPOI = { ...this.selectedPOI, ...formData };
+                    const updatedPOI = {
+                        ...this.selectedPOI,
+                        ...formData,
+                        ratings: this.normalizeRatingsPayload(ratings)
+                    };
                     this.selectedPOI = updatedPOI;
                     this.showPOIDetails(updatedPOI);
 
@@ -3615,19 +3619,7 @@
 
             setupCreateRatingSliders() {
                 const ratingsGrid = document.getElementById('createRatingsGrid');
-
-                const ratingCategories = {
-                    tarihi: { icon: 'fas fa-landmark', label: 'Tarihi', color: '#8B4513' },
-                    sanat_kultur: { icon: 'fas fa-palette', label: 'Sanat & Kültür', color: '#9B59B6' },
-                    doga: { icon: 'fas fa-leaf', label: 'Doğa', color: '#27AE60' },
-                    eglence: { icon: 'fas fa-music', label: 'Eğlence', color: '#E74C3C' },
-                    alisveris: { icon: 'fas fa-shopping-cart', label: 'Alışveriş', color: '#F39C12' },
-                    spor: { icon: 'fas fa-dumbbell', label: 'Spor', color: '#34495E' },
-                    macera: { icon: 'fas fa-mountain', label: 'Macera', color: '#D35400' },
-                    rahatlatici: { icon: 'fas fa-spa', label: 'Rahatlatıcı', color: '#16A085' },
-                    yemek: { icon: 'fas fa-utensils', label: 'Yemek', color: '#E67E22' },
-                    gece_hayati: { icon: 'fas fa-moon', label: 'Gece Hayatı', color: '#8E44AD' }
-                };
+                const ratingCategories = this.getRatingCategories();
 
                 ratingsGrid.innerHTML = Object.entries(ratingCategories).map(([key, category]) => {
                     return `
@@ -3666,20 +3658,7 @@
                 }
 
                 if (sliderElement) {
-                    const ratingCategories = {
-                        tarihi: '#8B4513',
-                        sanat_kultur: '#9B59B6',
-                        doga: '#27AE60',
-                        eglence: '#E74C3C',
-                        alisveris: '#F39C12',
-                        spor: '#34495E',
-                        macera: '#D35400',
-                        rahatlatici: '#16A085',
-                        yemek: '#E67E22',
-                        gece_hayati: '#8E44AD'
-                    };
-
-                    const color = ratingCategories[category] || 'var(--poi-primary)';
+                    const color = this.getRatingCategories()[category]?.color || 'var(--poi-primary)';
                     sliderElement.style.background = `linear-gradient(to right, ${color} 0%, ${color} ${value}%, var(--poi-border) ${value}%, var(--poi-border) 100%)`;
                 }
             }
@@ -3702,8 +3681,7 @@
 
                 // Collect ratings
                 const ratings = {};
-                const ratingCategories = ['tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'];
-                ratingCategories.forEach(category => {
+                this.getRatingKeys().forEach(category => {
                     const ratingElement = document.getElementById(`create_rating_${category}`);
                     if (ratingElement) {
                         ratings[category] = parseInt(ratingElement.value);
@@ -4184,71 +4162,46 @@
             displayPOIRatings(poi) {
                 const ratingsSection = document.getElementById('poiRatingsSection');
                 const ratingsContainer = document.getElementById('poiRatingsContainer');
+                const ratingCategories = this.getRatingCategories();
+                const ratings = this.normalizeRatingsPayload(poi);
 
                 if (!ratingsSection || !ratingsContainer) return;
+                ratingsSection.style.display = 'block';
 
-                // Rating categories from poi_manager_ui.html
-                const ratingCategories = {
-                    'tarihi': { name: '🏛️ Tarihi', color: '#8B4513' },
-                    'sanat_kultur': { name: '🎨 Sanat ve Kültür', color: '#9B59B6' },
-                    'doga': { name: '🌿 Doğa', color: '#27AE60' },
-                    'eglence': { name: '🎪 Eğlence', color: '#E74C3C' },
-                    'alisveris': { name: '🛍️ Alışveriş', color: '#F39C12' },
-                    'spor': { name: '⚽ Spor', color: '#34495E' },
-                    'macera': { name: '🏔️ Macera', color: '#D35400' },
-                    'rahatlatici': { name: '😌 Rahatlatıcı', color: '#16A085' },
-                    'yemek': { name: '🍽️ Yemek', color: '#E67E22' },
-                    'gece_hayati': { name: '🌙 Gece Hayatı', color: '#8E44AD' }
-                };
-
-                if (poi.ratings && typeof poi.ratings === 'object') {
-                    ratingsSection.style.display = 'block';
-
-                    let totalRating = 0;
-                    let ratingCount = 0;
-                    let ratingsHTML = '';
-
-                    Object.entries(ratingCategories).forEach(([key, category]) => {
-                        const rating = poi.ratings[key] || 0;
-                        if (rating > 0) {
-                            totalRating += rating;
-                            ratingCount++;
-                        }
-
-                        ratingsHTML += `
-                            <div class="rating-item-display">
-                                <div class="rating-label" style="color: ${category.color}">
-                                    ${category.name}
-                                </div>
-                                <div class="rating-bar-container">
-                                    <div class="rating-bar-bg">
-                                        <div class="rating-bar-fill" style="width: ${rating}%; background: ${category.color}"></div>
-                                    </div>
-                                    <span class="rating-value">${rating}</span>
-                                </div>
+                const ratingsHTML = Object.entries(ratingCategories).map(([key, category]) => {
+                    const rating = ratings[key] || 0;
+                    return `
+                        <div class="rating-item-display">
+                            <div class="rating-label" style="color: ${category.color}">
+                                ${category.displayName}
                             </div>
-                        `;
-                    });
-
-                    const averageRating = ratingCount > 0 ? Math.round(totalRating / ratingCount) : 0;
-
-                    ratingsContainer.innerHTML = `
-                        <div class="ratings-summary">
-                            <div class="average-rating">
-                                <div class="average-score">${averageRating}</div>
-                                <div class="average-label">Ortalama Puan</div>
-                                <div class="rating-stars">
-                                    ${this.generateStars(averageRating)}
+                            <div class="rating-bar-container">
+                                <div class="rating-bar-bg">
+                                    <div class="rating-bar-fill" style="width: ${rating}%; background: ${category.color}"></div>
                                 </div>
+                                <span class="rating-value">${rating}</span>
                             </div>
-                        </div>
-                        <div class="ratings-breakdown">
-                            ${ratingsHTML}
                         </div>
                     `;
-                } else {
-                    ratingsSection.style.display = 'none';
-                }
+                }).join('');
+
+                const averageRating = this.calculateAverageRating(ratings);
+                const summaryLabel = averageRating > 0 ? 'Ortalama Puan' : 'Henüz Puanlanmamış';
+
+                ratingsContainer.innerHTML = `
+                    <div class="ratings-summary">
+                        <div class="average-rating">
+                            <div class="average-score">${averageRating}</div>
+                            <div class="average-label">${summaryLabel}</div>
+                            <div class="rating-stars">
+                                ${this.generateStars(averageRating)}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ratings-breakdown">
+                        ${ratingsHTML}
+                    </div>
+                `;
             }
 
             generateStars(rating) {
@@ -4267,25 +4220,11 @@
             }
 
             generatePopupRating(poi) {
-                if (!poi.ratings || typeof poi.ratings !== 'object') {
+                const averageRating = this.calculateAverageRating(poi);
+                if (averageRating === 0) {
                     return '';
                 }
 
-                let totalRating = 0;
-                let ratingCount = 0;
-
-                Object.values(poi.ratings).forEach(rating => {
-                    if (typeof rating === 'number' && rating > 0) {
-                        totalRating += rating;
-                        ratingCount++;
-                    }
-                });
-
-                if (ratingCount === 0) {
-                    return '';
-                }
-
-                const averageRating = Math.round(totalRating / ratingCount);
                 const stars = this.generateStars(averageRating);
 
                 return `
@@ -4305,21 +4244,7 @@
                 }
 
                 if (sliderElement) {
-                    // Update slider background gradient
-                    const ratingCategories = {
-                        tarihi: '#8B4513',
-                        sanat_kultur: '#9B59B6',
-                        doga: '#27AE60',
-                        eglence: '#E74C3C',
-                        alisveris: '#F39C12',
-                        spor: '#34495E',
-                        macera: '#D35400',
-                        rahatlatici: '#16A085',
-                        yemek: '#E67E22',
-                        gece_hayati: '#8E44AD'
-                    };
-
-                    const color = ratingCategories[category] || 'var(--poi-primary)';
+                    const color = this.getRatingCategories()[category]?.color || 'var(--poi-primary)';
                     sliderElement.style.background = `linear-gradient(to right, ${color} 0%, ${color} ${value}%, var(--poi-border) ${value}%, var(--poi-border) 100%)`;
                 }
             }

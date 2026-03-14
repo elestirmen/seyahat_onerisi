@@ -60,9 +60,9 @@ class RoutePlanningService:
             
             # Calculate route based on type
             if route_type == 'walking':
-                return self._create_walking_route(waypoints)
+                return self.create_walking_route(waypoints)
             elif route_type == 'driving':
-                return self._create_driving_route(waypoints)
+                return self.create_driving_route(waypoints)
             else:
                 raise bad_request(f"Unsupported route type: {route_type}")
                 

@@ -16,6 +16,10 @@ from typing import Any, Dict, Iterable, List, Optional
 from flask import Blueprint, jsonify, request
 
 from auth_middleware import auth_middleware
+from app.services.media_service import media_service
+from app.services.poi_service import poi_service
+from app.services.recommendation_service import recommendation_service
+from app.services.route_planning_service import route_planning_service
 
 
 logger = logging.getLogger(__name__)
@@ -186,17 +190,20 @@ def categories():
 
 @compat_bp.route("/api/ratings/categories", methods=["GET"])
 def rating_categories():
-    return _delegate("get_rating_categories")
+    return jsonify(poi_service.get_rating_categories()), 200
 
 
 @compat_bp.route("/api/poi/<poi_id>/ratings", methods=["GET"])
+@auth_middleware.require_auth
 def get_poi_ratings(poi_id):
-    return _delegate("get_poi_ratings", poi_id)
+    return jsonify(poi_service.get_poi_ratings(poi_id)), 200
 
 
 @compat_bp.route("/api/poi/<poi_id>/ratings", methods=["PUT"])
+@auth_middleware.require_auth
 def update_poi_ratings(poi_id):
-    return _delegate("update_poi_ratings", poi_id)
+    payload = request.get_json(silent=True) or {}
+    return jsonify(poi_service.update_poi_ratings(poi_id, payload.get("ratings"))), 200
 
 
 @compat_bp.route("/api/poi/<poi_id>/images", methods=["GET"])
@@ -216,32 +223,46 @@ def delete_poi_image(poi_id, filename):
 
 @compat_bp.route("/api/panoramas", methods=["GET"])
 def list_panoramas():
-    return _delegate("list_panoramas")
+    return jsonify(media_service.list_panoramas()), 200
 
 
 @compat_bp.route("/api/panoramas", methods=["POST"])
+@auth_middleware.require_auth
 def upload_panorama():
-    return _delegate("upload_panorama")
+    files = []
+    if "media" in request.files:
+        files.extend(request.files.getlist("media"))
+    if "media[]" in request.files:
+        files.extend(request.files.getlist("media[]"))
+
+    payload = media_service.upload_panoramas(files, request.form.get("caption", ""))
+    if payload.get("errors"):
+        return jsonify(payload), 207
+    if payload.get("uploaded_count", 0) == 0 and payload.get("duplicate_count", 0) > 0:
+        return jsonify(payload), 200
+    return jsonify(payload), 201
 
 
 @compat_bp.route("/api/panoramas/<pano_id>", methods=["DELETE"])
+@auth_middleware.require_auth
 def delete_panorama(pano_id):
-    return _delegate("delete_panorama", pano_id)
+    return jsonify(media_service.delete_panorama(pano_id)), 200
 
 
 @compat_bp.route("/api/route-panoramas", methods=["GET"])
 def list_route_panoramas():
-    return _delegate("list_route_panoramas")
+    return jsonify(media_service.list_route_panoramas()), 200
 
 
 @compat_bp.route("/api/route/smart", methods=["POST"])
 def smart_route():
-    return _delegate("create_smart_route")
+    payload = request.get_json(silent=True) or {}
+    return jsonify(route_planning_service.create_route(payload.get("waypoints", []), "smart")), 200
 
 
 @compat_bp.route("/api/recommendations", methods=["POST"])
 def recommendations():
-    return _delegate("get_recommendations")
+    return jsonify(recommendation_service.get_recommendations(request.get_json(silent=True) or {})), 200
 
 
 @compat_bp.route("/api/routes/<int:route_id>/nearby-pois", methods=["GET"])

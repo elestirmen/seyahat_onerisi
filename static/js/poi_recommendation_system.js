@@ -1,30 +1,3 @@
-// Rate limiting bilgilendirme mesajı
-// Test function to verify category mappings - REMOVED
-
-// Test function to verify category consistency - REMOVED
-
-// Test function to verify API categories - REMOVED
-
-if (window.rateLimiter) {
-    // Log removed for cleaner console
-}
-
-// Debug: Test geometry API endpoint - REMOVED
-
-// Test function for debugging predefined routes media - REMOVED
-
-// Debug function to inspect POI recommendation data - REMOVED
-
-// Simplified test function - REMOVED
-
-// Test function for category system - REMOVED
-
-// Test markers on map - REMOVED
-
-// Visual category preview function - REMOVED
-
-// Test function for debugging - REMOVED
-
 // Global variables
 let routingControl = null;
 let selectedPOIs = [];
@@ -162,6 +135,100 @@ const ratingCategories = window.RATING_CATEGORIES || {
     'gece_hayati': { name: 'Gece Hayatı', icon: 'fas fa-moon' }
 };
 
+const CATEGORY_CONFIG_FALLBACK = {
+    displayNames: {
+        gastronomik: '🍽️ Gastronomik',
+        kulturel: '🏛️ Kültürel',
+        sanatsal: '🎨 Sanatsal',
+        doga_macera: '🌿 Doğa & Macera',
+        konaklama: '🏨 Konaklama',
+        alisveris: '🛍️ Alışveriş',
+        eglence: '🎪 Eğlence',
+        spor: '⚽ Spor',
+        diger: 'Diğer',
+        kulturel_miras: '🏛️ Kültürel Miras',
+        dogal_miras: '🍃 Doğal Miras',
+        macera_spor: '⛰️ Macera & Spor',
+        konaklama_hizmet: '🏨 Konaklama & Hizmet',
+        gastronomi: '🍽️ Gastronomi',
+        seyir_noktalari: '⛰️ Seyir Noktaları',
+        yasayan_kultur: '🕌 Yaşayan Kültür',
+        dogal_guzellilk: '🌿 Doğal Güzellik',
+        yemek_icecek: '🍽️ Yemek & İçecek',
+        alisveris_el_sanatlari: '🛍️ Alışveriş & El Sanatları',
+        eglence_aktivite: '🎪 Eğlence & Aktivite',
+        ulasilabilirlik: '🚗 Ulaşılabilirlik'
+    },
+    styles: {
+        gastronomik: { color: '#e74c3c' },
+        kulturel: { color: '#3498db' },
+        sanatsal: { color: '#2ecc71' },
+        doga_macera: { color: '#f39c12' },
+        konaklama: { color: '#9b59b6' },
+        alisveris: { color: '#f39c12' },
+        eglence: { color: '#e74c3c' },
+        spor: { color: '#34495e' },
+        diger: { color: '#708090' },
+        kulturel_miras: { color: '#3498db' },
+        dogal_miras: { color: '#16a085' },
+        macera_spor: { color: '#e67e22' },
+        konaklama_hizmet: { color: '#9b59b6' },
+        gastronomi: { color: '#e74c3c' },
+        seyir_noktalari: { color: '#2ecc71' },
+        yasayan_kultur: { color: '#8B4513' },
+        dogal_guzellilk: { color: '#27ae60' },
+        yemek_icecek: { color: '#e74c3c' },
+        alisveris_el_sanatlari: { color: '#f39c12' },
+        eglence_aktivite: { color: '#e91e63' },
+        ulasilabilirlik: { color: '#34495e' }
+    },
+    icons: {
+        gastronomik: 'fas fa-utensils',
+        kulturel: 'fas fa-landmark',
+        sanatsal: 'fas fa-palette',
+        doga_macera: 'fas fa-hiking',
+        konaklama: 'fas fa-bed',
+        alisveris: 'fas fa-shopping-cart',
+        eglence: 'fas fa-music',
+        spor: 'fas fa-dumbbell',
+        diger: 'fas fa-map-marker-alt',
+        kulturel_miras: 'fas fa-landmark',
+        dogal_miras: 'fas fa-leaf',
+        macera_spor: 'fas fa-hiking',
+        konaklama_hizmet: 'fas fa-bed',
+        gastronomi: 'fas fa-utensils',
+        seyir_noktalari: 'fas fa-mountain',
+        yasayan_kultur: 'fas fa-mosque',
+        dogal_guzellilk: 'fas fa-tree',
+        yemek_icecek: 'fas fa-utensils',
+        alisveris_el_sanatlari: 'fas fa-shopping-cart',
+        eglence_aktivite: 'fas fa-music',
+        ulasilabilirlik: 'fas fa-road'
+    },
+    aliases: {
+        gastronomik: 'gastronomik',
+        kulturel: 'kulturel',
+        sanatsal: 'sanatsal',
+        doga_macera: 'doga_macera',
+        konaklama: 'konaklama',
+        alisveris: 'alisveris',
+        eglence: 'eglence',
+        spor: 'spor',
+        kulturel_miras: 'kulturel_miras',
+        dogal_miras: 'dogal_miras',
+        macera_spor: 'macera_spor',
+        konaklama_hizmet: 'konaklama_hizmet',
+        gastronomi: 'gastronomi',
+        seyir_noktalari: 'seyir_noktalari',
+        yasayan_kultur: 'yasayan_kultur',
+        dogal_guzellilk: 'dogal_guzellilk',
+        yemek_icecek: 'yemek_icecek',
+        alisveris_el_sanatlari: 'alisveris_el_sanatlari',
+        eglence_aktivite: 'eglence_aktivite',
+        ulasilabilirlik: 'ulasilabilirlik'
+    }
+};
+
 // Dynamic category data (will be loaded from API or centralized config)
 let categoryData = {};
 
@@ -171,158 +238,57 @@ const fallbackCategoryStyles = {};
 const iconMap = {};
 const categoryIconAliases = {};
 
-// Initialize from centralized config
-if (typeof window !== 'undefined' && window.createIconMap) {
-    // Log removed for cleaner console
-    
-    const iconMapData = window.createIconMap();
-    const colorMapData = window.createColorMap();
-    const aliasMapData = window.createAliasMap();
-    
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    
-    Object.assign(iconMap, iconMapData);
-    Object.assign(fallbackCategoryStyles, colorMapData);
-    Object.assign(categoryIconAliases, aliasMapData);
-    
-    // Create display names map
-    const allCategories = window.getAllCategories();
-    // Log removed for cleaner console
-    
-    allCategories.forEach(category => {
-        fallbackCategoryNames[category.name] = category.display_name;
-        if (category.aliases) {
+function buildCategoryDisplayNameMap(categories) {
+    const displayNames = {};
+
+    categories.forEach(category => {
+        displayNames[category.name] = category.display_name;
+        if (Array.isArray(category.aliases)) {
             category.aliases.forEach(alias => {
-                fallbackCategoryNames[alias] = category.display_name;
+                displayNames[alias] = category.display_name;
             });
         }
     });
-    
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    
-    // Test a few categories
-    // Log removed for cleaner console
-    ['gastronomik', 'kulturel', 'doga_macera', 'macera_spor', 'gastronomi'].forEach(testCat => {
-        if (window.getCategoryStyle) {
-            const testResult = window.getCategoryStyle(testCat);
-            // Log removed for cleaner console
-        }
+
+    return displayNames;
+}
+
+function applyCategoryConfig(config) {
+    Object.assign(fallbackCategoryNames, config.displayNames || {});
+    Object.assign(fallbackCategoryStyles, config.styles || {});
+    Object.assign(iconMap, config.icons || {});
+    Object.assign(categoryIconAliases, config.aliases || {});
+}
+
+function loadCentralizedCategoryConfig() {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    const requiredFactories = [
+        'createIconMap',
+        'createColorMap',
+        'createAliasMap',
+        'getAllCategories'
+    ];
+
+    if (!requiredFactories.every(factoryName => typeof window[factoryName] === 'function')) {
+        return false;
+    }
+
+    applyCategoryConfig({
+        displayNames: buildCategoryDisplayNameMap(window.getAllCategories()),
+        styles: window.createColorMap(),
+        icons: window.createIconMap(),
+        aliases: window.createAliasMap()
     });
-    
-} else {
+
+    return true;
+}
+
+if (!loadCentralizedCategoryConfig()) {
     console.warn('⚠️ Centralized POI category configuration not available, using fallback configuration');
-    
-    // Fallback configuration for when centralized config is not loaded
-    Object.assign(fallbackCategoryNames, {
-        'gastronomik': '🍽️ Gastronomik',
-        'kulturel': '🏛️ Kültürel', 
-        'sanatsal': '🎨 Sanatsal',
-        'doga_macera': '🌿 Doğa & Macera',
-        'konaklama': '🏨 Konaklama',
-        'alisveris': '🛍️ Alışveriş',
-        'eglence': '🎪 Eğlence',
-        'spor': '⚽ Spor',
-        'diger': 'Diğer',
-        // API category display names
-        'kulturel_miras': '🏛️ Kültürel Miras',
-        'dogal_miras': '🍃 Doğal Miras',
-        'macera_spor': '⛰️ Macera & Spor',
-        'konaklama_hizmet': '🏨 Konaklama & Hizmet',
-        'gastronomi': '🍽️ Gastronomi',
-        'seyir_noktalari': '⛰️ Seyir Noktaları',
-        'yasayan_kultur': '🕌 Yaşayan Kültür',
-        'dogal_guzellilk': '🌿 Doğal Güzellik',
-        'yemek_icecek': '🍽️ Yemek & İçecek',
-        'alisveris_el_sanatlari': '🛍️ Alışveriş & El Sanatları',
-        'eglence_aktivite': '🎪 Eğlence & Aktivite',
-        'ulasilabilirlik': '🚗 Ulaşılabilirlik'
-    });
-    
-    Object.assign(fallbackCategoryStyles, {
-        'gastronomik': { color: '#e74c3c' },
-        'kulturel': { color: '#3498db' },
-        'sanatsal': { color: '#2ecc71' },
-        'doga_macera': { color: '#f39c12' },
-        'konaklama': { color: '#9b59b6' },
-        'alisveris': { color: '#f39c12' },
-        'eglence': { color: '#e74c3c' },
-        'spor': { color: '#34495e' },
-        'diger': { color: '#708090' },
-        // API category mappings
-        'kulturel_miras': { color: '#3498db' },
-        'dogal_miras': { color: '#16a085' },
-        'macera_spor': { color: '#e67e22' },
-        'konaklama_hizmet': { color: '#9b59b6' },
-        'gastronomi': { color: '#e74c3c' },
-        'seyir_noktalari': { color: '#2ecc71' },
-        'yasayan_kultur': { color: '#8B4513' },
-        'dogal_guzellilk': { color: '#27ae60' },
-        'yemek_icecek': { color: '#e74c3c' },
-        'alisveris_el_sanatlari': { color: '#f39c12' },
-        'eglence_aktivite': { color: '#e91e63' },
-        'ulasilabilirlik': { color: '#34495e' }
-    });
-    
-    Object.assign(iconMap, {
-        'gastronomik': 'fas fa-utensils',
-        'kulturel': 'fas fa-landmark',
-        'sanatsal': 'fas fa-palette',
-        'doga_macera': 'fas fa-hiking',
-        'konaklama': 'fas fa-bed',
-        'alisveris': 'fas fa-shopping-cart',
-        'eglence': 'fas fa-music',
-        'spor': 'fas fa-dumbbell',
-        'diger': 'fas fa-map-marker-alt',
-        // API category mappings
-        'kulturel_miras': 'fas fa-landmark',
-        'dogal_miras': 'fas fa-leaf',
-        'macera_spor': 'fas fa-hiking',
-        'konaklama_hizmet': 'fas fa-bed',
-        'gastronomi': 'fas fa-utensils',
-        'seyir_noktalari': 'fas fa-mountain',
-        'yasayan_kultur': 'fas fa-mosque',
-        'dogal_guzellilk': 'fas fa-tree',
-        'yemek_icecek': 'fas fa-utensils',
-        'alisveris_el_sanatlari': 'fas fa-shopping-cart',
-        'eglence_aktivite': 'fas fa-music',
-        'ulasilabilirlik': 'fas fa-road'
-    });
-    
-    Object.assign(categoryIconAliases, {
-        'gastronomik': 'gastronomik',
-        'kulturel': 'kulturel',
-        'sanatsal': 'sanatsal',
-        'doga_macera': 'doga_macera',
-        'konaklama': 'konaklama',
-        'alisveris': 'alisveris',
-        'eglence': 'eglence',
-        'spor': 'spor',
-        // API category aliases (self-referencing)
-        'kulturel_miras': 'kulturel_miras',
-        'dogal_miras': 'dogal_miras',
-        'macera_spor': 'macera_spor',
-        'konaklama_hizmet': 'konaklama_hizmet',
-        'gastronomi': 'gastronomi',
-        'seyir_noktalari': 'seyir_noktalari',
-        'yasayan_kultur': 'yasayan_kultur',
-        'dogal_guzellilk': 'dogal_guzellilk',
-        'yemek_icecek': 'yemek_icecek',
-        'alisveris_el_sanatlari': 'alisveris_el_sanatlari',
-        'eglence_aktivite': 'eglence_aktivite',
-        'ulasilabilirlik': 'ulasilabilirlik'
-    });
-    
-    console.warn('🗺️ Fallback configuration loaded:', {
-        iconMap: Object.keys(iconMap).length,
-        styles: Object.keys(fallbackCategoryStyles).length,
-        aliases: Object.keys(categoryIconAliases).length
-    });
+    applyCategoryConfig(CATEGORY_CONFIG_FALLBACK);
 }
 
 /**
@@ -415,13 +381,6 @@ function createCategoryMarker(lat, lng, poi, index = 0) {
     // Create custom marker with poi_manager_enhanced styling: EXACT same approach
     const categoryColor = categoryStyle.color;
     const categoryIcon = categoryStyle.iconClass.replace('fas fa-', ''); // Remove fas fa- prefix
-    
-    console.warn('🔍 Final marker styling:', {
-        category: poi.category,
-        color: categoryColor,
-        icon: categoryIcon,
-        fullIconClass: categoryStyle.iconClass
-    });
     
     const marker = L.marker([lat, lng], {
         icon: L.divIcon({
@@ -2485,8 +2444,6 @@ function initializeTouchSupport() {
     }
 }
 
-// Call on page load - REMOVED (merged below)
-
 // Check if page is served over HTTPS
 function checkSecurityContext() {
     const isSecure = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
@@ -2634,21 +2591,6 @@ function announceToScreenReader(message) {
         document.body.removeChild(announcement);
     }, 1000);
 }
-
-//         // Debug and testing helper
-//         function testMediaModal() {
-//             const testMedia = [
-//                 { type: 'image', path: '/test-image.jpg', title: 'Test Görsel' },
-//                 { type: 'video', path: '/test-video.mp4', title: 'Test Video' },
-//                 { type: 'audio', path: '/test-audio.mp3', title: 'Test Ses' }
-//             ];
-// 
-//             // Log removed for cleaner console
-//             showMediaModal(testMedia, 0, 'Test POI');
-//         }
-// 
-//         // Expose test function globally for debugging
-//         window.testMediaModal = testMediaModal;
 
 function showMediaError(message, canRetry = true) {
     const modalBody = document.getElementById('mediaModalBody');
@@ -3938,14 +3880,6 @@ function exportPredefinedRouteToGoogleMaps(routeId) {
                          routeName.includes('pigeon') ||
                          routeName.includes('kale') ||     // castle trails  
                          routeName.includes('castle');
-    
-    // DEBUG: Log export information
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    // Log removed for cleaner console 
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    // Log removed for cleaner console
     
     // SIMPLE AND WORKING: Just use basic Google Maps directions
     let travelMode = 'walking';
@@ -8281,14 +8215,6 @@ async function selectPredefinedRoute(route) {
         }
     }
 
-    console.warn('🔍 Final route data before display:', {
-        hasGeometry: !!route.geometry,
-        geometryType: typeof route.geometry,
-        hasPois: !!(route.pois && route.pois.length > 0),
-        poisCount: route.pois ? route.pois.length : 0,
-        firstPoi: route.pois && route.pois[0] ? route.pois[0] : null
-    });
-
     // Close modal after data loading
     closeRouteDetailModal();
 
@@ -8309,16 +8235,6 @@ async function selectPredefinedRoute(route) {
                               routeName.includes('pigeon') ||
                               routeName.includes('kale') ||     // castle trails  
                               routeName.includes('castle');
-         
-         // DEBUG: Log route information for debugging
-         // Log removed for cleaner console
-         // Log removed for cleaner console
-         // Log removed for cleaner console
-         // Log removed for cleaner console
-         // Log removed for cleaner console
-         // Log removed for cleaner console
-         // Log removed for cleaner console
-         // Log removed for cleaner console
          
         // Add navigation route from current location to route start
         addNavigationToRoute(route);
@@ -9866,90 +9782,6 @@ function getRouteTypeDisplayName(type) {
     return typeNames[type] || type;
 }
 
-// Debug function for testing route selection
-window.testRouteSelection = async function(routeId) {
-    // Log removed for cleaner console
-    
-    try {
-        const response = await fetch(`${apiBase}/routes/${routeId}`);
-        // Log removed for cleaner console
-        
-        if (response.ok) {
-            const data = await response.json();
-            // Log removed for cleaner console
-            
-            if (data.success && data.route) {
-                // Log removed for cleaner console
-                // Log removed for cleaner console
-                // Log removed for cleaner console
-                
-                // Log POI details
-                if (data.route.pois && data.route.pois.length > 0) {
-                    data.route.pois.forEach((poi, index) => {
-                        // Log removed for cleaner console
-                    });
-                }
-                
-                // Test the selection function
-                await selectPredefinedRoute(data.route);
-            } else {
-                console.error('❌ Route not found or API error');
-            }
-        } else {
-            console.error('❌ API request failed:', response.status);
-        }
-    } catch (error) {
-        console.error('❌ Error testing route selection:', error);
-    }
-};
-
-// Debug function for testing route list
-window.testRouteList = async function() {
-    // Log removed for cleaner console
-    
-    try {
-        const response = await fetch(`${apiBase}/routes`);
-        // Log removed for cleaner console
-        
-        if (response.ok) {
-            const data = await response.json();
-            // Log removed for cleaner console
-            
-            if (data.success && data.routes) {
-                // Log removed for cleaner console
-                
-                data.routes.forEach((route, index) => {
-                    // Log removed for cleaner console
-                });
-            } else {
-                console.error('❌ Routes not found or API error');
-            }
-        } else {
-            console.error('❌ Routes API request failed:', response.status);
-        }
-    } catch (error) {
-        console.error('❌ Error testing route list:', error);
-    }
-};
-
-// Debug function for testing map initialization
-window.testMapInit = async function() {
-    // Log removed for cleaner console
-    
-    const success = await initializeMainMap();
-    if (success) {
-        // Log removed for cleaner console
-        
-        // Test adding a sample marker
-        if (map) {
-            const testMarker = L.marker([38.632, 34.912]).addTo(map);
-            testMarker.bindPopup('Test marker').openPopup();
-            // Log removed for cleaner console
-        }
-    } else {
-        console.error('❌ Map initialization failed');
-    }
-};
 // Route preview map functionality
 let previewMaps = new Map(); // Store multiple preview maps
 
@@ -10654,210 +10486,7 @@ function withErrorHandling(fn, context = 'Operation') {
 window.addEventListener('beforeunload', cleanupApplication);
 window.addEventListener('unload', cleanupApplication);
 
-// Testing functions for the implementation
-window.testSeparateTabMaps = function() {
-    // Log removed for cleaner console
-    
-    const tests = [
-        {
-            name: 'Predefined Routes Map Container',
-            test: () => document.getElementById('predefinedRoutesMap') !== null
-        },
-        {
-            name: 'Map Controls',
-            test: () => document.getElementById('clearMapBtn') !== null && document.getElementById('fitMapBtn') !== null
-        },
-        {
-            name: 'Tab Switching Function',
-            test: () => typeof switchTab === 'function'
-        },
-        {
-            name: 'Predefined Map Functions',
-            test: () => typeof initializePredefinedMap === 'function' && 
-                       typeof displayRouteOnMap === 'function' && 
-                       typeof clearPredefinedMapContent === 'function'
-        },
-        {
-            name: 'Memory Management',
-            test: () => typeof cleanupApplication === 'function' && 
-                       typeof addTimeout === 'function'
-        },
-        {
-            name: 'State Management',
-            test: () => typeof cleanupTabState === 'function'
-        }
-    ];
-    
-    let passed = 0;
-    let failed = 0;
-    
-    tests.forEach(test => {
-        try {
-            if (test.test()) {
-                // Log removed for cleaner console
-                passed++;
-            } else {
-                // Log removed for cleaner console
-                failed++;
-            }
-        } catch (error) {
-            // Log removed for cleaner console
-            failed++;
-        }
-    });
-    
-    // Log removed for cleaner console
-    
-    if (failed === 0) {
-        // Log removed for cleaner console
-        return true;
-    } else {
-        // Log removed for cleaner console
-        return false;
-    }
-};
-
-// Test tab switching functionality
-window.testTabSwitching = async function() {
-    // Log removed for cleaner console
-    
-    try {
-        // Test switch to predefined routes
-        await switchTab('predefined-routes');
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Test switch to dynamic routes
-        await switchTab('dynamic-routes');
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Log removed for cleaner console
-        return true;
-    } catch (error) {
-        console.error('❌ Tab switching test failed:', error);
-        return false;
-    }
-};
-
-// Debug function for route display issues
-window.debugRouteDisplay = function(routeId) {
-    // Log removed for cleaner console
-    
-    // Find route in predefined routes
-    const route = predefinedRoutes.find(r => r.id == routeId || r._id == routeId);
-    if (!route) {
-        console.error('❌ Route not found in predefined routes');
-        return;
-    }
-    
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    // Log removed for cleaner console
-    
-    // Try to display
-    if (predefinedMapInitialized) {
-        displayRouteOnMap(route);
-    } else {
-        // Log removed for cleaner console
-        initializePredefinedMap().then(async () => {
-            await displayRouteOnMap(route);
-        });
-    }
-};
-
-// Test function to check route data
-window.checkRouteData = async function() {
-    // Log removed for cleaner console
-    
-    try {
-        const response = await fetch(`${apiBase}/routes`);
-        if (response.ok) {
-            const data = await response.json();
-            const routes = data.routes || [];
-            // Log removed for cleaner console
-            
-            routes.forEach((route, index) => {
-                console.warn(`Route ${index + 1}:`, {
-                    id: route.id || route._id,
-                    name: route.name,
-                    hasGeometry: !!route.geometry,
-                    hasPOIs: !!(route.pois && route.pois.length > 0),
-                    poiCount: route.pois ? route.pois.length : 0
-                });
-            });
-            
-            if (routes.length > 0) {
-                // Log removed for cleaner console
-            }
-        }
-    } catch (error) {
-        console.error('❌ Error checking route data:', error);
-    }
-};
-
-// Run comprehensive tests
-window.runAllSeparateTabMapTests = async function() {
-    // Log removed for cleaner console
-    
-    const basicTests = window.testSeparateTabMaps();
-    const tabTests = await window.testTabSwitching();
-    
-    if (basicTests && tabTests) {
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        // Log removed for cleaner console
-        return true;
-    } else {
-        // Log removed for cleaner console
-        return false;
-    }
-};
-
 // Initialize everything when DOM is loaded
-
-//         // Debug function to check elements
-//         function debugElements() {
-//             // Check loading manager availability
-//             console.warn('Loading Manager Status:', {
-//                 available: !!window.loadingManager,
-//                 showPOISkeletons: !!(window.loadingManager && window.loadingManager.showPOISkeletons),
-//                 lazyLoader: !!window.lazyLoader
-//             });
-//             // Log removed for cleaner console
-// 
-//             // Check sliders
-//             Object.keys(ratingCategories).forEach(category => {
-//                 const slider = document.getElementById(category);
-//                 const valueDisplay = document.getElementById(category + '-value');
-//                 console.warn(`Slider ${category}:`, {
-//                     slider: !!slider,
-//                     valueDisplay: !!valueDisplay,
-//                     sliderValue: slider ? slider.value : 'N/A',
-//                     displayValue: valueDisplay ? valueDisplay.textContent : 'N/A'
-//                 });
-//             });
-// 
-//             // Check recommend button
-//             const recommendBtn = document.getElementById('recommendBtn');
-//             console.warn('Recommend button:', {
-//                 found: !!recommendBtn,
-//                 hasEventListener: recommendBtn ? recommendBtn.onclick !== null : false,
-//                 text: recommendBtn ? recommendBtn.textContent : 'N/A'
-//             });
-//         }
 
 function initializeSliders() {
     // Log removed for cleaner console
@@ -11203,13 +10832,6 @@ async function getRecommendations() {
     const resultsSection = document.getElementById('resultsSection');
     const loadingIndicator = document.getElementById('loadingIndicator');
     const resultsContainer = document.getElementById('recommendationResults');
-
-    console.warn('Elements found:', {
-        button: !!button,
-        resultsSection: !!resultsSection,
-        loadingIndicator: !!loadingIndicator,
-        resultsContainer: !!resultsContainer
-    });
 
     // Show enhanced loading state
     button.disabled = true;
@@ -12560,629 +12182,6 @@ function toggleLowScorePOIs() {
         // Log removed for cleaner console
     }
 }
-// Enhanced Recommend Button Functionality - REMOVED DUPLICATE
-// This was causing conflicts with the main event listener in setupEventListeners()
-/*
-document.addEventListener('DOMContentLoaded', function() {
-    const recommendBtn = document.getElementById('recommendBtn');
-    
-    if (recommendBtn) {
-        recommendBtn.addEventListener('click', async function() {
-            // Prevent multiple clicks
-            if (recommendBtn.disabled) return;
-            
-            const btnIcon = recommendBtn.querySelector('.btn-icon');
-            const btnText = recommendBtn.querySelector('.btn-text');
-            
-            // Set loading state
-            recommendBtn.disabled = true;
-            recommendBtn.classList.add('loading');
-            if (btnIcon) btnIcon.className = 'fas fa-spinner btn-icon';
-            if (btnText) btnText.textContent = 'Öneriler Hazırlanıyor...';
-            
-            try {
-                // Get user preferences
-                const preferences = {};
-                const sliders = document.querySelectorAll('.slider');
-                sliders.forEach(slider => {
-                    preferences[slider.id] = parseInt(slider.value);
-                });
-                
-                // Note: Removed validation - users can get recommendations even with all preferences at 0
-                // This allows for general exploration without forcing specific preferences
-                
-                // Make API request
-                const response = await fetch(`${apiBase}/recommendations`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ preferences })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                // Success state
-                recommendBtn.classList.remove('loading');
-                recommendBtn.classList.add('success');
-                if (btnIcon) btnIcon.className = 'fas fa-check btn-icon';
-                if (btnText) btnText.textContent = 'Öneriler Hazır!';
-                
-                // Show results
-                displayResults(data);
-                
-                // Reset button after delay
-                setTimeout(resetButton, 2000);
-                
-            } catch (error) {
-                console.error('Error getting recommendations:', error);
-                
-                // Error state
-                recommendBtn.classList.remove('loading');
-                recommendBtn.classList.add('error');
-                if (btnIcon) btnIcon.className = 'fas fa-exclamation-triangle btn-icon';
-                if (btnText) btnText.textContent = 'Tekrar Deneyin';
-                
-                showNotification('❌ Öneriler alınırken bir hata oluştu. Lütfen tekrar deneyin.', 'error');
-                
-                // Reset button after delay
-                setTimeout(resetButton, 3000);
-            }
-        });
-    }
-    
-    function resetButton() {
-        const recommendBtn = document.getElementById('recommendBtn');
-        if (!recommendBtn) return;
-        
-        const btnIcon = recommendBtn.querySelector('.btn-icon');
-        const btnText = recommendBtn.querySelector('.btn-text');
-        
-        recommendBtn.disabled = false;
-        recommendBtn.classList.remove('loading', 'success', 'error');
-        if (btnIcon) btnIcon.className = 'fas fa-magic btn-icon';
-        if (btnText) btnText.textContent = 'Önerilerimi Getir';
-    }
-    
-    function displayResults(data) {
-        const resultsSection = document.getElementById('resultsSection');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-
-        if (window.loadingManager && typeof window.loadingManager.safeHideIndicator === 'function') {
-            window.loadingManager.safeHideIndicator(loadingIndicator || 'loadingIndicator', { fadeDuration: 0 });
-        } else if (loadingIndicator) {
-            loadingIndicator.style.display = 'none';
-            loadingIndicator.style.visibility = 'hidden';
-            loadingIndicator.style.opacity = '';
-            loadingIndicator.style.transition = '';
-            loadingIndicator.classList.remove('d-none');
-            loadingIndicator.removeAttribute('hidden');
-        }
-
-        if (resultsSection) {
-            resultsSection.style.display = 'block';
-            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        // Handle recommendation data and display on map
-        let recommendations = [];
-        if (data && data.recommendations && Array.isArray(data.recommendations)) {
-            recommendations = data.recommendations;
-        } else if (data && Array.isArray(data)) {
-            recommendations = data;
-        }
-
-        if (recommendations.length > 0) {
-            // Show map section
-            const mapSection = document.getElementById('mapSection');
-            if (mapSection) {
-                mapSection.style.display = 'block';
-            }
-
-            // Show results section with recommendation header
-            const recommendationResults = document.getElementById('recommendationResults');
-            if (recommendationResults) {
-                recommendationResults.innerHTML = `
-                    <div class="exploration-header">
-                        <h3><i class="fas fa-magic"></i> Kişisel Öneriler</h3>
-                        <p><strong>${recommendations.length} özel öneri</strong> bulundu ve haritada gösteriliyor. Tercihlerinize uygun yerleri keşfedebilirsiniz.</p>
-                        <div class="exploration-stats">
-                            <span class="stat-item"><i class="fas fa-star"></i> ${recommendations.length} Öneri</span>
-                            <span class="stat-item"><i class="fas fa-user"></i> Size Özel</span>
-                            <span class="stat-item"><i class="fas fa-mouse-pointer"></i> Tıklayarak Keşfedin</span>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Initialize map and show recommendations (exactly like free exploration)
-            setTimeout(async () => {
-                try {
-                    // Initialize main map (independent of recommendations)
-                    if (typeof window.initializeMainMap === 'function' || typeof initializeMainMap === 'function') {
-                        await (window.initializeMainMap || initializeMainMap)();
-                    }
-
-                    // Update map with recommendations (same as free exploration)
-                    if (typeof window.updateMapWithPOIs === 'function' || typeof updateMapWithPOIs === 'function') {
-                        (window.updateMapWithPOIs || updateMapWithPOIs)(recommendations);
-                    }
-
-                    // Focus the map section (same as free exploration)
-                    if (typeof window.switchToDynamicMapView === 'function' || typeof switchToDynamicMapView === 'function') {
-                        (window.switchToDynamicMapView || switchToDynamicMapView)();
-                    } else {
-                        setTimeout(() => {
-                            if (mapSection) {
-                                mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }
-                        }, 200);
-                    }
-
-                } catch (error) {
-                    console.error('Error displaying recommendations on map:', error);
-                }
-            }, 500);
-
-            showNotification(`✅ ${recommendations.length} öneri bulundu ve haritada gösteriliyor!`, 'success');
-        } else {
-            showNotification('❌ Uygun öneri bulunamadı. Lütfen tercihlerinizi değiştirin.', 'warning');
-        }
-    }
-    
-    function showNotification(message, type = 'info') {
-        // Remove existing notifications
-        document.querySelectorAll('.notification').forEach(n => n.remove());
-        
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.style.cssText = `
-            position: fixed; top: 20px; right: 20px; z-index: 10000;
-            background: ${getNotificationColor(type)}; color: white;
-            padding: 15px 20px; border-radius: 10px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-            transform: translateX(400px);
-            transition: all 0.4s ease; max-width: 400px;
-        `;
-        
-        notification.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
-                <span>${message}</span>
-                <button onclick="this.parentElement.parentElement.remove()" 
-                        style="background: none; border: none; color: white; cursor: pointer; padding: 5px;">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Animate in
-        setTimeout(() => notification.style.transform = 'translateX(0)', 100);
-        
-        // Auto remove
-        setTimeout(() => {
-            notification.style.transform = 'translateX(400px)';
-            setTimeout(() => notification.remove(), 400);
-        }, 5000);
-    }
-    
-
-    
-    function getNotificationColor(type) {
-        const colors = {
-            'success': 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-            'error': 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-            'warning': 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)',
-            'info': 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)'
-        };
-        return colors[type] || colors.info;
-    }
-});
-
-// Route Context Menu Class
-class RouteContextMenu {
-    constructor() {
-        this.menu = document.getElementById('routeContextMenu');
-        this.isVisible = false;
-        this.currentPOI = null;
-        this.currentIndex = null;
-        
-        // Bind event listeners
-        this.bindEvents();
-    }
-
-    static getInstance() {
-        if (!window.routeContextMenuInstance) {
-            window.routeContextMenuInstance = new RouteContextMenu();
-        }
-        return window.routeContextMenuInstance;
-    }
-
-    bindEvents() {
-        // Close menu when clicking outside
-        document.addEventListener('click', (e) => {
-            if (this.isVisible && !this.menu.contains(e.target)) {
-                this.hide();
-            }
-        });
-
-        // Close menu on escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isVisible) {
-                this.hide();
-            }
-        });
-
-        // Prevent menu from closing when clicking inside
-        this.menu.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-    }
-
-    showForPOI(event, poiId, index) {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        // Log removed for cleaner console
-        
-        // Find the POI in selectedPOIs
-        const poi = selectedPOIs.find(p => (p.id || p._id) === poiId);
-        if (!poi) {
-            console.error('❌ POI not found in selectedPOIs');
-            return;
-        }
-        
-        this.currentPOI = poi;
-        this.currentIndex = index;
-        
-        // Update menu content
-        this.updateMenuContent();
-        
-        // Position menu
-        this.positionMenu(event);
-        
-        // Show menu
-        this.show();
-    }
-
-    updateMenuContent() {
-        if (!this.currentPOI) return;
-        
-        // Update title
-        const titleEl = document.getElementById('routeContextMenuTitle');
-        titleEl.textContent = this.currentPOI.name;
-        
-        // Update subtitle
-        const subtitleEl = document.getElementById('routeContextMenuSubtitle');
-        const stepNumber = startLocation ? this.currentIndex + 2 : this.currentIndex + 1;
-        subtitleEl.textContent = `${stepNumber}. durak - ${getCategoryDisplayName(this.currentPOI.category)}`;
-        
-        // Update route stats
-        this.updateRouteStats();
-        
-        // Update route steps
-        this.updateRouteSteps();
-    }
-
-    updateRouteStats() {
-        const stats = getRouteStatistics();
-        if (!stats) return;
-        
-        document.getElementById('contextDistance').textContent = `${stats.totalDistance.toFixed(1)} km`;
-        document.getElementById('contextDuration').textContent = `${Math.round(stats.estimatedTime)} dk`;
-        document.getElementById('contextStops').textContent = `${stats.pointCount} durak`;
-        document.getElementById('contextCategories').textContent = `${stats.categories.length} kategori`;
-    }
-
-    updateRouteSteps() {
-        const stepsContainer = document.getElementById('routeContextSteps');
-        let stepsHTML = '';
-        
-        // Add start location if exists
-        if (startLocation) {
-            stepsHTML += `
-                <div class="route-context-step">
-                    <div class="route-context-step-number">🏁</div>
-                    <div class="route-context-step-content">
-                        <div class="route-context-step-name">${startLocation.name}</div>
-                        <div class="route-context-step-category">Başlangıç Noktası</div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Add selected POIs
-        selectedPOIs.forEach((poi, index) => {
-            const stepNumber = startLocation ? index + 2 : index + 1;
-            const isCurrentPOI = poi === this.currentPOI;
-            const categoryStyle = getCategoryStyle(poi.category);
-            
-            stepsHTML += `
-                <div class="route-context-step ${isCurrentPOI ? 'current' : ''}">
-                    <div class="route-context-step-number" style="background: ${isCurrentPOI ? '#e74c3c' : categoryStyle.color}">
-                        ${stepNumber}
-                    </div>
-                    <div class="route-context-step-content">
-                        <div class="route-context-step-name">${poi.name} ${isCurrentPOI ? '(Seçili)' : ''}</div>
-                        <div class="route-context-step-category">${getCategoryDisplayName(poi.category)}</div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        stepsContainer.innerHTML = stepsHTML;
-    }
-
-    positionMenu(event) {
-        const x = event.clientX;
-        const y = event.clientY;
-        const menuWidth = 320;
-        const menuHeight = 600; // Approximate height
-        
-        // Get viewport dimensions
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        
-        // Calculate position
-        let left = x;
-        let top = y;
-        
-        // Adjust if menu would go off screen horizontally
-        if (left + menuWidth > viewportWidth) {
-            left = viewportWidth - menuWidth - 20;
-        }
-        
-        // Adjust if menu would go off screen vertically
-        if (top + menuHeight > viewportHeight) {
-            top = viewportHeight - menuHeight - 20;
-        }
-        
-        // Ensure minimum margins
-        left = Math.max(10, left);
-        top = Math.max(10, top);
-        
-        this.menu.style.left = `${left}px`;
-        this.menu.style.top = `${top}px`;
-    }
-
-    show() {
-        this.menu.classList.add('show');
-        this.isVisible = true;
-        
-        // Focus trap for accessibility
-        const focusableElements = this.menu.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
-        if (focusableElements.length > 0) {
-            focusableElements[0].focus();
-        }
-    }
-
-    hide() {
-        this.menu.classList.remove('show');
-        this.isVisible = false;
-        this.currentPOI = null;
-        this.currentIndex = null;
-    }
-
-    // Action Methods
-    static showForPOI(event, poiId, index) {
-        const instance = RouteContextMenu.getInstance();
-        instance.showForPOI(event, poiId, index);
-    }
-
-    static showRouteDetails() {
-        const instance = RouteContextMenu.getInstance();
-        instance.hide();
-        
-        if (instance.currentPOI) {
-            // Log removed for cleaner console
-            
-            // Use existing route details panel
-            const routeData = {
-                pois: selectedPOIs,
-                startLocation: startLocation,
-                stats: getRouteStatistics()
-            };
-            
-            const panelInstance = RouteDetailsPanel.getInstance();
-            panelInstance.show(routeData);
-        }
-    }
-
-    static optimizeRoute() {
-        const instance = RouteContextMenu.getInstance();
-        instance.hide();
-        
-        // Log removed for cleaner console
-        optimizeRoute();
-        showNotification('Rota optimize ediliyor...', 'info');
-    }
-
-    static focusOnMap() {
-        const instance = RouteContextMenu.getInstance();
-        instance.hide();
-        
-        // Log removed for cleaner console
-        
-        if (selectedPOIs.length > 0) {
-            // Create bounds for all POIs
-            const bounds = L.latLngBounds();
-            
-            if (startLocation) {
-                bounds.extend([startLocation.latitude, startLocation.longitude]);
-            }
-            
-            selectedPOIs.forEach(poi => {
-                bounds.extend([poi.latitude, poi.longitude]);
-            });
-            
-            // Fit map to bounds with padding
-            map.fitBounds(bounds, { padding: [50, 50] });
-            
-            showNotification('Rota haritada odaklandı', 'success');
-        }
-    }
-
-    static shareRoute() {
-        const instance = RouteContextMenu.getInstance();
-        instance.hide();
-        
-        // Log removed for cleaner console
-        
-        // Create route share data
-        const routeData = {
-            pois: selectedPOIs.map(poi => ({
-                id: poi.id || poi._id,
-                name: poi.name,
-                latitude: poi.latitude,
-                longitude: poi.longitude,
-                category: poi.category
-            })),
-            startLocation: startLocation,
-            stats: getRouteStatistics(),
-            created: new Date().toISOString()
-        };
-        
-        // Create shareable URL
-        const routeDataEncoded = btoa(JSON.stringify(routeData));
-        const shareUrl = `${window.location.origin}${window.location.pathname}?route=${routeDataEncoded}`;
-        
-        // Copy to clipboard
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(shareUrl).then(() => {
-                showNotification('Rota linki panoya kopyalandı!', 'success');
-            }).catch(() => {
-                prompt('Rota linkini kopyalayın:', shareUrl);
-            });
-        } else {
-            prompt('Rota linkini kopyalayın:', shareUrl);
-        }
-    }
-
-    static openInGoogleMaps() {
-        const instance = RouteContextMenu.getInstance();
-        instance.hide();
-        
-        // Log removed for cleaner console
-        
-        let waypoints = [];
-        
-        if (startLocation) {
-            waypoints.push(`${startLocation.latitude},${startLocation.longitude}`);
-        }
-        
-        selectedPOIs.forEach(poi => {
-            waypoints.push(`${poi.latitude},${poi.longitude}`);
-        });
-        
-        if (waypoints.length >= 2) {
-            const origin = waypoints[0];
-            const destination = waypoints[waypoints.length - 1];
-            const waypointsParam = waypoints.slice(1, -1).join('|');
-            
-            let googleMapsUrl = `https://www.google.com/maps/dir/${origin}/${destination}`;
-            if (waypointsParam) {
-                googleMapsUrl += `?waypoints=${waypointsParam}`;
-            }
-            
-            window.open(googleMapsUrl, '_blank');
-            showNotification('Google Maps\'te açılıyor...', 'info');
-        } else {
-            showNotification('Google Maps için en az 2 nokta gerekli', 'warning');
-        }
-    }
-
-    static downloadRoute() {
-        const instance = RouteContextMenu.getInstance();
-        instance.hide();
-        
-        // Log removed for cleaner console
-        
-        const routeData = {
-            name: `Ürgüp Rotası - ${new Date().toLocaleDateString('tr-TR')}`,
-            description: `${selectedPOIs.length} durağı olan kişiselleştirilmiş rota`,
-            pois: selectedPOIs,
-            startLocation: startLocation,
-            stats: getRouteStatistics(),
-            created: new Date().toISOString()
-        };
-        
-        // Create JSON file
-        const jsonData = JSON.stringify(routeData, null, 2);
-        const blob = new Blob([jsonData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        // Create download link
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `urgup_rotasi_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        showNotification('Rota dosyası indirildi', 'success');
-    }
-
-    static editRoute() {
-        const instance = RouteContextMenu.getInstance();
-        instance.hide();
-        
-        // Log removed for cleaner console
-        showNotification('Rota düzenleme modu aktif - POI\'leri sürükleyip bırakabilirsiniz', 'info');
-        
-        // Enable drag and drop for route items (this would need additional implementation)
-        // For now, just show a notification
-    }
-
-    static reverseRoute() {
-        const instance = RouteContextMenu.getInstance();
-        instance.hide();
-        
-        // Log removed for cleaner console
-        
-        if (selectedPOIs.length >= 2) {
-            selectedPOIs.reverse();
-            updateRouteDisplay();
-            
-            // Recreate route with reversed order
-            if (selectedPOIs.length >= 1 && (startLocation || selectedPOIs.length >= 2)) {
-                createRoute();
-            }
-            
-            showNotification('Rota ters çevrildi', 'success');
-        } else {
-            showNotification('Ters çevirmek için en az 2 durak gerekli', 'warning');
-        }
-    }
-
-    static clearRoute() {
-        const instance = RouteContextMenu.getInstance();
-        instance.hide();
-        
-        // Log removed for cleaner console
-        
-        // Show confirmation dialog
-        if (confirm('Rotayı tamamen temizlemek istediğinizden emin misiniz?')) {
-            clearRoute();
-            showNotification('Rota temizlendi', 'info');
-        }
-    }
-}
-
-// Initialize RouteContextMenu when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    RouteContextMenu.getInstance();
-});
-
-// Export for global access
-window.RouteContextMenu = RouteContextMenu;
-
-// Close the commented duplicate event listener section
-*/
-
 async function initializeApp() {
     // Log removed for cleaner console
 
@@ -14133,12 +13132,6 @@ async function showAllPOIs() {
     const button = document.getElementById('showAllBtn');
     const resultsSection = document.getElementById('resultsSection');
     const resultsContainer = document.getElementById('recommendationResults');
-
-    console.warn('Elements found:', {
-        button: !!button,
-        resultsSection: !!resultsSection,
-        resultsContainer: !!resultsContainer
-    });
 
     // Show enhanced loading state
     button.disabled = true;
@@ -16339,7 +15332,6 @@ function closePOIDetailModal() {
 
 // Add close button event listener when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-    // Debug: Check if modal exists on page load
     const modalElement = document.getElementById('poiDetailModal');
     // Log removed for cleaner console
     

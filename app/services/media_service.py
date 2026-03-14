@@ -4,6 +4,8 @@ Handles media file upload, processing, and management for POIs.
 """
 
 import hashlib
+import json
+import os
 import uuid
 import logging
 from pathlib import Path
@@ -78,6 +80,259 @@ class MediaService:
         except Exception as e:
             logger.error(f"Error creating media directories: {e}")
             raise APIError("Failed to initialize media directories", "MEDIA_DIR_ERROR", 500)
+
+    def _get_database_connection(self):
+        """Get database connection or raise API error."""
+        try:
+            from app.config.database import get_database_pool
+
+            pool = get_database_pool()
+            if pool is not None:
+                return pool.get_connection()
+        except Exception as exc:
+            logger.debug("Database pool unavailable for media service: %s", exc)
+
+        try:
+            import psycopg2
+            from psycopg2.extras import RealDictCursor
+
+            conn_str = os.environ.get("POI_DB_CONNECTION")
+            if conn_str:
+                conn = psycopg2.connect(conn_str, cursor_factory=RealDictCursor)
+            else:
+                conn = psycopg2.connect(
+                    host=os.environ.get("DB_HOST") or os.environ.get("POI_DB_HOST", "localhost"),
+                    port=int(os.environ.get("DB_PORT") or os.environ.get("POI_DB_PORT") or 5432),
+                    database=os.environ.get("DB_NAME") or os.environ.get("POI_DB_NAME", "poi_db"),
+                    user=os.environ.get("DB_USER") or os.environ.get("POI_DB_USER", "poi_user"),
+                    password=os.environ.get("DB_PASSWORD") or os.environ.get("POI_DB_PASSWORD", "poi_password"),
+                    cursor_factory=RealDictCursor,
+                )
+
+            class DirectConnectionContext:
+                def __init__(self, connection):
+                    self.connection = connection
+
+                def __enter__(self):
+                    return self.connection
+
+                def __exit__(self, exc_type, exc_val, exc_tb):
+                    if exc_type:
+                        self.connection.rollback()
+                    else:
+                        self.connection.commit()
+                    self.connection.close()
+
+            return DirectConnectionContext(conn)
+        except Exception as exc:
+            logger.error("Database connection failed for media service: %s", exc)
+            raise APIError("Database connection failed", "DB_CONN_ERROR", 503)
+
+    def _to_relative_media_path(self, raw_path: Any) -> str:
+        """Normalize stored media paths for frontend consumption."""
+        if not raw_path or not isinstance(raw_path, str):
+            return ""
+
+        normalized = raw_path.replace("\\", "/")
+        path_obj = Path(normalized)
+        if path_obj.is_absolute():
+            try:
+                return str(path_obj.resolve().relative_to(Path.cwd().resolve())).replace("\\", "/")
+            except Exception:
+                marker = f"{self.base_path.name}/"
+                marker_index = normalized.find(marker)
+                if marker_index != -1:
+                    return normalized[marker_index:]
+                return normalized.lstrip("/")
+
+        return normalized
+
+    def upload_panoramas(self, files: List[FileStorage], caption: str = "") -> Dict[str, Any]:
+        """Upload standalone panorama images through the legacy media manager."""
+        valid_files = [file for file in files if getattr(file, "filename", None)]
+        if not valid_files:
+            raise bad_request("No media file provided")
+
+        legacy_manager = self._get_legacy_manager()
+        panoramas: List[Dict[str, Any]] = []
+        errors: List[Dict[str, Any]] = []
+
+        for idx, file in enumerate(valid_files):
+            filename_raw = file.filename or f"panorama_{idx + 1}"
+            safe_suffix = Path(filename_raw).suffix or ".jpg"
+            temp_path = Path("/tmp") / f"{uuid.uuid4()}_{Path(filename_raw).stem}{safe_suffix}"
+
+            try:
+                file.save(str(temp_path))
+                is_valid, message, detected_type = legacy_manager.validate_file(str(temp_path), "image")
+                if not is_valid or detected_type != "image":
+                    errors.append(
+                        {
+                            "index": idx,
+                            "filename": filename_raw,
+                            "error": message or "Invalid file type",
+                        }
+                    )
+                    continue
+
+                result = legacy_manager.add_panorama_image(str(temp_path), caption)
+                if not result:
+                    errors.append(
+                        {
+                            "index": idx,
+                            "filename": filename_raw,
+                            "error": "Failed to process panorama",
+                        }
+                    )
+                    continue
+
+                panoramas.append(result)
+            except Exception as exc:
+                logger.warning("Panorama upload failed for %s: %s", filename_raw, exc)
+                errors.append(
+                    {
+                        "index": idx,
+                        "filename": filename_raw,
+                        "error": str(exc),
+                    }
+                )
+            finally:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+
+        if not panoramas:
+            raise bad_request(
+                errors[0]["error"] if errors else "Failed to process panorama",
+                details={"errors": errors},
+            )
+
+        duplicate_count = sum(1 for pano in panoramas if pano.get("is_duplicate"))
+        uploaded_count = max(0, len(panoramas) - duplicate_count)
+
+        return {
+            "success": True,
+            "panorama": panoramas[0],
+            "panoramas": panoramas,
+            "uploaded_count": uploaded_count,
+            "duplicate_count": duplicate_count,
+            "total_requested": len(valid_files),
+            "total_processed": len(panoramas),
+            "errors": errors,
+        }
+
+    def list_panoramas(self) -> Dict[str, Any]:
+        """List standalone panoramas."""
+        try:
+            return {"panoramas": self._get_legacy_manager().get_all_panoramas()}
+        except Exception as exc:
+            logger.error("Error fetching panoramas: %s", exc)
+            raise APIError("Error fetching panoramas", "PANORAMA_LIST_ERROR", 500)
+
+    def list_route_panoramas(self) -> Dict[str, Any]:
+        """List geo-located route panoramas and panorama-capable route images."""
+        try:
+            try:
+                from PIL import Image  # type: ignore
+            except Exception:
+                Image = None
+
+            with self._get_database_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT route_id, file_path, thumbnail_path, caption, lat, lng, media_type, uploaded_at
+                        FROM route_media
+                        WHERE lat IS NOT NULL
+                          AND lng IS NOT NULL
+                          AND (media_type IS NULL OR media_type IN ('image', 'photo', 'panorama'))
+                        ORDER BY uploaded_at DESC NULLS LAST
+                        """
+                    )
+                    rows = cursor.fetchall() or []
+
+            results: List[Dict[str, Any]] = []
+            for row in rows:
+                record = dict(row)
+                rel_path = self._to_relative_media_path(record.get("file_path"))
+                filename = Path(rel_path).name if rel_path else None
+
+                file_path = Path(record.get("file_path")) if record.get("file_path") else None
+                if file_path and not file_path.is_absolute():
+                    file_path = Path.cwd() / file_path
+
+                is_pano = False
+                if Image and file_path and file_path.is_file():
+                    try:
+                        with Image.open(file_path) as image:
+                            width, height = image.size
+                            if height and 1.90 <= (float(width) / float(height)) <= 2.10 and width >= 1000:
+                                is_pano = True
+                    except Exception:
+                        pass
+
+                panorama_meta: Dict[str, Any] = {}
+                if file_path:
+                    try:
+                        sidecar_path = file_path.with_suffix(".pano.json")
+                        if sidecar_path.is_file():
+                            with open(sidecar_path, "r", encoding="utf-8") as sidecar_file:
+                                panorama_meta = json.load(sidecar_file) or {}
+                    except Exception:
+                        panorama_meta = {}
+
+                original_path = panorama_meta.get("original_path")
+                if isinstance(original_path, str):
+                    original_path = self._to_relative_media_path(original_path)
+
+                pyramid_levels = []
+                for level in panorama_meta.get("pyramid_levels", []) or []:
+                    if not isinstance(level, dict):
+                        continue
+                    normalized_level = dict(level)
+                    normalized_level["path"] = self._to_relative_media_path(level.get("path"))
+                    pyramid_levels.append(normalized_level)
+
+                results.append(
+                    {
+                        "route_id": record.get("route_id"),
+                        "path": rel_path,
+                        "caption": record.get("caption") or "",
+                        "lat": float(record["lat"]) if record.get("lat") is not None else None,
+                        "lng": float(record["lng"]) if record.get("lng") is not None else None,
+                        "filename": filename,
+                        "media_type": (
+                            "image"
+                            if (record.get("media_type") or "").lower() in ("photo", "image", "")
+                            else record.get("media_type")
+                        ),
+                        "is_pano": is_pano,
+                        "original_path": original_path,
+                        "pyramid_levels": pyramid_levels,
+                    }
+                )
+
+            return {"panoramas": results}
+        except APIError:
+            raise
+        except Exception as exc:
+            logger.error("Error fetching route panoramas: %s", exc)
+            raise APIError("Error fetching route panoramas", "ROUTE_PANORAMA_LIST_ERROR", 500)
+
+    def delete_panorama(self, pano_id: str) -> Dict[str, Any]:
+        """Delete standalone panorama by identifier."""
+        if not pano_id or len(str(pano_id)) < 6:
+            raise bad_request("Invalid panorama id")
+
+        try:
+            success = self._get_legacy_manager().delete_panorama_by_id(str(pano_id))
+            if success:
+                return {"success": True}
+            return {"success": True, "message": "Panorama not found or already deleted"}
+        except Exception as exc:
+            logger.error("Error deleting panorama %s: %s", pano_id, exc)
+            raise APIError("Error deleting panorama", "PANORAMA_DELETE_ERROR", 500)
 
     def generate_thumbnail(self, source_path: Union[str, Path], size: Tuple[int, int] = (300, 200)) -> Optional[str]:
         """Generate a thumbnail for the given image file."""

@@ -78,6 +78,20 @@ instance/
 *.temp
 temp/
 
+# Runtime/generated directories
+cache/*
+!cache/.gitkeep
+reports/*
+!reports/.gitkeep
+temp_uploads/*
+!temp_uploads/.gitkeep
+
+# Local analysis and migration artifacts
+category_migration_backup_*.json
+documentation_analysis_report.json
+duplicate_content_analysis.json
+performance_optimization_report.json
+
 # Media files (if too large)
 # poi_media/*.mp4
 # poi_media/*.mov

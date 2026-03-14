@@ -2088,11 +2088,8 @@ def get_rating_categories():
         'description': 'POI rating kategorileri ve bilgileri'
     })
 
-@app.route('/api/categories', methods=['GET', 'POST', 'PUT', 'DELETE'])
-@auth_middleware.require_auth
-def manage_categories():
-    """Kategori yönetimi - GET, POST, PUT, DELETE"""
-    
+def _handle_categories_request():
+    """Handle category reads publicly and keep mutations protected."""
     if request.method == 'GET':
         # Kategorileri getir
         if JSON_FALLBACK:
@@ -2257,6 +2254,19 @@ def manage_categories():
         except Exception as e:
             db.disconnect()
             return jsonify({'error': f'Category delete error: {str(e)}'}), 500
+
+
+@app.route('/api/categories', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def manage_categories():
+    """Kategori yönetimi - GET public, write operations protected."""
+    if request.method == 'GET':
+        return _handle_categories_request()
+
+    @auth_middleware.require_auth
+    def _protected():
+        return _handle_categories_request()
+
+    return _protected()
 
 @app.route('/api/pois/by-rating', methods=['GET'])
 def search_pois_by_rating():

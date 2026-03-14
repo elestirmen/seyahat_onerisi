@@ -16,6 +16,22 @@ from app.middleware.error_handler import APIError, bad_request, not_found
 logger = logging.getLogger(__name__)
 
 
+RATING_CATEGORIES = {
+    'tarihi': {'name': 'Tarihi', 'description': 'Tarihi önem ve değer', 'icon': 'fa-landmark', 'color': '#8B4513'},
+    'sanat_kultur': {'name': 'Sanat ve Kültür', 'description': 'Sanatsal ve kültürel değer', 'icon': 'fa-palette', 'color': '#9B59B6'},
+    'doga': {'name': 'Doğa', 'description': 'Doğal güzellik ve çevre', 'icon': 'fa-leaf', 'color': '#27AE60'},
+    'eglence': {'name': 'Eğlence', 'description': 'Eğlence ve aktivite değeri', 'icon': 'fa-music', 'color': '#E74C3C'},
+    'alisveris': {'name': 'Alışveriş', 'description': 'Alışveriş olanakları', 'icon': 'fa-shopping-cart', 'color': '#F39C12'},
+    'spor': {'name': 'Spor', 'description': 'Spor aktiviteleri', 'icon': 'fa-dumbbell', 'color': '#34495E'},
+    'macera': {'name': 'Macera', 'description': 'Macera ve heyecan', 'icon': 'fa-mountain', 'color': '#D35400'},
+    'rahatlatici': {'name': 'Rahatlatıcı', 'description': 'Huzur ve dinlendirici', 'icon': 'fa-spa', 'color': '#1ABC9C'},
+    'yemek': {'name': 'Yemek', 'description': 'Gastronomi ve lezzet', 'icon': 'fa-utensils', 'color': '#E67E22'},
+    'gece_hayati': {'name': 'Gece Hayatı', 'description': 'Gece eğlencesi', 'icon': 'fa-moon', 'color': '#6C3483'},
+}
+
+DEFAULT_RATINGS = {category: 0 for category in RATING_CATEGORIES}
+
+
 class POIService:
     """Service class for POI business logic operations."""
     
@@ -436,6 +452,128 @@ class POIService:
         except Exception as e:
             logger.error(f"Error getting POI {poi_id}: {e}")
             raise APIError("Failed to get POI", "POI_GET_ERROR")
+
+    def get_default_ratings(self) -> Dict[str, int]:
+        """Return default zeroed ratings for every known category."""
+        return DEFAULT_RATINGS.copy()
+
+    def get_rating_categories(self) -> Dict[str, Any]:
+        """Return rating category metadata used by legacy and modular frontends."""
+        return {
+            'categories': RATING_CATEGORIES,
+            'description': 'POI rating kategorileri ve bilgileri'
+        }
+
+    def _normalize_ratings(self, ratings: Dict[str, Any]) -> Dict[str, int]:
+        """Validate and normalize rating payloads."""
+        if not isinstance(ratings, dict):
+            raise bad_request("Ratings must be an object")
+
+        normalized: Dict[str, int] = {}
+        for category, value in ratings.items():
+            if category not in RATING_CATEGORIES:
+                continue
+            try:
+                numeric_value = int(value)
+            except (TypeError, ValueError):
+                raise bad_request(f"Invalid rating value for category: {category}")
+            normalized[category] = max(0, min(100, numeric_value))
+
+        if not normalized and ratings:
+            raise bad_request("No valid rating categories provided")
+
+        return normalized
+
+    def get_poi_ratings(self, poi_id: str) -> Dict[str, Any]:
+        """Get a POI's rating payload in legacy-compatible response format."""
+        try:
+            poi_id_int = int(poi_id)
+        except (TypeError, ValueError):
+            raise bad_request("Invalid POI ID format")
+
+        conn_context = self._get_database_connection()
+
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, name
+                    FROM pois
+                    WHERE id = %s AND is_active = true
+                    """,
+                    (poi_id_int,),
+                )
+                poi_row = cursor.fetchone()
+
+                if not poi_row:
+                    raise not_found(f"POI with ID {poi_id} not found")
+
+                cursor.execute(
+                    """
+                    SELECT category, rating
+                    FROM poi_ratings
+                    WHERE poi_id = %s
+                    """,
+                    (poi_id_int,),
+                )
+                rating_rows = cursor.fetchall() or []
+
+        ratings = self.get_default_ratings()
+        for row in rating_rows:
+            category = row.get('category') if isinstance(row, dict) else row[0]
+            rating = row.get('rating') if isinstance(row, dict) else row[1]
+            if category in ratings:
+                ratings[category] = int(rating or 0)
+
+        poi_name = poi_row.get('name') if isinstance(poi_row, dict) else poi_row[1]
+        return {
+            'poi_id': poi_id_int,
+            'poi_name': poi_name or '',
+            'ratings': ratings,
+            'rating_categories': RATING_CATEGORIES
+        }
+
+    def update_poi_ratings(self, poi_id: str, ratings: Dict[str, Any]) -> Dict[str, Any]:
+        """Update a POI's ratings and return the updated payload."""
+        try:
+            poi_id_int = int(poi_id)
+        except (TypeError, ValueError):
+            raise bad_request("Invalid POI ID format")
+
+        normalized_ratings = self._normalize_ratings(ratings or {})
+
+        conn_context = self._get_database_connection()
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id
+                    FROM pois
+                    WHERE id = %s AND is_active = true
+                    """,
+                    (poi_id_int,),
+                )
+                poi_row = cursor.fetchone()
+                if not poi_row:
+                    raise not_found(f"POI with ID {poi_id} not found")
+
+                upsert_query = """
+                    INSERT INTO poi_ratings (poi_id, category, rating)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (poi_id, category)
+                    DO UPDATE SET rating = EXCLUDED.rating
+                """
+
+                for category, rating in normalized_ratings.items():
+                    cursor.execute(upsert_query, (poi_id_int, category, rating))
+
+        updated_payload = self.get_poi_ratings(str(poi_id_int))
+        return {
+            'success': True,
+            'poi_id': poi_id_int,
+            'ratings': updated_payload['ratings'],
+            'message': "Rating'ler başarıyla güncellendi"
+        }
     
     def _get_poi_database(self, poi_id: str) -> Dict[str, Any]:
         """Get POI from database."""
