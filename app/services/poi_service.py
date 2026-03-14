@@ -9,7 +9,7 @@ import unicodedata
 import math
 import os
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 from app.middleware.error_handler import APIError, bad_request, not_found
 
@@ -463,6 +463,118 @@ class POIService:
             'categories': RATING_CATEGORIES,
             'description': 'POI rating kategorileri ve bilgileri'
         }
+
+    def list_categories(self) -> List[Dict[str, Any]]:
+        """List custom POI categories from the database."""
+        conn_context = self._get_database_connection()
+
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT name, display_name, color, icon, description
+                    FROM categories
+                    ORDER BY name
+                    """
+                )
+                rows = cursor.fetchall() or []
+
+        return [dict(row) for row in rows]
+
+    def create_category(self, category_data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Create a new POI category."""
+        if not category_data:
+            raise bad_request("No data provided")
+
+        required_fields = ['name', 'display_name', 'color', 'icon']
+        for field in required_fields:
+            if not category_data.get(field):
+                raise bad_request(f"Missing required field: {field}")
+
+        conn_context = self._get_database_connection()
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) AS count FROM categories WHERE name = %s", (category_data['name'],))
+                existing = cursor.fetchone()
+                existing_count = existing.get('count', 0) if isinstance(existing, dict) else existing[0]
+                if existing_count > 0:
+                    raise APIError("Category name already exists", "CATEGORY_CONFLICT", 409)
+
+                cursor.execute(
+                    """
+                    INSERT INTO categories (name, display_name, color, icon, description)
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    (
+                        category_data['name'],
+                        category_data['display_name'],
+                        category_data['color'],
+                        category_data['icon'],
+                        category_data.get('description', ''),
+                    ),
+                )
+
+        return {'success': True, 'message': 'Category added successfully'}
+
+    def update_category(self, category_data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Update a category's editable fields."""
+        if not category_data or not category_data.get('name'):
+            raise bad_request("Category name is required")
+
+        conn_context = self._get_database_connection()
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) AS count FROM categories WHERE name = %s", (category_data['name'],))
+                existing = cursor.fetchone()
+                existing_count = existing.get('count', 0) if isinstance(existing, dict) else existing[0]
+                if existing_count == 0:
+                    raise APIError("Category not found", "NOT_FOUND", 404)
+
+                update_fields: List[str] = []
+                update_values: List[Any] = []
+                for field in ['display_name', 'color', 'icon', 'description']:
+                    if field in category_data:
+                        update_fields.append(f"{field} = %s")
+                        update_values.append(category_data[field])
+
+                if not update_fields:
+                    raise bad_request("No fields to update")
+
+                update_values.append(category_data['name'])
+                cursor.execute(
+                    f"""
+                    UPDATE categories
+                    SET {', '.join(update_fields)}
+                    WHERE name = %s
+                    """,
+                    update_values,
+                )
+
+        return {'success': True, 'message': 'Category updated successfully'}
+
+    def delete_category(self, category_name: str) -> Dict[str, Any]:
+        """Delete a category when it is not referenced by any POIs."""
+        if not category_name:
+            raise bad_request("Category name is required")
+
+        conn_context = self._get_database_connection()
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) AS count FROM pois WHERE category = %s", (category_name,))
+                poi_count_row = cursor.fetchone()
+                poi_count = poi_count_row.get('count', 0) if isinstance(poi_count_row, dict) else poi_count_row[0]
+                if poi_count > 0:
+                    raise APIError(
+                        f"Cannot delete category. {poi_count} POIs are using this category.",
+                        "CATEGORY_IN_USE",
+                        409,
+                    )
+
+                cursor.execute("DELETE FROM categories WHERE name = %s", (category_name,))
+                if cursor.rowcount == 0:
+                    raise APIError("Category not found", "NOT_FOUND", 404)
+
+        return {'success': True, 'message': 'Category deleted successfully'}
 
     def _normalize_ratings(self, ratings: Dict[str, Any]) -> Dict[str, int]:
         """Validate and normalize rating payloads."""

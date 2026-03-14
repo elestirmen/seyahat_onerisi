@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import logging
 import os
-from contextlib import contextmanager
-from importlib import import_module
 from typing import Any, Dict, Iterable, List, Optional
 
 from flask import Blueprint, current_app, jsonify, request, send_from_directory
@@ -94,102 +92,45 @@ FALLBACK_CATEGORIES: List[Dict[str, Any]] = [
 ]
 
 
-def _legacy_api():
-    """Import the legacy module lazily so normal startup stays lightweight."""
-    return import_module("poi_api")
-
-
-def _direct_connection():
-    import psycopg2
-    from psycopg2.extras import RealDictCursor
-
-    conn_str = os.environ.get("POI_DB_CONNECTION")
-    if conn_str:
-        return psycopg2.connect(conn_str, cursor_factory=RealDictCursor)
-
-    return psycopg2.connect(
-        host=os.environ.get("DB_HOST") or os.environ.get("POI_DB_HOST", "localhost"),
-        port=int(os.environ.get("DB_PORT") or os.environ.get("POI_DB_PORT") or 5432),
-        dbname=os.environ.get("DB_NAME") or os.environ.get("POI_DB_NAME", "poi_db"),
-        user=os.environ.get("DB_USER") or os.environ.get("POI_DB_USER", "poi_user"),
-        password=os.environ.get("DB_PASSWORD") or os.environ.get("POI_DB_PASSWORD", "poi_password"),
-        cursor_factory=RealDictCursor,
-    )
-
-
-@contextmanager
-def _db_connection():
-    """
-    Get a pooled connection when available, otherwise open a direct connection.
-    """
-    try:
-        from app.config.database import get_database_pool
-
-        pool = get_database_pool()
-        if pool is not None:
-            with pool.get_connection() as conn:
-                yield conn
-            return
-    except Exception as exc:
-        logger.debug("Compatibility route pool unavailable: %s", exc)
-
-    conn = _direct_connection()
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
-
-
-def _load_categories_from_db() -> Optional[List[Dict[str, Any]]]:
-    try:
-        with _db_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT name, display_name, color, icon, description
-                    FROM categories
-                    ORDER BY name
-                    """
-                )
-                rows = cursor.fetchall() or []
-
-        return [dict(row) for row in rows]
-    except Exception as exc:
-        logger.warning("Falling back to static categories: %s", exc)
-        return None
-
-
-def _delegate(handler_name: str, *args, **kwargs):
-    try:
-        handler = getattr(_legacy_api(), handler_name)
-        return handler(*args, **kwargs)
-    except Exception as exc:
-        logger.exception("Compatibility delegate failed for %s: %s", handler_name, exc)
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "error": "Compatibility handler failed",
-                    "handler": handler_name,
-                }
-            ),
-            500,
-        )
+def _compat_error_response(error: APIError):
+    status_code = error.status_code
+    message = error.message
+    if error.code == "DB_CONN_ERROR":
+        status_code = 500
+        message = "Database connection failed"
+    return jsonify({"error": message}), status_code
 
 
 @compat_bp.route("/api/categories", methods=["GET", "POST", "PUT", "DELETE"])
 def categories():
     if request.method == "GET":
-        categories = _load_categories_from_db()
+        try:
+            categories = poi_service.list_categories()
+        except Exception as exc:
+            logger.warning("Falling back to static categories: %s", exc)
+            categories = None
+
         if categories is None or not categories:
             categories = FALLBACK_CATEGORIES
         return jsonify(categories), 200
 
-    return _delegate("manage_categories")
+    @auth_middleware.require_auth
+    def _protected():
+        try:
+            if request.method == "POST":
+                payload = poi_service.create_category(request.get_json(silent=True))
+                return jsonify(payload), 201
+
+            if request.method == "PUT":
+                payload = poi_service.update_category(request.get_json(silent=True))
+                return jsonify(payload), 200
+
+            payload = poi_service.delete_category(request.args.get("name"))
+            return jsonify(payload), 200
+        except APIError as exc:
+            return _compat_error_response(exc)
+
+    return _protected()
 
 
 @compat_bp.route("/api/ratings/categories", methods=["GET"])
@@ -212,17 +153,34 @@ def update_poi_ratings(poi_id):
 
 @compat_bp.route("/api/poi/<poi_id>/images", methods=["GET"])
 def get_poi_images(poi_id):
-    return _delegate("get_poi_images_legacy", poi_id)
+    try:
+        return jsonify(media_service.list_poi_images_legacy(poi_id)), 200
+    except APIError as exc:
+        return _compat_error_response(exc)
 
 
 @compat_bp.route("/api/poi/<poi_id>/images", methods=["POST"])
+@auth_middleware.require_auth
 def upload_poi_images(poi_id):
-    return _delegate("upload_poi_image_legacy", poi_id)
+    try:
+        payload = media_service.upload_poi_media_asset(
+            poi_id,
+            request.files.get("media"),
+            caption=request.form.get("caption", ""),
+            is_primary=str(request.form.get("is_primary", "false")).lower() == "true",
+        )
+        return jsonify(payload), 201
+    except APIError as exc:
+        return _compat_error_response(exc)
 
 
 @compat_bp.route("/api/poi/<poi_id>/images/<filename>", methods=["DELETE"])
+@auth_middleware.require_auth
 def delete_poi_image(poi_id, filename):
-    return _delegate("delete_poi_image_legacy", poi_id, filename)
+    try:
+        return jsonify(media_service.delete_poi_media_asset(poi_id, filename)), 200
+    except APIError as exc:
+        return _compat_error_response(exc)
 
 
 @compat_bp.route("/api/panoramas", methods=["GET"])

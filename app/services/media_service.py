@@ -11,8 +11,9 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
 from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
 
-from app.middleware.error_handler import APIError, bad_request
+from app.middleware.error_handler import APIError, bad_request, not_found
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +147,113 @@ class MediaService:
                 return normalized.lstrip("/")
 
         return normalized
+
+    def _get_active_poi_identity(self, poi_id: Union[str, int]) -> Dict[str, Any]:
+        """Fetch the minimum active POI data needed for media operations."""
+        try:
+            poi_id_int = int(poi_id)
+        except (TypeError, ValueError):
+            raise bad_request("Invalid POI ID format")
+
+        with self._get_database_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, name, category
+                    FROM pois
+                    WHERE id = %s AND is_active = true
+                    """,
+                    (poi_id_int,),
+                )
+                row = cursor.fetchone()
+
+        if not row:
+            raise not_found("POI not found")
+
+        return dict(row) if isinstance(row, dict) else {
+            "id": row[0],
+            "name": row[1],
+            "category": row[2],
+        }
+
+    def _list_supported_extensions(self) -> List[str]:
+        extensions: List[str] = []
+        for config in self._get_legacy_manager().SUPPORTED_FORMATS.values():
+            extensions.extend(config.get("extensions", []))
+        return extensions
+
+    def upload_poi_media_asset(
+        self,
+        poi_id: Union[str, int],
+        file: Optional[FileStorage],
+        caption: str = "",
+        is_primary: bool = False,
+        media_type: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Upload a POI media asset using the legacy storage contract."""
+        if not file:
+            raise bad_request("No media file provided")
+
+        if not getattr(file, "filename", ""):
+            raise bad_request("No file selected")
+
+        legacy_manager = self._get_legacy_manager()
+        detected_type = legacy_manager.detect_media_type(file.filename)
+        if not detected_type:
+            supported_formats = ", ".join(self._list_supported_extensions())
+            raise bad_request(f"Invalid file type. Supported formats: {supported_formats}")
+
+        max_size = legacy_manager.SUPPORTED_FORMATS[detected_type]["max_size"]
+        max_size_mb = max_size / (1024 * 1024)
+        if getattr(file, "content_length", None) and file.content_length > max_size:
+            raise bad_request(f"Dosya boyutu {max_size_mb:.0f}MB'dan küçük olmalıdır.")
+
+        poi = self._get_active_poi_identity(poi_id)
+
+        safe_name = secure_filename(file.filename)
+        temp_path = Path("/tmp") / f"{uuid.uuid4()}_{safe_name}"
+
+        try:
+            file.save(str(temp_path))
+            result = legacy_manager.add_poi_media(
+                poi_id=str(poi_id),
+                poi_name=poi.get("name", ""),
+                category=poi.get("category") or "",
+                media_file_path=str(temp_path),
+                media_type=media_type or detected_type,
+                caption=caption,
+                is_primary=is_primary,
+            )
+        finally:
+            try:
+                temp_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+        if not result:
+            raise APIError("Failed to process media file", "MEDIA_UPLOAD_ERROR", 500)
+
+        return {
+            "success": True,
+            "media": result,
+        }
+
+    def list_poi_images_legacy(self, poi_id: Union[str, int]) -> Dict[str, Any]:
+        """List image-only POI media in the legacy `/images` response shape."""
+        self._get_active_poi_identity(poi_id)
+        images = self._get_legacy_manager().get_poi_media_by_id(str(poi_id), "image")
+        return {"images": images}
+
+    def delete_poi_media_asset(self, poi_id: Union[str, int], filename: str) -> Dict[str, Any]:
+        """Delete a POI media asset by filename."""
+        if ".." in filename or filename.startswith("/"):
+            raise bad_request("Invalid filename")
+
+        success = self._get_legacy_manager().delete_poi_media_by_id(str(poi_id), filename)
+        if success:
+            return {"success": True}
+
+        return {"success": True, "message": "Media file not found or already deleted"}
 
     def upload_panoramas(self, files: List[FileStorage], caption: str = "") -> Dict[str, Any]:
         """Upload standalone panorama images through the legacy media manager."""

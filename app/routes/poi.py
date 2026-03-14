@@ -17,6 +17,12 @@ logger = logging.getLogger(__name__)
 poi_bp = Blueprint('poi', __name__, url_prefix='/api')
 
 
+def _legacy_style_error(error: APIError):
+    status_code = 500 if error.code == 'DB_CONN_ERROR' else error.status_code
+    message = 'Database connection failed' if error.code == 'DB_CONN_ERROR' else error.message
+    return jsonify({'error': message}), status_code
+
+
 @poi_bp.route('/pois', methods=['GET'])
 def list_pois():
     """
@@ -313,3 +319,36 @@ def get_poi_media(poi_id):
     except Exception as e:
         logger.error(f"Unexpected error in get_poi_media: {e}")
         raise APIError("Failed to load POI media", "MEDIA_GET_ERROR", 500)
+
+
+@poi_bp.route('/poi/<poi_id>/media', methods=['POST'])
+@auth_middleware.require_auth
+def upload_poi_media(poi_id):
+    """Upload a media asset for a POI using the legacy storage contract."""
+    try:
+        payload = media_service.upload_poi_media_asset(
+            poi_id,
+            request.files.get('media'),
+            caption=request.form.get('caption', ''),
+            is_primary=str(request.form.get('is_primary', 'false')).lower() == 'true',
+        )
+        return jsonify(payload), 201
+    except APIError as exc:
+        return _legacy_style_error(exc)
+    except Exception as e:
+        logger.error(f"Unexpected error in upload_poi_media: {e}")
+        return jsonify({'error': f'Error uploading media: {str(e)}'}), 500
+
+
+@poi_bp.route('/poi/<poi_id>/media/<filename>', methods=['DELETE'])
+@auth_middleware.require_auth
+def delete_poi_media(poi_id, filename):
+    """Delete a POI media asset by filename."""
+    try:
+        payload = media_service.delete_poi_media_asset(poi_id, filename)
+        return jsonify(payload), 200
+    except APIError as exc:
+        return _legacy_style_error(exc)
+    except Exception as e:
+        logger.error(f"Unexpected error in delete_poi_media: {e}")
+        return jsonify({'error': f'Error deleting media: {str(e)}'}), 500
