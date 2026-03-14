@@ -13,13 +13,17 @@ from contextlib import contextmanager
 from importlib import import_module
 from typing import Any, Dict, Iterable, List, Optional
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, send_from_directory
+from werkzeug.exceptions import NotFound
+from werkzeug.utils import safe_join
 
 from auth_middleware import auth_middleware
+from app.middleware.error_handler import APIError
 from app.services.media_service import media_service
 from app.services.poi_service import poi_service
 from app.services.recommendation_service import recommendation_service
 from app.services.route_planning_service import route_planning_service
+from app.services.route_service import route_service
 
 
 logger = logging.getLogger(__name__)
@@ -266,59 +270,240 @@ def recommendations():
 
 
 @compat_bp.route("/api/routes/<int:route_id>/nearby-pois", methods=["GET"])
+@auth_middleware.require_auth
 def nearby_pois(route_id):
-    return _delegate("find_nearby_pois_for_route", route_id)
+    try:
+        user_supplied = request.args.get("max_distance")
+        if user_supplied is not None:
+            max_distance = min(2000, max(50, int(user_supplied)))
+        else:
+            max_distance = 500
+
+        route = route_service.get_route(route_id)
+        geometry = route_service.get_route_geometry(route_id)
+        is_center = route_service.is_route_in_urgup_center(route, geometry)
+        dynamic_default = 50 if is_center else 250
+        max_distance = min(max_distance, dynamic_default) if user_supplied is not None else dynamic_default
+
+        nearby = route_service.find_nearby_pois(route_id, max_distance)
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "route": {"id": route["id"], "name": route["name"]},
+                    "nearby_pois": nearby,
+                    "total_found": len(nearby),
+                    "parameters": {
+                        "max_distance_meters": max_distance,
+                        "is_center_route": is_center,
+                        "user_supplied": user_supplied,
+                    },
+                }
+            ),
+            200,
+        )
+    except ValueError:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Geçersiz parametre değeri",
+                    "error_code": "INVALID_PARAMETER",
+                }
+            ),
+            400,
+        )
+    except APIError as exc:
+        logger.error("Error in find_nearby_pois_for_route: %s", exc)
+        error_code = "ROUTE_NOT_FOUND" if exc.status_code == 404 else "NEARBY_POI_ERROR"
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": str(exc),
+                    "error_code": error_code,
+                }
+            ),
+            exc.status_code,
+        )
+    except Exception as exc:
+        logger.error("Error in find_nearby_pois_for_route: %s", exc)
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": f"Yakın POI arama hatası: {str(exc)}",
+                    "error_code": "NEARBY_POI_ERROR",
+                }
+            ),
+            500,
+        )
 
 
 @compat_bp.route("/api/routes/<int:route_id>/auto-associate-pois", methods=["POST"])
+@auth_middleware.require_auth
 def auto_associate_pois(route_id):
-    return _delegate("auto_associate_nearby_pois", route_id)
+    try:
+        data = request.get_json(silent=True) or {}
+        raw_max_distance = data.get("max_distance")
+        max_distance = None
+        if raw_max_distance is not None:
+            try:
+                max_distance = min(2000, max(50, int(raw_max_distance)))
+            except Exception:
+                max_distance = None
+
+        auto_confirm = bool(data.get("auto_confirm", False))
+        categories = data.get("categories", [])
+        if not isinstance(categories, list):
+            categories = []
+
+        route = route_service.get_route(route_id)
+        geometry = route_service.get_route_geometry(route_id)
+        is_center = route_service.is_route_in_urgup_center(route, geometry)
+        dynamic_default = 50 if is_center else 250
+        effective_distance = dynamic_default if max_distance is None else min(max_distance, dynamic_default)
+
+        result = route_service.auto_associate_nearby_pois(
+            route_id,
+            effective_distance,
+            auto_confirm,
+            categories=categories,
+        )
+        result["route"] = {"id": route["id"], "name": route["name"]}
+        result["parameters"] = {
+            "max_distance_meters": effective_distance,
+            "auto_confirm": auto_confirm,
+            "categories": categories,
+        }
+        return jsonify(result), 200
+    except APIError as exc:
+        logger.error("Error in auto_associate_nearby_pois: %s", exc)
+        error_code = "ROUTE_NOT_FOUND" if exc.status_code == 404 else "AUTO_ASSOCIATION_ERROR"
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": str(exc),
+                    "error_code": error_code,
+                }
+            ),
+            exc.status_code,
+        )
+    except Exception as exc:
+        logger.error("Error in auto_associate_nearby_pois: %s", exc)
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": f"Otomatik POI ekleme hatası: {str(exc)}",
+                    "error_code": "AUTO_ASSOCIATION_ERROR",
+                }
+            ),
+            500,
+        )
 
 
 @compat_bp.route("/api/admin/routes/<int:route_id>/media/<filename>", methods=["DELETE"])
 @auth_middleware.require_auth
 def delete_route_media(route_id, filename):
-    return _delegate("delete_route_media", route_id, filename)
+    try:
+        return jsonify(route_service.delete_route_media_asset(route_id, filename)), 200
+    except APIError as exc:
+        code = 404 if exc.status_code == 404 else exc.status_code
+        return jsonify({"success": False, "error": str(exc)}), code
 
 
 @compat_bp.route("/api/admin/routes/<int:route_id>/media/<filename>", methods=["PUT"])
 @auth_middleware.require_auth
 def update_route_media(route_id, filename):
-    return _delegate("update_route_media", route_id, filename)
+    try:
+        payload = request.get_json(silent=True) or {}
+        return jsonify(route_service.update_route_media_asset(route_id, filename, payload)), 200
+    except APIError as exc:
+        return jsonify({"success": False, "error": str(exc)}), exc.status_code
 
 
 @compat_bp.route("/api/admin/routes/<int:route_id>/media/<filename>", methods=["PATCH"])
 @auth_middleware.require_auth
 def patch_route_media(route_id, filename):
-    return _delegate("patch_route_media", route_id, filename)
+    try:
+        payload = request.get_json(silent=True) or {}
+        return jsonify(route_service.update_route_media_asset(route_id, filename, payload)), 200
+    except APIError as exc:
+        return jsonify({"success": False, "error": str(exc)}), exc.status_code
 
 
 @compat_bp.route("/api/admin/routes/<int:route_id>/media/<filename>/location", methods=["PUT"])
 @auth_middleware.require_auth
 def update_route_media_location(route_id, filename):
-    return _delegate("update_route_media_location", route_id, filename)
+    try:
+        payload = request.get_json(silent=True) or {}
+        lat = payload.get("latitude", payload.get("lat"))
+        lng = payload.get("longitude", payload.get("lng"))
+        if lat is None or lng is None:
+            raise APIError("Both latitude and longitude are required", "MISSING_COORDINATES", 400)
+        return jsonify(route_service.update_route_media_location_asset(route_id, filename, float(lat), float(lng))), 200
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid coordinate values"}), 400
+    except APIError as exc:
+        return jsonify({"success": False, "error": str(exc)}), exc.status_code
 
 
 @compat_bp.route("/api/admin/routes/<int:route_id>/media/<filename>/location", methods=["DELETE"])
 @auth_middleware.require_auth
 def delete_route_media_location(route_id, filename):
-    return _delegate("delete_route_media_location", route_id, filename)
+    try:
+        return jsonify(route_service.delete_route_media_location_asset(route_id, filename)), 200
+    except APIError as exc:
+        return jsonify({"success": False, "error": str(exc)}), exc.status_code
 
 
 @compat_bp.route("/api/admin/routes/<int:route_id>/media/<filename>/location/auto", methods=["POST"])
 @auth_middleware.require_auth
 def auto_route_media_location(route_id, filename):
-    return _delegate("auto_route_media_location", route_id, filename)
+    try:
+        return jsonify(route_service.auto_route_media_location_asset(route_id, filename)), 200
+    except APIError as exc:
+        return jsonify({"success": False, "error": str(exc)}), exc.status_code
 
 
 @compat_bp.route("/poi_media/<path:filename>", methods=["GET"])
 def serve_poi_media(filename):
-    return _delegate("serve_poi_media", filename)
+    media_root = os.path.join(os.path.dirname(current_app.root_path), "poi_media")
+    try:
+        safe_path = safe_join(media_root, filename)
+    except (NotFound, ValueError):
+        safe_path = None
+
+    if safe_path and os.path.exists(safe_path):
+        return send_from_directory(media_root, filename)
+    return jsonify({"error": "Media file not found"}), 404
 
 
 @compat_bp.route("/poi_images/<path:filename>", methods=["GET"])
 def serve_poi_images(filename):
-    return _delegate("serve_poi_image", filename)
+    project_root = os.path.dirname(current_app.root_path)
+    poi_images_dir = os.path.join(project_root, "poi_images")
+    poi_media_dir = os.path.join(project_root, "poi_media")
+
+    try:
+        safe_poi_image_path = safe_join(poi_images_dir, filename)
+    except (NotFound, ValueError):
+        safe_poi_image_path = None
+
+    if safe_poi_image_path and os.path.exists(safe_poi_image_path):
+        return send_from_directory(poi_images_dir, filename)
+
+    try:
+        safe_media_path = safe_join(poi_media_dir, filename)
+    except (NotFound, ValueError):
+        safe_media_path = None
+
+    if safe_media_path and os.path.exists(safe_media_path):
+        return send_from_directory(poi_media_dir, filename)
+
+    return jsonify({"error": "Image not found"}), 404
 
 
 __all__ = ["compat_bp"]

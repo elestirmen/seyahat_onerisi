@@ -10,7 +10,7 @@ import time
 import uuid
 import os
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 
 from werkzeug.datastructures import FileStorage
@@ -28,6 +28,9 @@ class RouteService:
     def __init__(self):
         self.cache: Dict[str, Any] = {}  # Simple in-memory cache
         self.cache_ttl = 300  # 5 minutes
+        self.urgup_center: Tuple[float, float] = (38.6310, 34.9130)
+        self.urgup_center_radius_meters = 3000.0
+        self._legacy_media_manager = None
 
     def _get_table_schema(self, conn, table_name: str) -> Dict[str, str]:
         """Return a mapping of column_name -> udt_name for a table (cached)."""
@@ -152,6 +155,155 @@ class RouteService:
         for i in range(1, len(pts)):
             dist += haversine_km(pts[i - 1], pts[i])
         return round(dist, 4)
+
+    def _haversine_distance_meters(self, lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+        """Calculate great-circle distance between two points in meters."""
+        radius = 6371000.0
+        dlat = math.radians(lat2 - lat1)
+        dlng = math.radians(lng2 - lng1)
+        a = (
+            math.sin(dlat / 2) ** 2
+            + math.cos(math.radians(lat1))
+            * math.cos(math.radians(lat2))
+            * math.sin(dlng / 2) ** 2
+        )
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return radius * c
+
+    def _is_within_urgup_center(self, lat: float, lng: float) -> bool:
+        """Check whether a point falls inside the Ürgüp center radius."""
+        return self._haversine_distance_meters(lat, lng, self.urgup_center[0], self.urgup_center[1]) <= self.urgup_center_radius_meters
+
+    def _extract_route_points(self, route: Dict[str, Any], geometry_data: Optional[Dict[str, Any]] = None) -> List[Tuple[float, float]]:
+        """Collect representative route coordinates from pois, waypoints, or geometry."""
+        points: List[Tuple[float, float]] = []
+
+        def add_point(lat_value: Any, lng_value: Any):
+            try:
+                lat = float(lat_value)
+                lng = float(lng_value)
+            except (TypeError, ValueError):
+                return
+            if -90 <= lat <= 90 and -180 <= lng <= 180:
+                points.append((lat, lng))
+
+        def add_points_from_items(items: Any):
+            if not isinstance(items, list):
+                return
+            for item in items:
+                if isinstance(item, dict):
+                    add_point(
+                        item.get("lat", item.get("latitude")),
+                        item.get("lng", item.get("longitude", item.get("lon"))),
+                    )
+                elif isinstance(item, (list, tuple)) and len(item) >= 2:
+                    add_point(item[1], item[0])
+
+        add_points_from_items(route.get("pois"))
+        add_points_from_items(route.get("waypoints"))
+
+        geometry = None
+        if isinstance(geometry_data, dict):
+            geometry = geometry_data.get("geometry", geometry_data)
+        if geometry is None:
+            geometry = route.get("geometry")
+        if isinstance(geometry, str):
+            try:
+                geometry = json.loads(geometry)
+            except json.JSONDecodeError:
+                geometry = None
+
+        if isinstance(geometry, dict) and geometry.get("type") == "LineString":
+            for coord in geometry.get("coordinates") or []:
+                if isinstance(coord, (list, tuple)) and len(coord) >= 2:
+                    add_point(coord[1], coord[0])
+
+        return points
+
+    def _estimate_route_center_latlon(
+        self,
+        route: Dict[str, Any],
+        geometry_data: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Tuple[float, float]]:
+        """Estimate route center from representative coordinates."""
+        points = self._extract_route_points(route, geometry_data)
+        if not points:
+            return None
+        avg_lat = sum(lat for lat, _ in points) / len(points)
+        avg_lng = sum(lng for _, lng in points) / len(points)
+        return avg_lat, avg_lng
+
+    def is_route_in_urgup_center(
+        self,
+        route: Dict[str, Any],
+        geometry_data: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Decide whether the route should use center-specific nearby thresholds."""
+        center = self._estimate_route_center_latlon(route, geometry_data)
+        if center is None:
+            return False
+        return self._is_within_urgup_center(center[0], center[1])
+
+    def _closest_point_on_segment(
+        self,
+        point: Tuple[float, float],
+        start: Tuple[float, float],
+        end: Tuple[float, float],
+    ) -> Tuple[float, Tuple[float, float]]:
+        """Return shortest distance to a segment plus the closest point."""
+        radius = 6371000.0
+        ref_lat, ref_lng = point
+        cos_ref = math.cos(math.radians(ref_lat)) or 1e-12
+
+        def to_xy(lat: float, lng: float) -> Tuple[float, float]:
+            x = math.radians(lng - ref_lng) * radius * cos_ref
+            y = math.radians(lat - ref_lat) * radius
+            return x, y
+
+        def to_lat_lng(x: float, y: float) -> Tuple[float, float]:
+            lat = ref_lat + math.degrees(y / radius)
+            lng = ref_lng + math.degrees(x / (radius * cos_ref))
+            return lat, lng
+
+        px, py = to_xy(*point)
+        ax, ay = to_xy(*start)
+        bx, by = to_xy(*end)
+        dx, dy = bx - ax, by - ay
+
+        if dx == 0 and dy == 0:
+            closest_x, closest_y = ax, ay
+        else:
+            t = ((px - ax) * dx + (py - ay) * dy) / float(dx * dx + dy * dy)
+            t = max(0.0, min(1.0, t))
+            closest_x = ax + t * dx
+            closest_y = ay + t * dy
+
+        distance = math.hypot(px - closest_x, py - closest_y)
+        return distance, to_lat_lng(closest_x, closest_y)
+
+    def _distance_to_polyline(
+        self,
+        point: Tuple[float, float],
+        polyline_points: List[Tuple[float, float]],
+    ) -> Tuple[float, Optional[Tuple[float, float]]]:
+        """Compute shortest distance in meters from a point to a polyline."""
+        if not polyline_points:
+            return float("inf"), None
+        if len(polyline_points) == 1:
+            only_point = polyline_points[0]
+            return (
+                self._haversine_distance_meters(point[0], point[1], only_point[0], only_point[1]),
+                only_point,
+            )
+
+        best_distance = float("inf")
+        best_point = None
+        for idx in range(len(polyline_points) - 1):
+            distance, closest = self._closest_point_on_segment(point, polyline_points[idx], polyline_points[idx + 1])
+            if distance < best_distance:
+                best_distance = distance
+                best_point = closest
+        return best_distance, best_point
     
     def _get_database_connection(self):
         """Get database connection or raise API error."""
@@ -222,6 +374,13 @@ class RouteService:
     def _cache_set(self, key: str, value: Any):
         """Set value in cache with timestamp."""
         self.cache[key] = (value, time.time())
+
+    def _get_legacy_media_manager(self):
+        if self._legacy_media_manager is None:
+            from poi_media_manager import POIMediaManager
+
+            self._legacy_media_manager = POIMediaManager()
+        return self._legacy_media_manager
 
     def _map_route_record(self, record: Any) -> Dict[str, Any]:
         """Normalize raw database/json route record for API consumers."""
@@ -312,6 +471,43 @@ class RouteService:
         route.setdefault('is_active', True)
 
         return route
+
+    def _normalize_route_media_record(self, record: Any) -> Dict[str, Any]:
+        """Normalize route media records for API consumers."""
+        item = dict(record)
+        if item.get("uploaded_at"):
+            try:
+                item["uploaded_at"] = item["uploaded_at"].isoformat()
+            except Exception:
+                pass
+
+        file_path = item.get("file_path")
+        if file_path:
+            item["filename"] = Path(file_path).name
+            try:
+                path = Path(file_path)
+                item["file_size"] = path.stat().st_size if path.exists() else 0
+            except Exception:
+                item["file_size"] = 0
+        else:
+            item.setdefault("filename", "")
+            item["file_size"] = 0
+
+        if item.get("media_type") == "photo":
+            item["media_type"] = "image"
+        item.setdefault("media_type", "image")
+        item["latitude"] = item.get("lat")
+        item["longitude"] = item.get("lng")
+        return item
+
+    def _coerce_bool(self, value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            return value.strip().lower() in ("true", "1", "yes", "on")
+        return bool(value)
     
     def list_routes(self, page: int = 1, limit: int = 20, search: str = None, 
                    route_type: str = None, is_active: bool = None) -> Dict[str, Any]:
@@ -751,6 +947,229 @@ class RouteService:
 
         self.cache.pop("route_statistics", None)
 
+    def get_route_geometry(self, route_id: int) -> Optional[Dict[str, Any]]:
+        """Return route geometry/waypoint payload if available."""
+        route = self.get_route(route_id)
+        geometry = route.get("geometry")
+        waypoints = route.get("waypoints") or []
+
+        if geometry is None and not waypoints:
+            return None
+
+        return {
+            "route_id": route_id,
+            "geometry": geometry,
+            "total_distance": route.get("total_distance"),
+            "estimated_duration": route.get("estimated_duration"),
+            "waypoints": waypoints,
+        }
+
+    def get_route_pois(self, route_id: int) -> List[Dict[str, Any]]:
+        """Fetch POIs already associated with a route."""
+        conn_context = self._get_database_connection()
+        with conn_context as conn:
+            route_pois_schema = self._get_table_schema(conn, "route_pois")
+            route_poi_assoc_schema = self._get_table_schema(conn, "route_poi_associations")
+
+            with conn.cursor() as cursor:
+                if route_pois_schema:
+                    select_fields = [
+                        "rp.poi_id",
+                        "rp.order_in_route",
+                        "rp.is_mandatory" if "is_mandatory" in route_pois_schema else "true as is_mandatory",
+                        (
+                            "rp.estimated_time_at_poi"
+                            if "estimated_time_at_poi" in route_pois_schema
+                            else "15 as estimated_time_at_poi"
+                        ),
+                        "rp.notes" if "notes" in route_pois_schema else "'' as notes",
+                        "p.name",
+                        "ST_Y(p.location::geometry) as lat",
+                        "ST_X(p.location::geometry) as lon",
+                        "p.category",
+                        "p.description",
+                    ]
+                    cursor.execute(
+                        f"""
+                        SELECT {', '.join(select_fields)}
+                        FROM route_pois rp
+                        LEFT JOIN pois p ON p.id = rp.poi_id
+                        WHERE rp.route_id = %s
+                        ORDER BY rp.order_in_route
+                        """,
+                        (route_id,),
+                    )
+                elif route_poi_assoc_schema:
+                    select_fields = [
+                        "rpa.poi_id",
+                        "rpa.sequence_order as order_in_route",
+                        "rpa.is_mandatory" if "is_mandatory" in route_poi_assoc_schema else "true as is_mandatory",
+                        (
+                            "rpa.estimated_time_at_poi"
+                            if "estimated_time_at_poi" in route_poi_assoc_schema
+                            else "15 as estimated_time_at_poi"
+                        ),
+                        "rpa.notes" if "notes" in route_poi_assoc_schema else "'' as notes",
+                        "p.name",
+                        "ST_Y(p.location::geometry) as lat",
+                        "ST_X(p.location::geometry) as lon",
+                        "p.category",
+                        "p.description",
+                    ]
+                    cursor.execute(
+                        f"""
+                        SELECT {', '.join(select_fields)}
+                        FROM route_poi_associations rpa
+                        LEFT JOIN pois p ON p.id = rpa.poi_id
+                        WHERE rpa.route_id = %s
+                        ORDER BY rpa.sequence_order
+                        """,
+                        (route_id,),
+                    )
+                else:
+                    return []
+
+                rows = cursor.fetchall() or []
+
+        return [dict(row) for row in rows]
+
+    def _list_active_pois_with_location(self) -> List[Dict[str, Any]]:
+        """Load active POIs that have coordinates."""
+        conn_context = self._get_database_connection()
+        with conn_context as conn:
+            pois_schema = self._get_table_schema(conn, "pois")
+            active_condition = "AND p.is_active = true" if "is_active" in pois_schema else ""
+
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    f"""
+                    SELECT p.id, p.name, p.category, p.description,
+                           ST_Y(p.location::geometry) as lat,
+                           ST_X(p.location::geometry) as lon
+                    FROM pois p
+                    WHERE p.location IS NOT NULL
+                    {active_condition}
+                    """
+                )
+                rows = cursor.fetchall() or []
+
+        return [dict(row) for row in rows]
+
+    def find_nearby_pois(self, route_id: int, max_distance_meters: int = 500) -> List[Dict[str, Any]]:
+        """Find POIs close to a route geometry or waypoint chain."""
+        route = self.get_route(route_id)
+        geometry_data = self.get_route_geometry(route_id)
+        route_points = self._extract_route_points(route, geometry_data)
+        if not route_points:
+            return []
+
+        existing_ids = set()
+        for poi in self.get_route_pois(route_id):
+            try:
+                existing_ids.add(int(poi.get("poi_id")))
+            except (TypeError, ValueError):
+                continue
+        results: List[Dict[str, Any]] = []
+        for poi in self._list_active_pois_with_location():
+            poi_id = poi.get("id")
+            if poi_id in existing_ids:
+                continue
+
+            lat = poi.get("lat")
+            lng = poi.get("lon")
+            if lat is None or lng is None:
+                continue
+
+            distance_meters, closest_point = self._distance_to_polyline((float(lat), float(lng)), route_points)
+            if distance_meters > max_distance_meters:
+                continue
+
+            item = dict(poi)
+            item["distance_meters"] = round(distance_meters, 2)
+            if closest_point:
+                item["closest_route_point"] = {
+                    "lat": round(closest_point[0], 6),
+                    "lng": round(closest_point[1], 6),
+                }
+            results.append(item)
+
+        results.sort(key=lambda item: item.get("distance_meters", float("inf")))
+        return results
+
+    def auto_associate_nearby_pois(
+        self,
+        route_id: int,
+        max_distance_meters: int = 500,
+        auto_confirm: bool = False,
+        categories: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Optionally associate nearby POIs while preserving legacy response shape."""
+        nearby_pois = self.find_nearby_pois(route_id, max_distance_meters)
+
+        allowed_categories = {str(category) for category in (categories or []) if str(category).strip()}
+        if allowed_categories:
+            nearby_pois = [poi for poi in nearby_pois if str(poi.get("category")) in allowed_categories]
+
+        if not nearby_pois:
+            return {
+                "success": True,
+                "message": "Rota yakınında POI bulunamadı",
+                "found_pois": [],
+                "associated_count": 0,
+                "total_found": 0,
+            }
+
+        if not auto_confirm:
+            return {
+                "success": True,
+                "message": f"{len(nearby_pois)} POI bulundu",
+                "found_pois": nearby_pois,
+                "associated_count": 0,
+                "requires_confirmation": True,
+                "total_found": len(nearby_pois),
+            }
+
+        existing_pois = self.get_route_pois(route_id)
+        max_order = max((int(poi.get("order_in_route") or 0) for poi in existing_pois), default=0)
+
+        new_associations = []
+        for offset, poi in enumerate(nearby_pois, start=1):
+            distance_value = poi.get("distance_meters")
+            try:
+                distance_note = int(float(distance_value))
+            except (TypeError, ValueError):
+                distance_note = 0
+            new_associations.append(
+                {
+                    "poi_id": poi["id"],
+                    "order_in_route": max_order + offset,
+                    "is_mandatory": False,
+                    "estimated_time_at_poi": 10,
+                    "notes": f"Otomatik eklendi - {distance_note}m mesafede",
+                }
+            )
+
+        existing_associations = [
+            {
+                "poi_id": poi["poi_id"],
+                "order_in_route": poi.get("order_in_route"),
+                "is_mandatory": poi.get("is_mandatory", True),
+                "estimated_time_at_poi": poi.get("estimated_time_at_poi", 15),
+                "notes": poi.get("notes", ""),
+            }
+            for poi in existing_pois
+            if poi.get("poi_id") is not None
+        ]
+
+        self.associate_pois(route_id, existing_associations + new_associations)
+        return {
+            "success": True,
+            "message": f"{len(new_associations)} POI otomatik olarak rotaya eklendi",
+            "found_pois": nearby_pois,
+            "associated_count": len(new_associations),
+            "total_found": len(nearby_pois),
+        }
+
     def associate_pois(self, route_id: int, poi_ids: List[Any]) -> Dict[str, Any]:
         """Associate POIs to a route (best-effort; supports multiple schemas)."""
         if not route_id:
@@ -759,14 +1178,51 @@ class RouteService:
         if not poi_ids:
             return {"associated": 0, "table": None}
 
-        normalized: List[int] = []
-        for item in poi_ids:
+        normalized: List[Dict[str, Any]] = []
+        seen_poi_ids = set()
+        for idx, item in enumerate(poi_ids, start=1):
+            order_in_route = idx
+            is_mandatory = True
+            estimated_time_at_poi = 15
+            notes = ""
+
             if isinstance(item, dict):
-                item = item.get("poi_id", item.get("id"))
+                poi_id = item.get("poi_id", item.get("id"))
+                order_in_route = item.get("order_in_route", item.get("sequence_order", idx))
+                is_mandatory = bool(item.get("is_mandatory", True))
+                estimated_time_at_poi = item.get("estimated_time_at_poi", 15)
+                notes = item.get("notes", "") or ""
+            else:
+                poi_id = item
+
             try:
-                normalized.append(int(item))
+                poi_id = int(poi_id)
             except (TypeError, ValueError):
                 continue
+
+            if poi_id in seen_poi_ids:
+                continue
+            seen_poi_ids.add(poi_id)
+
+            try:
+                order_in_route = int(order_in_route)
+            except (TypeError, ValueError):
+                order_in_route = idx
+
+            try:
+                estimated_time_at_poi = int(estimated_time_at_poi)
+            except (TypeError, ValueError):
+                estimated_time_at_poi = 15
+
+            normalized.append(
+                {
+                    "poi_id": poi_id,
+                    "order_in_route": max(1, order_in_route),
+                    "is_mandatory": is_mandatory,
+                    "estimated_time_at_poi": max(1, estimated_time_at_poi),
+                    "notes": notes,
+                }
+            )
 
         if not normalized:
             return {"associated": 0, "table": None}
@@ -777,32 +1233,86 @@ class RouteService:
             route_poi_assoc_schema = self._get_table_schema(conn, "route_poi_associations")
 
             with conn.cursor() as cursor:
-                inserted = 0
-
                 if route_pois_schema:
-                    for idx, poi_id in enumerate(normalized, start=1):
-                        cursor.execute(
-                            """
-                            INSERT INTO route_pois (route_id, poi_id, order_in_route)
-                            VALUES (%s, %s, %s)
-                            ON CONFLICT (route_id, poi_id) DO NOTHING
-                            """,
-                            (route_id, poi_id, idx),
+                    for association in normalized:
+                        columns = ["route_id", "poi_id"]
+                        placeholders = ["%s", "%s"]
+                        values: List[Any] = [route_id, association["poi_id"]]
+                        update_parts = []
+
+                        if "order_in_route" in route_pois_schema:
+                            columns.append("order_in_route")
+                            placeholders.append("%s")
+                            values.append(association["order_in_route"])
+                            update_parts.append("order_in_route = EXCLUDED.order_in_route")
+                        if "is_mandatory" in route_pois_schema:
+                            columns.append("is_mandatory")
+                            placeholders.append("%s")
+                            values.append(association["is_mandatory"])
+                            update_parts.append("is_mandatory = EXCLUDED.is_mandatory")
+                        if "estimated_time_at_poi" in route_pois_schema:
+                            columns.append("estimated_time_at_poi")
+                            placeholders.append("%s")
+                            values.append(association["estimated_time_at_poi"])
+                            update_parts.append("estimated_time_at_poi = EXCLUDED.estimated_time_at_poi")
+                        if "notes" in route_pois_schema:
+                            columns.append("notes")
+                            placeholders.append("%s")
+                            values.append(association["notes"])
+                            update_parts.append("notes = EXCLUDED.notes")
+
+                        conflict_sql = (
+                            f"DO UPDATE SET {', '.join(update_parts)}" if update_parts else "DO NOTHING"
                         )
-                        inserted += max(cursor.rowcount, 0)
+                        cursor.execute(
+                            f"""
+                            INSERT INTO route_pois ({', '.join(columns)})
+                            VALUES ({', '.join(placeholders)})
+                            ON CONFLICT (route_id, poi_id) {conflict_sql}
+                            """,
+                            values,
+                        )
                     table_used = "route_pois"
 
                 elif route_poi_assoc_schema:
-                    for idx, poi_id in enumerate(normalized, start=1):
-                        cursor.execute(
-                            """
-                            INSERT INTO route_poi_associations (route_id, poi_id, sequence_order)
-                            VALUES (%s, %s, %s)
-                            ON CONFLICT (route_id, poi_id) DO NOTHING
-                            """,
-                            (route_id, poi_id, idx),
+                    for association in normalized:
+                        columns = ["route_id", "poi_id"]
+                        placeholders = ["%s", "%s"]
+                        values = [route_id, association["poi_id"]]
+                        update_parts = []
+
+                        if "sequence_order" in route_poi_assoc_schema:
+                            columns.append("sequence_order")
+                            placeholders.append("%s")
+                            values.append(association["order_in_route"])
+                            update_parts.append("sequence_order = EXCLUDED.sequence_order")
+                        if "is_mandatory" in route_poi_assoc_schema:
+                            columns.append("is_mandatory")
+                            placeholders.append("%s")
+                            values.append(association["is_mandatory"])
+                            update_parts.append("is_mandatory = EXCLUDED.is_mandatory")
+                        if "estimated_time_at_poi" in route_poi_assoc_schema:
+                            columns.append("estimated_time_at_poi")
+                            placeholders.append("%s")
+                            values.append(association["estimated_time_at_poi"])
+                            update_parts.append("estimated_time_at_poi = EXCLUDED.estimated_time_at_poi")
+                        if "notes" in route_poi_assoc_schema:
+                            columns.append("notes")
+                            placeholders.append("%s")
+                            values.append(association["notes"])
+                            update_parts.append("notes = EXCLUDED.notes")
+
+                        conflict_sql = (
+                            f"DO UPDATE SET {', '.join(update_parts)}" if update_parts else "DO NOTHING"
                         )
-                        inserted += max(cursor.rowcount, 0)
+                        cursor.execute(
+                            f"""
+                            INSERT INTO route_poi_associations ({', '.join(columns)})
+                            VALUES ({', '.join(placeholders)})
+                            ON CONFLICT (route_id, poi_id) {conflict_sql}
+                            """,
+                            values,
+                        )
                     table_used = "route_poi_associations"
 
                 else:
@@ -812,7 +1322,8 @@ class RouteService:
                         500,
                     )
 
-        return {"associated": inserted, "table": table_used}
+        self.cache.pop("route_statistics", None)
+        return {"associated": len(normalized), "table": table_used}
     
     def search_routes(self, query: str, route_type: str = None, limit: int = 50) -> Dict[str, Any]:
         """
@@ -983,30 +1494,206 @@ class RouteService:
                 cursor.execute(query, (route_id,))
                 rows = cursor.fetchall()
 
-        media_list = []
-        for row in rows:
-            item = dict(row)
-            if item.get('uploaded_at'):
-                item['uploaded_at'] = item['uploaded_at'].isoformat()
-            
-            # Add fields that the frontend expects
-            item['filename'] = Path(item['file_path']).name if item.get('file_path') else ''
-            try:
-                file_path = item.get('file_path')
-                if file_path:
-                    path = Path(file_path)
-                    item['file_size'] = path.stat().st_size if path.exists() else 0
-                else:
-                    item['file_size'] = 0
-            except Exception:
-                item['file_size'] = 0
-            item['media_type'] = 'image' if item.get('media_type') == 'photo' else item.get('media_type', 'image')
-            item['latitude'] = item.get('lat')
-            item['longitude'] = item.get('lng')
-            
-            media_list.append(item)
+        return [self._normalize_route_media_record(row) for row in rows]
 
-        return media_list
+    def _get_route_media_item(self, route_id: int, media_identifier: Any) -> Dict[str, Any]:
+        """Resolve a route media item by DB id or filename-like identifier."""
+        identifier = str(media_identifier).strip()
+        if not identifier:
+            raise bad_request("Media identifier is required")
+
+        conn_context = self._get_database_connection()
+        if conn_context is None:
+            raise APIError("Database connection failed", "DB_CONN_ERROR")
+
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                params: List[Any] = [route_id]
+                conditions = ["route_id = %s"]
+
+                if identifier.isdigit():
+                    conditions.append("CAST(id AS TEXT) = %s")
+                    params.append(identifier)
+
+                like_pattern = f"%{identifier}%"
+                conditions.append("(file_path LIKE %s OR COALESCE(thumbnail_path, '') LIKE %s OR COALESCE(preview_path, '') LIKE %s)")
+                params.extend([like_pattern, like_pattern, like_pattern])
+
+                cursor.execute(
+                    f"""
+                    SELECT id, route_id, file_path, thumbnail_path, preview_path, lat, lng,
+                           caption, is_primary, media_type, uploaded_at
+                    FROM route_media
+                    WHERE {' AND '.join(['route_id = %s', '(' + ' OR '.join(conditions[1:]) + ')'])}
+                    ORDER BY uploaded_at DESC NULLS LAST
+                    LIMIT 1
+                    """,
+                    params,
+                )
+                row = cursor.fetchone()
+
+        if not row:
+            raise not_found("Media not found")
+        return self._normalize_route_media_record(row)
+
+    def delete_route_media_asset(self, route_id: int, media_identifier: Any) -> Dict[str, Any]:
+        """Delete route media by DB id or filename."""
+        self.get_route(route_id)
+        media_item = self._get_route_media_item(route_id, media_identifier)
+        filename = media_item.get("filename")
+        if not filename:
+            raise not_found("Media not found")
+
+        if not self._get_legacy_media_manager().delete_route_media(route_id, filename):
+            raise not_found("Media not found or could not be deleted")
+
+        return {"success": True, "message": "Media deleted successfully"}
+
+    def update_route_media_asset(
+        self,
+        route_id: int,
+        media_identifier: Any,
+        payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Update route media metadata by DB id or filename."""
+        if not isinstance(payload, dict) or not payload:
+            raise bad_request("No data provided")
+
+        self.get_route(route_id)
+        media_item = self._get_route_media_item(route_id, media_identifier)
+        media_id = media_item.get("id")
+        if media_id is None:
+            raise not_found("Media not found")
+
+        lat_provided = any(key in payload for key in ("lat", "latitude"))
+        lng_provided = any(key in payload for key in ("lng", "longitude"))
+        lat_value = payload.get("lat", payload.get("latitude"))
+        lng_value = payload.get("lng", payload.get("longitude"))
+
+        set_parts: List[str] = []
+        values: List[Any] = []
+
+        if "caption" in payload:
+            set_parts.append("caption = %s")
+            values.append(payload.get("caption") or "")
+
+        if "is_primary" in payload:
+            is_primary = self._coerce_bool(payload.get("is_primary"))
+            set_parts.append("is_primary = %s")
+            values.append(is_primary)
+        else:
+            is_primary = None
+
+        if "media_type" in payload:
+            media_type = str(payload.get("media_type") or "").strip().lower()
+            if media_type == "photo":
+                media_type = "image"
+            if media_type not in ("image", "video", "audio", "model_3d", "panorama"):
+                raise bad_request("Invalid media_type value")
+            set_parts.append("media_type = %s")
+            values.append(media_type)
+
+        if lat_provided or lng_provided:
+            if not (lat_provided and lng_provided):
+                raise bad_request("Both latitude and longitude are required")
+
+            if lat_value is None and lng_value is None:
+                set_parts.append("lat = NULL")
+                set_parts.append("lng = NULL")
+            else:
+                try:
+                    lat_float = float(lat_value)
+                    lng_float = float(lng_value)
+                except (TypeError, ValueError):
+                    raise bad_request("Invalid coordinate values")
+                if not (-90 <= lat_float <= 90 and -180 <= lng_float <= 180):
+                    raise bad_request("Invalid coordinate values")
+                set_parts.append("lat = %s")
+                values.append(lat_float)
+                set_parts.append("lng = %s")
+                values.append(lng_float)
+
+        if not set_parts:
+            raise bad_request("No valid fields to update")
+
+        conn_context = self._get_database_connection()
+        if conn_context is None:
+            raise APIError("Database connection failed", "DB_CONN_ERROR")
+
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                if is_primary is True:
+                    cursor.execute(
+                        "UPDATE route_media SET is_primary = false WHERE route_id = %s AND id <> %s",
+                        (route_id, media_id),
+                    )
+
+                values.append(media_id)
+                cursor.execute(
+                    f"""
+                    UPDATE route_media
+                    SET {', '.join(set_parts)}
+                    WHERE id = %s
+                    RETURNING id, route_id, file_path, thumbnail_path, preview_path, lat, lng,
+                              caption, is_primary, media_type, uploaded_at
+                    """,
+                    values,
+                )
+                updated_row = cursor.fetchone()
+
+        if not updated_row:
+            raise not_found("Media not found")
+
+        return {
+            "success": True,
+            "message": "Media updated successfully",
+            "media": self._normalize_route_media_record(updated_row),
+        }
+
+    def update_route_media_location_asset(self, route_id: int, media_identifier: Any, lat: float, lng: float) -> Dict[str, Any]:
+        """Update route media coordinates."""
+        result = self.update_route_media_asset(
+            route_id,
+            media_identifier,
+            {"lat": lat, "lng": lng},
+        )
+        return {
+            "success": True,
+            "message": "Media location updated successfully",
+            "media": result["media"],
+        }
+
+    def delete_route_media_location_asset(self, route_id: int, media_identifier: Any) -> Dict[str, Any]:
+        """Clear route media coordinates."""
+        result = self.update_route_media_asset(
+            route_id,
+            media_identifier,
+            {"lat": None, "lng": None},
+        )
+        return {
+            "success": True,
+            "message": "Media location removed successfully",
+            "media": result["media"],
+        }
+
+    def auto_route_media_location_asset(self, route_id: int, media_identifier: Any) -> Dict[str, Any]:
+        """Extract EXIF coordinates for route media and persist them."""
+        self.get_route(route_id)
+        media_item = self._get_route_media_item(route_id, media_identifier)
+        filename = media_item.get("filename")
+        if not filename:
+            raise not_found("Media not found")
+
+        coords = self._get_legacy_media_manager().auto_set_route_media_location(route_id, filename)
+        if not coords:
+            raise not_found("No EXIF location found")
+
+        updated = self._get_route_media_item(route_id, filename)
+        return {
+            "success": True,
+            "message": "Media location extracted from EXIF",
+            "media": updated,
+        }
     
     def get_route_statistics(self) -> Dict[str, Any]:
         """Get route statistics."""

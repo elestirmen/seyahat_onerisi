@@ -200,11 +200,6 @@ def list_route_media(route_id):
         if not route_id:
             raise bad_request("Route ID is required")
 
-        try:
-            return _legacy_api().get_route_media(route_id)
-        except Exception as legacy_error:
-            logger.warning(f"Legacy route media fallback failed: {legacy_error}")
-
         media = route_service.list_route_media(route_id)
         return jsonify({'route_id': route_id, 'media': media}), 200
 
@@ -296,11 +291,6 @@ def admin_list_route_media(route_id):
     try:
         if not route_id:
             raise bad_request("Route ID is required")
-
-        try:
-            return _legacy_api().get_admin_route_media(route_id)
-        except Exception as legacy_error:
-            logger.warning(f"Legacy admin route media fallback failed: {legacy_error}")
 
         media = route_service.list_route_media(route_id)
         return jsonify({'route_id': route_id, 'media': media}), 200
