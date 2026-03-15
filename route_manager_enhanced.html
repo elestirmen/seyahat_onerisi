@@ -1561,6 +1561,7 @@
     <script src="static/js/api-client.js"></script>
     <script src="static/js/navigation-manager.js"></script>
     <script src="static/js/route-admin-manager.js"></script>
+    <script src="static/js/route-manager-utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 
     <script>
@@ -1571,11 +1572,6 @@
             // Eski kod ile uyumluluk için loadRouteMedia fonksiyonunu yayınla
             window.loadRouteMedia = (routeId) =>
                 window.routeAdminManager.loadRouteMedia(routeId);
-        }
-
-        // Rate limiting bilgilendirme mesajı
-        if (window.rateLimiter) {
-            console.log('✅ Rate limiting aktif - API çağrıları sınırlandırılacak');
         }
 
         let pendingExifLocation = null;
@@ -1977,16 +1973,6 @@
         const minLoadInterval = 2000; // 2 saniye minimum aralık
         let loadingInProgress = false;
 
-        // --- Helpers: ID and parsing ---
-        function getRouteId(route) {
-            return route?.id ?? route?._id ?? route?.route_id ?? null;
-        }
-
-        function getPoiId(poi) {
-            // Try different ID field names in order of preference
-            return poi?.id ?? poi?._id ?? poi?.poi_id ?? null;
-        }
-
         // Route type configurations
         const ROUTE_TYPES = {
             'walking': { name: 'Yürüyüş', icon: '🚶', color: '#059669' },
@@ -2020,9 +2006,6 @@
                 .then(d => { if (d?.csrf_token) csrfToken = d.csrf_token; })
                 .catch(() => { });
 
-            // Ensure media functionality is properly initialized
-            console.log('Route manager initialized, media functionality ready');
-            
             // Show info about automatic EXIF extraction
             setTimeout(() => {
                 showNotification('📸 Otomatik EXIF konum çıkarma aktif! Fotoğraf yüklediğinizde GPS bilgisi otomatik olarak haritaya eklenir.', 'info');
@@ -2283,16 +2266,6 @@
 
                 return true;
             });
-
-            // --- Helpers: ID and parsing ---
-            function getRouteId(route) {
-                return route?.id ?? route?._id ?? route?.route_id ?? null;
-            }
-
-            function getPoiId(poi) {
-                // Try different ID field names in order of preference
-                return poi?.id ?? poi?._id ?? poi?.poi_id ?? null;
-            }
 
             // Sort routes
             filteredRoutes.sort((a, b) => {
@@ -2567,9 +2540,6 @@
                             </button>
                             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="refreshRouteMedia()">
                                 <i class="fas fa-sync-alt me-1"></i>Yenile
-                            </button>
-                            <button type="button" class="btn btn-outline-warning btn-sm" onclick="debugMediaDisplay('${rid}')" title="Medya görüntüleme sorunlarını debug et">
-                                <i class="fas fa-bug me-1"></i>Debug
                             </button>
                         </div>
                         <div id="routeCurrentMedia" class="current-media-grid">
@@ -3654,54 +3624,6 @@
         function getDifficultyStars(level) {
             return '⭐'.repeat(level || 0) + '☆'.repeat(5 - (level || 0));
         }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return 'Bilinmiyor';
-            return new Date(dateString).toLocaleDateString('tr-TR', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-
-        function showLoading() {
-            document.getElementById('routeListContainer').innerHTML = `
-                <div class="loading-spinner">
-                    <div class="spinner"></div>
-                </div>
-            `;
-        }
-
-        function showError(message) {
-            showNotification(message, 'error');
-        }
-
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `notification notification-${type}`;
-            notification.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center">
-                    <span>${message}</span>
-                    <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.parentElement.remove()"></button>
-                </div>
-            `;
-
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 5000);
-        }
         // Resizable Map Functionality
         function setupResizableMap() {
             const resizeHandle = document.getElementById('resizeHandle');
@@ -4430,75 +4352,6 @@
             }
         }
 
-        // Debug media display issues
-        function debugMediaDisplay(routeId) {
-            console.log('🔍 Debugging media display for route:', routeId);
-            
-            // Check if container exists
-            const container = document.getElementById('routeCurrentMedia');
-            console.log('Media container found:', !!container);
-            if (container) {
-                console.log('Container innerHTML length:', container.innerHTML.length);
-                console.log('Container classes:', container.className);
-            }
-            
-            // Check if route is selected
-            console.log('Current route:', currentRoute);
-            console.log('Current route ID:', getRouteId(currentRoute));
-            
-            // Check if media loading function exists
-            console.log('loadRouteMediaForEdit function exists:', typeof loadRouteMediaForEdit === 'function');
-            
-            // Try to manually trigger media loading
-            if (typeof loadRouteMediaForEdit === 'function' && routeId) {
-                console.log('Manually triggering media loading...');
-                loadRouteMediaForEdit(routeId);
-            }
-        }
-
-        // Test API endpoints for debugging
-        async function testMediaAPIEndpoints(routeId, filename) {
-            if (!routeId || !filename) {
-                showNotification('Rota ID ve dosya adı gerekli', 'error');
-                return;
-            }
-
-            const endpoints = [
-                { method: 'DELETE', url: `${apiBase}/admin/routes/${routeId}/media/${filename}/location`, description: 'Location DELETE endpoint' },
-                { method: 'PATCH', url: `${apiBase}/admin/routes/${routeId}/media/${filename}`, description: 'Media PATCH endpoint' },
-                { method: 'PUT', url: `${apiBase}/admin/routes/${routeId}/media/${filename}`, description: 'Media PUT endpoint' }
-            ];
-
-            showNotification('API endpoint testleri başlatılıyor...', 'info');
-
-            for (const endpoint of endpoints) {
-                try {
-                    const response = await fetch(endpoint.url, {
-                        method: 'DELETE',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-Token': csrfToken || ''
-                        },
-                        credentials: 'include'
-                    });
-
-                    console.log(`${endpoint.description}: ${response.status} ${response.statusText}`);
-                    
-                    if (response.status === 405) {
-                        console.log(`${endpoint.description} - Method Not Allowed`);
-                    } else if (response.status === 404) {
-                        console.log(`${endpoint.description} - Not Found`);
-                    } else if (response.status >= 500) {
-                        console.error(`${endpoint.description} - Server Error: ${response.status}`);
-                    }
-                } catch (error) {
-                    console.error(`${endpoint.description} - Network Error:`, error);
-                }
-            }
-
-            showNotification('API endpoint testleri tamamlandı. Console\'u kontrol edin.', 'info');
-        }
-
         // Enhanced error logging for location operations
         function logLocationOperation(operation, filename, routeId, details = {}) {
             const logData = {
@@ -4523,21 +4376,6 @@
             localStorage.setItem('locationOperationLogs', JSON.stringify(logs));
         }
 
-        // Refresh route media
-        async function refreshRouteMedia() {
-            if (!currentRoute) {
-                showNotification('Önce bir rota seçin', 'error');
-                return;
-            }
-
-            try {
-                await loadRouteMediaForEdit(getRouteId(currentRoute));
-                showNotification('Medya listesi yenilendi', 'success');
-            } catch (error) {
-                console.error('Media refresh error:', error);
-                showNotification('Medya yenilenirken hata oluştu: ' + error.message, 'error');
-            }
-        }
         async function uploadRouteMedia() {
             if (!currentRoute) {
                 showNotification('Önce bir rota seçin', 'error');
@@ -5140,13 +4978,6 @@
                                             </button>
                                         </div>` : ''
                                     }
-                                    
-                                    <!-- Debug Button for API Testing -->
-                                    <div class="debug-actions mt-1">
-                                        <button class="btn btn-sm btn-outline-secondary" onclick="testMediaAPIEndpoints('${routeId}', '${filename}')" title="API endpoint testleri">
-                                            <i class="fas fa-bug"></i> API Test
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -6754,10 +6585,6 @@ function updatePhotoLocationMarker(filename, lat, lng, mediaType = 'image') {
                                             <i class="fas fa-magic me-1"></i>
                                             Otomatik Ekle
                                         </button>
-                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="testNearbyFeature()">
-                                            <i class="fas fa-bug me-1"></i>
-                                            Test
-                                        </button>
                                     </div>
                                 </div>
                                 
@@ -6997,9 +6824,6 @@ function updatePhotoLocationMarker(filename, lat, lng, mediaType = 'image') {
                                     <div class="btn-group" role="group">
                                         <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshRouteMedia()" title="Medya listesini yenile">
                                             <i class="fas fa-sync-alt"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="testMediaLoading()" title="Medya yükleme testi">
-                                            <i class="fas fa-bug"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -8486,98 +8310,6 @@ function updatePhotoLocationMarker(filename, lat, lng, mediaType = 'image') {
                 showNotification('Medya yenilenirken hata oluştu', 'error');
             }
         }
-        // Test function for debugging
-        function testNearbyFeature() {
-            console.log('🧪 TEST: Yakın POI özelliği test ediliyor');
-            console.log('currentRoute:', currentRoute);
-            console.log('apiBase:', apiBase);
-
-            if (!currentRoute) {
-                alert('❌ currentRoute null! Önce bir rota seçin.');
-                return;
-            }
-
-            alert(`✅ Test başarılı!\nSeçili rota: ${currentRoute.name}\nID: ${currentRoute.id}\nAPI Base: ${apiBase}`);
-
-            // Test API call
-            fetch(`${apiBase}/routes/${currentRoute.id}/nearby-pois`, {
-                credentials: 'include'
-            })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('🔍 API Test Sonucu:', data);
-                    if (data.success) {
-                        const eff = data.parameters && data.parameters.max_distance_meters ? ` (radar: ${data.parameters.max_distance_meters}m)` : '';
-                        alert(`🎉 API Test Başarılı!\n${data.total_found} POI bulundu${eff}.`);
-                    } else {
-                        alert(`❌ API Test Başarısız!\nHata: ${data.error}`);
-                    }
-                })
-                .catch(error => {
-                    console.error('API Test Hatası:', error);
-                    alert(`❌ API Test Hatası!\n${error.message}`);
-                });
-        }
-
-        // Test media loading function
-        async function testMediaLoading() {
-            if (!currentRoute) {
-                alert('❌ currentRoute null! Önce bir rota seçin.');
-                return;
-            }
-
-            const routeId = getRouteId(currentRoute);
-            console.log('🧪 TEST: Media loading test for route:', routeId);
-
-            // First, check if we're in edit mode
-            const isEditMode = document.getElementById('routeEditForm') !== null;
-            console.log('Is in edit mode:', isEditMode);
-
-            if (!isEditMode) {
-                alert('❌ Rota düzenleme modunda değilsiniz! Önce rotayı düzenlemeye girin.');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
-                    credentials: 'include'
-                });
-
-                console.log('Media API response:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    headers: Object.fromEntries(response.headers.entries())
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('Media API data:', data);
-                    
-                    // Test the display function
-                    const container = document.getElementById('routeCurrentMedia');
-                    if (container) {
-                        console.log('Media container found:', container);
-                        console.log('Container HTML before:', container.innerHTML);
-                        displayRouteCurrentMedia(data.media || data || [], routeId);
-                        console.log('Container HTML after:', container.innerHTML);
-                    } else {
-                        console.error('Media container not found');
-                        // Try to find the container in different ways
-                        const allContainers = document.querySelectorAll('[id*="media"]');
-                        console.log('All media-related containers:', allContainers);
-                    }
-                    
-                    alert(`🎉 Media Test Başarılı!\nResponse: ${JSON.stringify(data, null, 2)}`);
-                } else {
-                    const errorText = await response.text();
-                    console.error('Media API error:', errorText);
-                    alert(`❌ Media API Error: ${response.status}\n${errorText}`);
-                }
-            } catch (error) {
-                console.error('Media Test Error:', error);
-                alert(`❌ Media Test Error:\n${error.message}`);
-            }
-        }
         // Save route changes (with CSRF)
         async function saveRouteChanges() {
             if (!currentRoute) return;
@@ -8732,18 +8464,6 @@ function updatePhotoLocationMarker(filename, lat, lng, mediaType = 'image') {
             `);
             printWindow.document.close();
             printWindow.print();
-        }
-
-        // Utility function to download files
-        function downloadFile(blob, filename, mimeType) {
-            const url = window.URL.createObjectURL(new Blob([blob], { type: mimeType }));
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
         }
 
         function duplicateCurrentRoute() {
@@ -8951,17 +8671,6 @@ function updatePhotoLocationMarker(filename, lat, lng, mediaType = 'image') {
             }
         }
 
-        function toggleMapLayer(layerType) {
-            // TODO: Implement map layer switching
-            showNotification(`${layerType} katmanı özelliği yakında eklenecek`, 'info');
-        }
-
-        function fitMapToRoutes() {
-            if (Object.keys(routeLayers).length > 0) {
-                const group = new L.featureGroup(Object.values(routeLayers));
-                map.fitBounds(group.getBounds(), { padding: [20, 20] });
-            }
-        }
     </script>
 </body>
 
