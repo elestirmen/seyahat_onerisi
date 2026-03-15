@@ -3597,14 +3597,37 @@ function createRouteOptionsContent(waypoints) {
     `;
 }
 
-// Helper function to calculate total distance
-function calculateTotalDistance(waypoints) {
+function getPointCoordinates(point) {
+    if (!point || typeof point !== 'object') {
+        return null;
+    }
+
+    const lat = Number(point.lat ?? point.latitude);
+    const lng = Number(point.lng ?? point.lon ?? point.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return null;
+    }
+
+    return { lat, lng };
+}
+
+// Helper function to calculate total distance across mixed POI/waypoint shapes
+function calculateTotalDistance(points) {
+    if (!Array.isArray(points) || points.length < 2) {
+        return 0;
+    }
+
     let totalDistance = 0;
-    for (let i = 0; i < waypoints.length - 1; i++) {
-        const current = waypoints[i];
-        const next = waypoints[i + 1];
+    for (let i = 0; i < points.length - 1; i++) {
+        const current = getPointCoordinates(points[i]);
+        const next = getPointCoordinates(points[i + 1]);
+        if (!current || !next) {
+            continue;
+        }
+
         totalDistance += getDistance(current.lat, current.lng, next.lat, next.lng);
     }
+
     return totalDistance;
 }
 
@@ -3622,40 +3645,26 @@ function showPredefinedRouteOptionsPopup(latlng, route) {
 // Show route details panel for predefined routes (similar to personal routes)
 function showPredefinedRouteDetailsPanel(route, latlng) {
     if (!route) return;
-    
-    const poiCount = route.pois ? route.pois.length : 0;
-    
-    // Calculate estimated time and distance
-    let totalDistance = 0;
-    if (route.pois && route.pois.length > 1) {
-        for (let i = 0; i < route.pois.length - 1; i++) {
-            const current = route.pois[i];
-            const next = route.pois[i + 1];
-            if (current.lat && (current.lng || current.lon) && next.lat && (next.lng || next.lon)) {
-                const currentLng = current.lng || current.lon;
-                const nextLng = next.lng || next.lon;
-                totalDistance += getDistance(current.lat, currentLng, next.lat, nextLng);
-            }
-        }
-    }
-    
-    // Convert to kilometers and format
-    totalDistance = (totalDistance / 1000).toFixed(2);
-    
-    const estimatedTime = Math.round(totalDistance / 5 * 60); // 5 km/h walking speed, in minutes
+
+    const routeDistanceKm = calculateTotalDistance(route.pois || []);
+    const totalDistance = routeDistanceKm.toFixed(2);
+    const estimatedTime = Math.round(routeDistanceKm / 5 * 60); // 5 km/h walking speed, in minutes
     const routeType = route.route_type === 'walking' ? 'Yürüyüş' : 
                       route.route_type === 'hiking' ? 'Doğa Yürüyüşü' :
                       route.route_type === 'cycling' ? 'Bisiklet' : 
                       route.route_type === 'driving' ? 'Araç' : 'Bilinmeyen';
 
     // Create waypoints for the panel
-    const waypoints = route.pois ? route.pois.map(poi => ({
-        id: poi.id || poi._id,
-        name: poi.name,
-        latitude: poi.lat,
-        longitude: poi.lng || poi.lon,
-        category: poi.category || 'diger'
-    })) : [];
+    const waypoints = route.pois ? route.pois.map(poi => {
+        const coordinates = getPointCoordinates(poi);
+        return {
+            id: poi.id || poi._id,
+            name: poi.name,
+            latitude: coordinates ? coordinates.lat : null,
+            longitude: coordinates ? coordinates.lng : null,
+            category: poi.category || 'diger'
+        };
+    }) : [];
 
     // Show the route details panel using the existing RouteDetailsPanel class
     RouteDetailsPanel.show({
@@ -5230,20 +5239,6 @@ function optimizeRouteAdvanced() {
 
     const improvement = ((calculateTotalDistance(allPoints) - bestDistance) / calculateTotalDistance(allPoints) * 100);
     showNotification(`✅ Rota optimize edildi! ${iterations} iterasyon, ${bestDistance.toFixed(2)} km, %${improvement.toFixed(1)} iyileştirme`, 'success');
-}
-
-// Calculate total distance of a route
-function calculateTotalDistance(route) {
-    if (route.length < 2) return 0;
-
-    let totalDistance = 0;
-    for (let i = 0; i < route.length - 1; i++) {
-        totalDistance += getDistance(
-            route[i].latitude, route[i].longitude,
-            route[i + 1].latitude, route[i + 1].longitude
-        );
-    }
-    return totalDistance;
 }
 
 // Get route statistics

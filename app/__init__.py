@@ -108,10 +108,8 @@ def configure_logging(app):
 
 def register_blueprints(app):
     """Register application blueprints and routes."""
-    # Import all routes from main poi_api module
-    # This will be done gradually to maintain compatibility
-    
-    # Register new modular blueprints FIRST (higher priority)
+    # Register modular blueprints first, then mount compatibility routes
+    # that preserve legacy endpoint contracts on top of the same app.
     from .routes.health import health_bp
     from .routes.auth import auth_bp
     from .routes.poi import poi_bp
@@ -125,68 +123,8 @@ def register_blueprints(app):
     app.register_blueprint(route_bp)
     app.register_blueprint(route_import_bp)
     app.register_blueprint(compat_bp)
-    
-    # Import and register blueprints (avoiding circular imports)
-    # The main routes are still in poi_api.py and will be registered automatically
-    # when poi_api.py is imported by the main application
-    # Note: Blueprints registered first take precedence over later routes
-    
-    logger.info("Blueprints registered successfully (POI + Route)")
 
-
-def register_error_handlers(app):
-    """Register global error handlers."""
-    
-    @app.errorhandler(404)
-    def not_found(error):
-        return {
-            'success': False,
-            'error': 'Resource not found',
-            'code': 'NOT_FOUND'
-        }, 404
-    
-    @app.errorhandler(400)
-    def bad_request(error):
-        return {
-            'success': False,
-            'error': 'Bad request',
-            'code': 'BAD_REQUEST'
-        }, 400
-    
-    @app.errorhandler(401)
-    def unauthorized(error):
-        return {
-            'success': False,
-            'error': 'Authentication required',
-            'code': 'UNAUTHORIZED'
-        }, 401
-    
-    @app.errorhandler(403)
-    def forbidden(error):
-        return {
-            'success': False,
-            'error': 'Access forbidden',
-            'code': 'FORBIDDEN'
-        }, 403
-    
-    @app.errorhandler(429)
-    def rate_limit_exceeded(error):
-        return {
-            'success': False,
-            'error': 'Rate limit exceeded',
-            'code': 'RATE_LIMIT_EXCEEDED'
-        }, 429
-    
-    @app.errorhandler(500)
-    def internal_error(error):
-        logger.error(f"Internal server error: {error}")
-        return {
-            'success': False,
-            'error': 'Internal server error',
-            'code': 'INTERNAL_ERROR'
-        }, 500
-    
-    logger.info("Error handlers registered successfully")
+    logger.info("Blueprints registered successfully")
 
 
 # Export the factory function
