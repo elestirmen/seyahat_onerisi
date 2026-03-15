@@ -310,8 +310,6 @@
         } catch (error) {
             console.error('Routes load error:', error);
             showError(`Rotalar yüklenirken hata oluştu: ${error.message}`);
-        } finally {
-            loadingInProgress = false;
         }
     }
 
