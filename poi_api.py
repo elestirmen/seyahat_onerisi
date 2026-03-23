@@ -4553,6 +4553,7 @@ def get_route_media(route_id: int):
         abort(500, "Database error")
 
 @app.get('/api/admin/routes/<int:route_id>/media')
+@auth_middleware.require_auth
 def get_admin_route_media(route_id: int):
     """Return media items for a route (admin endpoint)"""
     try:
@@ -4586,6 +4587,7 @@ def get_admin_route_media(route_id: int):
 # Expect 404 if route 153 doesn't exist; 200 [] if exists but no media; 200 JSON array otherwise.
 
 @app.post('/api/admin/routes/<int:route_id>/media')
+@auth_middleware.require_auth
 def upload_route_media(route_id: int):
     """Upload media for a route"""
     try:
@@ -4687,7 +4689,17 @@ def upload_route_media(route_id: int):
                 
             except Exception as db_error:
                 print(f"⚠️ Database save failed: {db_error}")
-                # Continue anyway - the file is saved to filesystem
+                for path_key in ('thumbnail_path', 'file_path'):
+                    media_path = media_info.get(path_key)
+                    if media_path and os.path.exists(media_path):
+                        try:
+                            os.unlink(media_path)
+                        except Exception:
+                            pass
+                return jsonify({
+                    'success': False,
+                    'error': f'Database save failed: {str(db_error)}'
+                }), 500
             finally:
                 if cur:
                     cur.close()
@@ -4717,6 +4729,7 @@ def upload_route_media(route_id: int):
         }), 500
 
 @app.delete('/api/admin/routes/<int:route_id>/media/<filename>')
+@auth_middleware.require_auth
 def delete_route_media(route_id: int, filename: str):
     """Delete media for a route"""
     try:
@@ -4783,6 +4796,7 @@ def delete_route_media(route_id: int, filename: str):
         }), 500
 
 @app.put('/api/admin/routes/<int:route_id>/media/<filename>')
+@auth_middleware.require_auth
 def update_route_media(route_id: int, filename: str):
     """Update route media metadata including location"""
     try:
@@ -4894,6 +4908,7 @@ def update_route_media(route_id: int, filename: str):
         }), 500
 
 @app.post('/api/admin/routes/<int:route_id>/media/<filename>/location/auto')
+@auth_middleware.require_auth
 def auto_route_media_location(route_id: int, filename: str):
     """Extract route media location from EXIF and save it"""
     try:
@@ -4925,6 +4940,7 @@ def auto_route_media_location(route_id: int, filename: str):
         }), 500
 
 @app.put('/api/admin/routes/<int:route_id>/media/<filename>/location')
+@auth_middleware.require_auth
 def update_route_media_location(route_id: int, filename: str):
     """Update only the location of route media"""
     try:
@@ -5027,6 +5043,7 @@ def update_route_media_location(route_id: int, filename: str):
         }), 500
 
 @app.delete('/api/admin/routes/<int:route_id>/media/<filename>/location')
+@auth_middleware.require_auth
 def delete_route_media_location(route_id: int, filename: str):
     """Delete the location information from route media (set lat/lng to NULL)"""
     try:
@@ -5098,6 +5115,7 @@ def delete_route_media_location(route_id: int, filename: str):
         }), 500
 
 @app.patch('/api/admin/routes/<int:route_id>/media/<filename>')
+@auth_middleware.require_auth
 def patch_route_media(route_id: int, filename: str):
     """Update specific fields of route media using PATCH method"""
     try:
@@ -5435,6 +5453,13 @@ class SecureFileUploader:
             name = name[:100]
         
         return f"{name}{ext}"
+
+    def normalize_upload_id(self, upload_id: str) -> str:
+        """Validate upload identifiers before using them in filesystem lookups."""
+        try:
+            return str(uuid.UUID(str(upload_id)))
+        except (TypeError, ValueError, AttributeError):
+            raise ValueError('Geçersiz upload ID formatı')
     
     def scan_file_content(self, file_path: str) -> dict:
         """
@@ -5498,6 +5523,7 @@ class SecureFileUploader:
         Returns:
             str: Path to saved file
         """
+        upload_id = self.normalize_upload_id(upload_id)
         filename = self.sanitize_filename(file.filename)
         file_path = os.path.join(self.UPLOAD_FOLDER, f"{upload_id}_{filename}")
         
@@ -5595,6 +5621,8 @@ def upload_route_file():
         # Save file temporarily
         try:
             file_path = uploader.save_uploaded_file(file, upload_id)
+            with upload_progress_lock:
+                upload_progress[upload_id]['temp_file_path'] = file_path
         except Exception as e:
             with upload_progress_lock:
                 upload_progress[upload_id] = {
@@ -5754,6 +5782,15 @@ def get_upload_progress(upload_id):
         JSON response with progress information
     """
     try:
+        try:
+            upload_id = SecureFileUploader().normalize_upload_id(upload_id)
+        except ValueError as exc:
+            return jsonify({
+                'success': False,
+                'error': str(exc),
+                'error_code': 'INVALID_UPLOAD_ID'
+            }), 400
+
         with upload_progress_lock:
             progress_info = upload_progress.get(upload_id)
         
@@ -5764,10 +5801,13 @@ def get_upload_progress(upload_id):
                 'error_code': 'UPLOAD_NOT_FOUND'
             }), 404
         
+        public_progress = dict(progress_info)
+        public_progress.pop('temp_file_path', None)
+
         return jsonify({
             'success': True,
             'upload_id': upload_id,
-            'progress': progress_info
+            'progress': public_progress
         }), 200
         
     except Exception as e:
@@ -5807,7 +5847,15 @@ def confirm_route_import():
                 'error_code': 'MISSING_UPLOAD_ID'
             }), 400
         
-        upload_id = data['upload_id']
+        uploader = SecureFileUploader()
+        try:
+            upload_id = uploader.normalize_upload_id(data['upload_id'])
+        except ValueError as exc:
+            return jsonify({
+                'success': False,
+                'error': str(exc),
+                'error_code': 'INVALID_UPLOAD_ID'
+            }), 400
         
         # Check if upload exists and is completed
         with upload_progress_lock:
@@ -5828,17 +5876,13 @@ def confirm_route_import():
             }), 400
         
         # Get file path from temp storage
-        uploader = SecureFileUploader()
-        temp_files = [f for f in os.listdir(uploader.UPLOAD_FOLDER) if f.startswith(upload_id)]
-        
-        if not temp_files:
+        file_path = progress_info.get('temp_file_path')
+        if not file_path or not os.path.exists(file_path):
             return jsonify({
                 'success': False,
                 'error': 'Geçici dosya bulunamadı',
                 'error_code': 'TEMP_FILE_NOT_FOUND'
             }), 404
-        
-        file_path = os.path.join(uploader.UPLOAD_FOLDER, temp_files[0])
         
         # Re-parse the file to get complete data
         try:
@@ -5870,7 +5914,7 @@ def confirm_route_import():
                 'waypoints_count': len(parsed_route.waypoints),
                 'imported_at': datetime.now().isoformat(),
                 'imported_by': request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr) or 'unknown',
-                'original_filename': temp_files[0].split('_', 1)[1],  # Remove upload_id prefix
+                'original_filename': os.path.basename(file_path).split('_', 1)[1],
                 'import_source': parsed_route.original_format
             }
         }
@@ -6111,16 +6155,26 @@ def cancel_route_import():
                 'error_code': 'MISSING_UPLOAD_ID'
             }), 400
         
-        upload_id = data['upload_id']
-        
-        # Clean up temporary files
         uploader = SecureFileUploader()
-        temp_files = [f for f in os.listdir(uploader.UPLOAD_FOLDER) if f.startswith(upload_id)]
-        
-        for temp_file in temp_files:
+        try:
+            upload_id = uploader.normalize_upload_id(data['upload_id'])
+        except ValueError as exc:
+            return jsonify({
+                'success': False,
+                'error': str(exc),
+                'error_code': 'INVALID_UPLOAD_ID'
+            }), 400
+
+        temp_file_path = None
+        with upload_progress_lock:
+            progress_info = upload_progress.get(upload_id)
+            if progress_info:
+                temp_file_path = progress_info.get('temp_file_path')
+
+        if temp_file_path and os.path.exists(temp_file_path):
             try:
-                os.unlink(os.path.join(uploader.UPLOAD_FOLDER, temp_file))
-            except:
+                os.unlink(temp_file_path)
+            except Exception:
                 pass
         
         # Clean up progress tracking

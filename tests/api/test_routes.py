@@ -30,3 +30,8 @@ def test_route_statistics_shape(client):
     assert isinstance(data, dict)
     for key in ("total_routes", "active_routes", "inactive_routes", "by_type"):
         assert key in data
+
+
+def test_route_import_progress_rejects_invalid_upload_id(authed_client):
+    resp = authed_client.get("/api/routes/import/progress/not-a-uuid")
+    assert resp.status_code == 400

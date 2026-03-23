@@ -25,7 +25,7 @@ class POIMediaManager:
         'image': {
             'extensions': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'],
             'mime_types': ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff'],
-            'max_size': 50 * 1024 * 1024,  # 50MB (panorama için yükseltildi)
+            'max_size': 100 * 1024 * 1024,  # 100MB
             'folder': 'images'
         },
         'video': {
@@ -37,13 +37,13 @@ class POIMediaManager:
         'audio': {
             'extensions': ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'],
             'mime_types': ['audio/mp3', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/aac', 'audio/flac'],
-            'max_size': 50 * 1024 * 1024,  # 50MB
+            'max_size': 100 * 1024 * 1024,  # 100MB
             'folder': 'audio'
         },
         'model_3d': {
             'extensions': ['.glb', '.gltf', '.obj', '.fbx', '.dae', '.ply', '.stl'],
             'mime_types': ['model/gltf-binary', 'model/gltf+json', 'model/obj'],
-            'max_size': 50 * 1024 * 1024,  # 50MB
+            'max_size': 100 * 1024 * 1024,  # 100MB
             'folder': '3d_models'
         }
     }

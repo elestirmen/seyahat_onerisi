@@ -4,13 +4,17 @@ Environment-based configuration management with sensible defaults.
 """
 
 import os
+import secrets
+
+
+DEFAULT_SECRET_KEY = secrets.token_urlsafe(48)
 
 
 class Config:
     """Base configuration class with common settings."""
     
     # Flask Core Settings
-    SECRET_KEY = os.environ.get('SECRET_KEY') or os.environ.get('POI_SESSION_SECRET_KEY') or 'dev-secret-key-change-in-production'
+    SECRET_KEY = os.environ.get('SECRET_KEY') or os.environ.get('POI_SESSION_SECRET_KEY') or DEFAULT_SECRET_KEY
     
     # Database Configuration
     DB_HOST = os.environ.get('DB_HOST') or os.environ.get('POI_DB_HOST', 'localhost')
@@ -32,7 +36,7 @@ class Config:
     RATE_LIMIT_REQUESTS_PER_MINUTE = int(os.environ.get('RATE_LIMIT_REQUESTS_PER_MINUTE', 100))
     
     # File Upload Configuration
-    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 16777216))  # 16MB
+    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 100 * 1024 * 1024))  # 100MB
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', 'temp_uploads')
     POI_MEDIA_FOLDER = os.environ.get('POI_MEDIA_FOLDER', 'poi_media')
     
@@ -100,6 +104,17 @@ class ProductionConfig(Config):
         token = (os.environ.get("POI_ADMIN_TOKEN") or "").strip()
         if len(token) < 16:
             raise ValueError("POI_ADMIN_TOKEN must be set (min 16 chars) in production")
+
+        has_explicit_secret_key = bool(
+            (os.environ.get("SECRET_KEY") or "").strip()
+            or (os.environ.get("POI_SESSION_SECRET_KEY") or "").strip()
+        )
+        if not has_explicit_secret_key:
+            raise ValueError("SECRET_KEY or POI_SESSION_SECRET_KEY must be set in production")
+
+        secret_key = (app.config.get("SECRET_KEY") or "").strip()
+        if len(secret_key) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters in production")
 
 
 class TestingConfig(Config):

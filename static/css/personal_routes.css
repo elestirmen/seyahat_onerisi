@@ -295,6 +295,24 @@
   animation: loadingDots 1.5s infinite;
 }
 
+body.personal-routes-map-fullscreen .explore-bottom-section {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body:has(#mapContainer.fullscreen) .explore-bottom-section,
+body:has(#mapContainer:fullscreen) .explore-bottom-section,
+body:has(#mapContainer:-webkit-full-screen) .explore-bottom-section,
+body:has(.leaflet-fullscreen-on) .explore-bottom-section,
+body:has(.leaflet-pseudo-fullscreen) .explore-bottom-section {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 @keyframes loadingDots {
   0%, 20% {
     content: '';

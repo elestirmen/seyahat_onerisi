@@ -17,6 +17,8 @@ from app.middleware.error_handler import APIError, bad_request, not_found
 
 logger = logging.getLogger(__name__)
 
+MAX_MEDIA_FILE_SIZE = 100 * 1024 * 1024
+
 
 class MediaService:
     """Service class for media management operations."""
@@ -26,25 +28,25 @@ class MediaService:
         'image': {
             'extensions': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'],
             'mime_types': ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff'],
-            'max_size': 15 * 1024 * 1024,  # 15MB
+            'max_size': MAX_MEDIA_FILE_SIZE,
             'folder': 'images'
         },
         'video': {
             'extensions': ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv', '.m4v'],
             'mime_types': ['video/mp4', 'video/avi', 'video/quicktime', 'video/webm'],
-            'max_size': 100 * 1024 * 1024,  # 100MB
+            'max_size': MAX_MEDIA_FILE_SIZE,
             'folder': 'videos'
         },
         'audio': {
             'extensions': ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'],
             'mime_types': ['audio/mp3', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/aac', 'audio/flac'],
-            'max_size': 50 * 1024 * 1024,  # 50MB
+            'max_size': MAX_MEDIA_FILE_SIZE,
             'folder': 'audio'
         },
         'model_3d': {
             'extensions': ['.glb', '.gltf', '.obj', '.fbx', '.dae', '.ply', '.stl'],
             'mime_types': ['model/gltf-binary', 'model/gltf+json', 'model/obj'],
-            'max_size': 50 * 1024 * 1024,  # 50MB
+            'max_size': MAX_MEDIA_FILE_SIZE,
             'folder': '3d_models'
         }
     }
@@ -182,6 +184,31 @@ class MediaService:
             extensions.extend(config.get("extensions", []))
         return extensions
 
+    def _normalize_requested_media_type(
+        self,
+        media_type: Optional[str],
+        *,
+        allow_panorama: bool = False,
+    ) -> Optional[str]:
+        if media_type is None:
+            return None
+
+        normalized = str(media_type).strip().lower()
+        if not normalized:
+            return None
+
+        if normalized == "photo":
+            normalized = "image"
+
+        allowed_types = set(self.SUPPORTED_FORMATS.keys())
+        if allow_panorama:
+            allowed_types.add("panorama")
+
+        if normalized not in allowed_types:
+            raise bad_request("Invalid media_type value")
+
+        return normalized
+
     def upload_poi_media_asset(
         self,
         poi_id: Union[str, int],
@@ -197,16 +224,19 @@ class MediaService:
         if not getattr(file, "filename", ""):
             raise bad_request("No file selected")
 
-        legacy_manager = self._get_legacy_manager()
-        detected_type = legacy_manager.detect_media_type(file.filename)
-        if not detected_type:
-            supported_formats = ", ".join(self._list_supported_extensions())
-            raise bad_request(f"Invalid file type. Supported formats: {supported_formats}")
+        requested_type = self._normalize_requested_media_type(media_type)
+        validation_result = self.validate_file(file, requested_type)
+        if not validation_result["is_valid"]:
+            raise bad_request(
+                "File validation failed",
+                details={
+                    "validation_errors": validation_result["errors"],
+                    "warnings": validation_result.get("warnings", []),
+                },
+            )
 
-        max_size = legacy_manager.SUPPORTED_FORMATS[detected_type]["max_size"]
-        max_size_mb = max_size / (1024 * 1024)
-        if getattr(file, "content_length", None) and file.content_length > max_size:
-            raise bad_request(f"Dosya boyutu {max_size_mb:.0f}MB'dan küçük olmalıdır.")
+        legacy_manager = self._get_legacy_manager()
+        detected_type = validation_result["file_info"]["detected_type"]
 
         poi = self._get_active_poi_identity(poi_id)
 
@@ -220,7 +250,7 @@ class MediaService:
                 poi_name=poi.get("name", ""),
                 category=poi.get("category") or "",
                 media_file_path=str(temp_path),
-                media_type=media_type or detected_type,
+                media_type=requested_type or detected_type,
                 caption=caption,
                 is_primary=is_primary,
             )

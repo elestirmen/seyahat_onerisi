@@ -38,7 +38,6 @@ def login():
         if not auth_config.validate_admin_token(token):
             return jsonify({"success": False, "error": "Invalid token"}), 401
 
-        auth_middleware.create_session()
         return jsonify({"success": True, "message": "Login successful"}), 200
 
     # GET
@@ -124,9 +123,18 @@ def login():
         try { localStorage.removeItem('poi_admin_token'); } catch (_) {}
       }
 
-      async function validateSession() {
+      function storeToken(token) {
+        const value = (token || '').trim();
+        if (!value) return;
+        try { sessionStorage.setItem('poi_admin_token', value); } catch (_) {}
+        try { localStorage.removeItem('poi_admin_token'); } catch (_) {}
+      }
+
+      async function validateSession(candidate) {
+        const headers = { 'Accept': 'application/json' };
+        if (candidate) headers['X-Admin-Token'] = candidate;
         const res = await fetch('/auth/status', {
-          headers: { 'Accept': 'application/json' }
+          headers
         });
         const data = await res.json().catch(() => ({}));
         return Boolean(data && data.authenticated);
@@ -147,19 +155,19 @@ def login():
 
       async function autoLoginIfPresent() {
         try {
-          const alreadyAuthenticated = await validateSession();
+          const existing = getStoredToken();
+          const alreadyAuthenticated = await validateSession(existing);
           if (alreadyAuthenticated) {
             window.location.href = getNext();
             return;
           }
 
-          const existing = getStoredToken();
           if (!existing) return;
 
           setLoading(true);
           const result = await performLogin(existing);
           if (result.ok) {
-            clearStoredToken();
+            storeToken(existing);
             window.location.href = getNext();
           } else {
             clearStoredToken();
@@ -178,7 +186,7 @@ def login():
         try {
           const result = await performLogin(token);
           if (result.ok) {
-            clearStoredToken();
+            storeToken(token);
             show('✅ Token doğrulandı', true);
             setTimeout(() => window.location.href = getNext(), 200);
           } else {

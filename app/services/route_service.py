@@ -1429,6 +1429,21 @@ class RouteService:
         if not file or not file.filename:
             raise bad_request("File is required")
 
+        requested_type = media_service._normalize_requested_media_type(
+            requested_media_type,
+            allow_panorama=True,
+        )
+        validation_type = "image" if requested_type == "panorama" else requested_type
+        validation_result = media_service.validate_file(file, validation_type)
+        if not validation_result["is_valid"]:
+            raise bad_request(
+                "File validation failed",
+                details={
+                    "validation_errors": validation_result["errors"],
+                    "warnings": validation_result.get("warnings", []),
+                },
+            )
+
         filename = secure_filename(file.filename)
         extension = Path(filename).suffix
         unique_name = f"{uuid.uuid4().hex}{extension}"
@@ -1437,36 +1452,61 @@ class RouteService:
         media_dir.mkdir(parents=True, exist_ok=True)
 
         file_path = media_dir / unique_name
-        file.save(str(file_path))
+        created_paths: List[Path] = []
 
-        thumbnail_path = media_service.generate_thumbnail(str(file_path))
+        try:
+            file.save(str(file_path))
+            created_paths.append(file_path)
 
-        conn_context = self._get_database_connection()
-        if conn_context is None:
-            raise APIError("Database connection failed", "DB_CONN_ERROR")
+            thumbnail_path = media_service.generate_thumbnail(str(file_path))
+            if thumbnail_path:
+                created_paths.append(Path(thumbnail_path))
 
-        stored_media_type = requested_media_type or media_service._detect_media_type(filename) or 'image'
-        if stored_media_type == 'photo':
-            stored_media_type = 'image'
+            conn_context = self._get_database_connection()
+            if conn_context is None:
+                raise APIError("Database connection failed", "DB_CONN_ERROR")
 
-        with conn_context as conn:
-            with conn.cursor() as cursor:
-                query = (
-                    "INSERT INTO route_media (route_id, file_path, thumbnail_path, lat, lng, caption, is_primary, media_type) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
-                    "RETURNING id, route_id, file_path, thumbnail_path, lat, lng, caption, is_primary, media_type, uploaded_at"
-                )
-                cursor.execute(query, (
-                    route_id,
-                    str(file_path),
-                    thumbnail_path,
-                    lat,
-                    lng,
-                    caption,
-                    is_primary,
-                    stored_media_type,
-                ))
-                result = cursor.fetchone()
+            stored_media_type = requested_type or validation_result["file_info"]["detected_type"]
+
+            with conn_context as conn:
+                with conn.cursor() as cursor:
+                    query = (
+                        "INSERT INTO route_media (route_id, file_path, thumbnail_path, lat, lng, caption, is_primary, media_type) "
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
+                        "RETURNING id, route_id, file_path, thumbnail_path, lat, lng, caption, is_primary, media_type, uploaded_at"
+                    )
+                    cursor.execute(query, (
+                        route_id,
+                        str(file_path),
+                        thumbnail_path,
+                        lat,
+                        lng,
+                        caption,
+                        is_primary,
+                        stored_media_type,
+                    ))
+                    result = cursor.fetchone()
+                    if not result:
+                        raise APIError("Failed to persist route media", "ROUTE_MEDIA_UPLOAD_ERROR", 500)
+        except APIError:
+            for created_path in reversed(created_paths):
+                try:
+                    created_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+            if media_dir.exists() and not any(media_dir.iterdir()):
+                media_dir.rmdir()
+            raise
+        except Exception as exc:
+            for created_path in reversed(created_paths):
+                try:
+                    created_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+            if media_dir.exists() and not any(media_dir.iterdir()):
+                media_dir.rmdir()
+            logger.error("Failed to add route media for route %s: %s", route_id, exc)
+            raise APIError("Failed to upload route media", "ROUTE_MEDIA_UPLOAD_ERROR", 500)
 
         media_record = dict(result)
         if media_record.get('uploaded_at'):

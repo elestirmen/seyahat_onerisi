@@ -11527,16 +11527,29 @@ async function initializeEmptyMap() {
         // Hide route planner text while in fullscreen via plugin
         try {
             const routeSection = document.getElementById('routeSection');
+            const exploreBottomSection = document.querySelector('.explore-bottom-section');
             let prevDisplay = '';
+            let prevExploreDisplay = '';
             map.on('enterFullscreen', () => {
+                document.body.classList.add('personal-routes-map-fullscreen');
                 if (routeSection) {
                     prevDisplay = routeSection.style.display;
                     routeSection.style.display = 'none';
                 }
+                if (exploreBottomSection) {
+                    prevExploreDisplay = exploreBottomSection.style.display;
+                    exploreBottomSection.style.display = 'none';
+                    exploreBottomSection.setAttribute('aria-hidden', 'true');
+                }
             });
             map.on('exitFullscreen', () => {
+                document.body.classList.remove('personal-routes-map-fullscreen');
                 if (routeSection) {
                     routeSection.style.display = prevDisplay || '';
+                }
+                if (exploreBottomSection) {
+                    exploreBottomSection.style.display = prevExploreDisplay || '';
+                    exploreBottomSection.removeAttribute('aria-hidden');
                 }
             });
         } catch (_) { /* noop */ }
@@ -11662,16 +11675,29 @@ async function initializeMap(recommendationData) {
         // Hide route planner text while in fullscreen via plugin
         try {
             const routeSection = document.getElementById('routeSection');
+            const exploreBottomSection = document.querySelector('.explore-bottom-section');
             let prevDisplay = '';
+            let prevExploreDisplay = '';
             map.on('enterFullscreen', () => {
+                document.body.classList.add('personal-routes-map-fullscreen');
                 if (routeSection) {
                     prevDisplay = routeSection.style.display;
                     routeSection.style.display = 'none';
                 }
+                if (exploreBottomSection) {
+                    prevExploreDisplay = exploreBottomSection.style.display;
+                    exploreBottomSection.style.display = 'none';
+                    exploreBottomSection.setAttribute('aria-hidden', 'true');
+                }
             });
             map.on('exitFullscreen', () => {
+                document.body.classList.remove('personal-routes-map-fullscreen');
                 if (routeSection) {
                     routeSection.style.display = prevDisplay || '';
+                }
+                if (exploreBottomSection) {
+                    exploreBottomSection.style.display = prevExploreDisplay || '';
+                    exploreBottomSection.removeAttribute('aria-hidden');
                 }
             });
         } catch (_) { /* noop */ }
@@ -12937,10 +12963,12 @@ document.addEventListener('DOMContentLoaded', function() {
     (function setupDynamicMapFullscreen() {
         const btn = document.getElementById('dynamicMapFullscreenBtn');
         const container = document.getElementById('mapContainer');
+        const exploreBottomSection = document.querySelector('.explore-bottom-section');
         if (!btn || !container) return;
 
         let prevScrollY = 0;
         let previousRouteSectionDisplay = '';
+        let previousExploreSectionDisplay = '';
         const routeSection = document.getElementById('routeSection');
         const escHandler = (e) => {
             if (e.key === 'Escape' && container.classList.contains('fullscreen')) toggle(false);
@@ -12971,6 +12999,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 container.classList.add('fullscreen');
+                document.body.classList.add('personal-routes-map-fullscreen');
+                if (exploreBottomSection) {
+                    previousExploreSectionDisplay = exploreBottomSection.style.display;
+                    exploreBottomSection.style.display = 'none';
+                    exploreBottomSection.setAttribute('aria-hidden', 'true');
+                }
 
                 // Hide route planner section to avoid overlaying text
                 if (routeSection) {
@@ -13043,6 +13077,11 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 // Exit fullscreen
                 container.classList.remove('fullscreen');
+                document.body.classList.remove('personal-routes-map-fullscreen');
+                if (exploreBottomSection) {
+                    exploreBottomSection.style.display = previousExploreSectionDisplay || '';
+                    exploreBottomSection.removeAttribute('aria-hidden');
+                }
 
                 // Mobile-specific cleanup
                 if (isMobile) {

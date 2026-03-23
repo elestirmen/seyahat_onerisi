@@ -31,25 +31,40 @@ class RouteImportService:
         self.state_dir.mkdir(parents=True, exist_ok=True)
         self.progress_tracking = {}
 
+    def _normalize_upload_id(self, upload_id: str) -> str:
+        try:
+            return str(uuid.UUID(str(upload_id)))
+        except (TypeError, ValueError, AttributeError):
+            raise bad_request("Invalid upload_id format")
+
     def _state_path(self, upload_id: str) -> Path:
-        return self.state_dir / f"{upload_id}.json"
+        safe_upload_id = self._normalize_upload_id(upload_id)
+        state_path = (self.state_dir / f"{safe_upload_id}.json").resolve()
+        state_root = self.state_dir.resolve()
+        try:
+            state_path.relative_to(state_root)
+        except ValueError:
+            raise bad_request("Invalid upload_id format")
+        return state_path
 
     def _write_progress_state(self, upload_id: str, payload: Dict[str, Any]):
-        state_path = self._state_path(upload_id)
+        safe_upload_id = self._normalize_upload_id(upload_id)
+        state_path = self._state_path(safe_upload_id)
         temp_path = state_path.with_suffix(".tmp")
         with open(temp_path, "w", encoding="utf-8") as handle:
             json.dump(payload, handle, ensure_ascii=False)
         os.replace(temp_path, state_path)
 
     def _read_progress_state(self, upload_id: str) -> Optional[Dict[str, Any]]:
-        state_path = self._state_path(upload_id)
+        safe_upload_id = self._normalize_upload_id(upload_id)
+        state_path = self._state_path(safe_upload_id)
         if not state_path.exists():
             return None
         try:
             with open(state_path, "r", encoding="utf-8") as handle:
                 return json.load(handle)
         except Exception as exc:
-            logger.warning(f"Failed to read import state for {upload_id}: {exc}")
+            logger.warning(f"Failed to read import state for {safe_upload_id}: {exc}")
             return None
     
     def validate_file(self, file: FileStorage) -> Dict[str, Any]:
@@ -161,10 +176,11 @@ class RouteImportService:
             Path to saved file
         """
         try:
+            safe_upload_id = self._normalize_upload_id(upload_id)
             # Create secure filename
             ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'tmp'
-            safe_filename = f"route_import_{upload_id}.{ext}"
-            file_path = os.path.join(self.upload_dir, safe_filename)
+            safe_filename = f"route_import_{safe_upload_id}.{ext}"
+            file_path = str(Path(self.upload_dir) / safe_filename)
             
             # Save file
             file.save(file_path)
@@ -365,6 +381,7 @@ class RouteImportService:
     
     def update_progress(self, upload_id: str, status: str, progress: int, message: str, **kwargs):
         """Update import progress."""
+        safe_upload_id = self._normalize_upload_id(upload_id)
         payload = {
             'status': status,
             'progress': progress,
@@ -372,22 +389,24 @@ class RouteImportService:
             'timestamp': datetime.now().isoformat(),
             **kwargs
         }
-        self.progress_tracking[upload_id] = payload
-        self._write_progress_state(upload_id, payload)
-    
+        self.progress_tracking[safe_upload_id] = payload
+        self._write_progress_state(safe_upload_id, payload)
+
     def get_progress(self, upload_id: str) -> Optional[Dict[str, Any]]:
         """Get import progress."""
-        state = self._read_progress_state(upload_id)
+        safe_upload_id = self._normalize_upload_id(upload_id)
+        state = self._read_progress_state(safe_upload_id)
         if state is not None:
-            self.progress_tracking[upload_id] = state
+            self.progress_tracking[safe_upload_id] = state
             return state
-        return self.progress_tracking.get(upload_id)
+        return self.progress_tracking.get(safe_upload_id)
     
     def cleanup_upload(self, upload_id: str, file_path: str = None):
         """Clean up upload files and progress tracking."""
+        safe_upload_id = self._normalize_upload_id(upload_id)
         try:
             if not file_path:
-                state = self.get_progress(upload_id) or {}
+                state = self.get_progress(safe_upload_id) or {}
                 file_path = state.get('temp_file_path')
 
             # Remove file if exists
@@ -396,14 +415,14 @@ class RouteImportService:
                 logger.info(f"Cleaned up file: {file_path}")
             
             # Remove progress tracking
-            if upload_id in self.progress_tracking:
-                del self.progress_tracking[upload_id]
-                logger.info(f"Cleaned up progress tracking: {upload_id}")
+            if safe_upload_id in self.progress_tracking:
+                del self.progress_tracking[safe_upload_id]
+                logger.info(f"Cleaned up progress tracking: {safe_upload_id}")
 
-            state_path = self._state_path(upload_id)
+            state_path = self._state_path(safe_upload_id)
             if state_path.exists():
                 state_path.unlink()
-                logger.info(f"Cleaned up persisted state: {upload_id}")
+                logger.info(f"Cleaned up persisted state: {safe_upload_id}")
                 
         except Exception as e:
             logger.warning(f"Error during cleanup: {e}")
