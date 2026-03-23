@@ -8806,7 +8806,7 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
         const eyeOffset = 1.6;
 
         const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
 
         const container = document.createElement('div');
         container.style.cssText = normalContainerStyle;
@@ -8841,6 +8841,8 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
         container.appendChild(hint);
         overlay.appendChild(container);
         document.body.appendChild(overlay);
+        const originalBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
 
         let isClosing = false;
         let isVrMode = false;
@@ -8860,6 +8862,71 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
         let sourceSwitchCooldownUntil = 0;
         let currentPanoramaUrl = '';
         let activeVariant = null;
+
+        const getFullscreenElement = () => (
+            document.fullscreenElement
+            || document.webkitFullscreenElement
+            || document.mozFullScreenElement
+            || document.msFullscreenElement
+            || null
+        );
+
+        const requestElementFullscreen = async (element) => {
+            if (!element) return false;
+            if (getFullscreenElement()) return true;
+            const requestFn = element.requestFullscreen
+                || element.webkitRequestFullscreen
+                || element.mozRequestFullScreen
+                || element.msRequestFullscreen;
+            if (typeof requestFn !== 'function') return false;
+            try {
+                const result = requestFn.call(element);
+                if (result && typeof result.then === 'function') {
+                    await result;
+                }
+                return !!getFullscreenElement();
+            } catch (_) {
+                return false;
+            }
+        };
+
+        const exitAnyFullscreen = async () => {
+            const exitFn = document.exitFullscreen
+                || document.webkitExitFullscreen
+                || document.mozCancelFullScreen
+                || document.msExitFullscreen;
+            if (typeof exitFn !== 'function' || !getFullscreenElement()) return false;
+            try {
+                const result = exitFn.call(document);
+                if (result && typeof result.then === 'function') {
+                    await result;
+                }
+                return !getFullscreenElement();
+            } catch (_) {
+                return false;
+            }
+        };
+
+        const setViewerPresentation = (immersive) => {
+            overlay.style.alignItems = immersive ? 'stretch' : 'center';
+            overlay.style.justifyContent = immersive ? 'stretch' : 'center';
+            overlay.style.padding = immersive ? '0' : '16px';
+            overlay.style.background = immersive ? '#000' : 'rgba(0,0,0,.88)';
+            container.style.cssText = immersive ? vrContainerStyle : normalContainerStyle;
+        };
+
+        const isLikelyMobileVrDevice = () => {
+            try {
+                const coarsePointer = typeof window.matchMedia === 'function'
+                    ? window.matchMedia('(pointer: coarse)').matches
+                    : false;
+                const touchPoints = Number(navigator.maxTouchPoints || 0);
+                const compactViewport = Math.max(window.innerWidth || 0, window.innerHeight || 0) <= 1180;
+                return coarsePointer || (touchPoints > 0 && compactViewport);
+            } catch (_) {
+                return false;
+            }
+        };
 
         const normalizePanoramaUrl = (value) => {
             if (!value || typeof value !== 'string') return '';
@@ -9000,6 +9067,36 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
                 hint.style.display = 'none';
                 hintTimer = null;
             }, ms);
+        };
+
+        const lockLandscapeOrientation = async () => {
+            try {
+                if (screen.orientation && typeof screen.orientation.lock === 'function') {
+                    await screen.orientation.lock('landscape');
+                    return true;
+                }
+            } catch (_) {}
+            return false;
+        };
+
+        const describeVrState = (immersiveState, baseText) => {
+            if (!immersiveState || immersiveState.fullscreenActive === false) {
+                return `${baseText} Tam ekran açılamadı; görünüm sayfaya sabitlendi.`;
+            }
+            if (immersiveState.orientationLocked === false) {
+                return `${baseText} En iyi sonuç için telefonu yatay kullanın.`;
+            }
+            return baseText;
+        };
+
+        const enterVrImmersiveMode = async () => {
+            setViewerPresentation(true);
+            const fullscreenActive = await requestElementFullscreen(container);
+            const orientationLocked = await lockLandscapeOrientation();
+            return {
+                fullscreenActive,
+                orientationLocked,
+            };
         };
 
         const readCurrentHfov = () => {
@@ -9296,6 +9393,12 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
             } catch (_) {}
         };
 
+        const exitVrImmersiveMode = async () => {
+            unlockOrientation();
+            await exitAnyFullscreen();
+            setViewerPresentation(false);
+        };
+
         const closeViewer = () => {
             if (isClosing) return;
             isClosing = true;
@@ -9304,12 +9407,10 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
                 clearTimeout(hintTimer);
                 hintTimer = null;
             }
-            unlockOrientation();
-            if (document.fullscreenElement && document.exitFullscreen) {
-                document.exitFullscreen().catch(() => {});
-            }
+            exitVrImmersiveMode().catch(() => {});
             document.removeEventListener('keydown', onEsc);
             overlay.removeEventListener('click', onOverlayClick);
+            document.body.style.overflow = originalBodyOverflow;
             try { document.body.removeChild(overlay); } catch (_) {}
         };
 
@@ -9332,11 +9433,7 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
                 activeVariant = preferredNormalVariant;
                 currentPanoramaUrl = preferredNormalVariant.url;
             }
-            if (document.fullscreenElement && document.exitFullscreen) {
-                document.exitFullscreen().catch(() => {});
-            }
-            unlockOrientation();
-            container.style.cssText = normalContainerStyle;
+            await exitVrImmersiveMode();
             setVrButtonState(false);
             destroyAllViewers();
 
@@ -9523,22 +9620,17 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
                     const yaw = (typeof stereoLeftViewer.getYaw === 'function') ? stereoLeftViewer.getYaw() : 0;
                     const pitch = (typeof stereoLeftViewer.getPitch === 'function') ? stereoLeftViewer.getPitch() : 0;
                     const hfov = (typeof stereoLeftViewer.getHfov === 'function') ? stereoLeftViewer.getHfov() : 100;
-                    const rightYaw = normalizeYaw(yaw + eyeOffset);
-                    if (typeof stereoRightViewer.lookAt === 'function') {
-                        stereoRightViewer.lookAt(pitch, rightYaw, hfov, false);
-                    } else {
-                        if (typeof stereoRightViewer.setPitch === 'function') stereoRightViewer.setPitch(pitch, false);
-                        if (typeof stereoRightViewer.setYaw === 'function') stereoRightViewer.setYaw(rightYaw, false);
-                        if (typeof stereoRightViewer.setHfov === 'function') stereoRightViewer.setHfov(hfov, false);
-                    }
+                    applyStereoLook(yaw, pitch, hfov);
                 } catch (_) {}
                 stereoSyncRafId = requestAnimationFrame(tick);
             };
             stereoSyncRafId = requestAnimationFrame(tick);
         };
 
-        const initStereoViewer = async () => {
+        const initStereoViewer = async (immersivePromise = null) => {
             if (isClosing) return false;
+            const settledImmersivePromise = immersivePromise || enterVrImmersiveMode();
+            const preferManualStereo = isLikelyMobileVrDevice();
             let seedHfov = 100;
             if (normalViewer && typeof normalViewer.getHfov === 'function') {
                 try { seedHfov = Number(normalViewer.getHfov()) || 100; } catch (_) {}
@@ -9553,7 +9645,7 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
                 if (!modules || isClosing) return false;
 
                 destroyAllViewers();
-                container.style.cssText = vrContainerStyle;
+                setViewerPresentation(true);
                 try {
                     officialModules = modules;
                     officialViewer = new officialModules.Viewer({
@@ -9596,10 +9688,14 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
                     }
 
                     await officialStereoPlugin.start();
+                    const immersiveState = await settledImmersivePromise;
                     usingOfficialStereo = true;
                     setVrButtonState(true);
                     startAdaptiveSourceMonitor();
-                    showHint('Resmi Stereo plugin aktif.', 2600);
+                    showHint(
+                        describeVrState(immersiveState, 'VR aktif: stereo plugin + sensör/dokunmatik hazır.'),
+                        3400
+                    );
                     return true;
                 } catch (e) {
                     console.warn('Official stereo start failed, fallback to manual stereo:', e);
@@ -9609,7 +9705,7 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
                 }
             };
 
-            if (await initOfficialStereo()) return true;
+            if (!preferManualStereo && await initOfficialStereo()) return true;
             if (!await ensurePannellum()) return false;
 
             let initialYaw = 0;
@@ -9622,7 +9718,7 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
             }
 
             destroyAllViewers();
-            container.style.cssText = vrContainerStyle;
+            setViewerPresentation(true);
             viewerDiv.innerHTML = '';
             viewerDiv.style.display = 'flex';
 
@@ -9687,22 +9783,20 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
                     }
                 }
 
+                const immersiveState = await settledImmersivePromise;
                 if (stereoOrientationActive) {
-                    showHint('VR aktif: sensör + iki tarafta pinch/zoom kullanılabilir.', 3400);
+                    showHint(
+                        describeVrState(immersiveState, 'VR aktif: sensör + iki tarafta pinch/zoom kullanılabilir.'),
+                        3800
+                    );
                 } else {
-                    showHint('VR aktif: sensör yok/izin verilmedi; iki tarafta dokunmatik kontrol aktif.', 3600);
+                    showHint(
+                        describeVrState(immersiveState, 'VR aktif: sensör yok/izin verilmedi; iki tarafta dokunmatik kontrol aktif.'),
+                        4000
+                    );
                 }
 
                 startStereoSync();
-                if (!document.fullscreenElement && container.requestFullscreen) {
-                    container.requestFullscreen().catch(() => {});
-                }
-                try {
-                    if (screen.orientation && typeof screen.orientation.lock === 'function') {
-                        screen.orientation.lock('landscape').catch(() => {});
-                    }
-                } catch (_) {}
-
                 setVrButtonState(true);
                 startAdaptiveSourceMonitor();
                 return true;
@@ -9717,10 +9811,6 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
             if (usingOfficialStereo) {
                 destroyOfficialStereo();
             }
-            if (document.fullscreenElement && document.exitFullscreen) {
-                document.exitFullscreen().catch(() => {});
-            }
-            unlockOrientation();
             await initNormalViewer();
         };
 
@@ -9731,7 +9821,8 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
                 if (isVrMode) {
                     await exitStereoViewer();
                 } else {
-                    const ok = await initStereoViewer();
+                    const immersivePromise = enterVrImmersiveMode();
+                    const ok = await initStereoViewer(immersivePromise);
                     if (!ok) {
                         await initNormalViewer();
                         showHint('VR modu açılamadı. Normal panoramaya dönüldü.', 2800);

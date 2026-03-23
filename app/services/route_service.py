@@ -496,9 +496,67 @@ class RouteService:
         if item.get("media_type") == "photo":
             item["media_type"] = "image"
         item.setdefault("media_type", "image")
+        panorama_meta = self._extract_route_panorama_meta(
+            item.get("file_path"),
+            item.get("media_type"),
+        )
+        item.update(panorama_meta)
         item["latitude"] = item.get("lat")
         item["longitude"] = item.get("lng")
         return item
+
+    def _extract_route_panorama_meta(self, file_path: Any, media_type: Any) -> Dict[str, Any]:
+        meta: Dict[str, Any] = {
+            "is_pano": str(media_type or "").strip().lower() == "panorama",
+            "original_path": None,
+            "pyramid_levels": [],
+        }
+        if not file_path:
+            return meta
+
+        path = Path(str(file_path))
+        if not path.is_absolute():
+            path = Path.cwd() / path
+        if not path.is_file():
+            return meta
+
+        if not meta["is_pano"]:
+            try:
+                from PIL import Image  # type: ignore
+
+                with Image.open(path) as image:
+                    width, height = image.size
+                if height and 1.90 <= (float(width) / float(height)) <= 2.10 and width >= 1000:
+                    meta["is_pano"] = True
+            except Exception:
+                pass
+
+        try:
+            sidecar_path = path.with_suffix(".pano.json")
+            if sidecar_path.is_file():
+                with open(sidecar_path, "r", encoding="utf-8") as sidecar_file:
+                    sidecar_meta = json.load(sidecar_file) or {}
+
+                original_path = sidecar_meta.get("original_path")
+                if isinstance(original_path, str):
+                    normalized_original = media_service._to_relative_media_path(original_path)
+                    meta["original_path"] = normalized_original or None
+
+                normalized_levels: List[Dict[str, Any]] = []
+                for level in sidecar_meta.get("pyramid_levels", []) or []:
+                    if not isinstance(level, dict):
+                        continue
+                    normalized_level = dict(level)
+                    normalized_level["path"] = media_service._to_relative_media_path(level.get("path"))
+                    normalized_levels.append(normalized_level)
+                meta["pyramid_levels"] = normalized_levels
+
+                if meta["original_path"] or meta["pyramid_levels"]:
+                    meta["is_pano"] = True
+        except Exception:
+            pass
+
+        return meta
 
     def _coerce_bool(self, value: Any) -> bool:
         if isinstance(value, bool):

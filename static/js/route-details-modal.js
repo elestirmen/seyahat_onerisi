@@ -1242,8 +1242,53 @@ class RouteDetailsModal {
         }
     }
 
+    escapeAttribute(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    isPanoramaMedia(mediaType, mediaMeta = {}) {
+        const normalizedType = String(mediaType || mediaMeta.type || '').toLowerCase();
+        return normalizedType === 'panorama'
+            || mediaMeta.isPano === true
+            || mediaMeta.is_pano === true
+            || String(mediaMeta.originalPath || mediaMeta.original_path || '').length > 0;
+    }
+
+    openPanoramaMedia(mediaUrl, mediaMeta = {}) {
+        if (!mediaUrl || typeof window.openPanoramaViewer !== 'function') {
+            return false;
+        }
+
+        const caption = mediaMeta.caption || mediaMeta.alt_text || '360° Panorama';
+        const originalPath = mediaMeta.originalPath || mediaMeta.original_path || '';
+        let pyramidEncoded = '';
+
+        if (typeof mediaMeta.pyramidEncoded === 'string' && mediaMeta.pyramidEncoded) {
+            pyramidEncoded = mediaMeta.pyramidEncoded;
+        } else if (Array.isArray(mediaMeta.pyramid_levels)) {
+            try {
+                pyramidEncoded = encodeURIComponent(JSON.stringify(mediaMeta.pyramid_levels));
+            } catch (_) {
+                pyramidEncoded = '';
+            }
+        }
+
+        if (this.currentMediaViewer && document.contains(this.currentMediaViewer)) {
+            this.currentMediaViewer.remove();
+        }
+        this.currentMediaViewer = null;
+
+        window.openPanoramaViewer(mediaUrl, caption, pyramidEncoded, originalPath);
+        return true;
+    }
+
     renderMediaItems(mediaFiles) {
         return mediaFiles.map((media, index) => {
+            const isPanorama = media.is_pano === true || media.media_type === 'panorama';
             const isVideo = media.media_type === 'video' || media.path?.includes('.mp4');
             const isAudio = media.media_type === 'audio' || media.path?.includes('.mp3');
             const is3D = media.media_type === 'model_3d' || media.path?.includes('.glb');
@@ -1290,17 +1335,40 @@ class RouteDetailsModal {
 
             console.warn('🎬 Final media URL for display:', mediaUrl);
 
+            const mediaType = isPanorama
+                ? 'panorama'
+                : (media.media_type || (isVideo ? 'video' : isAudio ? 'audio' : is3D ? 'model_3d' : 'image'));
+
             let typeIcon = 'fas fa-file';
-            if (isVideo) typeIcon = 'fas fa-play';
+            if (isPanorama) typeIcon = 'fas fa-vr-cardboard';
+            else if (isVideo) typeIcon = 'fas fa-play';
             else if (isAudio) typeIcon = 'fas fa-volume-up';
             else if (is3D) typeIcon = 'fas fa-cube';
             else typeIcon = 'fas fa-image';
 
             const mediaTitle = media.caption || media.alt_text || `Medya ${index + 1}`;
-            const mediaInfo = `${media.media_type || 'image'} • ${this.formatFileSize(media.file_size)}`;
+            const mediaInfo = `${mediaType} • ${this.formatFileSize(media.file_size)}`;
+            const captionAttr = this.escapeAttribute(mediaTitle);
+            const originalPathAttr = this.escapeAttribute(media.original_path || '');
+            const pyramidAttr = this.escapeAttribute(
+                (() => {
+                    try {
+                        return encodeURIComponent(JSON.stringify(Array.isArray(media.pyramid_levels) ? media.pyramid_levels : []));
+                    } catch (_) {
+                        return '';
+                    }
+                })()
+            );
 
             return `
-                <div class="route-media-item" data-media-index="${index}" data-media-url="${mediaUrl}" data-media-type="${media.media_type || 'image'}">
+                <div class="route-media-item"
+                     data-media-index="${index}"
+                     data-media-url="${this.escapeAttribute(mediaUrl)}"
+                     data-media-type="${this.escapeAttribute(mediaType)}"
+                     data-media-caption="${captionAttr}"
+                     data-media-original-path="${originalPathAttr}"
+                     data-media-pyramid-levels="${pyramidAttr}"
+                     data-media-is-pano="${isPanorama ? '1' : '0'}">
                     ${isVideo ?
                     `<video src="${mediaUrl}" muted preload="metadata" onloadeddata="this.classList.add('loaded')" onerror="console.error('Failed to load video:', '${mediaUrl}'); this.parentElement.style.display='none';"></video>
                      <div class="route-media-play-btn">
@@ -1358,12 +1426,18 @@ class RouteDetailsModal {
             const url = item.dataset.mediaUrl;
             const type = item.dataset.mediaType;
             const index = parseInt(item.dataset.mediaIndex, 10);
+            const mediaMeta = {
+                caption: item.dataset.mediaCaption || '',
+                originalPath: item.dataset.mediaOriginalPath || '',
+                pyramidEncoded: item.dataset.mediaPyramidLevels || '',
+                isPano: item.dataset.mediaIsPano === '1'
+            };
 
-            console.log('📊 Media Item Data:', { url, type, index });
+            console.log('📊 Media Item Data:', { url, type, index, mediaMeta });
 
             if (url) {
                 console.log('🚀 Calling showMediaViewer...');
-                this.showMediaViewer(url, type, index);
+                this.showMediaViewer(url, type, index, mediaMeta);
             } else {
                 console.error('❌ No URL found in dataset');
             }
@@ -3065,7 +3139,12 @@ class RouteDetailsModal {
                     const url = media.url || media.path || media.file_path || media.full_path || media.original_path || '';
                     const type = (media.media_type && media.media_type.toLowerCase()) || this.getMediaTypeFromUrl(url);
                     if (url) {
-                        this.showMediaViewer(url, type);
+                        this.showMediaViewer(url, type, 0, {
+                            caption: media.caption || media.alt_text || '',
+                            originalPath: media.original_path || '',
+                            pyramid_levels: Array.isArray(media.pyramid_levels) ? media.pyramid_levels : [],
+                            isPano: media.is_pano === true
+                        });
                         return; // don't also pan the map
                     }
                 }
@@ -3231,7 +3310,14 @@ class RouteDetailsModal {
                 el.appendChild(i);
                 el.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    if (rawUrl) this.showMediaViewer(rawUrl, type);
+                    if (rawUrl) {
+                        this.showMediaViewer(rawUrl, type, 0, {
+                            caption: media.caption || media.alt_text || '',
+                            originalPath: media.original_path || '',
+                            pyramid_levels: Array.isArray(media.pyramid_levels) ? media.pyramid_levels : [],
+                            isPano: media.is_pano === true
+                        });
+                    }
                 });
                 layer.appendChild(el);
             });
@@ -3558,7 +3644,7 @@ class RouteDetailsModal {
         }
     }
 
-    showMediaViewer(mediaUrl, mediaType, mediaIndex = 0) {
+    showMediaViewer(mediaUrl, mediaType, mediaIndex = 0, mediaMeta = {}) {
         console.warn('🎬 Show media viewer:', mediaUrl, mediaType, 'index:', mediaIndex);
 
         if (!mediaUrl) {
@@ -3592,6 +3678,14 @@ class RouteDetailsModal {
         }).then(workingUrl => {
             console.log('📍 Step 3: Working URL found:', workingUrl);
             if (workingUrl) {
+                const resolvedMeta = {
+                    ...mediaMeta,
+                    type: mediaType,
+                    url: workingUrl
+                };
+                if (this.isPanoramaMedia(mediaType, resolvedMeta) && this.openPanoramaMedia(workingUrl, resolvedMeta)) {
+                    return;
+                }
                 console.log('📍 Step 4: Creating media viewer modal...');
                 this.createMediaViewerModal(workingUrl, mediaType, mediaIndex);
                 console.log('✅ Media viewer modal created');
@@ -3796,6 +3890,7 @@ class RouteDetailsModal {
 
     getMediaTypeName(mediaType) {
         const typeNames = {
+            'panorama': '360° Panorama',
             'image': 'Resim',
             'video': 'Video',
             'audio': 'Ses',
@@ -3836,14 +3931,27 @@ class RouteDetailsModal {
         const items = Array.from(document.querySelectorAll('.route-media-item'));
         return items.map((item) => {
             const imgOrVideo = item.querySelector('img, video');
-            const url = imgOrVideo ? (imgOrVideo.src || imgOrVideo.poster) : '';
-            const type = window.getMediaTypeFromPath ? window.getMediaTypeFromPath(url) : 'image';
-            return { url, type };
+            const url = item.dataset.mediaUrl || (imgOrVideo ? (imgOrVideo.src || imgOrVideo.poster) : '');
+            const rawType = item.dataset.mediaType || (window.getMediaTypeFromPath ? window.getMediaTypeFromPath(url) : 'image');
+            const isPano = item.dataset.mediaIsPano === '1' || rawType === 'panorama';
+            return {
+                url,
+                type: isPano ? 'panorama' : rawType,
+                caption: item.dataset.mediaCaption || '',
+                originalPath: item.dataset.mediaOriginalPath || '',
+                pyramidEncoded: item.dataset.mediaPyramidLevels || '',
+                isPano
+            };
         });
     }
 
     setViewerIndex(newIndex) {
         if (newIndex < 0 || newIndex >= this.currentMediaList.length) return;
+        const nextMedia = this.currentMediaList[newIndex];
+        if (nextMedia && this.isPanoramaMedia(nextMedia.type, nextMedia) && this.openPanoramaMedia(nextMedia.url, nextMedia)) {
+            this.currentMediaIndex = newIndex;
+            return;
+        }
         this.currentMediaIndex = newIndex;
         this.updateViewerContent();
         this.preloadNeighborMedia();

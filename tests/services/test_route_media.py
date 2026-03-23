@@ -68,3 +68,51 @@ def test_route_media_files_are_cleaned_up_when_db_write_fails(monkeypatch):
 
     if route_dir.exists() and not any(route_dir.iterdir()):
         route_dir.rmdir()
+
+
+def test_normalize_route_media_record_exposes_panorama_meta(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    route_dir = tmp_path / "poi_media" / "route_media" / "42"
+    route_dir.mkdir(parents=True)
+
+    media_path = route_dir / "pano.jpg"
+    media_path.write_bytes(b"not-a-real-image")
+
+    sidecar_path = route_dir / "pano.pano.json"
+    sidecar_path.write_text(
+        """
+        {
+          "original_path": "poi_media/route_media/42/pano_orig.jpg",
+          "pyramid_levels": [
+            {
+              "path": "poi_media/route_media/42/levels/pano_2048.jpg",
+              "width": 2048,
+              "height": 1024
+            }
+          ]
+        }
+        """.strip(),
+        encoding="utf-8",
+    )
+
+    normalized = route_service._normalize_route_media_record(
+        {
+            "id": 1,
+            "route_id": 42,
+            "file_path": str(media_path),
+            "media_type": "image",
+            "lat": 38.63,
+            "lng": 34.91,
+        }
+    )
+
+    assert normalized["is_pano"] is True
+    assert normalized["original_path"] == "poi_media/route_media/42/pano_orig.jpg"
+    assert normalized["pyramid_levels"] == [
+        {
+            "path": "poi_media/route_media/42/levels/pano_2048.jpg",
+            "width": 2048,
+            "height": 1024,
+        }
+    ]
