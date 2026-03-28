@@ -1,4 +1,20 @@
 <resources>
   <string name="app_name">Harita Ürgüp</string>
+  <string name="nearby_poi_channel_name">Yakın POI Uyarıları</string>
+  <string name="nearby_poi_channel_description">Yakınınızdaki POI türleri için canlı uyarı bildirimleri</string>
+  <string name="nearby_poi_notification_title">Yakın POI Uyarısı</string>
+  <string name="poi_tracking_channel_name">Arka Plan POI Takibi</string>
+  <string name="poi_tracking_channel_description">Yakın POI türlerini arka planda izleyen foreground service bildirimleri</string>
+  <string name="poi_tracking_notification_title">Yakın POI takibi aktif</string>
+  <string name="poi_tracking_notification_active">%1$s için %2$d m eşiğinde izleme sürüyor</string>
+  <string name="poi_tracking_notification_nearest">En yakın POI: %1$s (%2$s)</string>
+  <string name="poi_tracking_notification_empty">%1$s için %2$d m içinde POI bulunamadı</string>
+  <string name="poi_tracking_notification_no_location">Konum izni olmadan arka plan takibi başlatılamaz</string>
+  <string name="poi_tracking_notification_location_disabled">Konum servisleri kapalı, takip beklemede</string>
+  <string name="poi_tracking_notification_error">Yakın POI taraması geçici olarak başarısız oldu</string>
+  <string name="poi_tracking_alert_title">%1$s POI yakınınızda</string>
+  <string name="poi_tracking_alert_message">%1$s yaklaşık %2$s mesafede</string>
+  <string name="poi_tracking_stop_action">Durdur</string>
+  <string name="poi_tracking_all_categories">Tüm türler</string>
+  <string name="poi_tracking_permission_denied">Konum izni verilmeden arka plan takibi başlatılamaz</string>
 </resources>
-

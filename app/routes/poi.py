@@ -3,6 +3,8 @@ POI Routes for POI Travel Recommendation API.
 Handles all POI-related HTTP endpoints.
 """
 
+from typing import List
+
 from flask import Blueprint, request, jsonify
 import logging
 
@@ -21,6 +23,22 @@ def _legacy_style_error(error: APIError):
     status_code = 500 if error.code == 'DB_CONN_ERROR' else error.status_code
     message = 'Database connection failed' if error.code == 'DB_CONN_ERROR' else error.message
     return jsonify({'error': message}), status_code
+
+
+def _parse_category_filters() -> List[str]:
+    raw_values = request.args.getlist('categories') + request.args.getlist('categories[]')
+    normalized: List[str] = []
+    seen = set()
+
+    for raw_value in raw_values:
+        for item in str(raw_value or '').split(','):
+            category_name = item.strip()
+            if not category_name or category_name in seen:
+                continue
+            normalized.append(category_name)
+            seen.add(category_name)
+
+    return normalized
 
 
 @poi_bp.route('/pois', methods=['GET'])
@@ -133,6 +151,56 @@ def search_pois():
     except Exception as e:
         logger.error(f"Unexpected error in search_pois: {e}")
         raise APIError("Internal server error", "INTERNAL_ERROR", 500)
+
+
+@poi_bp.route('/pois/nearby', methods=['GET'])
+def nearby_pois():
+    """List nearby POIs around a coordinate, optionally filtered by category/categories."""
+    try:
+        lat_raw = (request.args.get('lat') or '').strip()
+        lng_raw = (request.args.get('lng') or '').strip()
+        if not lat_raw or not lng_raw:
+            raise bad_request("lat and lng query params are required")
+
+        try:
+            lat = float(lat_raw)
+            lng = float(lng_raw)
+        except (TypeError, ValueError):
+            raise bad_request("lat and lng must be numbers")
+
+        if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+            raise bad_request("lat/lng out of range")
+
+        try:
+            radius_m = int(float(request.args.get('radius_m', 1000)))
+        except (TypeError, ValueError):
+            radius_m = 1000
+
+        try:
+            limit = int(float(request.args.get('limit', 50)))
+        except (TypeError, ValueError):
+            limit = 50
+
+        categories = _parse_category_filters()
+        category = (request.args.get('category') or '').strip() or None
+        if categories:
+            category = None
+
+        payload = poi_service.search_nearby_pois(
+            lat=lat,
+            lng=lng,
+            radius_m=radius_m,
+            limit=limit,
+            category=category,
+            categories=categories,
+        )
+        return jsonify(payload), 200
+
+    except APIError:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in nearby_pois: {e}")
+        raise APIError("Failed to search nearby POIs", "POI_NEARBY_ERROR", 500)
 
 
 @poi_bp.route('/poi/<poi_id>', methods=['GET'])

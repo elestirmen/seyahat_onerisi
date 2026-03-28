@@ -8862,6 +8862,7 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
         let sourceSwitchCooldownUntil = 0;
         let currentPanoramaUrl = '';
         let activeVariant = null;
+        let nativeVrBridgeActive = false;
 
         const getFullscreenElement = () => (
             document.fullscreenElement
@@ -8935,6 +8936,12 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
             }
             return value.startsWith('/') ? value : `/${value}`;
         };
+
+        const hasNativeVrBridge = () => (
+            !!window.APDAndroid
+            && typeof window.APDAndroid.enterVrMode === 'function'
+            && typeof window.APDAndroid.exitVrMode === 'function'
+        );
 
         const decodePyramidLevels = (raw) => {
             if (!raw || typeof raw !== 'string') return [];
@@ -9079,6 +9086,33 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
             return false;
         };
 
+        const enterNativeVrMode = async () => {
+            if (!hasNativeVrBridge()) return false;
+            try {
+                const result = window.APDAndroid.enterVrMode();
+                nativeVrBridgeActive = result !== false;
+                return nativeVrBridgeActive;
+            } catch (_) {
+                nativeVrBridgeActive = false;
+                return false;
+            }
+        };
+
+        const exitNativeVrMode = async () => {
+            if (!nativeVrBridgeActive || !hasNativeVrBridge()) {
+                nativeVrBridgeActive = false;
+                return false;
+            }
+            try {
+                window.APDAndroid.exitVrMode();
+                nativeVrBridgeActive = false;
+                return true;
+            } catch (_) {
+                nativeVrBridgeActive = false;
+                return false;
+            }
+        };
+
         const describeVrState = (immersiveState, baseText) => {
             if (!immersiveState || immersiveState.fullscreenActive === false) {
                 return `${baseText} Tam ekran açılamadı; görünüm sayfaya sabitlendi.`;
@@ -9091,11 +9125,14 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
 
         const enterVrImmersiveMode = async () => {
             setViewerPresentation(true);
-            const fullscreenActive = await requestElementFullscreen(container);
-            const orientationLocked = await lockLandscapeOrientation();
+            const nativeVrActive = await enterNativeVrMode();
+            const fullscreenRequested = await requestElementFullscreen(container);
+            const fullscreenActive = fullscreenRequested || nativeVrActive;
+            const orientationLocked = nativeVrActive || await lockLandscapeOrientation();
             return {
                 fullscreenActive,
                 orientationLocked,
+                nativeVrActive,
             };
         };
 
@@ -9396,6 +9433,7 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
         const exitVrImmersiveMode = async () => {
             unlockOrientation();
             await exitAnyFullscreen();
+            await exitNativeVrMode();
             setViewerPresentation(false);
         };
 
@@ -9411,6 +9449,9 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
             document.removeEventListener('keydown', onEsc);
             overlay.removeEventListener('click', onOverlayClick);
             document.body.style.overflow = originalBodyOverflow;
+            if (window.__APDClosePanoramaViewer === closeViewer) {
+                delete window.__APDClosePanoramaViewer;
+            }
             try { document.body.removeChild(overlay); } catch (_) {}
         };
 
@@ -9423,6 +9464,7 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
         }
 
         closeBtn.onclick = closeViewer;
+        window.__APDClosePanoramaViewer = closeViewer;
         document.addEventListener('keydown', onEsc);
         overlay.addEventListener('click', onOverlayClick);
 
@@ -12474,6 +12516,14 @@ const nearbyPOIState = {
     radiusCircle: null,
     layer: null,
     poiMarkersById: new Map(),
+    liveAlertWatchId: null,
+    liveAlertMode: null,
+    liveAlertStatesById: new Map(),
+    liveAlertFeed: [],
+    liveAlertFeedById: new Map(),
+    liveAlertScanInFlight: false,
+    lastLiveAlertScanAt: 0,
+    lastLiveAlertScanLatLng: null,
 };
 
 function initializeNearbyPOIsUI() {
@@ -12484,10 +12534,216 @@ function initializeNearbyPOIsUI() {
     const pickBtn = document.getElementById('nearbyPickBtn');
     const useBtn = document.getElementById('nearbyUseLocationBtn');
     const radiusSelect = document.getElementById('nearbyRadiusKm');
+    const categorySelect = document.getElementById('nearbyCategoryFilter');
     const statusEl = document.getElementById('nearbyStatus');
     const resultsEl = document.getElementById('nearbyResults');
+    const alertDistanceSelect = document.getElementById('nearbyAlertDistanceM');
+    const alertToggleBtn = document.getElementById('nearbyAlertToggleBtn');
+    const alertStatusEl = document.getElementById('nearbyAlertStatus');
+    const alertFeedEl = document.getElementById('nearbyAlertFeed');
+    const alertPreferencesBtn = document.getElementById('nearbyAlertPreferencesBtn');
+    const alertPreferencesPanel = document.getElementById('nearbyAlertPreferencesPanel');
+    const alertPreferenceSummaryEl = document.getElementById('nearbyAlertPreferenceSummary');
+    const alertAllCategoriesToggle = document.getElementById('nearbyAlertAllCategoriesToggle');
+    const alertCategoryToolsEl = document.getElementById('nearbyAlertCategoryTools');
+    const alertCategoryListEl = document.getElementById('nearbyAlertCategoryList');
+    const alertSelectAllBtn = document.getElementById('nearbyAlertSelectAllBtn');
+    const alertClearBtn = document.getElementById('nearbyAlertClearBtn');
 
     if (!locateBtn || !pickBtn || !useBtn || !radiusSelect || !statusEl || !resultsEl) return;
+    const canRunLiveAlerts = Boolean(alertDistanceSelect && alertToggleBtn && alertStatusEl && alertFeedEl);
+    const nearbyPreferencesStorageKey = 'nearby_poi_preferences_v1';
+    const defaultNearbyPreferences = {
+        searchRadiusKm: '1',
+        searchCategory: '',
+        alertRadiusM: '250',
+        alertAllCategories: true,
+        alertCategories: [],
+    };
+    let nearbyCategoryOptions = [];
+
+    const loadNearbyPreferences = () => {
+        try {
+            const rawValue = localStorage.getItem(nearbyPreferencesStorageKey);
+            if (!rawValue) return { ...defaultNearbyPreferences };
+            const parsed = JSON.parse(rawValue);
+            return {
+                ...defaultNearbyPreferences,
+                ...(parsed && typeof parsed === 'object' ? parsed : {}),
+                alertCategories: Array.isArray(parsed?.alertCategories) ? parsed.alertCategories : [],
+                alertAllCategories: parsed?.alertAllCategories !== false,
+            };
+        } catch (error) {
+            console.warn('Nearby preferences could not be loaded:', error);
+            return { ...defaultNearbyPreferences };
+        }
+    };
+
+    const persistNearbyPreferences = (nextPreferences) => {
+        try {
+            localStorage.setItem(nearbyPreferencesStorageKey, JSON.stringify(nextPreferences));
+        } catch (error) {
+            console.warn('Nearby preferences could not be saved:', error);
+        }
+    };
+
+    const nearbyPreferences = loadNearbyPreferences();
+
+    const setSelectValue = (selectEl, preferredValue, fallbackValue = '') => {
+        if (!selectEl) return;
+
+        const options = Array.from(selectEl.options || []);
+        const normalizedPreferred = String(preferredValue ?? '').trim();
+        const normalizedFallback = String(fallbackValue ?? '').trim();
+
+        if (normalizedPreferred && options.some((option) => option.value === normalizedPreferred)) {
+            selectEl.value = normalizedPreferred;
+            return;
+        }
+
+        if (options.some((option) => option.value === normalizedFallback)) {
+            selectEl.value = normalizedFallback;
+        }
+    };
+
+    const getCategoryLabelByName = (categoryName) => {
+        const normalizedName = String(categoryName || '').trim();
+        if (!normalizedName) return 'Tüm türler';
+
+        const matchedCategory = nearbyCategoryOptions.find((category) => category.name === normalizedName);
+        if (matchedCategory?.display_name) {
+            return matchedCategory.display_name;
+        }
+
+        if (typeof getCategoryDisplayName === 'function') {
+            return getCategoryDisplayName(normalizedName) || normalizedName;
+        }
+
+        return normalizedName;
+    };
+
+    const getNormalizedAlertCategoryNames = () => {
+        const selectedNames = Array.isArray(nearbyPreferences.alertCategories) ? nearbyPreferences.alertCategories : [];
+        const validNames = nearbyCategoryOptions.length
+            ? new Set(nearbyCategoryOptions.map((category) => category.name))
+            : null;
+        const normalized = [];
+
+        selectedNames.forEach((categoryName) => {
+            const normalizedName = String(categoryName || '').trim();
+            if (!normalizedName || normalized.includes(normalizedName)) return;
+            if (validNames && !validNames.has(normalizedName)) return;
+            normalized.push(normalizedName);
+        });
+
+        return normalized;
+    };
+
+    const getSelectedAlertCategories = () => (
+        nearbyPreferences.alertAllCategories ? [] : getNormalizedAlertCategoryNames()
+    );
+
+    const getAlertCategorySummary = () => {
+        if (nearbyPreferences.alertAllCategories) return 'Tüm türler';
+
+        const selectedCategories = getSelectedAlertCategories();
+        if (!selectedCategories.length) return 'Henüz tür seçilmedi';
+
+        const labels = selectedCategories.map((categoryName) => getCategoryLabelByName(categoryName));
+        if (labels.length <= 3) return labels.join(', ');
+        return `${labels.slice(0, 3).join(', ')} +${labels.length - 3}`;
+    };
+
+    const syncAlertPreferenceSummary = () => {
+        if (!alertPreferenceSummaryEl) return;
+        alertPreferenceSummaryEl.textContent = `Uyarı türleri: ${getAlertCategorySummary()}`;
+    };
+
+    const syncAlertCategoryInputs = () => {
+        if (!canRunLiveAlerts || !alertCategoryListEl) return;
+
+        const useAllCategories = nearbyPreferences.alertAllCategories;
+        const checkboxes = Array.from(alertCategoryListEl.querySelectorAll('input[data-alert-category]'));
+
+        checkboxes.forEach((input) => {
+            const label = input.closest('.nearby-alert-category-option');
+            const isChecked = Boolean(input.checked);
+            if (label) {
+                label.classList.toggle('is-checked', isChecked);
+            }
+            input.disabled = useAllCategories;
+        });
+
+        if (alertCategoryToolsEl) {
+            alertCategoryToolsEl.hidden = useAllCategories || checkboxes.length === 0;
+        }
+
+        alertCategoryListEl.hidden = useAllCategories || checkboxes.length === 0;
+
+        if (alertSelectAllBtn) {
+            alertSelectAllBtn.disabled = useAllCategories || checkboxes.length === 0;
+        }
+
+        if (alertClearBtn) {
+            alertClearBtn.disabled = useAllCategories || checkboxes.length === 0;
+        }
+
+        if (alertAllCategoriesToggle) {
+            alertAllCategoriesToggle.checked = useAllCategories;
+        }
+    };
+
+    const renderAlertCategoryPreferences = (categories) => {
+        if (!canRunLiveAlerts || !alertCategoryListEl) return;
+
+        nearbyCategoryOptions = Array.isArray(categories) ? categories.slice() : [];
+        nearbyPreferences.alertCategories = getNormalizedAlertCategoryNames();
+
+        if (!nearbyCategoryOptions.length) {
+            alertCategoryListEl.innerHTML = '<p class="nearby-alert-category-empty">Kategori listesi yüklenemedi. Varsayılan olarak tüm türler izlenecek.</p>';
+            nearbyPreferences.alertAllCategories = true;
+            syncAlertCategoryInputs();
+            syncAlertPreferenceSummary();
+            persistNearbyPreferences(nearbyPreferences);
+            return;
+        }
+
+        const selectedCategories = new Set(getNormalizedAlertCategoryNames());
+        alertCategoryListEl.innerHTML = nearbyCategoryOptions.map((category) => `
+            <label class="nearby-alert-category-option${selectedCategories.has(category.name) ? ' is-checked' : ''}">
+                <input
+                    type="checkbox"
+                    data-alert-category="true"
+                    value="${escapeHtml(category.name)}"
+                    ${selectedCategories.has(category.name) ? 'checked' : ''}
+                >
+                <span>${escapeHtml(category.display_name || getCategoryLabelByName(category.name))}</span>
+            </label>
+        `).join('');
+
+        syncAlertCategoryInputs();
+        syncAlertPreferenceSummary();
+        persistNearbyPreferences(nearbyPreferences);
+    };
+
+    const persistSearchPreferences = () => {
+        nearbyPreferences.searchRadiusKm = String(radiusSelect?.value || defaultNearbyPreferences.searchRadiusKm);
+        nearbyPreferences.searchCategory = getSelectedCategory();
+        persistNearbyPreferences(nearbyPreferences);
+    };
+
+    const persistAlertPreferences = () => {
+        nearbyPreferences.alertRadiusM = String(alertDistanceSelect?.value || defaultNearbyPreferences.alertRadiusM);
+        nearbyPreferences.alertCategories = getNormalizedAlertCategoryNames();
+        persistNearbyPreferences(nearbyPreferences);
+        syncAlertPreferenceSummary();
+    };
+
+    setSelectValue(radiusSelect, nearbyPreferences.searchRadiusKm, defaultNearbyPreferences.searchRadiusKm);
+    if (alertDistanceSelect) {
+        setSelectValue(alertDistanceSelect, nearbyPreferences.alertRadiusM, defaultNearbyPreferences.alertRadiusM);
+    }
+    syncAlertPreferenceSummary();
 
     const setStatus = (text, kind = '') => {
         statusEl.textContent = text || '';
@@ -12495,11 +12751,44 @@ function initializeNearbyPOIsUI() {
         if (kind) statusEl.classList.add(kind);
     };
 
+    const setAlertStatus = (text, kind = '') => {
+        if (!canRunLiveAlerts) return;
+        alertStatusEl.textContent = text || '';
+        alertStatusEl.classList.remove('error', 'success');
+        if (kind) alertStatusEl.classList.add(kind);
+    };
+
     const getRadiusMeters = () => {
         const km = parseFloat(radiusSelect.value);
         if (isNaN(km) || km <= 0) return 1000;
         return Math.round(km * 1000);
     };
+
+    const getAlertRadiusMeters = () => {
+        if (!alertDistanceSelect) return 250;
+        const meters = parseInt(alertDistanceSelect.value, 10);
+        if (!Number.isFinite(meters) || meters <= 0) return 250;
+        return meters;
+    };
+
+    const getSelectedCategory = () => {
+        if (!categorySelect || typeof categorySelect.value !== 'string') return '';
+        return categorySelect.value.trim();
+    };
+
+    const getSelectedCategoryLabel = () => {
+        if (!categorySelect) return 'Tüm türler';
+        const option = categorySelect.selectedOptions && categorySelect.selectedOptions[0];
+        const text = option && option.textContent ? option.textContent.trim() : '';
+        return text || 'Tüm türler';
+    };
+
+    const getPoiKey = (poi) => String(
+        poi?._id ||
+        poi?.id ||
+        poi?.poi_id ||
+        `${poi?.name || 'poi'}:${poi?.latitude || poi?.lat}:${poi?.longitude || poi?.lng || poi?.lon}`
+    );
 
     const ensureMapReadyAndVisible = async () => {
         const resultsSection = document.getElementById('resultsSection');
@@ -12595,15 +12884,141 @@ function initializeNearbyPOIsUI() {
         return `${Math.round(m)} m`;
     };
 
+    const formatAlertTime = (timestamp) => {
+        try {
+            return new Date(timestamp).toLocaleTimeString('tr-TR', {
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+        } catch (_) {
+            return '';
+        }
+    };
+
+    const renderAlertFeed = () => {
+        if (!canRunLiveAlerts) return;
+
+        if (!nearbyPOIState.liveAlertFeed.length) {
+            alertFeedEl.innerHTML = '';
+            return;
+        }
+
+        alertFeedEl.innerHTML = nearbyPOIState.liveAlertFeed.map((item) => `
+            <div class="nearby-alert-item">
+                <div class="nearby-alert-item-header">
+                    <div>
+                        <p class="nearby-alert-item-title">${escapeHtml(item.name)}</p>
+                        <div class="nearby-alert-item-meta">
+                            <span class="nearby-poi-chip">${escapeHtml(item.categoryName)}</span>
+                            <span class="nearby-poi-chip secondary">${escapeHtml(item.distanceLabel)}</span>
+                            <span class="nearby-poi-chip secondary">${escapeHtml(item.timeLabel)}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="nearby-alert-item-actions">
+                    <button class="nearby-alert-feed-btn" type="button" data-nearby-alert-action="map" data-poi-id="${escapeHtml(item.poiId)}">
+                        Haritada Göster
+                    </button>
+                    <button class="nearby-alert-feed-btn secondary" type="button" data-nearby-alert-action="detail" data-poi-id="${escapeHtml(item.poiId)}">
+                        Detay Aç
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    };
+
+    const addAlertFeedItem = (poi, distanceM) => {
+        if (!canRunLiveAlerts) return;
+
+        const poiId = getPoiKey(poi);
+        const nextItem = {
+            poiId,
+            name: poi.name || 'POI',
+            categoryName: getCategoryDisplayName(poi.category || 'diger'),
+            distanceLabel: formatDistance(distanceM),
+            timeLabel: formatAlertTime(Date.now()),
+        };
+
+        nearbyPOIState.liveAlertFeedById.set(poiId, poi);
+        nearbyPOIState.liveAlertFeed = [
+            nextItem,
+            ...nearbyPOIState.liveAlertFeed.filter((item) => item.poiId !== poiId),
+        ].slice(0, 5);
+
+        const activeIds = new Set(nearbyPOIState.liveAlertFeed.map((item) => item.poiId));
+        Array.from(nearbyPOIState.liveAlertFeedById.keys()).forEach((poiIdKey) => {
+            if (!activeIds.has(poiIdKey)) {
+                nearbyPOIState.liveAlertFeedById.delete(poiIdKey);
+            }
+        });
+
+        renderAlertFeed();
+    };
+
+    const updateAlertToggleButton = () => {
+        if (!canRunLiveAlerts) return;
+        const isActive = nearbyPOIState.liveAlertMode === 'native' || nearbyPOIState.liveAlertWatchId != null;
+        alertToggleBtn.classList.toggle('active', isActive);
+        alertToggleBtn.innerHTML = isActive
+            ? `<i class="fas fa-bell-slash"></i> ${nearbyPOIState.liveAlertMode === 'native' ? 'Arka Plan Takibini Durdur' : 'Canlı Uyarıyı Durdur'}`
+            : '<i class="fas fa-bell"></i> Canlı Uyarıyı Başlat';
+    };
+
+    const resetLiveAlertState = () => {
+        nearbyPOIState.liveAlertStatesById.clear();
+        nearbyPOIState.lastLiveAlertScanAt = 0;
+        nearbyPOIState.lastLiveAlertScanLatLng = null;
+    };
+
+    const requestLiveAlertPermissions = async () => {
+        try {
+            if (window.APDAndroid && typeof window.APDAndroid.requestNotificationPermission === 'function') {
+                window.APDAndroid.requestNotificationPermission();
+            }
+        } catch (error) {
+            console.warn('Android notification permission request failed:', error);
+        }
+
+        if ('Notification' in window && Notification.permission === 'default') {
+            try {
+                await Notification.requestPermission();
+            } catch (error) {
+                console.warn('Browser notification permission request failed:', error);
+            }
+        }
+    };
+
+    const hasNativePoiTrackingService = () => {
+        return Boolean(
+            window.APDAndroid &&
+            typeof window.APDAndroid.startPoiTrackingService === 'function' &&
+            typeof window.APDAndroid.stopPoiTrackingService === 'function'
+        );
+    };
+
+    const isNativePoiTrackingServiceRunning = () => {
+        if (!hasNativePoiTrackingService()) return false;
+
+        try {
+            const result = window.APDAndroid.isPoiTrackingServiceRunning?.();
+            return result === true || result === 'true';
+        } catch (error) {
+            console.warn('Native tracking service state could not be read:', error);
+            return false;
+        }
+    };
+
     const renderResults = (payload) => {
         const pois = Array.isArray(payload?.pois) ? payload.pois : [];
         if (pois.length === 0) {
             resultsEl.innerHTML = '';
-            setStatus('Bu mesafede POI bulunamadı.', 'error');
+            const categoryMessage = getSelectedCategory() ? ` (${getSelectedCategoryLabel()})` : '';
+            setStatus(`Bu mesafede POI bulunamadı${categoryMessage}.`, 'error');
             return;
         }
 
-        setStatus(`${pois.length} POI bulundu (mesafeye göre sıralı).`, 'success');
+        const categoryMessage = getSelectedCategory() ? ` • Tür: ${getSelectedCategoryLabel()}` : '';
+        setStatus(`${pois.length} POI bulundu (mesafeye göre sıralı${categoryMessage}).`, 'success');
 
         // Reuse the same POI card UI used elsewhere (recommendations / all POIs)
         resultsEl.innerHTML = `
@@ -12710,10 +13125,77 @@ function initializeNearbyPOIsUI() {
         } catch (_) {}
     };
 
-    const fetchNearby = async (lat, lng) => {
-        const radiusM = getRadiusMeters();
-        const url = `${apiBase}/pois/nearby?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}&radius_m=${encodeURIComponent(radiusM)}&limit=50`;
-        const res = await fetch(url, { credentials: 'include' });
+    const populateCategoryOptions = async () => {
+        if (!categorySelect) return;
+
+        const previousValue = categorySelect.value || '';
+        let categories = [];
+
+        try {
+            if (window.POIClient && typeof window.POIClient.getPOICategories === 'function') {
+                const payload = await window.POIClient.getPOICategories();
+                if (Array.isArray(payload)) {
+                    categories = payload;
+                }
+            }
+        } catch (error) {
+            console.warn('Category list could not be loaded from API:', error);
+        }
+
+        if (!categories.length && window.CATEGORIES && Array.isArray(window.CATEGORIES)) {
+            categories = window.CATEGORIES.map((category) => ({
+                name: category.name,
+                display_name: category.displayName,
+            }));
+        }
+
+        categories = categories
+            .map((category) => ({
+                name: String(category.name || '').trim(),
+                display_name: String(category.display_name || getCategoryDisplayName(category.name || '') || category.name || '').trim(),
+            }))
+            .filter((category) => category.name)
+            .sort((left, right) => left.display_name.localeCompare(right.display_name, 'tr'));
+
+        categorySelect.innerHTML = [
+            '<option value="">Tüm türler</option>',
+            ...categories.map((category) => (
+                `<option value="${escapeHtml(category.name)}">${escapeHtml(category.display_name || category.name)}</option>`
+            )),
+        ].join('');
+
+        setSelectValue(categorySelect, nearbyPreferences.searchCategory || previousValue, '');
+        renderAlertCategoryPreferences(categories);
+    };
+
+    const fetchNearby = async (lat, lng, options = {}) => {
+        const radiusM = Number.isFinite(options.radiusM) ? options.radiusM : getRadiusMeters();
+        const limit = Number.isFinite(options.limit) ? options.limit : 50;
+        const hasCategoryOverride = Object.prototype.hasOwnProperty.call(options, 'category');
+        const hasCategoriesOverride = Object.prototype.hasOwnProperty.call(options, 'categories');
+        const category = hasCategoryOverride
+            ? (typeof options.category === 'string' ? options.category.trim() : '')
+            : (hasCategoriesOverride ? '' : getSelectedCategory());
+        const categories = Array.isArray(options.categories)
+            ? options.categories.map((value) => String(value || '').trim()).filter(Boolean)
+            : [];
+
+        const searchParams = new URLSearchParams({
+            lat: String(lat),
+            lng: String(lng),
+            radius_m: String(radiusM),
+            limit: String(limit),
+        });
+
+        if (categories.length) {
+            categories.forEach((categoryName) => {
+                searchParams.append('categories', categoryName);
+            });
+        } else if (category) {
+            searchParams.set('category', category);
+        }
+
+        const res = await fetch(`${apiBase}/pois/nearby?${searchParams.toString()}`, { credentials: 'include' });
         if (!res.ok) {
             const text = await res.text().catch(() => '');
             throw new Error(`Yakın POI API hatası: ${res.status}${text ? ` - ${text}` : ''}`);
@@ -12736,7 +13218,11 @@ function initializeNearbyPOIsUI() {
             setCenterOverlays(lat, lng, { pending: false });
         }
 
-        const payload = await fetchNearby(lat, lng);
+        const payload = await fetchNearby(lat, lng, {
+            radiusM: getRadiusMeters(),
+            limit: 50,
+            category: getSelectedCategory(),
+        });
         renderResults(payload);
 
         // Add result markers (so "popup" is instant)
@@ -12755,10 +13241,291 @@ function initializeNearbyPOIsUI() {
         try { map.setView([lat, lng], 15, { animate: true }); } catch (_) { map.setView([lat, lng], 15); }
     };
 
+    const shouldRunLiveAlertScan = (lat, lng, { force = false } = {}) => {
+        if (force) return true;
+        if (!nearbyPOIState.lastLiveAlertScanLatLng) return true;
+
+        const now = Date.now();
+        const elapsedMs = now - nearbyPOIState.lastLiveAlertScanAt;
+        const movedMeters = getDistance(
+            nearbyPOIState.lastLiveAlertScanLatLng.lat,
+            nearbyPOIState.lastLiveAlertScanLatLng.lng,
+            lat,
+            lng,
+        ) * 1000;
+
+        return movedMeters >= 50 || elapsedMs >= 30000;
+    };
+
+    const triggerLiveAlert = (poi, distanceM) => {
+        const poiId = getPoiKey(poi);
+        const categoryName = getCategoryDisplayName(poi.category || 'diger');
+        const distanceLabel = formatDistance(distanceM || poi.distance_m);
+        const title = `${categoryName} POI yakınınızda`;
+        const message = `${poi.name || 'Bir POI'} ${distanceLabel ? `${distanceLabel} mesafede.` : 'yakınınızda.'}`;
+
+        setAlertStatus(message, 'success');
+        addAlertFeedItem(poi, distanceM || poi.distance_m);
+
+        try {
+            if (typeof showNotification === 'function') {
+                showNotification(message, 'success');
+            }
+        } catch (_) {}
+
+        let nativeNotificationSent = false;
+        try {
+            if (window.APDAndroid && typeof window.APDAndroid.showPoiNotification === 'function') {
+                window.APDAndroid.showPoiNotification(title, message, poiId);
+                nativeNotificationSent = true;
+            }
+        } catch (error) {
+            console.warn('Android notification bridge failed:', error);
+        }
+
+        if (!nativeNotificationSent && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+                const notification = new Notification(title, {
+                    body: message,
+                    tag: `nearby-poi-${poiId}`,
+                });
+
+                notification.onclick = () => {
+                    try { window.focus(); } catch (_) {}
+                    try { focusPOIOnMap(poi); } catch (_) {}
+                };
+            } catch (error) {
+                console.warn('Browser notification failed:', error);
+            }
+        }
+    };
+
+    const hasValidAlertSelection = () => (
+        nearbyPreferences.alertAllCategories || getSelectedAlertCategories().length > 0
+    );
+
+    const ensureValidAlertSelection = () => {
+        if (hasValidAlertSelection()) return;
+        throw new Error('Canlı uyarı için en az bir POI türü seçin veya tüm türleri aktif tutun.');
+    };
+
+    const applyAlertPreferenceChanges = async () => {
+        syncAlertCategoryInputs();
+        persistAlertPreferences();
+
+        if (!hasValidAlertSelection()) {
+            if (nearbyPOIState.liveAlertMode === 'native' || nearbyPOIState.liveAlertWatchId != null) {
+                stopLiveAlerts();
+                setAlertStatus('Canlı uyarı durduruldu. En az bir POI türü seçin.', 'error');
+                return;
+            }
+
+            setAlertStatus('Canlı uyarı için en az bir POI türü seçin.', 'error');
+            return;
+        }
+
+        if (nearbyPOIState.liveAlertMode === 'native') {
+            await restartNativePoiTrackingService();
+            return;
+        }
+
+        if (nearbyPOIState.liveAlertWatchId != null && nearbyPOIState.activeLatLng) {
+            resetLiveAlertState();
+            const { lat, lng } = nearbyPOIState.activeLatLng;
+            await processLiveAlertPosition(lat, lng, { force: true });
+            return;
+        }
+
+        setAlertStatus(`Uyarı türleri ${getAlertCategorySummary()} olarak ayarlandı.`, '');
+    };
+
+    const processLiveAlertPosition = async (lat, lng, { force = false } = {}) => {
+        if (!canRunLiveAlerts) return;
+        if (nearbyPOIState.liveAlertScanInFlight && !force) return;
+        if (!shouldRunLiveAlertScan(lat, lng, { force })) return;
+        ensureValidAlertSelection();
+
+        nearbyPOIState.liveAlertScanInFlight = true;
+        nearbyPOIState.lastLiveAlertScanAt = Date.now();
+        nearbyPOIState.lastLiveAlertScanLatLng = { lat, lng };
+
+        try {
+            const payload = await fetchNearby(lat, lng, {
+                radiusM: getAlertRadiusMeters(),
+                limit: 20,
+                categories: getSelectedAlertCategories(),
+            });
+
+            const visiblePoiIds = new Set();
+            const now = Date.now();
+
+            (payload.pois || []).forEach((poi) => {
+                const poiId = getPoiKey(poi);
+                const distanceM = typeof poi.distance_m === 'number' ? poi.distance_m : parseFloat(poi.distance_m || 0);
+                const existing = nearbyPOIState.liveAlertStatesById.get(poiId) || {
+                    inside: false,
+                    lastAlertAt: 0,
+                };
+
+                visiblePoiIds.add(poiId);
+
+                if (!existing.inside && (!existing.lastAlertAt || (now - existing.lastAlertAt) >= 300000)) {
+                    triggerLiveAlert(poi, distanceM);
+                    existing.lastAlertAt = now;
+                }
+
+                existing.inside = true;
+                nearbyPOIState.liveAlertStatesById.set(poiId, existing);
+            });
+
+            Array.from(nearbyPOIState.liveAlertStatesById.entries()).forEach(([poiId, state]) => {
+                if (visiblePoiIds.has(poiId)) return;
+                state.inside = false;
+                if (state.lastAlertAt && (now - state.lastAlertAt) > 7200000) {
+                    nearbyPOIState.liveAlertStatesById.delete(poiId);
+                    return;
+                }
+                nearbyPOIState.liveAlertStatesById.set(poiId, state);
+            });
+
+            if ((payload.pois || []).length > 0) {
+                const nearest = payload.pois[0];
+                setAlertStatus(
+                    `Canlı uyarı açık. ${getAlertCategorySummary()} için en yakın POI: ${nearest.name || 'POI'} (${formatDistance(nearest.distance_m)}).`,
+                    'success',
+                );
+            } else {
+                setAlertStatus(
+                    `Canlı uyarı açık. ${getAlertCategorySummary()} için ${formatDistance(getAlertRadiusMeters())} içinde POI yok.`,
+                    '',
+                );
+            }
+        } catch (error) {
+            console.warn('Live alert scan failed:', error);
+            setAlertStatus(error.message || 'Canlı uyarı taraması yapılamadı.', 'error');
+        } finally {
+            nearbyPOIState.liveAlertScanInFlight = false;
+        }
+    };
+
+    const stopLiveAlerts = ({ preserveFeed = true } = {}) => {
+        if (nearbyPOIState.liveAlertMode === 'native' && hasNativePoiTrackingService()) {
+            try {
+                window.APDAndroid.stopPoiTrackingService();
+            } catch (error) {
+                console.warn('Native tracking service could not be stopped:', error);
+            }
+        }
+
+        if (nearbyPOIState.liveAlertWatchId != null) {
+            try { navigator.geolocation.clearWatch(nearbyPOIState.liveAlertWatchId); } catch (_) {}
+        }
+
+        nearbyPOIState.liveAlertWatchId = null;
+        nearbyPOIState.liveAlertMode = null;
+        resetLiveAlertState();
+
+        if (!preserveFeed) {
+            nearbyPOIState.liveAlertFeed = [];
+            nearbyPOIState.liveAlertFeedById.clear();
+            renderAlertFeed();
+        }
+
+        updateAlertToggleButton();
+    };
+
+    const restartNativePoiTrackingService = async () => {
+        if (!hasNativePoiTrackingService()) return;
+        ensureValidAlertSelection();
+
+        await requestLiveAlertPermissions();
+        window.APDAndroid.startPoiTrackingService(
+            nearbyPreferences.alertAllCategories ? '' : JSON.stringify(getSelectedAlertCategories()),
+            String(getAlertRadiusMeters()),
+        );
+        nearbyPOIState.liveAlertMode = 'native';
+        updateAlertToggleButton();
+        setAlertStatus(
+            `Android foreground service aktif. Türler: ${getAlertCategorySummary()}, eşik: ${formatDistance(getAlertRadiusMeters())}.`,
+            'success',
+        );
+    };
+
+    const startLiveAlerts = async () => {
+        if (!canRunLiveAlerts) return;
+        if (nearbyPOIState.liveAlertMode === 'native' || nearbyPOIState.liveAlertWatchId != null) return;
+        ensureValidAlertSelection();
+
+        if (hasNativePoiTrackingService()) {
+            await restartNativePoiTrackingService();
+            return;
+        }
+
+        if (!navigator.geolocation) {
+            throw new Error('Bu cihazda canlı konum takibi desteklenmiyor');
+        }
+
+        setAlertStatus('Canlı uyarı başlatılıyor...', '');
+        await requestLiveAlertPermissions();
+
+        const location = await getCurrentLocation();
+        const lat = location.latitude;
+        const lng = location.longitude;
+
+        nearbyPOIState.activeLatLng = { lat, lng };
+        await ensureMapReadyAndVisible();
+        setCenterOverlays(lat, lng, { pending: false });
+
+        try {
+            await runNearbySearch(lat, lng);
+        } catch (error) {
+            console.warn('Initial nearby search during live alerts failed:', error);
+        }
+
+        await processLiveAlertPosition(lat, lng, { force: true });
+
+        nearbyPOIState.liveAlertWatchId = navigator.geolocation.watchPosition(
+            async (position) => {
+                const nextLat = position.coords.latitude;
+                const nextLng = position.coords.longitude;
+                nearbyPOIState.activeLatLng = { lat: nextLat, lng: nextLng };
+
+                try {
+                    if (map && map._loaded) {
+                        setCenterOverlays(nextLat, nextLng, { pending: false });
+                    }
+                } catch (_) {}
+
+                await processLiveAlertPosition(nextLat, nextLng);
+            },
+            (error) => {
+                let message = 'Canlı konum takibi durdu';
+                if (error && error.code === error.PERMISSION_DENIED) {
+                    message = 'Konum izni reddedildi, canlı uyarı durduruldu';
+                } else if (error && error.code === error.TIMEOUT) {
+                    message = 'Konum güncellemesi zaman aşımına uğradı';
+                }
+
+                stopLiveAlerts();
+                setAlertStatus(message, 'error');
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 30000,
+            },
+        );
+
+        nearbyPOIState.liveAlertMode = 'web';
+        updateAlertToggleButton();
+        setAlertStatus(`Canlı uyarı açık. İzlenen türler: ${getAlertCategorySummary()}.`, 'success');
+    };
+
     // (Results are rendered with the shared POI card UI; card buttons already call focusOnMap/showPOIDetail.)
 
     // Radius change: re-run search if we have an active location
     radiusSelect.addEventListener('change', async () => {
+        persistSearchPreferences();
         try {
             if (nearbyPOIState.activeLatLng) {
                 const { lat, lng } = nearbyPOIState.activeLatLng;
@@ -12769,6 +13536,20 @@ function initializeNearbyPOIsUI() {
             setStatus(e.message || 'Mesafe güncellenemedi.', 'error');
         }
     });
+
+    if (categorySelect) {
+        categorySelect.addEventListener('change', async () => {
+            persistSearchPreferences();
+            try {
+                if (nearbyPOIState.activeLatLng) {
+                    const { lat, lng } = nearbyPOIState.activeLatLng;
+                    await runNearbySearch(lat, lng);
+                }
+            } catch (error) {
+                setStatus(error.message || 'Tür filtresi güncellenemedi.', 'error');
+            }
+        });
+    }
 
     locateBtn.addEventListener('click', async () => {
         clearPickingMode();
@@ -12852,6 +13633,179 @@ function initializeNearbyPOIsUI() {
         } catch (e) {
             setStatus(e.message || 'Yakın POI araması başarısız.', 'error');
         }
+    });
+
+    if (canRunLiveAlerts) {
+        const setAlertPreferencesPanelVisible = (visible) => {
+            if (!alertPreferencesPanel || !alertPreferencesBtn) return;
+
+            if (visible) {
+                alertPreferencesPanel.removeAttribute('hidden');
+                alertPreferencesBtn.innerHTML = '<i class="fas fa-times"></i> Tercihleri Gizle';
+                return;
+            }
+
+            alertPreferencesPanel.setAttribute('hidden', 'hidden');
+            alertPreferencesBtn.innerHTML = '<i class="fas fa-sliders-h"></i> Uyarı Tercihleri';
+        };
+
+        if (alertPreferencesBtn) {
+            alertPreferencesBtn.addEventListener('click', () => {
+                const isVisible = alertPreferencesPanel && !alertPreferencesPanel.hasAttribute('hidden');
+                setAlertPreferencesPanelVisible(!isVisible);
+            });
+        }
+
+        if (alertAllCategoriesToggle) {
+            alertAllCategoriesToggle.checked = nearbyPreferences.alertAllCategories;
+            alertAllCategoriesToggle.addEventListener('change', async () => {
+                nearbyPreferences.alertAllCategories = Boolean(alertAllCategoriesToggle.checked);
+                try {
+                    await applyAlertPreferenceChanges();
+                } catch (error) {
+                    setAlertStatus(error.message || 'Uyarı tercihleri güncellenemedi.', 'error');
+                }
+            });
+        }
+
+        if (alertCategoryListEl) {
+            alertCategoryListEl.addEventListener('change', async (event) => {
+                const input = event.target.closest('input[data-alert-category]');
+                if (!input) return;
+
+                nearbyPreferences.alertCategories = Array.from(
+                    alertCategoryListEl.querySelectorAll('input[data-alert-category]:checked'),
+                ).map((checkbox) => checkbox.value);
+
+                try {
+                    await applyAlertPreferenceChanges();
+                } catch (error) {
+                    setAlertStatus(error.message || 'Uyarı tercihleri güncellenemedi.', 'error');
+                }
+            });
+        }
+
+        if (alertSelectAllBtn) {
+            alertSelectAllBtn.addEventListener('click', async () => {
+                if (!alertCategoryListEl) return;
+                alertCategoryListEl.querySelectorAll('input[data-alert-category]').forEach((input) => {
+                    input.checked = true;
+                });
+                nearbyPreferences.alertCategories = Array.from(
+                    alertCategoryListEl.querySelectorAll('input[data-alert-category]'),
+                ).map((checkbox) => checkbox.value);
+
+                try {
+                    await applyAlertPreferenceChanges();
+                } catch (error) {
+                    setAlertStatus(error.message || 'Uyarı tercihleri güncellenemedi.', 'error');
+                }
+            });
+        }
+
+        if (alertClearBtn) {
+            alertClearBtn.addEventListener('click', async () => {
+                if (!alertCategoryListEl) return;
+                alertCategoryListEl.querySelectorAll('input[data-alert-category]').forEach((input) => {
+                    input.checked = false;
+                });
+                nearbyPreferences.alertCategories = [];
+
+                try {
+                    await applyAlertPreferenceChanges();
+                } catch (error) {
+                    setAlertStatus(error.message || 'Uyarı tercihleri güncellenemedi.', 'error');
+                }
+            });
+        }
+
+        alertDistanceSelect.addEventListener('change', async () => {
+            persistAlertPreferences();
+            try {
+                if (nearbyPOIState.liveAlertMode === 'native') {
+                    await restartNativePoiTrackingService();
+                    return;
+                }
+
+                if (!nearbyPOIState.liveAlertWatchId || !nearbyPOIState.activeLatLng) {
+                    setAlertStatus(`Uyarı eşiği ${formatDistance(getAlertRadiusMeters())} olarak ayarlandı.`, '');
+                    return;
+                }
+
+                resetLiveAlertState();
+                const { lat, lng } = nearbyPOIState.activeLatLng;
+                await processLiveAlertPosition(lat, lng, { force: true });
+            } catch (error) {
+                setAlertStatus(error.message || 'Uyarı eşiği güncellenemedi.', 'error');
+            }
+        });
+
+        alertToggleBtn.addEventListener('click', async () => {
+            if (nearbyPOIState.liveAlertMode === 'native' || nearbyPOIState.liveAlertWatchId != null) {
+                const activeMode = nearbyPOIState.liveAlertMode;
+                stopLiveAlerts();
+                setAlertStatus(activeMode === 'native' ? 'Arka plan takibi kapatıldı.' : 'Canlı uyarı kapatıldı.', '');
+                return;
+            }
+
+            try {
+                await startLiveAlerts();
+            } catch (error) {
+                stopLiveAlerts();
+                const help = error && error.helpText ? ` ${error.helpText}` : '';
+                setAlertStatus((error && error.message ? error.message : 'Canlı uyarı başlatılamadı.') + help, 'error');
+                try {
+                    if (typeof showNotification === 'function') {
+                        showNotification('Canlı uyarı başlatılamadı', 'error');
+                    }
+                } catch (_) {}
+            }
+        });
+
+        alertFeedEl.addEventListener('click', async (event) => {
+            const actionButton = event.target.closest('[data-nearby-alert-action]');
+            if (!actionButton) return;
+
+            const poiId = actionButton.getAttribute('data-poi-id') || '';
+            const poi = nearbyPOIState.liveAlertFeedById.get(poiId);
+            if (!poi) return;
+
+            if (actionButton.getAttribute('data-nearby-alert-action') === 'map') {
+                await focusPOIOnMap(poi);
+                return;
+            }
+
+            try {
+                await showPOIDetail(String(poi._id || poi.id || poi.poi_id || poiId));
+            } catch (error) {
+                console.warn('POI detail modal could not be opened from alert feed:', error);
+            }
+        });
+
+        if (isNativePoiTrackingServiceRunning()) {
+            nearbyPOIState.liveAlertMode = 'native';
+            updateAlertToggleButton();
+            setAlertStatus('Android foreground service aktif. Arka planda POI yaklaşım uyarıları sürüyor.', 'success');
+        } else {
+            updateAlertToggleButton();
+            setAlertStatus('Canlı uyarı kapalı. Uyarı türlerini seçip başlatabilirsiniz.', '');
+        }
+
+        setAlertPreferencesPanelVisible(false);
+    }
+
+    populateCategoryOptions().catch((error) => {
+        console.warn('Nearby category filter initialization failed:', error);
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (nearbyPOIState.liveAlertMode === 'native') {
+            nearbyPOIState.liveAlertMode = null;
+            nearbyPOIState.liveAlertWatchId = null;
+            return;
+        }
+
+        stopLiveAlerts();
     });
 
     // Initial hint

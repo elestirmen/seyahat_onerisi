@@ -372,10 +372,57 @@
 	                  <option value="5">5 km</option>
 	                </select>
 	              </div>
+
+	              <div class="nearby-poi-radius">
+	                <label for="nearbyCategoryFilter"><i class="fas fa-shapes"></i> Tür</label>
+	                <select id="nearbyCategoryFilter">
+	                  <option value="">Tüm türler</option>
+	                </select>
+	              </div>
 	
 	              <button class="nearby-poi-btn success" id="nearbyUseLocationBtn" type="button" disabled>
 	                <i class="fas fa-check"></i> Bu konumu kullan
 	              </button>
+	            </div>
+
+	            <div class="nearby-alert-section" id="nearbyAlertSection">
+	              <div class="nearby-alert-header">
+	                <div>
+	                  <h4><i class="fas fa-bell"></i> Yaklaşınca Uyar</h4>
+	                  <p>Seçtiğiniz POI türleri uyarı mesafesine girdiğinde uygulama bildirim göstersin.</p>
+	                </div>
+	                <button class="nearby-poi-btn" id="nearbyAlertPreferencesBtn" type="button">
+	                  <i class="fas fa-sliders-h"></i> Uyarı Tercihleri
+	                </button>
+	              </div>
+	              <div class="nearby-alert-preference-note" id="nearbyAlertPreferenceSummary">Uyarı türleri: Tüm türler</div>
+	              <div class="nearby-alert-preferences" id="nearbyAlertPreferencesPanel" hidden>
+	                <label class="nearby-alert-toggle" for="nearbyAlertAllCategoriesToggle">
+	                  <input id="nearbyAlertAllCategoriesToggle" type="checkbox" checked>
+	                  <span>Tüm POI türlerinde uyarı göster</span>
+	                </label>
+	                <div class="nearby-alert-category-tools" id="nearbyAlertCategoryTools">
+	                  <button class="nearby-alert-feed-btn secondary" id="nearbyAlertSelectAllBtn" type="button">Tümünü Seç</button>
+	                  <button class="nearby-alert-feed-btn secondary" id="nearbyAlertClearBtn" type="button">Temizle</button>
+	                </div>
+	                <div class="nearby-alert-category-grid" id="nearbyAlertCategoryList"></div>
+	              </div>
+	              <div class="nearby-alert-controls">
+	                <div class="nearby-poi-radius">
+	                  <label for="nearbyAlertDistanceM"><i class="fas fa-bullseye"></i> Uyarı Eşiği</label>
+	                  <select id="nearbyAlertDistanceM">
+	                    <option value="100">100 m</option>
+	                    <option value="250" selected>250 m</option>
+	                    <option value="500">500 m</option>
+	                    <option value="1000">1 km</option>
+	                  </select>
+	                </div>
+	                <button class="nearby-poi-btn primary" id="nearbyAlertToggleBtn" type="button">
+	                  <i class="fas fa-bell"></i> Canlı Uyarıyı Başlat
+	                </button>
+	              </div>
+	              <div class="nearby-poi-status" id="nearbyAlertStatus" aria-live="polite"></div>
+	              <div class="nearby-alert-feed" id="nearbyAlertFeed"></div>
 	            </div>
 	
 	            <div class="nearby-poi-status" id="nearbyStatus" aria-live="polite"></div>
@@ -575,7 +622,7 @@
   <script src="static/js/modal-jitter-fix-poi.js"></script>
 
   <!-- Main app logic (shared) + page wrapper (isolated) -->
-  <script src="static/js/poi_recommendation_system.js?v=20260323-mobile-fs-fix2"></script>
+  <script src="static/js/poi_recommendation_system.js?v=20260328-user-alert-prefs1"></script>
   <script src="static/js/personal_routes.js?v=20260323-mobile-fs-fix2"></script>
 
   <!-- Simple smart preset functions -->
@@ -884,6 +931,11 @@
 	    }
 	    .nearby-poi-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
 	    .nearby-poi-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+	    .nearby-poi-btn.active {
+	      background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%);
+	      color: white;
+	      border: none;
+	    }
 	    .nearby-poi-btn.primary {
 	      background: linear-gradient(135deg, #3b82f6 0%, #22c55e 100%);
 	      color: white;
@@ -920,6 +972,167 @@
 	      color: #475569;
 	      font-size: 0.9rem;
 	    }
+	    .nearby-alert-section {
+	      margin-top: 14px;
+	      padding: 14px;
+	      border-radius: 16px;
+	      border: 1px solid rgba(37,99,235,0.14);
+	      background: linear-gradient(180deg, rgba(239,246,255,0.9) 0%, rgba(255,255,255,0.96) 100%);
+	    }
+	    .nearby-alert-header h4 {
+	      margin: 0 0 4px 0;
+	      font-size: 1rem;
+	      font-weight: 800;
+	      color: #0f172a;
+	    }
+	    .nearby-alert-header {
+	      display: flex;
+	      justify-content: space-between;
+	      align-items: flex-start;
+	      gap: 12px;
+	    }
+	    .nearby-alert-header p {
+	      margin: 0;
+	      color: #475569;
+	      font-size: 0.92rem;
+	      line-height: 1.5;
+	    }
+	    .nearby-alert-controls {
+	      margin-top: 12px;
+	      display: flex;
+	      flex-wrap: wrap;
+	      gap: 10px;
+	      align-items: center;
+	    }
+	    .nearby-alert-preference-note {
+	      margin-top: 10px;
+	      color: #1e3a8a;
+	      font-size: 0.9rem;
+	      font-weight: 600;
+	    }
+	    .nearby-alert-preferences {
+	      margin-top: 12px;
+	      padding: 12px;
+	      border-radius: 14px;
+	      background: rgba(255,255,255,0.92);
+	      border: 1px solid rgba(15,23,42,0.08);
+	    }
+	    .nearby-alert-toggle {
+	      display: inline-flex;
+	      align-items: center;
+	      gap: 10px;
+	      color: #0f172a;
+	      font-size: 0.92rem;
+	      font-weight: 600;
+	      cursor: pointer;
+	    }
+	    .nearby-alert-toggle input {
+	      width: 18px;
+	      height: 18px;
+	      accent-color: #2563eb;
+	    }
+	    .nearby-alert-category-tools {
+	      margin-top: 12px;
+	      display: flex;
+	      flex-wrap: wrap;
+	      gap: 8px;
+	    }
+	    .nearby-alert-category-grid {
+	      margin-top: 12px;
+	      display: grid;
+	      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	      gap: 8px;
+	    }
+	    .nearby-alert-category-option {
+	      display: flex;
+	      align-items: center;
+	      gap: 10px;
+	      padding: 10px 12px;
+	      border-radius: 12px;
+	      border: 1px solid rgba(15,23,42,0.08);
+	      background: rgba(248,250,252,0.92);
+	      cursor: pointer;
+	      transition: all 0.2s ease;
+	    }
+	    .nearby-alert-category-option:hover {
+	      border-color: rgba(37,99,235,0.24);
+	      background: rgba(239,246,255,0.92);
+	    }
+	    .nearby-alert-category-option.is-checked {
+	      border-color: rgba(37,99,235,0.28);
+	      background: rgba(219,234,254,0.75);
+	      box-shadow: inset 0 0 0 1px rgba(37,99,235,0.08);
+	    }
+	    .nearby-alert-category-option input {
+	      width: 16px;
+	      height: 16px;
+	      accent-color: #2563eb;
+	      flex: 0 0 auto;
+	    }
+	    .nearby-alert-category-option span {
+	      color: #0f172a;
+	      font-size: 0.9rem;
+	      font-weight: 600;
+	      line-height: 1.35;
+	    }
+	    .nearby-alert-category-empty {
+	      margin: 0;
+	      color: #64748b;
+	      font-size: 0.88rem;
+	    }
+	    .nearby-alert-feed {
+	      display: grid;
+	      gap: 10px;
+	      margin-top: 12px;
+	    }
+	    .nearby-alert-item {
+	      background: rgba(255,255,255,0.95);
+	      border: 1px solid rgba(15,23,42,0.08);
+	      border-radius: 14px;
+	      padding: 12px 14px;
+	      box-shadow: 0 6px 18px rgba(15,23,42,0.05);
+	    }
+	    .nearby-alert-item-header {
+	      display: flex;
+	      align-items: flex-start;
+	      justify-content: space-between;
+	      gap: 12px;
+	    }
+	    .nearby-alert-item-title {
+	      margin: 0;
+	      font-size: 0.96rem;
+	      font-weight: 800;
+	      color: #0f172a;
+	    }
+	    .nearby-alert-item-meta {
+	      margin-top: 6px;
+	      display: flex;
+	      flex-wrap: wrap;
+	      gap: 8px;
+	      color: #475569;
+	      font-size: 0.86rem;
+	    }
+	    .nearby-alert-item-actions {
+	      margin-top: 10px;
+	      display: flex;
+	      flex-wrap: wrap;
+	      gap: 8px;
+	    }
+	    .nearby-alert-feed-btn {
+	      border: 1px solid rgba(37,99,235,0.16);
+	      background: rgba(37,99,235,0.08);
+	      color: #1d4ed8;
+	      padding: 7px 10px;
+	      border-radius: 10px;
+	      font-size: 0.84rem;
+	      font-weight: 700;
+	      cursor: pointer;
+	    }
+	    .nearby-alert-feed-btn.secondary {
+	      border-color: rgba(15,23,42,0.08);
+	      background: rgba(15,23,42,0.04);
+	      color: #0f172a;
+	    }
 	    .nearby-poi-status.error { color: #b91c1c; }
 	    .nearby-poi-status.success { color: #065f46; }
 	    .nearby-poi-results {
@@ -937,6 +1150,15 @@
 	    }
 	    @media (max-width: 768px) {
 	      .nearby-poi-results .poi-grid { grid-template-columns: 1fr; }
+	      .nearby-alert-header {
+	        display: flex;
+	        flex-direction: column;
+	        gap: 10px;
+	        align-items: flex-start;
+	      }
+	      .nearby-alert-category-grid {
+	        grid-template-columns: 1fr;
+	      }
 	    }
 	    .nearby-poi-card {
 	      border: 1px solid rgba(0,0,0,0.08);
@@ -1001,9 +1223,11 @@
 	    @media (max-width: 768px) {
 	      .nearby-poi-results { grid-template-columns: 1fr; }
 	      .nearby-poi-controls { gap: 8px; }
+	      .nearby-alert-controls { gap: 8px; }
 	      .nearby-poi-btn { width: 100%; justify-content: center; }
 	      .nearby-poi-radius { width: 100%; justify-content: space-between; }
 	      .nearby-poi-radius select { width: 130px; }
+	      .nearby-alert-item-header { flex-direction: column; }
 	    }
 	  </style>
 

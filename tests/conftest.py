@@ -75,9 +75,25 @@ def app(monkeypatch):
     def _stub_poi_get(*args, **kwargs):
         raise APIError("POI not found", "NOT_FOUND", 404)
 
+    def _stub_poi_nearby(*args, **kwargs):
+        lat = kwargs.get("lat", 0.0)
+        lng = kwargs.get("lng", 0.0)
+        radius_m = kwargs.get("radius_m", 1000)
+        category = kwargs.get("category")
+        categories = kwargs.get("categories") or []
+        return {
+            "center": {"lat": lat, "lng": lng},
+            "radius_m": radius_m,
+            "count": 0,
+            "category": category,
+            "categories": categories,
+            "pois": [],
+        }
+
     monkeypatch.setattr(poi_service, "list_pois", _stub_poi_list, raising=False)
     monkeypatch.setattr(poi_service, "search_pois", _stub_poi_search, raising=False)
     monkeypatch.setattr(poi_service, "get_poi", _stub_poi_get, raising=False)
+    monkeypatch.setattr(poi_service, "search_nearby_pois", _stub_poi_nearby, raising=False)
 
     yield flask_app
 

@@ -379,7 +379,105 @@ class POIService:
         except Exception as e:
             logger.error(f"Error searching POIs: {e}")
             raise APIError("Search failed", "POI_SEARCH_ERROR")
-    
+
+    def search_nearby_pois(
+        self,
+        lat: float,
+        lng: float,
+        radius_m: int = 1000,
+        limit: int = 50,
+        category: Optional[str] = None,
+        categories: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Return POIs near the given coordinate ordered by distance."""
+        if not (-90 <= lat <= 90):
+            raise bad_request("Latitude must be between -90 and 90")
+
+        if not (-180 <= lng <= 180):
+            raise bad_request("Longitude must be between -180 and 180")
+
+        radius_m = max(50, min(int(radius_m), 50000))
+        limit = max(1, min(int(limit), 200))
+        normalized_category = (category or "").strip() or None
+        normalized_categories: List[str] = []
+
+        for item in categories or []:
+            category_name = str(item or "").strip()
+            if not category_name or category_name in normalized_categories:
+                continue
+            normalized_categories.append(category_name)
+
+        if normalized_categories:
+            normalized_category = normalized_categories[0] if len(normalized_categories) == 1 else None
+
+        conn_context = self._get_database_connection()
+
+        with conn_context as conn:
+            with conn.cursor() as cursor:
+                params: List[Any] = [lng, lat, lng, lat, radius_m]
+                category_clause = ""
+                if normalized_categories:
+                    category_clause = " AND p.category = ANY(%s)"
+                    params.append(normalized_categories)
+                elif normalized_category:
+                    category_clause = " AND p.category = %s"
+                    params.append(normalized_category)
+
+                params.append(limit)
+
+                query = f"""
+                    SELECT
+                        p.id,
+                        p.name,
+                        p.description,
+                        p.short_description,
+                        p.category,
+                        p.altitude,
+                        ST_Y(p.location::geometry) AS latitude,
+                        ST_X(p.location::geometry) AS longitude,
+                        p.attributes,
+                        p.is_active,
+                        p.created_at,
+                        p.updated_at,
+                        ST_Distance(
+                            p.location::geography,
+                            ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
+                        ) AS distance_m
+                    FROM pois p
+                    WHERE p.is_active = true
+                      AND p.location IS NOT NULL
+                      AND ST_DWithin(
+                            p.location::geography,
+                            ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography,
+                            %s
+                      )
+                      {category_clause}
+                    ORDER BY distance_m ASC
+                    LIMIT %s
+                """
+
+                cursor.execute(query, params)
+                rows = cursor.fetchall() or []
+
+        pois: List[Dict[str, Any]] = []
+        for row in rows:
+            mapped = self._ensure_client_compat(self._map_poi_record(row))
+            mapped["_id"] = mapped.get("id")
+            try:
+                mapped["distance_m"] = int(round(float(mapped.get("distance_m") or 0)))
+            except (TypeError, ValueError):
+                mapped["distance_m"] = 0
+            pois.append(mapped)
+
+        return {
+            "center": {"lat": lat, "lng": lng},
+            "radius_m": radius_m,
+            "count": len(pois),
+            "category": normalized_category,
+            "categories": normalized_categories,
+            "pois": pois,
+        }
+
     def _search_pois_database(self, query: str, category: str, limit: int) -> Dict[str, Any]:
         """Search POIs in database with relevance scoring."""
         conn_context = self._get_database_connection()

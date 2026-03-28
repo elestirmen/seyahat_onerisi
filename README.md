@@ -1710,14 +1710,25 @@ Bu repo içindeki `android_app/` klasörü, web arayüzünü Android üzerinde *
 
 #### Build (CLI)
 ```bash
-cd android_app
+# Yerel bilgisayarinizda JDK 17 ve Android SDK kurulu olmali
+export JAVA_HOME=/path/to/jdk-17
+export ANDROID_SDK_ROOT=/path/to/Android/Sdk
 
-# Android SDK yolunu local.properties içine yazın
-echo "sdk.dir=/path/to/Android/Sdk" > local.properties
-
-# Debug APK
-./gradlew :app:assembleDebug
+# Repo kokunden debug APK uret
+./scripts/build_android_apk.sh
 ```
+
+Script, `android_app/local.properties` dosyasini otomatik yazar ve `debug` build alir.
+
+Release icin:
+```bash
+./scripts/build_android_apk.sh release
+```
+
+Gerekli Android SDK paketleri:
+- `platforms;android-34`
+- `build-tools;34.0.0`
+- `platform-tools`
 
 APK çıktısı:
 - `android_app/app/build/outputs/apk/debug/app-debug.apk`
