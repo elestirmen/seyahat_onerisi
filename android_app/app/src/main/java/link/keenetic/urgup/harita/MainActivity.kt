@@ -59,6 +59,8 @@ class MainActivity : AppCompatActivity() {
   private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
   private var pendingPoiTrackingCategories: List<String> = emptyList()
   private var pendingPoiTrackingRadiusMeters: Int = 250
+  private var pendingPoiTrackingPanoramasEnabled: Boolean = true
+  private var pendingPoiTrackingAllCategories: Boolean = true
   private var nativeVrModeActive = false
   private var previousRequestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 
@@ -100,11 +102,15 @@ class MainActivity : AppCompatActivity() {
 
         val categories = pendingPoiTrackingCategories
         val radiusMeters = pendingPoiTrackingRadiusMeters
+        val includePanoramas = pendingPoiTrackingPanoramasEnabled
+        val trackAllCategories = pendingPoiTrackingAllCategories
         pendingPoiTrackingCategories = emptyList()
         pendingPoiTrackingRadiusMeters = 250
+        pendingPoiTrackingPanoramasEnabled = true
+        pendingPoiTrackingAllCategories = true
 
         if (granted) {
-          startNearbyPoiTrackingService(categories, radiusMeters)
+          startNearbyPoiTrackingService(categories, radiusMeters, includePanoramas, trackAllCategories)
         } else {
           Toast.makeText(
             this,
@@ -363,6 +369,20 @@ class MainActivity : AppCompatActivity() {
       .toString()
   }
 
+  private fun buildPanoramaTargetUrl(alertId: String?, sourceType: String?): String {
+    val normalizedAlertId = alertId?.trim().orEmpty()
+    if (normalizedAlertId.isBlank()) {
+      return PERSONAL_ROUTES_URL
+    }
+
+    return Uri.parse(PERSONAL_ROUTES_URL)
+      .buildUpon()
+      .appendQueryParameter("panorama", normalizedAlertId)
+      .appendQueryParameter("panoramaSource", sourceType?.trim().takeUnless { it.isNullOrBlank() } ?: "standalone")
+      .build()
+      .toString()
+  }
+
   private fun createPoiAlertChannel() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
 
@@ -413,9 +433,25 @@ class MainActivity : AppCompatActivity() {
     }
   }
 
-  private fun requestNearbyPoiTrackingLocationPermission(categories: List<String>, alertRadiusM: Int) {
+  private fun parsePoiTrackingFlag(payload: String?, defaultValue: Boolean): Boolean {
+    return when (payload?.trim()?.lowercase()) {
+      null, "" -> defaultValue
+      "1", "true", "yes", "on" -> true
+      "0", "false", "no", "off" -> false
+      else -> defaultValue
+    }
+  }
+
+  private fun requestNearbyPoiTrackingLocationPermission(
+    categories: List<String>,
+    alertRadiusM: Int,
+    includePanoramas: Boolean,
+    trackAllCategories: Boolean,
+  ) {
     pendingPoiTrackingCategories = categories
     pendingPoiTrackingRadiusMeters = alertRadiusM
+    pendingPoiTrackingPanoramasEnabled = includePanoramas
+    pendingPoiTrackingAllCategories = trackAllCategories
     nativeTrackingLocationPermissionLauncher.launch(
       arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -424,11 +460,16 @@ class MainActivity : AppCompatActivity() {
     )
   }
 
-  private fun startNearbyPoiTrackingService(categories: List<String>, alertRadiusM: Int) {
+  private fun startNearbyPoiTrackingService(
+    categories: List<String>,
+    alertRadiusM: Int,
+    includePanoramas: Boolean,
+    trackAllCategories: Boolean,
+  ) {
     requestNotificationPermissionIfNeeded()
     ContextCompat.startForegroundService(
       this,
-      NearbyPoiTrackingService.buildStartIntent(this, categories, alertRadiusM),
+      NearbyPoiTrackingService.buildStartIntent(this, categories, alertRadiusM, includePanoramas, trackAllCategories),
     )
   }
 
@@ -452,28 +493,38 @@ class MainActivity : AppCompatActivity() {
     )
   }
 
-  private fun showPoiAlertNotification(title: String, message: String, poiId: String?) {
+  private fun showNearbyAlertNotification(
+    title: String,
+    message: String,
+    alertId: String?,
+    targetUrl: String?,
+  ) {
     if (!hasNotificationPermission()) {
       requestNotificationPermissionIfNeeded()
       return
     }
 
-    val normalizedPoiId = PoiNotificationPreferenceStore.normalizePoiId(poiId)
-    if (normalizedPoiId.isEmpty()) return
-    if (PoiNotificationPreferenceStore.isPoiMuted(this, normalizedPoiId)) return
+    val normalizedAlertId = PoiNotificationPreferenceStore.normalizePoiId(alertId)
+    if (normalizedAlertId.isEmpty()) return
+    if (PoiNotificationPreferenceStore.isPoiMuted(this, normalizedAlertId)) return
 
-    val targetUrl = buildPoiTargetUrl(poiId)
-    val notificationId = targetUrl.hashCode()
+    val safeTargetUrl =
+      targetUrl?.trim().takeUnless { it.isNullOrBlank() } ?: when {
+        normalizedAlertId.startsWith("route-panorama:") -> buildPanoramaTargetUrl(normalizedAlertId, "route")
+        normalizedAlertId.startsWith("panorama:") -> buildPanoramaTargetUrl(normalizedAlertId, "standalone")
+        else -> buildPoiTargetUrl(alertId)
+      }
+    val notificationId = safeTargetUrl.hashCode()
     val intent =
       Intent(this, MainActivity::class.java).apply {
-        putExtra(EXTRA_TARGET_URL, targetUrl)
+        putExtra(EXTRA_TARGET_URL, safeTargetUrl)
         flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
       }
 
     val pendingIntent =
       PendingIntent.getActivity(
         this,
-        targetUrl.hashCode(),
+        safeTargetUrl.hashCode(),
         intent,
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
       )
@@ -490,12 +541,16 @@ class MainActivity : AppCompatActivity() {
         .addAction(
           0,
           getString(R.string.poi_tracking_mute_action),
-          buildMutePoiPendingIntent(normalizedPoiId, notificationId),
+          buildMutePoiPendingIntent(normalizedAlertId, notificationId),
         )
         .build()
 
-    PoiNotificationPreferenceStore.persistLastAlertAt(this, normalizedPoiId, System.currentTimeMillis())
+    PoiNotificationPreferenceStore.persistLastAlertAt(this, normalizedAlertId, System.currentTimeMillis())
     NotificationManagerCompat.from(this).notify(notificationId, notification)
+  }
+
+  private fun showPoiAlertNotification(title: String, message: String, poiId: String?) {
+    showNearbyAlertNotification(title, message, poiId, buildPoiTargetUrl(poiId))
   }
 
   private inner class AndroidBridge {
@@ -512,6 +567,15 @@ class MainActivity : AppCompatActivity() {
         val safeTitle = title?.takeIf { it.isNotBlank() } ?: getString(R.string.nearby_poi_notification_title)
         val safeMessage = message?.takeIf { it.isNotBlank() } ?: return@runOnUiThread
         showPoiAlertNotification(safeTitle, safeMessage, poiId)
+      }
+    }
+
+    @JavascriptInterface
+    fun showNearbyAlertNotification(title: String?, message: String?, alertId: String?, targetUrl: String?) {
+      runOnUiThread {
+        val safeTitle = title?.takeIf { it.isNotBlank() } ?: getString(R.string.nearby_poi_notification_title)
+        val safeMessage = message?.takeIf { it.isNotBlank() } ?: return@runOnUiThread
+        this@MainActivity.showNearbyAlertNotification(safeTitle, safeMessage, alertId, targetUrl)
       }
     }
 
@@ -533,15 +597,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     @JavascriptInterface
-    fun startPoiTrackingService(categoriesPayload: String?, alertRadiusMeters: String?) {
+    fun startPoiTrackingService(
+      categoriesPayload: String?,
+      alertRadiusMeters: String?,
+      includePanoramasPayload: String?,
+      trackAllCategoriesPayload: String?,
+    ) {
       runOnUiThread {
         val radiusMeters = alertRadiusMeters?.toIntOrNull()?.coerceIn(100, 5000) ?: 250
         val categories = parsePoiTrackingCategories(categoriesPayload)
+        val includePanoramas = parsePoiTrackingFlag(includePanoramasPayload, true)
+        val trackAllCategories = parsePoiTrackingFlag(trackAllCategoriesPayload, true)
 
         if (hasLocationPermission()) {
-          startNearbyPoiTrackingService(categories, radiusMeters)
+          startNearbyPoiTrackingService(categories, radiusMeters, includePanoramas, trackAllCategories)
         } else {
-          requestNearbyPoiTrackingLocationPermission(categories, radiusMeters)
+          requestNearbyPoiTrackingLocationPermission(categories, radiusMeters, includePanoramas, trackAllCategories)
         }
       }
     }

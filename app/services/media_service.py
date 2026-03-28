@@ -8,6 +8,7 @@ import json
 import os
 import uuid
 import logging
+import math
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
 from werkzeug.datastructures import FileStorage
@@ -363,7 +364,30 @@ class MediaService:
     def list_panoramas(self) -> Dict[str, Any]:
         """List standalone panoramas."""
         try:
-            return {"panoramas": self._get_legacy_manager().get_all_panoramas()}
+            items = self._get_legacy_manager().get_all_panoramas()
+            normalized_items: List[Dict[str, Any]] = []
+
+            for item in items:
+                record = dict(item)
+                record_id = self._build_panorama_alert_id(
+                    "standalone",
+                    panorama_id=record.get("id"),
+                    filename=record.get("filename"),
+                    path=record.get("path"),
+                )
+                title = str(record.get("caption") or "").strip() or "360° Panorama"
+                record.update(
+                    {
+                        "alert_id": record_id,
+                        "name": title,
+                        "source_type": "standalone",
+                        "entity_type": "panorama",
+                        "kind_label": "360° Panorama",
+                    }
+                )
+                normalized_items.append(record)
+
+            return {"panoramas": normalized_items}
         except Exception as exc:
             logger.error("Error fetching panoramas: %s", exc)
             raise APIError("Error fetching panoramas", "PANORAMA_LIST_ERROR", 500)
@@ -434,6 +458,13 @@ class MediaService:
 
                 results.append(
                     {
+                        "alert_id": self._build_panorama_alert_id(
+                            "route",
+                            route_id=record.get("route_id"),
+                            filename=filename,
+                            path=rel_path,
+                        ),
+                        "name": (record.get("caption") or "360° Panorama").strip() or "360° Panorama",
                         "route_id": record.get("route_id"),
                         "path": rel_path,
                         "caption": record.get("caption") or "",
@@ -446,6 +477,9 @@ class MediaService:
                             else record.get("media_type")
                         ),
                         "is_pano": is_pano,
+                        "source_type": "route",
+                        "entity_type": "panorama",
+                        "kind_label": "360° Panorama",
                         "original_path": original_path,
                         "pyramid_levels": pyramid_levels,
                     }
@@ -457,6 +491,151 @@ class MediaService:
         except Exception as exc:
             logger.error("Error fetching route panoramas: %s", exc)
             raise APIError("Error fetching route panoramas", "ROUTE_PANORAMA_LIST_ERROR", 500)
+
+    @staticmethod
+    def _parse_coordinate(value: Any) -> Optional[float]:
+        try:
+            coordinate = float(value)
+        except (TypeError, ValueError):
+            return None
+
+        if not math.isfinite(coordinate):
+            return None
+
+        return coordinate
+
+    @staticmethod
+    def _calculate_haversine_distance_m(
+        origin_lat: float,
+        origin_lng: float,
+        target_lat: float,
+        target_lng: float,
+    ) -> float:
+        earth_radius_m = 6_371_000.0
+        lat1 = math.radians(origin_lat)
+        lng1 = math.radians(origin_lng)
+        lat2 = math.radians(target_lat)
+        lng2 = math.radians(target_lng)
+        delta_lat = lat2 - lat1
+        delta_lng = lng2 - lng1
+
+        haversine = (
+            math.sin(delta_lat / 2) ** 2
+            + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lng / 2) ** 2
+        )
+        return 2 * earth_radius_m * math.asin(math.sqrt(haversine))
+
+    @staticmethod
+    def _build_panorama_alert_id(
+        source_type: str,
+        *,
+        panorama_id: Any = None,
+        route_id: Any = None,
+        filename: Any = None,
+        path: Any = None,
+    ) -> str:
+        normalized_source = str(source_type or "").strip().lower() or "standalone"
+        existing_id = str(panorama_id or "").strip()
+        if existing_id.startswith("panorama:") or existing_id.startswith("route-panorama:"):
+            return existing_id
+
+        if normalized_source == "standalone":
+            base_id = existing_id
+            if base_id:
+                return f"panorama:{base_id}"
+
+            fallback_stem = Path(str(path or filename or "panorama")).stem
+            safe_fallback = secure_filename(fallback_stem) or "panorama"
+            return f"panorama:{safe_fallback}"
+
+        route_value = str(route_id or "").strip() or "unknown"
+        stem = Path(str(filename or path or "panorama")).stem
+        safe_stem = secure_filename(stem) or "panorama"
+        return f"route-panorama:{route_value}:{safe_stem}"
+
+    def search_nearby_panoramas(
+        self,
+        *,
+        lat: float,
+        lng: float,
+        radius_m: int = 1000,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        """List nearby standalone and route panoramas around a coordinate."""
+        normalized_radius = max(50, min(int(radius_m), 10_000))
+        normalized_limit = max(1, min(int(limit), 100))
+        normalized_results: List[Dict[str, Any]] = []
+        seen_ids = set()
+
+        def add_result(item: Dict[str, Any], source_type: str) -> None:
+            item_lat = self._parse_coordinate(item.get("lat"))
+            item_lng = self._parse_coordinate(item.get("lng"))
+            if item_lat is None or item_lng is None:
+                return
+
+            distance_m = self._calculate_haversine_distance_m(lat, lng, item_lat, item_lng)
+            if distance_m > normalized_radius:
+                return
+
+            alert_id = self._build_panorama_alert_id(
+                source_type,
+                panorama_id=item.get("alert_id") or item.get("id"),
+                route_id=item.get("route_id"),
+                filename=item.get("filename"),
+                path=item.get("path"),
+            )
+            if not alert_id or alert_id in seen_ids:
+                return
+
+            seen_ids.add(alert_id)
+
+            title = str(item.get("caption") or "").strip()
+            if not title:
+                title = "360° Panorama"
+
+            normalized_results.append(
+                {
+                    "id": alert_id,
+                    "_id": alert_id,
+                    "name": title,
+                    "caption": str(item.get("caption") or "").strip(),
+                    "entity_type": "panorama",
+                    "source_type": source_type,
+                    "latitude": item_lat,
+                    "longitude": item_lng,
+                    "lat": item_lat,
+                    "lng": item_lng,
+                    "distance_m": round(distance_m, 1),
+                    "path": self._to_relative_media_path(item.get("path")),
+                    "original_path": self._to_relative_media_path(item.get("original_path")),
+                    "pyramid_levels": item.get("pyramid_levels") if isinstance(item.get("pyramid_levels"), list) else [],
+                    "filename": item.get("filename"),
+                    "route_id": item.get("route_id"),
+                    "kind_label": "360° Panorama",
+                }
+            )
+
+        standalone_payload = self.list_panoramas()
+        for panorama in standalone_payload.get("panoramas", []) or []:
+            add_result(dict(panorama), "standalone")
+
+        route_payload = self.list_route_panoramas()
+        for panorama in route_payload.get("panoramas", []) or []:
+            record = dict(panorama)
+            is_pano = bool(record.get("is_pano")) or str(record.get("media_type") or "").strip().lower() == "panorama"
+            if not is_pano:
+                continue
+            add_result(record, "route")
+
+        normalized_results.sort(key=lambda item: (item.get("distance_m") or 0, item.get("name") or ""))
+        limited_results = normalized_results[:normalized_limit]
+
+        return {
+            "center": {"lat": lat, "lng": lng},
+            "radius_m": normalized_radius,
+            "count": len(limited_results),
+            "panoramas": limited_results,
+        }
 
     def delete_panorama(self, pano_id: str) -> Dict[str, Any]:
         """Delete standalone panorama by identifier."""

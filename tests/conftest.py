@@ -26,7 +26,7 @@ def app(monkeypatch):
 
     # Stub services to avoid real database usage during tests
     from app.middleware.error_handler import APIError
-    from app.services import route_service, poi_service
+    from app.services import route_service, poi_service, media_service
 
     def _stub_route_list(*args, **kwargs):
         page = kwargs.get("page", 1)
@@ -90,10 +90,22 @@ def app(monkeypatch):
             "pois": [],
         }
 
+    def _stub_nearby_panoramas(*args, **kwargs):
+        lat = kwargs.get("lat", 0.0)
+        lng = kwargs.get("lng", 0.0)
+        radius_m = kwargs.get("radius_m", 1000)
+        return {
+            "center": {"lat": lat, "lng": lng},
+            "radius_m": radius_m,
+            "count": 0,
+            "panoramas": [],
+        }
+
     monkeypatch.setattr(poi_service, "list_pois", _stub_poi_list, raising=False)
     monkeypatch.setattr(poi_service, "search_pois", _stub_poi_search, raising=False)
     monkeypatch.setattr(poi_service, "get_poi", _stub_poi_get, raising=False)
     monkeypatch.setattr(poi_service, "search_nearby_pois", _stub_poi_nearby, raising=False)
+    monkeypatch.setattr(media_service, "search_nearby_panoramas", _stub_nearby_panoramas, raising=False)
 
     yield flask_app
 

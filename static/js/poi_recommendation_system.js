@@ -8669,6 +8669,164 @@ async function initializeMapForRoute() {
 
 // --------- Standalone 360° Panoramas on User Map ---------
 let panoramaLayer;
+const panoramaMarkersByAlertId = new Map();
+
+function normalizePanoramaMediaPath(path) {
+    if (!path || typeof path !== 'string') return '';
+    return path.startsWith('/') ? path : `/${path}`;
+}
+
+function createPanoramaAlertRecord(panorama, sourceType = '') {
+    const resolvedSourceType = String(sourceType || panorama?.source_type || (panorama?.route_id != null ? 'route' : 'standalone')).trim() || 'standalone';
+    const lat = typeof panorama?.lat === 'number' ? panorama.lat : parseFloat(panorama?.lat ?? panorama?.latitude);
+    const lng = typeof panorama?.lng === 'number' ? panorama.lng : parseFloat(panorama?.lng ?? panorama?.longitude);
+    const caption = String(panorama?.caption || panorama?.name || '').trim();
+    const alertId = String(panorama?.alert_id || panorama?.id || panorama?._id || '').trim();
+
+    return {
+        ...(panorama && typeof panorama === 'object' ? panorama : {}),
+        id: alertId,
+        _id: alertId,
+        name: caption || '360° Panorama',
+        caption,
+        entity_type: 'panorama',
+        source_type: resolvedSourceType,
+        kind_label: '360° Panorama',
+        lat: Number.isFinite(lat) ? lat : null,
+        lng: Number.isFinite(lng) ? lng : null,
+        latitude: Number.isFinite(lat) ? lat : null,
+        longitude: Number.isFinite(lng) ? lng : null,
+        path: String(panorama?.path || '').trim(),
+        original_path: String(panorama?.original_path || '').trim(),
+        pyramid_levels: Array.isArray(panorama?.pyramid_levels) ? panorama.pyramid_levels : [],
+    };
+}
+
+function buildPanoramaDeepLink(panorama) {
+    const alertItem = createPanoramaAlertRecord(panorama);
+    if (!alertItem.id) return '';
+
+    const params = new URLSearchParams();
+    params.set('panorama', alertItem.id);
+    if (alertItem.source_type) {
+        params.set('panoramaSource', alertItem.source_type);
+    }
+
+    return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+}
+
+async function fetchPanoramaAlertItemById(alertId, preferredSourceType = '') {
+    const normalizedAlertId = String(alertId || '').trim();
+    if (!normalizedAlertId) return null;
+
+    const sourceOrder = preferredSourceType === 'route'
+        ? [
+            { endpoint: '/api/route-panoramas', sourceType: 'route' },
+            { endpoint: '/api/panoramas', sourceType: 'standalone' },
+        ]
+        : preferredSourceType === 'standalone'
+            ? [
+                { endpoint: '/api/panoramas', sourceType: 'standalone' },
+                { endpoint: '/api/route-panoramas', sourceType: 'route' },
+            ]
+            : [
+                { endpoint: '/api/panoramas', sourceType: 'standalone' },
+                { endpoint: '/api/route-panoramas', sourceType: 'route' },
+            ];
+
+    for (const source of sourceOrder) {
+        try {
+            const response = await fetch(source.endpoint, { credentials: 'include' });
+            if (!response.ok) continue;
+
+            const payload = await response.json();
+            const items = Array.isArray(payload) ? payload : (payload.panoramas || []);
+            const matchedItem = items
+                .map((item) => createPanoramaAlertRecord(item, source.sourceType))
+                .find((item) => item.id === normalizedAlertId);
+
+            if (matchedItem) {
+                return matchedItem;
+            }
+        } catch (error) {
+            console.warn('Panorama deep-link source could not be loaded:', source.endpoint, error);
+        }
+    }
+
+    return null;
+}
+
+async function focusPanoramaOnMap(panorama) {
+    const alertItem = createPanoramaAlertRecord(panorama);
+    const lat = parseFloat(alertItem.latitude ?? alertItem.lat);
+    const lng = parseFloat(alertItem.longitude ?? alertItem.lng);
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    const mapSection = document.getElementById('mapSection');
+    if (mapSection) {
+        mapSection.style.display = 'block';
+    }
+
+    try {
+        if ((!map || !map._loaded) && document.getElementById('mapContainer') && typeof initializeMainMap === 'function') {
+            await initializeMainMap();
+        }
+    } catch (error) {
+        console.warn('Panorama map initialization failed:', error);
+    }
+
+    const targetMap = (typeof predefinedMap !== 'undefined' && predefinedMap) ? predefinedMap : map;
+    if (!targetMap) return;
+
+    try {
+        if (!panoramaLayer || !panoramaMarkersByAlertId.has(alertItem.id)) {
+            await loadPanoramasLayer();
+        }
+    } catch (error) {
+        console.warn('Panorama markers could not be refreshed:', error);
+    }
+
+    try {
+        targetMap.setView([lat, lng], 16, { animate: true });
+    } catch (_) {
+        targetMap.setView([lat, lng], 16);
+    }
+
+    try {
+        const marker = panoramaMarkersByAlertId.get(alertItem.id);
+        if (marker) marker.openPopup();
+    } catch (_) {}
+
+    try {
+        if (mapSection) {
+            mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    } catch (_) {}
+}
+
+async function openPanoramaAlertItem(panorama, { focusMap = true } = {}) {
+    const alertItem = createPanoramaAlertRecord(panorama);
+    const imageUrl = normalizePanoramaMediaPath(alertItem.path);
+    if (!imageUrl || typeof openPanoramaViewer !== 'function') return false;
+
+    const originalUrl = normalizePanoramaMediaPath(alertItem.original_path);
+    const pyramidEncoded = encodeURIComponent(JSON.stringify(Array.isArray(alertItem.pyramid_levels) ? alertItem.pyramid_levels : []));
+    openPanoramaViewer(imageUrl, alertItem.caption || alertItem.name || '360° Panorama', pyramidEncoded, originalUrl);
+
+    if (focusMap) {
+        try {
+            await focusPanoramaOnMap(alertItem);
+        } catch (error) {
+            console.warn('Panorama map focus failed:', error);
+        }
+    }
+
+    return true;
+}
+
+window.fetchPanoramaAlertItemById = fetchPanoramaAlertItemById;
+window.focusPanoramaOnMap = focusPanoramaOnMap;
+window.openPanoramaAlertItem = openPanoramaAlertItem;
 
 async function loadPanoramasLayer() {
     try {
@@ -8682,6 +8840,7 @@ async function loadPanoramasLayer() {
         } else {
             panoramaLayer.clearLayers();
         }
+        panoramaMarkersByAlertId.clear();
 
         // Simple heuristic to detect 360° image by filename keywords
         const isPanoramicCandidate = (name) => {
@@ -8696,8 +8855,9 @@ async function loadPanoramasLayer() {
         const items = Array.isArray(data) ? data : (data.panoramas || []);
 
         items.forEach(pano => {
-            const lat = typeof pano.lat === 'number' ? pano.lat : parseFloat(pano.lat);
-            const lng = typeof pano.lng === 'number' ? pano.lng : parseFloat(pano.lng);
+            const panoramaItem = createPanoramaAlertRecord(pano, 'standalone');
+            const lat = typeof panoramaItem.lat === 'number' ? panoramaItem.lat : parseFloat(panoramaItem.lat);
+            const lng = typeof panoramaItem.lng === 'number' ? panoramaItem.lng : parseFloat(panoramaItem.lng);
             if (isNaN(lat) || isNaN(lng)) return;
 
             const icon = L.divIcon({
@@ -8712,12 +8872,10 @@ async function loadPanoramasLayer() {
                 popupAnchor: [0, -16]
             });
 
-            const mediaPath = (pano.path || '').startsWith('/') ? pano.path : `/${pano.path}`;
-            const caption = pano.caption || '360° Panorama';
-            const pyramidEncoded = encodeURIComponent(JSON.stringify(Array.isArray(pano.pyramid_levels) ? pano.pyramid_levels : []));
-            const originalPath = pano.original_path
-                ? ((pano.original_path || '').startsWith('/') ? pano.original_path : `/${pano.original_path}`)
-                : '';
+            const mediaPath = normalizePanoramaMediaPath(panoramaItem.path);
+            const caption = panoramaItem.caption || '360° Panorama';
+            const pyramidEncoded = encodeURIComponent(JSON.stringify(Array.isArray(panoramaItem.pyramid_levels) ? panoramaItem.pyramid_levels : []));
+            const originalPath = normalizePanoramaMediaPath(panoramaItem.original_path);
 
             const marker = L.marker([lat, lng], { icon })
                 .bindPopup(`
@@ -8732,6 +8890,10 @@ async function loadPanoramasLayer() {
                         </button>
                     </div>
                 `);
+            marker.panoramaData = panoramaItem;
+            if (panoramaItem.id) {
+                panoramaMarkersByAlertId.set(panoramaItem.id, marker);
+            }
             panoramaLayer.addLayer(marker);
         });
 
@@ -8742,8 +8904,9 @@ async function loadPanoramasLayer() {
                 const data2 = await res2.json();
                 const items2 = Array.isArray(data2) ? data2 : (data2.panoramas || []);
                 items2.forEach(p => {
-                    const lat = typeof p.lat === 'number' ? p.lat : parseFloat(p.lat);
-                    const lng = typeof p.lng === 'number' ? p.lng : parseFloat(p.lng);
+                    const panoramaItem = createPanoramaAlertRecord(p, 'route');
+                    const lat = typeof panoramaItem.lat === 'number' ? panoramaItem.lat : parseFloat(panoramaItem.lat);
+                    const lng = typeof panoramaItem.lng === 'number' ? panoramaItem.lng : parseFloat(panoramaItem.lng);
                     if (isNaN(lat) || isNaN(lng)) return;
                     // Prefer server-side flag; fallback to name heuristic
                     if (p && p.is_pano !== undefined) {
@@ -8766,12 +8929,10 @@ async function loadPanoramasLayer() {
                         popupAnchor: [0, -16]
                     });
 
-                    const mediaPath = (p.path || '').startsWith('/') ? p.path : `/${p.path}`;
-                    const caption = p.caption || 'Rota Medyası 360°';
-                    const pyramidEncoded = encodeURIComponent(JSON.stringify(Array.isArray(p.pyramid_levels) ? p.pyramid_levels : []));
-                    const originalPath = p.original_path
-                        ? ((p.original_path || '').startsWith('/') ? p.original_path : `/${p.original_path}`)
-                        : '';
+                    const mediaPath = normalizePanoramaMediaPath(panoramaItem.path);
+                    const caption = panoramaItem.caption || 'Rota Medyası 360°';
+                    const pyramidEncoded = encodeURIComponent(JSON.stringify(Array.isArray(panoramaItem.pyramid_levels) ? panoramaItem.pyramid_levels : []));
+                    const originalPath = normalizePanoramaMediaPath(panoramaItem.original_path);
 
                     const marker = L.marker([lat, lng], { icon })
                         .bindPopup(`
@@ -8786,6 +8947,10 @@ async function loadPanoramasLayer() {
                                 </button>
                             </div>
                         `);
+                    marker.panoramaData = panoramaItem;
+                    if (panoramaItem.id) {
+                        panoramaMarkersByAlertId.set(panoramaItem.id, marker);
+                    }
                     panoramaLayer.addLayer(marker);
                 });
             }
@@ -12502,6 +12667,25 @@ async function initializeApp() {
         console.warn('POI deep-link handling error:', e);
     }
 
+    // Deep-link: open panorama viewer when ?panorama=<id> present
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const panoramaParam = params.get('panorama');
+        const panoramaSourceParam = params.get('panoramaSource') || '';
+        if (panoramaParam) {
+            const panorama = await fetchPanoramaAlertItemById(panoramaParam, panoramaSourceParam);
+            if (panorama) {
+                try {
+                    await openPanoramaAlertItem(panorama, { focusMap: true });
+                } catch (error) {
+                    console.warn('Panorama deep-link open failed:', error);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Panorama deep-link handling error:', e);
+    }
+
     // Log removed for cleaner console
 }
 
@@ -12537,6 +12721,7 @@ function getDefaultNearbyAlertPreferences() {
         alertRadiusM: '250',
         alertAllCategories: true,
         alertCategories: [],
+        alertPanoramas: true,
         mutedPoiIds: [],
         alertHistoryByPoiId: {},
     };
@@ -12562,6 +12747,7 @@ function loadStoredNearbyAlertPreferences() {
         nextPreferences.alertCategories = Array.isArray(nextPreferences.alertCategories)
             ? nextPreferences.alertCategories
             : [];
+        nextPreferences.alertPanoramas = nextPreferences.alertPanoramas !== false;
         nextPreferences.mutedPoiIds = Array.isArray(nextPreferences.mutedPoiIds)
             ? nextPreferences.mutedPoiIds.map((poiId) => normalizeNearbyAlertPoiId(poiId)).filter(Boolean)
             : [];
@@ -12583,6 +12769,7 @@ function saveStoredNearbyAlertPreferences(nextPreferences) {
         ...defaults,
         ...(nextPreferences && typeof nextPreferences === 'object' ? nextPreferences : {}),
         alertCategories: Array.isArray(nextPreferences?.alertCategories) ? nextPreferences.alertCategories : [],
+        alertPanoramas: nextPreferences?.alertPanoramas !== false,
         mutedPoiIds: Array.isArray(nextPreferences?.mutedPoiIds)
             ? nextPreferences.mutedPoiIds.map((poiId) => normalizeNearbyAlertPoiId(poiId)).filter(Boolean)
             : [],
@@ -12732,6 +12919,7 @@ function initializeNearbyPOIsUI() {
     const alertPreferencesPanel = document.getElementById('nearbyAlertPreferencesPanel');
     const alertPreferenceSummaryEl = document.getElementById('nearbyAlertPreferenceSummary');
     const alertAllCategoriesToggle = document.getElementById('nearbyAlertAllCategoriesToggle');
+    const alertPanoramaToggle = document.getElementById('nearbyAlertPanoramasToggle');
     const alertCategoryToolsEl = document.getElementById('nearbyAlertCategoryTools');
     const alertCategoryListEl = document.getElementById('nearbyAlertCategoryList');
     const alertSelectAllBtn = document.getElementById('nearbyAlertSelectAllBtn');
@@ -12823,15 +13011,31 @@ function initializeNearbyPOIsUI() {
         nearbyPreferences.alertAllCategories ? [] : getNormalizedAlertCategoryNames()
     );
 
+    const isPanoramaAlertsEnabled = () => nearbyPreferences.alertPanoramas !== false;
+
+    const hasPoiAlertSelection = () => (
+        nearbyPreferences.alertAllCategories || getSelectedAlertCategories().length > 0
+    );
+
     const getAlertCategorySummary = () => {
-        if (nearbyPreferences.alertAllCategories) return 'Tüm türler';
+        const summaryParts = [];
 
-        const selectedCategories = getSelectedAlertCategories();
-        if (!selectedCategories.length) return 'Henüz tür seçilmedi';
+        if (nearbyPreferences.alertAllCategories) {
+            summaryParts.push('Tüm POI türleri');
+        } else {
+            const selectedCategories = getSelectedAlertCategories();
+            if (selectedCategories.length) {
+                const labels = selectedCategories.map((categoryName) => getCategoryLabelByName(categoryName));
+                summaryParts.push(labels.length <= 3 ? labels.join(', ') : `${labels.slice(0, 3).join(', ')} +${labels.length - 3}`);
+            }
+        }
 
-        const labels = selectedCategories.map((categoryName) => getCategoryLabelByName(categoryName));
-        if (labels.length <= 3) return labels.join(', ');
-        return `${labels.slice(0, 3).join(', ')} +${labels.length - 3}`;
+        if (isPanoramaAlertsEnabled()) {
+            summaryParts.push('360° görüntüler');
+        }
+
+        if (!summaryParts.length) return 'Henüz içerik seçilmedi';
+        return summaryParts.join(' + ');
     };
 
     const syncAlertPreferenceSummary = () => {
@@ -12870,6 +13074,10 @@ function initializeNearbyPOIsUI() {
 
         if (alertAllCategoriesToggle) {
             alertAllCategoriesToggle.checked = useAllCategories;
+        }
+
+        if (alertPanoramaToggle) {
+            alertPanoramaToggle.checked = isPanoramaAlertsEnabled();
         }
     };
 
@@ -12915,6 +13123,7 @@ function initializeNearbyPOIsUI() {
     const persistAlertPreferences = () => {
         nearbyPreferences.alertRadiusM = String(alertDistanceSelect?.value || defaultNearbyPreferences.alertRadiusM);
         nearbyPreferences.alertCategories = getNormalizedAlertCategoryNames();
+        nearbyPreferences.alertPanoramas = isPanoramaAlertsEnabled();
         persistNearbyPreferences(nearbyPreferences);
         syncAlertPreferenceSummary();
     };
@@ -12968,6 +13177,41 @@ function initializeNearbyPOIsUI() {
         poi?.id ||
         poi?.poi_id ||
         `${poi?.name || 'poi'}:${poi?.latitude || poi?.lat}:${poi?.longitude || poi?.lng || poi?.lon}`
+    );
+
+    const isPanoramaAlertItem = (item) => (
+        String(item?.entity_type || item?.source_type || '').toLowerCase() === 'panorama' ||
+        String(item?.kind_label || '').toLowerCase().includes('360')
+    );
+
+    const getAlertItemKey = (item) => (
+        isPanoramaAlertItem(item)
+            ? String(item?.id || item?._id || item?.path || item?.name || '').trim()
+            : getPoiKey(item)
+    );
+
+    const getAlertItemDisplayName = (item) => (
+        isPanoramaAlertItem(item)
+            ? (String(item?.caption || item?.name || '').trim() || '360° Panorama')
+            : (item?.name || 'POI')
+    );
+
+    const getAlertItemTypeLabel = (item) => (
+        isPanoramaAlertItem(item)
+            ? '360° Panorama'
+            : getCategoryDisplayName(item?.category || 'diger')
+    );
+
+    const buildPoiAlertTargetUrl = (poi) => {
+        const poiId = String(poi?._id || poi?.id || poi?.poi_id || '').trim();
+        if (!poiId) return '';
+        return `${window.location.origin}${window.location.pathname}?poi=${encodeURIComponent(poiId)}`;
+    };
+
+    const buildAlertTargetUrl = (item) => (
+        isPanoramaAlertItem(item)
+            ? buildPanoramaDeepLink(item)
+            : buildPoiAlertTargetUrl(item)
     );
 
     const ensureMapReadyAndVisible = async () => {
@@ -13089,46 +13333,47 @@ function initializeNearbyPOIsUI() {
                     <div>
                         <p class="nearby-alert-item-title">${escapeHtml(item.name)}</p>
                         <div class="nearby-alert-item-meta">
-                            <span class="nearby-poi-chip">${escapeHtml(item.categoryName)}</span>
+                            <span class="nearby-poi-chip">${escapeHtml(item.typeLabel)}</span>
                             <span class="nearby-poi-chip secondary">${escapeHtml(item.distanceLabel)}</span>
                             <span class="nearby-poi-chip secondary">${escapeHtml(item.timeLabel)}</span>
                         </div>
                     </div>
                 </div>
                 <div class="nearby-alert-item-actions">
-                    <button class="nearby-alert-feed-btn" type="button" data-nearby-alert-action="map" data-poi-id="${escapeHtml(item.poiId)}">
+                    <button class="nearby-alert-feed-btn" type="button" data-nearby-alert-action="map" data-alert-item-id="${escapeHtml(item.alertItemId)}">
                         Haritada Göster
                     </button>
-                    <button class="nearby-alert-feed-btn secondary" type="button" data-nearby-alert-action="detail" data-poi-id="${escapeHtml(item.poiId)}">
-                        Detay Aç
+                    <button class="nearby-alert-feed-btn secondary" type="button" data-nearby-alert-action="detail" data-alert-item-id="${escapeHtml(item.alertItemId)}">
+                        ${escapeHtml(item.detailLabel)}
                     </button>
                 </div>
             </div>
         `).join('');
     };
 
-    const addAlertFeedItem = (poi, distanceM) => {
+    const addAlertFeedItem = (item, distanceM) => {
         if (!canRunLiveAlerts) return;
 
-        const poiId = getPoiKey(poi);
+        const alertItemId = getAlertItemKey(item);
         const nextItem = {
-            poiId,
-            name: poi.name || 'POI',
-            categoryName: getCategoryDisplayName(poi.category || 'diger'),
-            distanceLabel: formatDistance(distanceM),
+            alertItemId,
+            name: getAlertItemDisplayName(item),
+            typeLabel: getAlertItemTypeLabel(item),
+            distanceLabel: formatDistance(distanceM || item.distance_m),
             timeLabel: formatAlertTime(Date.now()),
+            detailLabel: isPanoramaAlertItem(item) ? '360° Aç' : 'Detay Aç',
         };
 
-        nearbyPOIState.liveAlertFeedById.set(poiId, poi);
+        nearbyPOIState.liveAlertFeedById.set(alertItemId, item);
         nearbyPOIState.liveAlertFeed = [
             nextItem,
-            ...nearbyPOIState.liveAlertFeed.filter((item) => item.poiId !== poiId),
+            ...nearbyPOIState.liveAlertFeed.filter((feedItem) => feedItem.alertItemId !== alertItemId),
         ].slice(0, 5);
 
-        const activeIds = new Set(nearbyPOIState.liveAlertFeed.map((item) => item.poiId));
-        Array.from(nearbyPOIState.liveAlertFeedById.keys()).forEach((poiIdKey) => {
-            if (!activeIds.has(poiIdKey)) {
-                nearbyPOIState.liveAlertFeedById.delete(poiIdKey);
+        const activeIds = new Set(nearbyPOIState.liveAlertFeed.map((feedItem) => feedItem.alertItemId));
+        Array.from(nearbyPOIState.liveAlertFeedById.keys()).forEach((itemIdKey) => {
+            if (!activeIds.has(itemIdKey)) {
+                nearbyPOIState.liveAlertFeedById.delete(itemIdKey);
             }
         });
 
@@ -13383,6 +13628,25 @@ function initializeNearbyPOIsUI() {
         return await res.json();
     };
 
+    const fetchNearbyPanoramas = async (lat, lng, options = {}) => {
+        const radiusM = Number.isFinite(options.radiusM) ? options.radiusM : getAlertRadiusMeters();
+        const limit = Number.isFinite(options.limit) ? options.limit : 20;
+        const searchParams = new URLSearchParams({
+            lat: String(lat),
+            lng: String(lng),
+            radius_m: String(radiusM),
+            limit: String(limit),
+        });
+
+        const res = await fetch(`/api/panoramas/nearby?${searchParams.toString()}`, { credentials: 'include' });
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(`Yakın panorama API hatası: ${res.status}${text ? ` - ${text}` : ''}`);
+        }
+
+        return await res.json();
+    };
+
     const runNearbySearch = async (lat, lng, { source = 'active' } = {}) => {
         setStatus('Yakındaki POI\'ler aranıyor...', '');
         resultsEl.innerHTML = '';
@@ -13437,33 +13701,39 @@ function initializeNearbyPOIsUI() {
         return movedMeters >= 50 || elapsedMs >= 30000;
     };
 
-    const triggerLiveAlert = (poi, distanceM) => {
-        const poiId = getPoiKey(poi);
-        const categoryName = getCategoryDisplayName(poi.category || 'diger');
-        const distanceLabel = formatDistance(distanceM || poi.distance_m);
-        const title = `${categoryName} POI yakınınızda`;
-        const message = `${poi.name || 'Bir POI'} ${distanceLabel ? `${distanceLabel} mesafede.` : 'yakınınızda.'}`;
+    const triggerLiveAlert = (item, distanceM) => {
+        const alertItemId = getAlertItemKey(item);
+        const isPanorama = isPanoramaAlertItem(item);
+        const itemTypeLabel = getAlertItemTypeLabel(item);
+        const itemName = getAlertItemDisplayName(item);
+        const distanceLabel = formatDistance(distanceM || item.distance_m);
+        const title = isPanorama ? '360° panorama yakınınızda' : `${itemTypeLabel} POI yakınınızda`;
+        const message = `${itemName} ${distanceLabel ? `${distanceLabel} mesafede.` : 'yakınınızda.'}`;
 
         setAlertStatus(message, 'success');
-        addAlertFeedItem(poi, distanceM || poi.distance_m);
+        addAlertFeedItem(item, distanceM || item.distance_m);
 
         try {
             if (typeof showNotificationWithAction === 'function') {
                 showNotificationWithAction(
                     message,
                     'success',
-                    'Bu POI’yi Sustur',
+                    'Bildirimi Sustur',
                     () => {
-                        setPoiNotificationMutedForCurrentDevice(poiId, true);
-                        setStoredPoiAlertTimestamp(poiId, Date.now());
-                        if (currentPOIData && getCurrentPOIAlertIdentifier(currentPOIData) === poiId) {
+                        setPoiNotificationMutedForCurrentDevice(alertItemId, true);
+                        setStoredPoiAlertTimestamp(alertItemId, Date.now());
+                        if (!isPanorama && currentPOIData && getCurrentPOIAlertIdentifier(currentPOIData) === alertItemId) {
                             updatePOIAlertMuteButton(currentPOIData);
                         }
-                        setAlertStatus(`"${poi.name || 'POI'}" için bildirimler kapatıldı.`, 'success');
+                        setAlertStatus(`"${itemName}" için bildirimler kapatıldı.`, 'success');
                     },
-                    'Detayı Aç',
-                    () => {
-                        try { showPOIDetail(String(poi._id || poi.id || poi.poi_id || poiId), poi); } catch (_) {}
+                    isPanorama ? '360° Aç' : 'Detayı Aç',
+                    async () => {
+                        if (isPanorama) {
+                            try { await openPanoramaAlertItem(item); } catch (_) {}
+                            return;
+                        }
+                        try { await showPOIDetail(String(item._id || item.id || item.poi_id || alertItemId), item); } catch (_) {}
                     },
                 );
             } else if (typeof showNotification === 'function') {
@@ -13473,8 +13743,12 @@ function initializeNearbyPOIsUI() {
 
         let nativeNotificationSent = false;
         try {
-            if (window.APDAndroid && typeof window.APDAndroid.showPoiNotification === 'function') {
-                window.APDAndroid.showPoiNotification(title, message, poiId);
+            const targetUrl = buildAlertTargetUrl(item);
+            if (window.APDAndroid && typeof window.APDAndroid.showNearbyAlertNotification === 'function') {
+                window.APDAndroid.showNearbyAlertNotification(title, message, alertItemId, targetUrl);
+                nativeNotificationSent = true;
+            } else if (!isPanorama && window.APDAndroid && typeof window.APDAndroid.showPoiNotification === 'function') {
+                window.APDAndroid.showPoiNotification(title, message, alertItemId);
                 nativeNotificationSent = true;
             }
         } catch (error) {
@@ -13485,13 +13759,17 @@ function initializeNearbyPOIsUI() {
             try {
                 const notification = new Notification(title, {
                     body: message,
-                    tag: `nearby-poi-${poiId}`,
+                    tag: `nearby-alert-${alertItemId}`,
                 });
 
                 notification.onclick = async () => {
                     try { window.focus(); } catch (_) {}
-                    try { await showPOIDetail(String(poi._id || poi.id || poi.poi_id || poiId), poi); } catch (_) {}
-                    try { focusPOIOnMap(poi); } catch (_) {}
+                    if (isPanorama) {
+                        try { await openPanoramaAlertItem(item); } catch (_) {}
+                        return;
+                    }
+                    try { await showPOIDetail(String(item._id || item.id || item.poi_id || alertItemId), item); } catch (_) {}
+                    try { focusPOIOnMap(item); } catch (_) {}
                 };
             } catch (error) {
                 console.warn('Browser notification failed:', error);
@@ -13500,12 +13778,12 @@ function initializeNearbyPOIsUI() {
     };
 
     const hasValidAlertSelection = () => (
-        nearbyPreferences.alertAllCategories || getSelectedAlertCategories().length > 0
+        hasPoiAlertSelection() || isPanoramaAlertsEnabled()
     );
 
     const ensureValidAlertSelection = () => {
         if (hasValidAlertSelection()) return;
-        throw new Error('Canlı uyarı için en az bir POI türü seçin veya tüm türleri aktif tutun.');
+        throw new Error('Canlı uyarı için en az bir POI türü seçin veya 360° görüntü uyarısını açık tutun.');
     };
 
     const applyAlertPreferenceChanges = async () => {
@@ -13515,11 +13793,11 @@ function initializeNearbyPOIsUI() {
         if (!hasValidAlertSelection()) {
             if (nearbyPOIState.liveAlertMode === 'native' || nearbyPOIState.liveAlertWatchId != null) {
                 stopLiveAlerts();
-                setAlertStatus('Canlı uyarı durduruldu. En az bir POI türü seçin.', 'error');
+                setAlertStatus('Canlı uyarı durduruldu. En az bir POI türü veya 360° görüntü seçin.', 'error');
                 return;
             }
 
-            setAlertStatus('Canlı uyarı için en az bir POI türü seçin.', 'error');
+            setAlertStatus('Canlı uyarı için en az bir POI türü veya 360° görüntü seçin.', 'error');
             return;
         }
 
@@ -13549,30 +13827,49 @@ function initializeNearbyPOIsUI() {
         nearbyPOIState.lastLiveAlertScanLatLng = { lat, lng };
 
         try {
-            const payload = await fetchNearby(lat, lng, {
-                radiusM: getAlertRadiusMeters(),
-                limit: 20,
-                categories: getSelectedAlertCategories(),
+            const [poiPayload, panoramaPayload] = await Promise.all([
+                hasPoiAlertSelection()
+                    ? fetchNearby(lat, lng, {
+                        radiusM: getAlertRadiusMeters(),
+                        limit: 20,
+                        categories: getSelectedAlertCategories(),
+                    })
+                    : Promise.resolve({ pois: [] }),
+                isPanoramaAlertsEnabled()
+                    ? fetchNearbyPanoramas(lat, lng, {
+                        radiusM: getAlertRadiusMeters(),
+                        limit: 20,
+                    })
+                    : Promise.resolve({ panoramas: [] }),
+            ]);
+
+            const nearbyAlertItems = [
+                ...(Array.isArray(poiPayload?.pois) ? poiPayload.pois : []),
+                ...(Array.isArray(panoramaPayload?.panoramas) ? panoramaPayload.panoramas.map((panorama) => createPanoramaAlertRecord(panorama, panorama?.source_type || 'standalone')) : []),
+            ].sort((left, right) => {
+                const leftDistance = typeof left?.distance_m === 'number' ? left.distance_m : parseFloat(left?.distance_m || 0);
+                const rightDistance = typeof right?.distance_m === 'number' ? right.distance_m : parseFloat(right?.distance_m || 0);
+                return leftDistance - rightDistance;
             });
 
-            const visiblePoiIds = new Set();
+            const visibleItemIds = new Set();
             const now = Date.now();
 
-            (payload.pois || []).forEach((poi) => {
-                const poiId = getPoiKey(poi);
-                const storedLastAlertAt = getStoredPoiAlertTimestamp(poiId);
-                const distanceM = typeof poi.distance_m === 'number' ? poi.distance_m : parseFloat(poi.distance_m || 0);
-                const existing = nearbyPOIState.liveAlertStatesById.get(poiId) || {
+            nearbyAlertItems.forEach((item) => {
+                const alertItemId = getAlertItemKey(item);
+                const storedLastAlertAt = getStoredPoiAlertTimestamp(alertItemId);
+                const distanceM = typeof item.distance_m === 'number' ? item.distance_m : parseFloat(item.distance_m || 0);
+                const existing = nearbyPOIState.liveAlertStatesById.get(alertItemId) || {
                     inside: false,
                     lastAlertAt: storedLastAlertAt,
                 };
 
-                visiblePoiIds.add(poiId);
+                visibleItemIds.add(alertItemId);
 
-                if (isPoiNotificationMutedForCurrentDevice(poiId)) {
+                if (isPoiNotificationMutedForCurrentDevice(alertItemId)) {
                     existing.inside = true;
                     existing.lastAlertAt = Math.max(existing.lastAlertAt || 0, storedLastAlertAt);
-                    nearbyPOIState.liveAlertStatesById.set(poiId, existing);
+                    nearbyPOIState.liveAlertStatesById.set(alertItemId, existing);
                     return;
                 }
 
@@ -13580,34 +13877,34 @@ function initializeNearbyPOIsUI() {
                 existing.lastAlertAt = effectiveLastAlertAt;
 
                 if (!existing.inside && (!effectiveLastAlertAt || (now - effectiveLastAlertAt) >= NEARBY_ALERT_POI_COOLDOWN_MS)) {
-                    triggerLiveAlert(poi, distanceM);
+                    triggerLiveAlert(item, distanceM);
                     existing.lastAlertAt = now;
-                    setStoredPoiAlertTimestamp(poiId, now);
+                    setStoredPoiAlertTimestamp(alertItemId, now);
                 }
 
                 existing.inside = true;
-                nearbyPOIState.liveAlertStatesById.set(poiId, existing);
+                nearbyPOIState.liveAlertStatesById.set(alertItemId, existing);
             });
 
-            Array.from(nearbyPOIState.liveAlertStatesById.entries()).forEach(([poiId, state]) => {
-                if (visiblePoiIds.has(poiId)) return;
+            Array.from(nearbyPOIState.liveAlertStatesById.entries()).forEach(([alertItemId, state]) => {
+                if (visibleItemIds.has(alertItemId)) return;
                 state.inside = false;
                 if (state.lastAlertAt && (now - state.lastAlertAt) > NEARBY_ALERT_HISTORY_MAX_AGE_MS) {
-                    nearbyPOIState.liveAlertStatesById.delete(poiId);
+                    nearbyPOIState.liveAlertStatesById.delete(alertItemId);
                     return;
                 }
-                nearbyPOIState.liveAlertStatesById.set(poiId, state);
+                nearbyPOIState.liveAlertStatesById.set(alertItemId, state);
             });
 
-            if ((payload.pois || []).length > 0) {
-                const nearest = payload.pois[0];
+            if (nearbyAlertItems.length > 0) {
+                const nearest = nearbyAlertItems[0];
                 setAlertStatus(
-                    `Canlı uyarı açık. ${getAlertCategorySummary()} için en yakın POI: ${nearest.name || 'POI'} (${formatDistance(nearest.distance_m)}).`,
+                    `Canlı uyarı açık. ${getAlertCategorySummary()} için en yakın içerik: ${getAlertItemDisplayName(nearest)} (${getAlertItemTypeLabel(nearest)}, ${formatDistance(nearest.distance_m)}).`,
                     'success',
                 );
             } else {
                 setAlertStatus(
-                    `Canlı uyarı açık. ${getAlertCategorySummary()} için ${formatDistance(getAlertRadiusMeters())} içinde POI yok.`,
+                    `Canlı uyarı açık. ${getAlertCategorySummary()} için ${formatDistance(getAlertRadiusMeters())} içinde uygun içerik yok.`,
                     '',
                 );
             }
@@ -13653,6 +13950,8 @@ function initializeNearbyPOIsUI() {
         window.APDAndroid.startPoiTrackingService(
             nearbyPreferences.alertAllCategories ? '' : JSON.stringify(getSelectedAlertCategories()),
             String(getAlertRadiusMeters()),
+            String(isPanoramaAlertsEnabled()),
+            String(nearbyPreferences.alertAllCategories),
         );
         nearbyPOIState.liveAlertMode = 'native';
         updateAlertToggleButton();
@@ -13879,6 +14178,18 @@ function initializeNearbyPOIsUI() {
             });
         }
 
+        if (alertPanoramaToggle) {
+            alertPanoramaToggle.checked = isPanoramaAlertsEnabled();
+            alertPanoramaToggle.addEventListener('change', async () => {
+                nearbyPreferences.alertPanoramas = Boolean(alertPanoramaToggle.checked);
+                try {
+                    await applyAlertPreferenceChanges();
+                } catch (error) {
+                    setAlertStatus(error.message || 'Uyarı tercihleri güncellenemedi.', 'error');
+                }
+            });
+        }
+
         if (alertCategoryListEl) {
             alertCategoryListEl.addEventListener('change', async (event) => {
                 const input = event.target.closest('input[data-alert-category]');
@@ -13977,17 +14288,30 @@ function initializeNearbyPOIsUI() {
             const actionButton = event.target.closest('[data-nearby-alert-action]');
             if (!actionButton) return;
 
-            const poiId = actionButton.getAttribute('data-poi-id') || '';
-            const poi = nearbyPOIState.liveAlertFeedById.get(poiId);
-            if (!poi) return;
+            const alertItemId = actionButton.getAttribute('data-alert-item-id') || '';
+            const item = nearbyPOIState.liveAlertFeedById.get(alertItemId);
+            if (!item) return;
 
             if (actionButton.getAttribute('data-nearby-alert-action') === 'map') {
-                await focusPOIOnMap(poi);
+                if (isPanoramaAlertItem(item)) {
+                    await focusPanoramaOnMap(item);
+                    return;
+                }
+                await focusPOIOnMap(item);
+                return;
+            }
+
+            if (isPanoramaAlertItem(item)) {
+                try {
+                    await openPanoramaAlertItem(item);
+                } catch (error) {
+                    console.warn('Panorama viewer could not be opened from alert feed:', error);
+                }
                 return;
             }
 
             try {
-                await showPOIDetail(String(poi._id || poi.id || poi.poi_id || poiId));
+                await showPOIDetail(String(item._id || item.id || item.poi_id || alertItemId));
             } catch (error) {
                 console.warn('POI detail modal could not be opened from alert feed:', error);
             }
@@ -13996,7 +14320,7 @@ function initializeNearbyPOIsUI() {
         if (isNativePoiTrackingServiceRunning()) {
             nearbyPOIState.liveAlertMode = 'native';
             updateAlertToggleButton();
-            setAlertStatus('Android foreground service aktif. Arka planda POI yaklaşım uyarıları sürüyor.', 'success');
+            setAlertStatus('Android foreground service aktif. Arka planda yakın içerik uyarıları sürüyor.', 'success');
         } else {
             updateAlertToggleButton();
             setAlertStatus('Canlı uyarı kapalı. Uyarı türlerini seçip başlatabilirsiniz.', '');

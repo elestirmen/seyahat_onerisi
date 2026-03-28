@@ -216,6 +216,38 @@ def list_route_panoramas():
     return jsonify(media_service.list_route_panoramas()), 200
 
 
+@compat_bp.route("/api/panoramas/nearby", methods=["GET"])
+def nearby_panoramas():
+    lat_raw = (request.args.get("lat") or "").strip()
+    lng_raw = (request.args.get("lng") or "").strip()
+    if not lat_raw or not lng_raw:
+        return jsonify({"error": "lat and lng query params are required"}), 400
+
+    try:
+        lat = float(lat_raw)
+        lng = float(lng_raw)
+    except (TypeError, ValueError):
+        return jsonify({"error": "lat and lng must be numbers"}), 400
+
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return jsonify({"error": "lat/lng out of range"}), 400
+
+    try:
+        radius_m = int(float(request.args.get("radius_m", 1000)))
+    except (TypeError, ValueError):
+        radius_m = 1000
+
+    try:
+        limit = int(float(request.args.get("limit", 20)))
+    except (TypeError, ValueError):
+        limit = 20
+
+    try:
+        return jsonify(media_service.search_nearby_panoramas(lat=lat, lng=lng, radius_m=radius_m, limit=limit)), 200
+    except APIError as exc:
+        return _compat_error_response(exc)
+
+
 @compat_bp.route("/api/route/smart", methods=["POST"])
 def smart_route():
     payload = request.get_json(silent=True) or {}

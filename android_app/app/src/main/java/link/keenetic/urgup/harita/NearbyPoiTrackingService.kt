@@ -34,8 +34,11 @@ class NearbyPoiTrackingService : Service() {
     private const val EXTRA_CATEGORY = "extra_category"
     private const val EXTRA_CATEGORIES = "extra_categories"
     private const val EXTRA_ALERT_RADIUS_METERS = "extra_alert_radius_meters"
+    private const val EXTRA_INCLUDE_PANORAMAS = "extra_include_panoramas"
+    private const val EXTRA_TRACK_ALL_CATEGORIES = "extra_track_all_categories"
     private const val EXTRA_TARGET_URL = "target_url"
     private const val API_URL = "https://harita.urgup.keenetic.link/api/pois/nearby"
+    private const val PANORAMA_API_URL = "https://harita.urgup.keenetic.link/api/panoramas/nearby"
     private const val PERSONAL_ROUTES_URL = "https://harita.urgup.keenetic.link/personal_routes.html"
     const val TRACKING_CHANNEL_ID = "poi_tracking_service"
     const val ALERT_CHANNEL_ID = "nearby_poi_alerts"
@@ -51,11 +54,19 @@ class NearbyPoiTrackingService : Service() {
     @Volatile
     var isRunning: Boolean = false
 
-    fun buildStartIntent(context: Context, categories: List<String>, alertRadiusMeters: Int): Intent {
+    fun buildStartIntent(
+      context: Context,
+      categories: List<String>,
+      alertRadiusMeters: Int,
+      includePanoramas: Boolean,
+      trackAllCategories: Boolean,
+    ): Intent {
       return Intent(context, NearbyPoiTrackingService::class.java).apply {
         action = ACTION_START
         putStringArrayListExtra(EXTRA_CATEGORIES, ArrayList(categories.filter { it.isNotBlank() }))
         putExtra(EXTRA_ALERT_RADIUS_METERS, alertRadiusMeters)
+        putExtra(EXTRA_INCLUDE_PANORAMAS, includePanoramas)
+        putExtra(EXTRA_TRACK_ALL_CATEGORIES, trackAllCategories)
       }
     }
 
@@ -66,11 +77,12 @@ class NearbyPoiTrackingService : Service() {
     }
   }
 
-  private data class NearbyPoi(
+  private data class NearbyAlertItem(
     val id: String,
     val name: String,
-    val category: String,
+    val typeLabel: String,
     val distanceMeters: Int,
+    val targetUrl: String,
   )
 
   private lateinit var locationManager: LocationManager
@@ -78,6 +90,8 @@ class NearbyPoiTrackingService : Service() {
   private val lastAlertAtByPoiId = ConcurrentHashMap<String, Long>()
 
   private var selectedCategories: List<String> = emptyList()
+  private var includePanoramas: Boolean = true
+  private var trackAllCategories: Boolean = true
   private var alertRadiusMeters: Int = DEFAULT_ALERT_RADIUS_METERS
   private var lastScannedLocation: Location? = null
   private var lastScanAt: Long = 0L
@@ -112,6 +126,8 @@ class NearbyPoiTrackingService : Service() {
     } else {
       listOfNotNull(singleCategory)
     }
+    includePanoramas = intent?.getBooleanExtra(EXTRA_INCLUDE_PANORAMAS, true) ?: true
+    trackAllCategories = intent?.getBooleanExtra(EXTRA_TRACK_ALL_CATEGORIES, true) ?: true
     alertRadiusMeters = sanitizeAlertRadius(intent?.getIntExtra(EXTRA_ALERT_RADIUS_METERS, DEFAULT_ALERT_RADIUS_METERS))
     lastAlertAtByPoiId.clear()
     lastScannedLocation = null
@@ -228,19 +244,19 @@ class NearbyPoiTrackingService : Service() {
 
   private fun runNearbyScan(location: Location) {
     try {
-      val pois = fetchNearbyPois(location)
-      if (pois.isEmpty()) {
+      val alertItems = fetchNearbyAlertItems(location)
+      if (alertItems.isEmpty()) {
         updateTrackingNotification(
           getString(
             R.string.poi_tracking_notification_empty,
-            trackingCategoryLabel(),
+            trackingSelectionLabel(),
             alertRadiusMeters,
           ),
         )
         return
       }
 
-      val nearestPoi = pois.first()
+      val nearestPoi = alertItems.first()
       updateTrackingNotification(
         getString(
           R.string.poi_tracking_notification_nearest,
@@ -250,37 +266,50 @@ class NearbyPoiTrackingService : Service() {
       )
 
       val now = System.currentTimeMillis()
-      pois.forEach { poi ->
-        if (PoiNotificationPreferenceStore.isPoiMuted(this, poi.id)) {
+      alertItems.forEach { alertItem ->
+        if (PoiNotificationPreferenceStore.isPoiMuted(this, alertItem.id)) {
           return@forEach
         }
 
         val lastAlertAt = maxOf(
-          lastAlertAtByPoiId[poi.id] ?: 0L,
-          PoiNotificationPreferenceStore.getLastAlertAt(this, poi.id),
+          lastAlertAtByPoiId[alertItem.id] ?: 0L,
+          PoiNotificationPreferenceStore.getLastAlertAt(this, alertItem.id),
         )
         if ((now - lastAlertAt) < ALERT_COOLDOWN_MS) {
           return@forEach
         }
 
-        showPoiAlertNotification(poi)
-        lastAlertAtByPoiId[poi.id] = now
-        PoiNotificationPreferenceStore.persistLastAlertAt(this, poi.id, now)
+        showNearbyAlertNotification(alertItem)
+        lastAlertAtByPoiId[alertItem.id] = now
+        PoiNotificationPreferenceStore.persistLastAlertAt(this, alertItem.id, now)
       }
     } catch (_: Exception) {
       updateTrackingNotification(getString(R.string.poi_tracking_notification_error))
     }
   }
 
-  private fun fetchNearbyPois(location: Location): List<NearbyPoi> {
+  private fun fetchNearbyAlertItems(location: Location): List<NearbyAlertItem> {
+    val items = mutableListOf<NearbyAlertItem>()
+    if (trackAllCategories || selectedCategories.isNotEmpty()) {
+      items += fetchNearbyPois(location)
+    }
+    if (includePanoramas) {
+      items += fetchNearbyPanoramas(location)
+    }
+    return items.sortedBy { it.distanceMeters }
+  }
+
+  private fun fetchNearbyPois(location: Location): List<NearbyAlertItem> {
     val uriBuilder = Uri.parse(API_URL).buildUpon()
       .appendQueryParameter("lat", location.latitude.toString())
       .appendQueryParameter("lng", location.longitude.toString())
       .appendQueryParameter("radius_m", alertRadiusMeters.toString())
       .appendQueryParameter("limit", "20")
 
-    selectedCategories.forEach { categoryName ->
-      uriBuilder.appendQueryParameter("categories", categoryName)
+    if (!trackAllCategories) {
+      selectedCategories.forEach { categoryName ->
+        uriBuilder.appendQueryParameter("categories", categoryName)
+      }
     }
 
     val connection = (URL(uriBuilder.build().toString()).openConnection() as HttpURLConnection).apply {
@@ -299,7 +328,7 @@ class NearbyPoiTrackingService : Service() {
       val payload = connection.inputStream.bufferedReader().use { it.readText() }
       val root = JSONObject(payload)
       val poisArray = root.optJSONArray("pois") ?: return emptyList()
-      val pois = mutableListOf<NearbyPoi>()
+      val pois = mutableListOf<NearbyAlertItem>()
 
       for (index in 0 until poisArray.length()) {
         val item = poisArray.optJSONObject(index) ?: continue
@@ -310,11 +339,12 @@ class NearbyPoiTrackingService : Service() {
         val poiDistanceMeters = item.optDouble("distance_m", 0.0).roundToInt()
 
         pois.add(
-          NearbyPoi(
+          NearbyAlertItem(
             id = poiId,
             name = poiName,
-            category = poiCategory,
+            typeLabel = poiCategory.takeIf { it.isNotBlank() }?.let { formatCategoryLabel(it) } ?: trackingPoiCategoryLabel(),
             distanceMeters = poiDistanceMeters,
+            targetUrl = buildPoiTargetUrl(poiId),
           ),
         )
       }
@@ -325,16 +355,67 @@ class NearbyPoiTrackingService : Service() {
     }
   }
 
-  private fun showPoiAlertNotification(poi: NearbyPoi) {
-    val notificationId = poi.id.hashCode()
+  private fun fetchNearbyPanoramas(location: Location): List<NearbyAlertItem> {
+    val uriBuilder = Uri.parse(PANORAMA_API_URL).buildUpon()
+      .appendQueryParameter("lat", location.latitude.toString())
+      .appendQueryParameter("lng", location.longitude.toString())
+      .appendQueryParameter("radius_m", alertRadiusMeters.toString())
+      .appendQueryParameter("limit", "20")
+
+    val connection = (URL(uriBuilder.build().toString()).openConnection() as HttpURLConnection).apply {
+      requestMethod = "GET"
+      connectTimeout = 10_000
+      readTimeout = 10_000
+      doInput = true
+    }
+
+    return try {
+      val responseCode = connection.responseCode
+      if (responseCode !in 200..299) {
+        throw IllegalStateException("Nearby panorama request failed: $responseCode")
+      }
+
+      val payload = connection.inputStream.bufferedReader().use { it.readText() }
+      val root = JSONObject(payload)
+      val panoramasArray = root.optJSONArray("panoramas") ?: return emptyList()
+      val panoramas = mutableListOf<NearbyAlertItem>()
+
+      for (index in 0 until panoramasArray.length()) {
+        val item = panoramasArray.optJSONObject(index) ?: continue
+        val alertId = item.optString("_id", item.optString("id"))
+          .ifBlank { item.optString("name", "panorama-$index") }
+        val sourceType = item.optString("source_type", "standalone")
+        val panoramaName = item.optString("name", item.optString("caption", "360° Panorama"))
+          .ifBlank { "360° Panorama" }
+        val panoramaDistanceMeters = item.optDouble("distance_m", 0.0).roundToInt()
+
+        panoramas.add(
+          NearbyAlertItem(
+            id = alertId,
+            name = panoramaName,
+            typeLabel = getString(R.string.poi_tracking_panorama_label),
+            distanceMeters = panoramaDistanceMeters,
+            targetUrl = buildPanoramaTargetUrl(alertId, sourceType),
+          ),
+        )
+      }
+
+      panoramas
+    } finally {
+      connection.disconnect()
+    }
+  }
+
+  private fun showNearbyAlertNotification(alertItem: NearbyAlertItem) {
+    val notificationId = alertItem.id.hashCode()
     val title = getString(
       R.string.poi_tracking_alert_title,
-      poi.category.takeIf { it.isNotBlank() }?.let { formatCategoryLabel(it) } ?: trackingCategoryLabel(),
+      alertItem.typeLabel.ifBlank { trackingSelectionLabel() },
     )
     val message = getString(
       R.string.poi_tracking_alert_message,
-      poi.name,
-      formatDistance(poi.distanceMeters),
+      alertItem.name,
+      formatDistance(alertItem.distanceMeters),
     )
 
     val notification =
@@ -343,13 +424,13 @@ class NearbyPoiTrackingService : Service() {
         .setContentTitle(title)
         .setContentText(message)
         .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-        .setContentIntent(buildContentPendingIntent(buildPoiTargetUrl(poi.id), notificationId))
+        .setContentIntent(buildContentPendingIntent(alertItem.targetUrl, notificationId))
         .setAutoCancel(true)
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
         .addAction(
           0,
           getString(R.string.poi_tracking_mute_action),
-          buildMutePoiPendingIntent(poi.id, notificationId),
+          buildMutePoiPendingIntent(alertItem.id, notificationId),
         )
         .build()
 
@@ -372,7 +453,7 @@ class NearbyPoiTrackingService : Service() {
       .setContentText(
         statusText ?: getString(
           R.string.poi_tracking_notification_active,
-          trackingCategoryLabel(),
+          trackingSelectionLabel(),
           alertRadiusMeters,
         ),
       )
@@ -434,6 +515,15 @@ class NearbyPoiTrackingService : Service() {
       .toString()
   }
 
+  private fun buildPanoramaTargetUrl(alertId: String, sourceType: String): String {
+    return Uri.parse(PERSONAL_ROUTES_URL)
+      .buildUpon()
+      .appendQueryParameter("panorama", alertId)
+      .appendQueryParameter("panoramaSource", sourceType.ifBlank { "standalone" })
+      .build()
+      .toString()
+  }
+
   private fun createNotificationChannels() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
 
@@ -459,8 +549,8 @@ class NearbyPoiTrackingService : Service() {
     notificationManager.createNotificationChannel(alertChannel)
   }
 
-  private fun trackingCategoryLabel(): String {
-    if (selectedCategories.isEmpty()) {
+  private fun trackingPoiCategoryLabel(): String {
+    if (trackAllCategories || selectedCategories.isEmpty()) {
       return getString(R.string.poi_tracking_all_categories)
     }
 
@@ -470,6 +560,24 @@ class NearbyPoiTrackingService : Service() {
     }
 
     return "${displayLabels.take(2).joinToString(", ")} +${displayLabels.size - 2}"
+  }
+
+  private fun trackingSelectionLabel(): String {
+    val parts = mutableListOf<String>()
+
+    if (trackAllCategories || selectedCategories.isNotEmpty()) {
+      parts += trackingPoiCategoryLabel()
+    }
+
+    if (includePanoramas) {
+      parts += getString(R.string.poi_tracking_panorama_label)
+    }
+
+    if (parts.isEmpty()) {
+      return getString(R.string.poi_tracking_all_categories)
+    }
+
+    return parts.joinToString(" + ")
   }
 
   private fun formatCategoryLabel(categoryName: String): String {
