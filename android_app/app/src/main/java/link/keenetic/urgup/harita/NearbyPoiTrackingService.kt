@@ -46,7 +46,7 @@ class NearbyPoiTrackingService : Service() {
     private const val LOCATION_UPDATE_INTERVAL_MS = 15_000L
     private const val LOCATION_UPDATE_DISTANCE_METERS = 50f
     private const val SCAN_MIN_INTERVAL_MS = 30_000L
-    private const val ALERT_COOLDOWN_MS = 5 * 60 * 1000L
+    private const val ALERT_COOLDOWN_MS = 6 * 60 * 60 * 1000L
 
     @Volatile
     var isRunning: Boolean = false
@@ -251,13 +251,21 @@ class NearbyPoiTrackingService : Service() {
 
       val now = System.currentTimeMillis()
       pois.forEach { poi ->
-        val lastAlertAt = lastAlertAtByPoiId[poi.id] ?: 0L
+        if (PoiNotificationPreferenceStore.isPoiMuted(this, poi.id)) {
+          return@forEach
+        }
+
+        val lastAlertAt = maxOf(
+          lastAlertAtByPoiId[poi.id] ?: 0L,
+          PoiNotificationPreferenceStore.getLastAlertAt(this, poi.id),
+        )
         if ((now - lastAlertAt) < ALERT_COOLDOWN_MS) {
           return@forEach
         }
 
         showPoiAlertNotification(poi)
         lastAlertAtByPoiId[poi.id] = now
+        PoiNotificationPreferenceStore.persistLastAlertAt(this, poi.id, now)
       }
     } catch (_: Exception) {
       updateTrackingNotification(getString(R.string.poi_tracking_notification_error))
@@ -318,6 +326,7 @@ class NearbyPoiTrackingService : Service() {
   }
 
   private fun showPoiAlertNotification(poi: NearbyPoi) {
+    val notificationId = poi.id.hashCode()
     val title = getString(
       R.string.poi_tracking_alert_title,
       poi.category.takeIf { it.isNotBlank() }?.let { formatCategoryLabel(it) } ?: trackingCategoryLabel(),
@@ -334,12 +343,17 @@ class NearbyPoiTrackingService : Service() {
         .setContentTitle(title)
         .setContentText(message)
         .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-        .setContentIntent(buildContentPendingIntent(buildPoiTargetUrl(poi.id), poi.id.hashCode()))
+        .setContentIntent(buildContentPendingIntent(buildPoiTargetUrl(poi.id), notificationId))
         .setAutoCancel(true)
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .addAction(
+          0,
+          getString(R.string.poi_tracking_mute_action),
+          buildMutePoiPendingIntent(poi.id, notificationId),
+        )
         .build()
 
-    NotificationManagerCompat.from(this).notify(poi.id.hashCode(), notification)
+    NotificationManagerCompat.from(this).notify(notificationId, notification)
   }
 
   private fun buildTrackingNotification(statusText: String? = null): Notification {
@@ -392,6 +406,22 @@ class NearbyPoiTrackingService : Service() {
       this,
       requestCode,
       openIntent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+  }
+
+  private fun buildMutePoiPendingIntent(poiId: String, notificationId: Int): PendingIntent {
+    val muteIntent =
+      Intent(this, PoiNotificationActionReceiver::class.java).apply {
+        action = PoiNotificationActionReceiver.ACTION_MUTE_POI
+        putExtra(PoiNotificationActionReceiver.EXTRA_POI_ID, poiId)
+        putExtra(PoiNotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+      }
+
+    return PendingIntent.getBroadcast(
+      this,
+      notificationId + 1,
+      muteIntent,
       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
   }

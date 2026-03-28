@@ -436,13 +436,34 @@ class MainActivity : AppCompatActivity() {
     startService(NearbyPoiTrackingService.buildStopIntent(this))
   }
 
+  private fun buildMutePoiPendingIntent(poiId: String, notificationId: Int): PendingIntent {
+    val muteIntent =
+      Intent(this, PoiNotificationActionReceiver::class.java).apply {
+        action = PoiNotificationActionReceiver.ACTION_MUTE_POI
+        putExtra(PoiNotificationActionReceiver.EXTRA_POI_ID, poiId)
+        putExtra(PoiNotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+      }
+
+    return PendingIntent.getBroadcast(
+      this,
+      notificationId + 1,
+      muteIntent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+  }
+
   private fun showPoiAlertNotification(title: String, message: String, poiId: String?) {
     if (!hasNotificationPermission()) {
       requestNotificationPermissionIfNeeded()
       return
     }
 
+    val normalizedPoiId = PoiNotificationPreferenceStore.normalizePoiId(poiId)
+    if (normalizedPoiId.isEmpty()) return
+    if (PoiNotificationPreferenceStore.isPoiMuted(this, normalizedPoiId)) return
+
     val targetUrl = buildPoiTargetUrl(poiId)
+    val notificationId = targetUrl.hashCode()
     val intent =
       Intent(this, MainActivity::class.java).apply {
         putExtra(EXTRA_TARGET_URL, targetUrl)
@@ -466,9 +487,15 @@ class MainActivity : AppCompatActivity() {
         .setContentIntent(pendingIntent)
         .setAutoCancel(true)
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .addAction(
+          0,
+          getString(R.string.poi_tracking_mute_action),
+          buildMutePoiPendingIntent(normalizedPoiId, notificationId),
+        )
         .build()
 
-    NotificationManagerCompat.from(this).notify(targetUrl.hashCode(), notification)
+    PoiNotificationPreferenceStore.persistLastAlertAt(this, normalizedPoiId, System.currentTimeMillis())
+    NotificationManagerCompat.from(this).notify(notificationId, notification)
   }
 
   private inner class AndroidBridge {
@@ -485,6 +512,23 @@ class MainActivity : AppCompatActivity() {
         val safeTitle = title?.takeIf { it.isNotBlank() } ?: getString(R.string.nearby_poi_notification_title)
         val safeMessage = message?.takeIf { it.isNotBlank() } ?: return@runOnUiThread
         showPoiAlertNotification(safeTitle, safeMessage, poiId)
+      }
+    }
+
+    @JavascriptInterface
+    fun isPoiNotificationMuted(poiId: String?): Boolean {
+      return PoiNotificationPreferenceStore.isPoiMuted(this@MainActivity, poiId)
+    }
+
+    @JavascriptInterface
+    fun setPoiNotificationMuted(poiId: String?, muted: Boolean) {
+      PoiNotificationPreferenceStore.setPoiMuted(this@MainActivity, poiId, muted)
+      if (muted) {
+        PoiNotificationPreferenceStore.persistLastAlertAt(
+          this@MainActivity,
+          poiId,
+          System.currentTimeMillis(),
+        )
       }
     }
 

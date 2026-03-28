@@ -12526,6 +12526,193 @@ const nearbyPOIState = {
     lastLiveAlertScanLatLng: null,
 };
 
+const NEARBY_ALERT_PREFERENCES_STORAGE_KEY = 'nearby_poi_preferences_v1';
+const NEARBY_ALERT_POI_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+const NEARBY_ALERT_HISTORY_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function getDefaultNearbyAlertPreferences() {
+    return {
+        searchRadiusKm: '1',
+        searchCategory: '',
+        alertRadiusM: '250',
+        alertAllCategories: true,
+        alertCategories: [],
+        mutedPoiIds: [],
+        alertHistoryByPoiId: {},
+    };
+}
+
+function normalizeNearbyAlertPoiId(poiId) {
+    return String(poiId ?? '').trim();
+}
+
+function loadStoredNearbyAlertPreferences() {
+    const defaults = getDefaultNearbyAlertPreferences();
+
+    try {
+        const rawValue = localStorage.getItem(NEARBY_ALERT_PREFERENCES_STORAGE_KEY);
+        if (!rawValue) return { ...defaults };
+
+        const parsed = JSON.parse(rawValue);
+        const nextPreferences = {
+            ...defaults,
+            ...(parsed && typeof parsed === 'object' ? parsed : {}),
+        };
+
+        nextPreferences.alertCategories = Array.isArray(nextPreferences.alertCategories)
+            ? nextPreferences.alertCategories
+            : [];
+        nextPreferences.mutedPoiIds = Array.isArray(nextPreferences.mutedPoiIds)
+            ? nextPreferences.mutedPoiIds.map((poiId) => normalizeNearbyAlertPoiId(poiId)).filter(Boolean)
+            : [];
+        nextPreferences.alertHistoryByPoiId =
+            nextPreferences.alertHistoryByPoiId && typeof nextPreferences.alertHistoryByPoiId === 'object'
+                ? { ...nextPreferences.alertHistoryByPoiId }
+                : {};
+
+        return nextPreferences;
+    } catch (error) {
+        console.warn('Nearby preferences could not be loaded:', error);
+        return { ...defaults };
+    }
+}
+
+function saveStoredNearbyAlertPreferences(nextPreferences) {
+    const defaults = getDefaultNearbyAlertPreferences();
+    const preferences = {
+        ...defaults,
+        ...(nextPreferences && typeof nextPreferences === 'object' ? nextPreferences : {}),
+        alertCategories: Array.isArray(nextPreferences?.alertCategories) ? nextPreferences.alertCategories : [],
+        mutedPoiIds: Array.isArray(nextPreferences?.mutedPoiIds)
+            ? nextPreferences.mutedPoiIds.map((poiId) => normalizeNearbyAlertPoiId(poiId)).filter(Boolean)
+            : [],
+        alertHistoryByPoiId:
+            nextPreferences?.alertHistoryByPoiId && typeof nextPreferences.alertHistoryByPoiId === 'object'
+                ? { ...nextPreferences.alertHistoryByPoiId }
+                : {},
+    };
+
+    try {
+        localStorage.setItem(NEARBY_ALERT_PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
+    } catch (error) {
+        console.warn('Nearby preferences could not be saved:', error);
+    }
+}
+
+function pruneStoredNearbyAlertHistory() {
+    const preferences = loadStoredNearbyAlertPreferences();
+    const now = Date.now();
+    const nextHistory = {};
+    let changed = false;
+
+    Object.entries(preferences.alertHistoryByPoiId || {}).forEach(([poiId, timestamp]) => {
+        const normalizedPoiId = normalizeNearbyAlertPoiId(poiId);
+        const normalizedTimestamp = Number(timestamp);
+        if (!normalizedPoiId || !Number.isFinite(normalizedTimestamp) || normalizedTimestamp <= 0) {
+            changed = true;
+            return;
+        }
+
+        if ((now - normalizedTimestamp) > NEARBY_ALERT_HISTORY_MAX_AGE_MS) {
+            changed = true;
+            return;
+        }
+
+        nextHistory[normalizedPoiId] = normalizedTimestamp;
+    });
+
+    if (changed) {
+        preferences.alertHistoryByPoiId = nextHistory;
+        saveStoredNearbyAlertPreferences(preferences);
+    }
+}
+
+function getStoredPoiAlertTimestamp(poiId) {
+    const normalizedPoiId = normalizeNearbyAlertPoiId(poiId);
+    if (!normalizedPoiId) return 0;
+
+    const preferences = loadStoredNearbyAlertPreferences();
+    const timestamp = Number(preferences.alertHistoryByPoiId?.[normalizedPoiId] || 0);
+    return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function setStoredPoiAlertTimestamp(poiId, timestamp = Date.now()) {
+    const normalizedPoiId = normalizeNearbyAlertPoiId(poiId);
+    if (!normalizedPoiId) return;
+
+    const preferences = loadStoredNearbyAlertPreferences();
+    preferences.alertHistoryByPoiId = {
+        ...(preferences.alertHistoryByPoiId || {}),
+        [normalizedPoiId]: Number(timestamp) || Date.now(),
+    };
+    saveStoredNearbyAlertPreferences(preferences);
+}
+
+function isPoiNotificationMutedLocally(poiId) {
+    const normalizedPoiId = normalizeNearbyAlertPoiId(poiId);
+    if (!normalizedPoiId) return false;
+
+    const preferences = loadStoredNearbyAlertPreferences();
+    return (preferences.mutedPoiIds || []).includes(normalizedPoiId);
+}
+
+function setPoiNotificationMutedLocally(poiId, muted) {
+    const normalizedPoiId = normalizeNearbyAlertPoiId(poiId);
+    if (!normalizedPoiId) return;
+
+    const preferences = loadStoredNearbyAlertPreferences();
+    const mutedPoiIds = new Set(
+        (preferences.mutedPoiIds || []).map((storedPoiId) => normalizeNearbyAlertPoiId(storedPoiId)).filter(Boolean),
+    );
+
+    if (muted) {
+        mutedPoiIds.add(normalizedPoiId);
+    } else {
+        mutedPoiIds.delete(normalizedPoiId);
+    }
+
+    preferences.mutedPoiIds = Array.from(mutedPoiIds);
+    saveStoredNearbyAlertPreferences(preferences);
+}
+
+function isPoiNotificationMutedForCurrentDevice(poiId) {
+    const normalizedPoiId = normalizeNearbyAlertPoiId(poiId);
+    if (!normalizedPoiId) return false;
+
+    try {
+        if (window.APDAndroid && typeof window.APDAndroid.isPoiNotificationMuted === 'function') {
+            const result = window.APDAndroid.isPoiNotificationMuted(normalizedPoiId);
+            const isMuted = result === true || result === 'true';
+            setPoiNotificationMutedLocally(normalizedPoiId, isMuted);
+            return isMuted;
+        }
+    } catch (error) {
+        console.warn('Native POI mute state could not be read:', error);
+    }
+
+    return isPoiNotificationMutedLocally(normalizedPoiId);
+}
+
+function setPoiNotificationMutedForCurrentDevice(poiId, muted) {
+    const normalizedPoiId = normalizeNearbyAlertPoiId(poiId);
+    if (!normalizedPoiId) return;
+
+    setPoiNotificationMutedLocally(normalizedPoiId, muted);
+
+    try {
+        if (window.APDAndroid && typeof window.APDAndroid.setPoiNotificationMuted === 'function') {
+            window.APDAndroid.setPoiNotificationMuted(normalizedPoiId, Boolean(muted));
+        }
+    } catch (error) {
+        console.warn('Native POI mute state could not be updated:', error);
+    }
+}
+
+function hasPoiAlertCooldownActive(poiId, now = Date.now()) {
+    const lastAlertAt = getStoredPoiAlertTimestamp(poiId);
+    return Boolean(lastAlertAt && (now - lastAlertAt) < NEARBY_ALERT_POI_COOLDOWN_MS);
+}
+
 function initializeNearbyPOIsUI() {
     const section = document.getElementById('nearbyPOISection');
     if (!section) return;
@@ -12552,42 +12739,35 @@ function initializeNearbyPOIsUI() {
 
     if (!locateBtn || !pickBtn || !useBtn || !radiusSelect || !statusEl || !resultsEl) return;
     const canRunLiveAlerts = Boolean(alertDistanceSelect && alertToggleBtn && alertStatusEl && alertFeedEl);
-    const nearbyPreferencesStorageKey = 'nearby_poi_preferences_v1';
-    const defaultNearbyPreferences = {
-        searchRadiusKm: '1',
-        searchCategory: '',
-        alertRadiusM: '250',
-        alertAllCategories: true,
-        alertCategories: [],
-    };
+    const defaultNearbyPreferences = getDefaultNearbyAlertPreferences();
     let nearbyCategoryOptions = [];
 
     const loadNearbyPreferences = () => {
-        try {
-            const rawValue = localStorage.getItem(nearbyPreferencesStorageKey);
-            if (!rawValue) return { ...defaultNearbyPreferences };
-            const parsed = JSON.parse(rawValue);
-            return {
-                ...defaultNearbyPreferences,
-                ...(parsed && typeof parsed === 'object' ? parsed : {}),
-                alertCategories: Array.isArray(parsed?.alertCategories) ? parsed.alertCategories : [],
-                alertAllCategories: parsed?.alertAllCategories !== false,
-            };
-        } catch (error) {
-            console.warn('Nearby preferences could not be loaded:', error);
-            return { ...defaultNearbyPreferences };
-        }
+        const preferences = loadStoredNearbyAlertPreferences();
+        return {
+            ...defaultNearbyPreferences,
+            ...preferences,
+            alertAllCategories: preferences.alertAllCategories !== false,
+        };
     };
 
     const persistNearbyPreferences = (nextPreferences) => {
-        try {
-            localStorage.setItem(nearbyPreferencesStorageKey, JSON.stringify(nextPreferences));
-        } catch (error) {
-            console.warn('Nearby preferences could not be saved:', error);
-        }
+        const latestPreferences = loadStoredNearbyAlertPreferences();
+        const mergedPreferences = {
+            ...latestPreferences,
+            ...nextPreferences,
+            mutedPoiIds: Array.isArray(latestPreferences.mutedPoiIds) ? latestPreferences.mutedPoiIds : [],
+            alertHistoryByPoiId:
+                latestPreferences.alertHistoryByPoiId && typeof latestPreferences.alertHistoryByPoiId === 'object'
+                    ? latestPreferences.alertHistoryByPoiId
+                    : {},
+        };
+
+        saveStoredNearbyAlertPreferences(mergedPreferences);
     };
 
     const nearbyPreferences = loadNearbyPreferences();
+    pruneStoredNearbyAlertHistory();
 
     const setSelectValue = (selectEl, preferredValue, fallbackValue = '') => {
         if (!selectEl) return;
@@ -13268,7 +13448,25 @@ function initializeNearbyPOIsUI() {
         addAlertFeedItem(poi, distanceM || poi.distance_m);
 
         try {
-            if (typeof showNotification === 'function') {
+            if (typeof showNotificationWithAction === 'function') {
+                showNotificationWithAction(
+                    message,
+                    'success',
+                    'Bu POI’yi Sustur',
+                    () => {
+                        setPoiNotificationMutedForCurrentDevice(poiId, true);
+                        setStoredPoiAlertTimestamp(poiId, Date.now());
+                        if (currentPOIData && getCurrentPOIAlertIdentifier(currentPOIData) === poiId) {
+                            updatePOIAlertMuteButton(currentPOIData);
+                        }
+                        setAlertStatus(`"${poi.name || 'POI'}" için bildirimler kapatıldı.`, 'success');
+                    },
+                    'Detayı Aç',
+                    () => {
+                        try { showPOIDetail(String(poi._id || poi.id || poi.poi_id || poiId), poi); } catch (_) {}
+                    },
+                );
+            } else if (typeof showNotification === 'function') {
                 showNotification(message, 'success');
             }
         } catch (_) {}
@@ -13290,8 +13488,9 @@ function initializeNearbyPOIsUI() {
                     tag: `nearby-poi-${poiId}`,
                 });
 
-                notification.onclick = () => {
+                notification.onclick = async () => {
                     try { window.focus(); } catch (_) {}
+                    try { await showPOIDetail(String(poi._id || poi.id || poi.poi_id || poiId), poi); } catch (_) {}
                     try { focusPOIOnMap(poi); } catch (_) {}
                 };
             } catch (error) {
@@ -13361,17 +13560,29 @@ function initializeNearbyPOIsUI() {
 
             (payload.pois || []).forEach((poi) => {
                 const poiId = getPoiKey(poi);
+                const storedLastAlertAt = getStoredPoiAlertTimestamp(poiId);
                 const distanceM = typeof poi.distance_m === 'number' ? poi.distance_m : parseFloat(poi.distance_m || 0);
                 const existing = nearbyPOIState.liveAlertStatesById.get(poiId) || {
                     inside: false,
-                    lastAlertAt: 0,
+                    lastAlertAt: storedLastAlertAt,
                 };
 
                 visiblePoiIds.add(poiId);
 
-                if (!existing.inside && (!existing.lastAlertAt || (now - existing.lastAlertAt) >= 300000)) {
+                if (isPoiNotificationMutedForCurrentDevice(poiId)) {
+                    existing.inside = true;
+                    existing.lastAlertAt = Math.max(existing.lastAlertAt || 0, storedLastAlertAt);
+                    nearbyPOIState.liveAlertStatesById.set(poiId, existing);
+                    return;
+                }
+
+                const effectiveLastAlertAt = Math.max(existing.lastAlertAt || 0, storedLastAlertAt);
+                existing.lastAlertAt = effectiveLastAlertAt;
+
+                if (!existing.inside && (!effectiveLastAlertAt || (now - effectiveLastAlertAt) >= NEARBY_ALERT_POI_COOLDOWN_MS)) {
                     triggerLiveAlert(poi, distanceM);
                     existing.lastAlertAt = now;
+                    setStoredPoiAlertTimestamp(poiId, now);
                 }
 
                 existing.inside = true;
@@ -13381,7 +13592,7 @@ function initializeNearbyPOIsUI() {
             Array.from(nearbyPOIState.liveAlertStatesById.entries()).forEach(([poiId, state]) => {
                 if (visiblePoiIds.has(poiId)) return;
                 state.inside = false;
-                if (state.lastAlertAt && (now - state.lastAlertAt) > 7200000) {
+                if (state.lastAlertAt && (now - state.lastAlertAt) > NEARBY_ALERT_HISTORY_MAX_AGE_MS) {
                     nearbyPOIState.liveAlertStatesById.delete(poiId);
                     return;
                 }
@@ -14798,6 +15009,41 @@ function applyPOICardFallbackCover(cardElement) {
 let currentPOIData = null;
 // Note: currentMediaItems and currentMediaIndex are already declared above
 
+function getCurrentPOIAlertIdentifier(poi = currentPOIData) {
+    return normalizeNearbyAlertPoiId(poi?._id || poi?.id || poi?.poi_id || '');
+}
+
+function updatePOIAlertMuteButton(poi = currentPOIData) {
+    const toggleBtn = document.getElementById('togglePoiAlertMuteBtn');
+    const helpText = document.getElementById('poiAlertMuteHelp');
+    if (!toggleBtn || !helpText) return;
+
+    const poiId = getCurrentPOIAlertIdentifier(poi);
+    if (!poiId) {
+        toggleBtn.style.display = 'none';
+        helpText.textContent = '';
+        return;
+    }
+
+    const isMuted = isPoiNotificationMutedForCurrentDevice(poiId);
+    toggleBtn.style.display = '';
+    toggleBtn.dataset.poiId = poiId;
+    toggleBtn.dataset.muted = isMuted ? 'true' : 'false';
+
+    if (isMuted) {
+        toggleBtn.className = 'btn btn-outline-secondary btn-sm w-100 mt-2';
+        toggleBtn.innerHTML = '<i class="fas fa-bell me-2"></i> Bu POI İçin Bildirimleri Aç';
+        helpText.textContent = 'Bu cihazda bu POI için bildirimler kapalı. İsterseniz tekrar açabilirsiniz.';
+        return;
+    }
+
+    toggleBtn.className = 'btn btn-outline-danger btn-sm w-100 mt-2';
+    toggleBtn.innerHTML = '<i class="fas fa-bell-slash me-2"></i> Bu POI İçin Bildirim Gönderme';
+    helpText.textContent = 'Bu ayar sadece sizin cihazınız için geçerlidir. Gösterilen bildirimler de en az 6 saat tekrar etmez.';
+}
+
+window.updatePOIAlertMuteButton = updatePOIAlertMuteButton;
+
 // Wait for Bootstrap to be loaded
 function waitForBootstrap() {
     return new Promise((resolve) => {
@@ -15061,6 +15307,8 @@ function updatePOIModalContent(poi) {
     } else {
         scoreSection.style.display = 'none';
     }
+
+    updatePOIAlertMuteButton(poi);
 }
 
 // Load POI modal media with robust error handling and fallbacks
@@ -16290,6 +16538,26 @@ function setupPOIModalEventListeners() {
             sharePOI(currentPOIData);
         }
     };
+
+    const togglePoiAlertMuteBtn = document.getElementById('togglePoiAlertMuteBtn');
+    if (togglePoiAlertMuteBtn) {
+        togglePoiAlertMuteBtn.onclick = () => {
+            const poiId = getCurrentPOIAlertIdentifier();
+            if (!poiId || !currentPOIData) return;
+
+            const nextMutedState = !isPoiNotificationMutedForCurrentDevice(poiId);
+            setPoiNotificationMutedForCurrentDevice(poiId, nextMutedState);
+
+            if (nextMutedState) {
+                setStoredPoiAlertTimestamp(poiId, Date.now());
+                showNotification(`"${currentPOIData.name}" için bildirimler kapatıldı`, 'success');
+            } else {
+                showNotification(`"${currentPOIData.name}" için bildirimler yeniden açıldı`, 'success');
+            }
+
+            updatePOIAlertMuteButton(currentPOIData);
+        };
+    }
     
     // Keyboard navigation
     const handleModalKeydown = (e) => {
