@@ -14,8 +14,19 @@ if project_root not in sys.path:
 # Import the application factory
 from app import create_app
 
+
+def resolve_wsgi_config():
+    """Default WSGI deployments to production unless explicitly overridden."""
+    return (
+        os.environ.get("POI_APP_ENV")
+        or os.environ.get("APP_ENV")
+        or os.environ.get("FLASK_ENV")
+        or "production"
+    )
+
+
 # Create application instance
-application = create_app()
+application = create_app(resolve_wsgi_config())
 
 # For compatibility, also expose as 'app'
 app = application

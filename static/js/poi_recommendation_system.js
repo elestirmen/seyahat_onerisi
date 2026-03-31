@@ -3939,58 +3939,27 @@ async function addNavigationToRoute(route) {
     
     // Request user location
     try {
-        if (!navigator.geolocation) {
-            showNotification('❌ Konumunuz bu cihazda desteklenmiyor', 'error');
+        showNotification('📍 Konumunuz alınıyor...', 'info');
+        const currentLocation = await getCurrentLocation({
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000,
+        });
+        const userLocation = [currentLocation.latitude, currentLocation.longitude];
+
+        // Calculate distance to route start
+        const distance = getDistance(userLocation[0], userLocation[1], routeStartCoord[0], routeStartCoord[1]);
+        const distanceKm = (distance / 1000).toFixed(1);
+
+        if (distance < 100) { // Less than 100 meters
             return;
         }
-        
-        // Show loading notification
-        showNotification('📍 Konumunuz alınıyor...', 'info');
-        
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const userLocation = [position.coords.latitude, position.coords.longitude];
-                // Log removed for cleaner console
-                
-                // Calculate distance to route start
-                const distance = getDistance(userLocation[0], userLocation[1], routeStartCoord[0], routeStartCoord[1]);
-                const distanceKm = (distance / 1000).toFixed(1);
-                
-                if (distance < 100) { // Less than 100 meters
-                    return;
-                }
-                
-                // Get navigation route from current location to route start
-                await createNavigationRoute(userLocation, routeStartCoord, route.name, distanceKm);
-            },
-            (error) => {
-                console.error('❌ Geolocation error:', error);
-                let errorMessage = 'Konumunuz alınamadı';
-                
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage = 'Konum izni reddedildi. Lütfen tarayıcı ayarlarından konum iznini açın.';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage = 'Konumunuz belirlenemedi. GPS açık olduğundan emin olun.';
-                        break;
-                    case error.TIMEOUT:
-                        errorMessage = 'Konum alınırken zaman aşımı oluştu.';
-                        break;
-                }
-                
-                showNotification(`❌ ${errorMessage}`, 'error');
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 300000 // 5 minutes cache
-            }
-        );
-        
+
+        // Get navigation route from current location to route start
+        await createNavigationRoute(userLocation, routeStartCoord, route.name, distanceKm);
     } catch (error) {
         console.error('❌ Navigation error:', error);
-        showNotification('❌ Navigasyon rotası oluşturulamadı', 'error');
+        showNotification('❌ Navigasyon rotası oluşturulamadı: ' + (error && error.message ? error.message : 'Konum alınamadı'), 'error');
     }
 }
 
@@ -4759,6 +4728,14 @@ async function handleLocationPermission(choice) {
         // Log removed for cleaner console
 
         if (permission.state === 'denied') {
+            const nativeLocation = resolveNativeLocation();
+            if (nativeLocation) {
+                if (window.locationPermissionResolve) {
+                    window.locationPermissionResolve(nativeLocation);
+                }
+                return;
+            }
+
             // Browser has denied permission, show detailed instructions
             showBrowserPermissionHelp();
             return;
@@ -4771,177 +4748,264 @@ async function handleLocationPermission(choice) {
     requestActualLocation();
 }
 
-// Request actual location from browser
-function requestActualLocation() {
-    // Log removed for cleaner console
-    const isSecureContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
+const DEFAULT_GEOLOCATION_OPTIONS = Object.freeze({
+    enableHighAccuracy: false,
+    timeout: 15000,
+    maximumAge: 300000
+});
 
-    if (!isSecureContext) {
-        const error = new Error('Konum servisleri güvenli bağlantı gerektiriyor');
-        error.helpText = 'Sayfayı HTTPS üzerinden açın veya localhost kullanın.';
-        if (typeof showNotification === 'function') {
-            showNotification('Konum servisleri için HTTPS gerekli. Lütfen siteyi güvenli bağlantı ile açın.', 'error');
+function normalizeGeolocationOptions(options = {}) {
+    return {
+        ...DEFAULT_GEOLOCATION_OPTIONS,
+        ...(options && typeof options === 'object' ? options : {})
+    };
+}
+
+function isSecureLocationContext() {
+    return window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
+}
+
+function createResolvedLocation(latitude, longitude, accuracy, timestamp, provider, source) {
+    return {
+        latitude,
+        longitude,
+        accuracy: Number.isFinite(accuracy) ? accuracy : null,
+        timestamp: Number.isFinite(timestamp) ? timestamp : Date.now(),
+        provider: typeof provider === 'string' && provider ? provider : null,
+        source: source || 'browser'
+    };
+}
+
+function storeResolvedLocation(location) {
+    userLocation = location;
+    return location;
+}
+
+function getNativeLocationBridge() {
+    if (!window.APDAndroid || typeof window.APDAndroid.getLastKnownLocation !== 'function') {
+        return null;
+    }
+    return window.APDAndroid;
+}
+
+function hasNativeLocationFallback() {
+    return !!getNativeLocationBridge();
+}
+
+function getNativeLastKnownLocation(options = {}) {
+    const bridge = getNativeLocationBridge();
+    if (!bridge) return null;
+
+    const normalizedOptions = normalizeGeolocationOptions(options);
+
+    try {
+        const rawPayload = bridge.getLastKnownLocation(String(normalizedOptions.maximumAge));
+        if (!rawPayload) return null;
+
+        const payload = JSON.parse(String(rawPayload));
+        if (!payload || typeof payload !== 'object') return null;
+
+        const latitude = Number(payload.latitude);
+        const longitude = Number(payload.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            return null;
         }
-        if (window.locationPermissionReject) {
-            window.locationPermissionReject(error);
-        }
-        return;
+
+        return createResolvedLocation(
+            latitude,
+            longitude,
+            Number(payload.accuracy),
+            Number(payload.timestamp),
+            payload.provider,
+            payload.source || 'android-last-known'
+        );
+    } catch (error) {
+        console.warn('Native location bridge returned invalid payload:', error);
+        return null;
+    }
+}
+
+function buildLocationError(error) {
+    if (error instanceof Error && typeof error.code !== 'number') {
+        return error;
     }
 
-    const options = {
-        enableHighAccuracy: false,
-        timeout: 15000,
-        maximumAge: 300000
-    };
+    console.error('❌ Geolocation error:', error);
+    let errorMessage = 'Konum alınamadı';
+    let helpText = '';
+    const errorCode = error && typeof error.code === 'number' ? error.code : null;
 
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            // Log removed for cleaner console
-            const location = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy
-            };
-            userLocation = location;
-            // Log removed for cleaner console
-
-            if (window.locationPermissionResolve) {
-                window.locationPermissionResolve(location);
-            }
-        },
-        (error) => {
-            console.error('❌ Geolocation error:', error);
-            let errorMessage = 'Konum alınamadı';
-            let helpText = '';
-
-            switch (error.code) {
-                case error.PERMISSION_DENIED:
-                    errorMessage = 'Konum izni reddedildi';
-                    helpText = 'Konum iznini açmak için: 1. Adres çubuğundaki kilit simgesine tıklayın 2. Konum seçeneğini İzin ver yapın 3. Sayfayı yenileyin';
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    errorMessage = 'Konum bilgisi mevcut değil';
-                    helpText = 'GPS\'inizi açın, WiFi\'ye bağlanın veya açık alanda olduğunuzdan emin olun.';
-                    break;
-                case error.TIMEOUT:
-                    errorMessage = 'Konum alma zaman aşımı';
-                    helpText = 'İnternet bağlantınızı kontrol edin ve tekrar deneyin.';
-                    break;
-                default:
-                    errorMessage = 'Konum hatası (Kod: ' + error.code + ')';
-                    helpText = 'Tarayıcınızı yenileyin ve tekrar deneyin.';
-            }
-
-            if (error.message && error.message.toLowerCase().includes('permissions policy')) {
-                errorMessage = 'Bu sayfa için konum özelliğine izin verilmiyor';
-                helpText = 'Sayfayı doğrudan açın veya ebeveyn sayfadaki iframe\'e geolocation izni verildiğinden emin olun (ör. allow="geolocation").';
-            }
-
-            const fullError = new Error(errorMessage);
-            fullError.helpText = helpText;
-
-            if (window.locationPermissionReject) {
-                window.locationPermissionReject(fullError);
-            }
-        },
-        options
-    );
-}
-// Get user's current location with native browser dialog
-async function getCurrentLocation() {
-    return new Promise(async (resolve, reject) => {
-        // Log removed for cleaner console
-
-        // First check if we're on HTTPS or localhost
-        const isSecureContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
-        // Log removed for cleaner console
-
-        if (!navigator.geolocation) {
-            console.error('❌ Geolocation not supported');
-            const error = new Error('Bu tarayıcı konum hizmetlerini desteklemiyor');
-            error.helpText = 'Lütfen güncel bir tarayıcı kullanın (Chrome, Firefox, Safari, Edge)';
-            reject(error);
-            return;
-        }
-
-        if (!isSecureContext) {
-            console.error('❌ Not secure context');
-            const error = new Error('Konum servisleri güvenli bağlantı gerektiriyor');
-            error.helpText = 'Sayfayı HTTPS üzerinden açın veya localhost kullanın';
-            reject(error);
-            return;
-        }
-
-        // Check permission state for debugging
-        try {
-            const permission = await navigator.permissions.query({ name: 'geolocation' });
-            // Log removed for cleaner console
-        } catch (e) {
-            console.warn('Permission API not supported');
-        }
-
-        // Always try getCurrentPosition - even if permission state is 'denied'
-        // This allows the native dialog to show if user has changed browser settings
-        // Log removed for cleaner console
-
-        const options = {
-            enableHighAccuracy: false,
-            timeout: 15000,
-            maximumAge: 300000
-        };
-
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                // Log removed for cleaner console
-                const location = {
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy
-                };
-                userLocation = location;
-                // Log removed for cleaner console
-                resolve(location);
-            },
-            (error) => {
-                console.error('❌ Geolocation error:', error);
-                let errorMessage = 'Konum alınamadı';
-                let helpText = '';
-
-                switch (error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage = 'Konum izni reddedildi';
-                        helpText = `Konum iznini açmak için:
+    switch (errorCode) {
+        case 1:
+            errorMessage = 'Konum izni reddedildi';
+            helpText = `Konum iznini açmak için:
 1. Chrome'da adres çubuğundaki kilit simgesine tıklayın
 2. "Konum" seçeneğini "İzin ver" yapın
 3. Sayfayı yenileyin (F5)
 
 Alternatif: chrome://settings/content/location adresinden site izinlerini kontrol edin`;
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage = 'Konum bilgisi mevcut değil';
-                        helpText = 'GPS\'inizi açın, WiFi\'ye bağlanın veya açık alanda olduğunuzdan emin olun.';
-                        break;
-                case error.TIMEOUT:
-                    errorMessage = 'Konum alma zaman aşımı';
-                    helpText = 'İnternet bağlantınızı kontrol edin ve tekrar deneyin.';
-                    break;
-                default:
-                    errorMessage = 'Konum hatası (Kod: ' + error.code + ')';
-                    helpText = 'Tarayıcınızı yenileyin ve tekrar deneyin.';
+            break;
+        case 2:
+            errorMessage = 'Konum bilgisi mevcut değil';
+            helpText = 'GPS\'inizi açın, WiFi\'ye bağlanın veya açık alanda olduğunuzdan emin olun.';
+            break;
+        case 3:
+            errorMessage = 'Konum alma zaman aşımı';
+            helpText = 'İnternet bağlantınızı kontrol edin ve tekrar deneyin.';
+            break;
+        default:
+            if (error && typeof error.message === 'string' && error.message) {
+                errorMessage = error.message;
+            } else if (error && typeof error.code !== 'undefined') {
+                errorMessage = 'Konum hatası (Kod: ' + error.code + ')';
             }
+            helpText = 'Tarayıcınızı yenileyin ve tekrar deneyin.';
+    }
 
-            if (error.message && error.message.toLowerCase().includes('permissions policy')) {
-                errorMessage = 'Bu sayfa için konum özelliğine izin verilmiyor';
-                helpText = 'Sayfayı doğrudan açın veya ebeveyn sayfadaki iframe\'e geolocation izni verildiğinden emin olun (ör. allow="geolocation").';
-            }
+    if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('permissions policy')) {
+        errorMessage = 'Bu sayfa için konum özelliğine izin verilmiyor';
+        helpText = 'Sayfayı doğrudan açın veya ebeveyn sayfadaki iframe\'e geolocation izni verildiğinden emin olun (ör. allow="geolocation").';
+    }
 
-            const fullError = new Error(errorMessage);
-            fullError.helpText = helpText;
-            reject(fullError);
+    const fullError = new Error(errorMessage);
+    if (helpText) {
+        fullError.helpText = helpText;
+    }
+    return fullError;
+}
+
+function shouldTryNativeLocationFallback(error) {
+    if (hasNativeLocationFallback()) {
+        return true;
+    }
+    return !error || error.code !== 1;
+}
+
+function requestBrowserCurrentLocation(options = {}) {
+    const normalizedOptions = normalizeGeolocationOptions(options);
+
+    return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                resolve(storeResolvedLocation(createResolvedLocation(
+                    position.coords.latitude,
+                    position.coords.longitude,
+                    position.coords.accuracy,
+                    position.timestamp,
+                    null,
+                    'browser'
+                )));
             },
-            options
+            reject,
+            normalizedOptions
         );
     });
+}
+
+function resolveNativeLocation(options = {}) {
+    const nativeLocation = getNativeLastKnownLocation(options);
+    if (!nativeLocation) return null;
+    return storeResolvedLocation(nativeLocation);
+}
+
+// Request actual location from browser
+function requestActualLocation(options = {}) {
+    const normalizedOptions = normalizeGeolocationOptions(options);
+    const resolveLocation = (location) => {
+        if (window.locationPermissionResolve) {
+            window.locationPermissionResolve(location);
+        }
+    };
+    const rejectLocation = (error) => {
+        if (window.locationPermissionReject) {
+            window.locationPermissionReject(error);
+        }
+    };
+
+    if (!isSecureLocationContext()) {
+        const nativeLocation = resolveNativeLocation(normalizedOptions);
+        if (nativeLocation) {
+            resolveLocation(nativeLocation);
+            return;
+        }
+
+        const error = new Error('Konum servisleri güvenli bağlantı gerektiriyor');
+        error.helpText = 'Sayfayı HTTPS üzerinden açın veya localhost kullanın.';
+        if (typeof showNotification === 'function') {
+            showNotification('Konum servisleri için HTTPS gerekli. Lütfen siteyi güvenli bağlantı ile açın.', 'error');
+        }
+        rejectLocation(error);
+        return;
+    }
+
+    if (!navigator.geolocation) {
+        const nativeLocation = resolveNativeLocation(normalizedOptions);
+        if (nativeLocation) {
+            resolveLocation(nativeLocation);
+            return;
+        }
+
+        const error = new Error('Bu tarayıcı konum hizmetlerini desteklemiyor');
+        error.helpText = 'Lütfen güncel bir tarayıcı kullanın (Chrome, Firefox, Safari, Edge)';
+        rejectLocation(error);
+        return;
+    }
+
+    requestBrowserCurrentLocation(normalizedOptions)
+        .then(resolveLocation)
+        .catch((error) => {
+            const nativeLocation = shouldTryNativeLocationFallback(error)
+                ? resolveNativeLocation(normalizedOptions)
+                : null;
+            if (nativeLocation) {
+                resolveLocation(nativeLocation);
+                return;
+            }
+
+            rejectLocation(buildLocationError(error));
+        });
+}
+
+// Get user's current location with native browser dialog
+async function getCurrentLocation(options = {}) {
+    const normalizedOptions = normalizeGeolocationOptions(options);
+    const nativeLocation = resolveNativeLocation(normalizedOptions);
+    if (nativeLocation) {
+        return nativeLocation;
+    }
+
+    if (!navigator.geolocation) {
+        console.error('❌ Geolocation not supported');
+        const error = new Error('Bu tarayıcı konum hizmetlerini desteklemiyor');
+        error.helpText = 'Lütfen güncel bir tarayıcı kullanın (Chrome, Firefox, Safari, Edge)';
+        throw error;
+    }
+
+    if (!isSecureLocationContext()) {
+        console.error('❌ Not secure context');
+        const error = new Error('Konum servisleri güvenli bağlantı gerektiriyor');
+        error.helpText = 'Sayfayı HTTPS üzerinden açın veya localhost kullanın';
+        throw error;
+    }
+
+    try {
+        await navigator.permissions.query({ name: 'geolocation' });
+    } catch (e) {
+        console.warn('Permission API not supported');
+    }
+
+    try {
+        return await requestBrowserCurrentLocation(normalizedOptions);
+    } catch (error) {
+        const fallbackLocation = shouldTryNativeLocationFallback(error)
+            ? resolveNativeLocation(normalizedOptions)
+            : null;
+        if (fallbackLocation) {
+            return fallbackLocation;
+        }
+
+        throw buildLocationError(error);
+    }
 }
 
 // Set start location for route
@@ -4949,11 +5013,6 @@ async function setStartLocation() {
     // Log removed for cleaner console
 
     try {
-        // Log removed for cleaner console
-        if (!navigator.geolocation) {
-            throw new Error('Bu tarayıcı konum hizmetlerini desteklemiyor');
-        }
-
         // Log removed for cleaner console
         const location = await getCurrentLocation();
         // Log removed for cleaner console
@@ -13117,11 +13176,18 @@ function initializeNearbyPOIsUI() {
     const persistSearchPreferences = () => {
         nearbyPreferences.searchRadiusKm = String(radiusSelect?.value || defaultNearbyPreferences.searchRadiusKm);
         nearbyPreferences.searchCategory = getSelectedCategory();
+        if (canRunLiveAlerts) {
+            syncAlertDistanceSelection();
+        }
         persistNearbyPreferences(nearbyPreferences);
     };
 
     const persistAlertPreferences = () => {
-        nearbyPreferences.alertRadiusM = String(alertDistanceSelect?.value || defaultNearbyPreferences.alertRadiusM);
+        if (canRunLiveAlerts) {
+            syncAlertDistanceSelection();
+        } else {
+            nearbyPreferences.alertRadiusM = String(alertDistanceSelect?.value || defaultNearbyPreferences.alertRadiusM);
+        }
         nearbyPreferences.alertCategories = getNormalizedAlertCategoryNames();
         nearbyPreferences.alertPanoramas = isPanoramaAlertsEnabled();
         persistNearbyPreferences(nearbyPreferences);
@@ -13132,7 +13198,6 @@ function initializeNearbyPOIsUI() {
     if (alertDistanceSelect) {
         setSelectValue(alertDistanceSelect, nearbyPreferences.alertRadiusM, defaultNearbyPreferences.alertRadiusM);
     }
-    syncAlertPreferenceSummary();
 
     const setStatus = (text, kind = '') => {
         statusEl.textContent = text || '';
@@ -13153,12 +13218,66 @@ function initializeNearbyPOIsUI() {
         return Math.round(km * 1000);
     };
 
-    const getAlertRadiusMeters = () => {
+    const getRequestedAlertRadiusMeters = () => {
         if (!alertDistanceSelect) return 250;
         const meters = parseInt(alertDistanceSelect.value, 10);
         if (!Number.isFinite(meters) || meters <= 0) return 250;
         return meters;
     };
+
+    const getNearestAllowedAlertRadiusMeters = (requestedMeters = getRequestedAlertRadiusMeters()) => {
+        if (!alertDistanceSelect) return Math.min(requestedMeters, getRadiusMeters());
+
+        const searchRadiusMeters = getRadiusMeters();
+        const allowedOptionValues = Array.from(alertDistanceSelect.options || [])
+            .map((option) => parseInt(option.value, 10))
+            .filter((value) => Number.isFinite(value) && value > 0 && value <= searchRadiusMeters)
+            .sort((left, right) => left - right);
+
+        if (!allowedOptionValues.length) {
+            return Math.min(requestedMeters, searchRadiusMeters);
+        }
+
+        const cappedValues = allowedOptionValues.filter((value) => value <= requestedMeters);
+        return cappedValues.length
+            ? cappedValues[cappedValues.length - 1]
+            : allowedOptionValues[0];
+    };
+
+    const syncAlertDistanceSelection = () => {
+        if (!alertDistanceSelect) {
+            const effectiveMeters = Math.min(250, getRadiusMeters());
+            nearbyPreferences.alertRadiusM = String(effectiveMeters);
+            return {
+                changed: false,
+                requestedMeters: effectiveMeters,
+                effectiveMeters,
+            };
+        }
+
+        const requestedMeters = getRequestedAlertRadiusMeters();
+        const effectiveMeters = getNearestAllowedAlertRadiusMeters(requestedMeters);
+        const nextValue = String(effectiveMeters);
+        const changed = alertDistanceSelect.value !== nextValue;
+
+        if (changed && Array.from(alertDistanceSelect.options || []).some((option) => option.value === nextValue)) {
+            alertDistanceSelect.value = nextValue;
+        }
+
+        nearbyPreferences.alertRadiusM = nextValue;
+        return {
+            changed,
+            requestedMeters,
+            effectiveMeters,
+        };
+    };
+
+    const getAlertRadiusMeters = () => getNearestAllowedAlertRadiusMeters();
+
+    if (canRunLiveAlerts) {
+        syncAlertDistanceSelection();
+    }
+    syncAlertPreferenceSummary();
 
     const getSelectedCategory = () => {
         if (!categorySelect || typeof categorySelect.value !== 'string') return '';
@@ -13396,12 +13515,25 @@ function initializeNearbyPOIsUI() {
     };
 
     const requestLiveAlertPermissions = async () => {
+        const hasNativeNotificationBridge = Boolean(
+            window.APDAndroid &&
+            (
+                typeof window.APDAndroid.requestNotificationPermission === 'function' ||
+                typeof window.APDAndroid.showNearbyAlertNotification === 'function' ||
+                typeof window.APDAndroid.showPoiNotification === 'function'
+            )
+        );
+
         try {
             if (window.APDAndroid && typeof window.APDAndroid.requestNotificationPermission === 'function') {
                 window.APDAndroid.requestNotificationPermission();
             }
         } catch (error) {
             console.warn('Android notification permission request failed:', error);
+        }
+
+        if (hasNativeNotificationBridge) {
+            return;
         }
 
         if ('Notification' in window && Notification.permission === 'default') {
@@ -13431,6 +13563,60 @@ function initializeNearbyPOIsUI() {
             console.warn('Native tracking service state could not be read:', error);
             return false;
         }
+    };
+
+    const getNativePoiTrackingServiceStartStatus = () => {
+        if (!hasNativePoiTrackingService()) return 'unavailable';
+
+        try {
+            const result = window.APDAndroid.getPoiTrackingServiceStartStatus?.();
+            return typeof result === 'string' && result.trim() ? result.trim() : 'idle';
+        } catch (error) {
+            console.warn('Native tracking service start status could not be read:', error);
+            return 'idle';
+        }
+    };
+
+    const getNativePoiTrackingServiceLastError = () => {
+        if (!hasNativePoiTrackingService()) return '';
+
+        try {
+            const result = window.APDAndroid.getPoiTrackingServiceLastError?.();
+            return typeof result === 'string' ? result.trim() : '';
+        } catch (error) {
+            console.warn('Native tracking service error could not be read:', error);
+            return '';
+        }
+    };
+
+    const waitForNativePoiTrackingServiceStart = async ({ timeoutMs = 45000, intervalMs = 300 } = {}) => {
+        const startedAt = Date.now();
+
+        while ((Date.now() - startedAt) < timeoutMs) {
+            if (isNativePoiTrackingServiceRunning()) {
+                return;
+            }
+
+            const status = getNativePoiTrackingServiceStartStatus();
+            const errorMessage = getNativePoiTrackingServiceLastError();
+
+            if (status === 'error') {
+                throw new Error(errorMessage || 'Android arka plan takibi başlatılamadı.');
+            }
+
+            if (status !== 'pending_location_permission' && status !== 'pending_background_permission' && status !== 'starting') {
+                if (errorMessage) {
+                    throw new Error(errorMessage);
+                }
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, intervalMs));
+        }
+
+        throw new Error(
+            getNativePoiTrackingServiceLastError() ||
+            'Android arka plan takibi zamanında başlatılamadı. Konum ve bildirim izinlerini kontrol edin.',
+        );
     };
 
     const renderResults = (payload) => {
@@ -13953,6 +14139,7 @@ function initializeNearbyPOIsUI() {
             String(isPanoramaAlertsEnabled()),
             String(nearbyPreferences.alertAllCategories),
         );
+        await waitForNativePoiTrackingServiceStart();
         nearbyPOIState.liveAlertMode = 'native';
         updateAlertToggleButton();
         setAlertStatus(
@@ -13966,9 +14153,18 @@ function initializeNearbyPOIsUI() {
         if (nearbyPOIState.liveAlertMode === 'native' || nearbyPOIState.liveAlertWatchId != null) return;
         ensureValidAlertSelection();
 
+        let nativeStartError = null;
+
         if (hasNativePoiTrackingService()) {
-            await restartNativePoiTrackingService();
-            return;
+            try {
+                await restartNativePoiTrackingService();
+                return;
+            } catch (error) {
+                nativeStartError = error;
+                nearbyPOIState.liveAlertMode = null;
+                updateAlertToggleButton();
+                console.warn('Native tracking service could not be started, falling back to web live alerts:', error);
+            }
         }
 
         if (!navigator.geolocation) {
@@ -14028,6 +14224,19 @@ function initializeNearbyPOIsUI() {
 
         nearbyPOIState.liveAlertMode = 'web';
         updateAlertToggleButton();
+        if (nativeStartError) {
+            setAlertStatus(
+                `Android arka plan takibi başlatılamadı (${nativeStartError.message || 'bilinmeyen hata'}). Uygulama açıkken canlı uyarı açık: ${getAlertCategorySummary()}.`,
+                'success',
+            );
+            try {
+                if (typeof showNotification === 'function') {
+                    showNotification('Arka plan takibi başlatılamadı, uygulama açıkken canlı uyarı ile devam ediliyor.', 'warning');
+                }
+            } catch (_) {}
+            return;
+        }
+
         setAlertStatus(`Canlı uyarı açık. İzlenen türler: ${getAlertCategorySummary()}.`, 'success');
     };
 
@@ -14035,12 +14244,28 @@ function initializeNearbyPOIsUI() {
 
     // Radius change: re-run search if we have an active location
     radiusSelect.addEventListener('change', async () => {
+        const alertRadiusSync = canRunLiveAlerts ? syncAlertDistanceSelection() : { changed: false, effectiveMeters: 0 };
         persistSearchPreferences();
         try {
             if (nearbyPOIState.activeLatLng) {
                 const { lat, lng } = nearbyPOIState.activeLatLng;
                 setCenterOverlays(lat, lng, { pending: false });
                 await runNearbySearch(lat, lng);
+            }
+
+            if (canRunLiveAlerts && alertRadiusSync.changed) {
+                if (nearbyPOIState.liveAlertMode === 'native') {
+                    await restartNativePoiTrackingService();
+                } else if (nearbyPOIState.liveAlertWatchId != null && nearbyPOIState.activeLatLng) {
+                    resetLiveAlertState();
+                    const { lat, lng } = nearbyPOIState.activeLatLng;
+                    await processLiveAlertPosition(lat, lng, { force: true });
+                } else {
+                    setAlertStatus(
+                        `Arama mesafesi ${formatDistance(getRadiusMeters())} olduğu için uyarı eşiği ${formatDistance(alertRadiusSync.effectiveMeters)} olarak ayarlandı.`,
+                        '',
+                    );
+                }
             }
         } catch (e) {
             setStatus(e.message || 'Mesafe güncellenemedi.', 'error');
@@ -14242,6 +14467,7 @@ function initializeNearbyPOIsUI() {
         }
 
         alertDistanceSelect.addEventListener('change', async () => {
+            const alertRadiusSync = syncAlertDistanceSelection();
             persistAlertPreferences();
             try {
                 if (nearbyPOIState.liveAlertMode === 'native') {
@@ -14250,7 +14476,10 @@ function initializeNearbyPOIsUI() {
                 }
 
                 if (!nearbyPOIState.liveAlertWatchId || !nearbyPOIState.activeLatLng) {
-                    setAlertStatus(`Uyarı eşiği ${formatDistance(getAlertRadiusMeters())} olarak ayarlandı.`, '');
+                    const message = alertRadiusSync.changed
+                        ? `Uyarı eşiği arama mesafesini aşamayacağı için ${formatDistance(alertRadiusSync.effectiveMeters)} olarak ayarlandı.`
+                        : `Uyarı eşiği ${formatDistance(getAlertRadiusMeters())} olarak ayarlandı.`;
+                    setAlertStatus(message, '');
                     return;
                 }
 

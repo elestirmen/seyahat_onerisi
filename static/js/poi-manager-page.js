@@ -8,71 +8,12 @@
     }
 
     function showPasswordChangeModal() {
-        const existing = document.getElementById('passwordChangeModal');
-        if (existing) {
-            const modal = new bootstrap.Modal(existing);
-            modal.show();
+        const message = 'Bu panel parola ile değil yönetici tokeni ile korunuyor. Token değişikliği sunucuda POI_ADMIN_TOKEN ortam değişkeni üzerinden yapılır.';
+        if (global.poiManager?.showToast) {
+            global.poiManager.showToast(message, 'info');
             return;
         }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal fade';
-        modal.id = 'passwordChangeModal';
-        modal.innerHTML = `
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="fas fa-key me-2"></i>Şifre Değiştir</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="passwordChangeForm">
-                            <div class="mb-3">
-                                <label for="currentPassword" class="form-label"><i class="fas fa-lock me-1"></i>Mevcut Şifre</label>
-                                <div class="input-group">
-                                    <input type="password" class="form-control" id="currentPassword" name="current_password" required>
-                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('currentPassword', this)"><i class="fas fa-eye"></i></button>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="newPassword" class="form-label"><i class="fas fa-key me-1"></i>Yeni Şifre</label>
-                                <div class="input-group">
-                                    <input type="password" class="form-control" id="newPassword" name="new_password" required>
-                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('newPassword', this)"><i class="fas fa-eye"></i></button>
-                                </div>
-                                <small class="text-muted d-block mt-1">Şifre en az 8 karakter olmalı ve büyük/küçük harf, rakam ve özel karakter içermelidir.</small>
-                                <div id="passwordStrength" class="mt-2"></div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="confirmPassword" class="form-label"><i class="fas fa-check me-1"></i>Yeni Şifre Tekrar</label>
-                                <div class="input-group">
-                                    <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required>
-                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('confirmPassword', this)"><i class="fas fa-eye"></i></button>
-                                </div>
-                                <div id="passwordMatch" class="mt-1"></div>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                        <button type="button" id="changePasswordSubmitBtn" class="btn btn-primary" onclick="changePassword()"><i class="fas fa-save me-1"></i>Değiştir</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-
-        const newPasswordInput = modal.querySelector('#newPassword');
-        const confirmPasswordInput = modal.querySelector('#confirmPassword');
-        if (newPasswordInput) {
-            newPasswordInput.addEventListener('input', () => validatePasswordStrength(newPasswordInput.value));
-        }
-        if (confirmPasswordInput) {
-            confirmPasswordInput.addEventListener('input', checkPasswordMatch);
-        }
+        global.alert(message);
     }
 
     function togglePasswordVisibility(inputId, button) {
@@ -144,66 +85,7 @@
     }
 
     async function changePassword() {
-        const form = document.getElementById('passwordChangeForm');
-        const submitBtn = document.getElementById('changePasswordSubmitBtn');
-        if (!form || !submitBtn) return;
-
-        const formData = new FormData(form);
-        const currentPassword = formData.get('current_password');
-        const newPassword = formData.get('new_password');
-        const confirmPassword = formData.get('confirm_password');
-
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            global.poiManager?.showToast('Lütfen tüm alanları doldurun', 'error');
-            return;
-        }
-        if (newPassword !== confirmPassword) {
-            global.poiManager?.showToast('Yeni şifre ve tekrarı eşleşmiyor', 'error');
-            return;
-        }
-        if (newPassword.length < 8) {
-            global.poiManager?.showToast('Yeni şifre en az 8 karakter olmalıdır', 'error');
-            return;
-        }
-
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Değiştiriliyor...';
-
-        try {
-            const response = await fetch('/auth/change-password', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': global.poiManager?.csrfToken || ''
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    current_password: currentPassword,
-                    new_password: newPassword,
-                    confirm_password: confirmPassword
-                })
-            });
-
-            if (response.ok) {
-                global.poiManager?.showToast('Şifre başarıyla değiştirildi. Yeniden giriş yapılıyor...', 'success');
-                const modal = bootstrap.Modal.getInstance(document.getElementById('passwordChangeModal'));
-                if (modal) {
-                    modal.hide();
-                }
-                setTimeout(() => {
-                    global.location.href = '/auth/login';
-                }, 1200);
-                return;
-            }
-
-            const data = await response.json().catch(() => ({}));
-            global.poiManager?.showToast('Şifre değiştirilemedi: ' + (data.error || response.statusText), 'error');
-        } catch (error) {
-            global.poiManager?.showToast('İstek hatası: ' + error.message, 'error');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-save me-1"></i>Değiştir';
-        }
+        showPasswordChangeModal();
     }
 
     function initMapResizer() {

@@ -2,10 +2,13 @@ package link.keenetic.urgup.harita
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Notification
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
 import android.net.Uri
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -35,6 +38,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import org.json.JSONArray
+import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
   companion object {
@@ -42,7 +46,22 @@ class MainActivity : AppCompatActivity() {
     private const val PERSONAL_ROUTES_URL = "https://harita.urgup.keenetic.link/personal_routes.html"
     private const val EXTRA_TARGET_URL = "target_url"
     private const val POI_ALERT_CHANNEL_ID = "nearby_poi_alerts"
+    private const val DEFAULT_NATIVE_LOCATION_MAX_AGE_MS = 5 * 60 * 1000L
+    private val TRUSTED_WEB_HOSTS =
+      linkedSetOf<String>().apply {
+        Uri.parse(START_URL).host?.lowercase()?.let(::add)
+        add("localhost")
+        add("127.0.0.1")
+        add("10.0.2.2")
+      }
   }
+
+  private data class PendingPoiTrackingStartRequest(
+    val categories: List<String>,
+    val alertRadiusMeters: Int,
+    val includePanoramas: Boolean,
+    val trackAllCategories: Boolean,
+  )
 
   private lateinit var rootContainer: FrameLayout
   private lateinit var webView: WebView
@@ -57,10 +76,9 @@ class MainActivity : AppCompatActivity() {
   private lateinit var locationPermissionLauncher: ActivityResultLauncher<Array<String>>
   private lateinit var nativeTrackingLocationPermissionLauncher: ActivityResultLauncher<Array<String>>
   private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
-  private var pendingPoiTrackingCategories: List<String> = emptyList()
-  private var pendingPoiTrackingRadiusMeters: Int = 250
-  private var pendingPoiTrackingPanoramasEnabled: Boolean = true
-  private var pendingPoiTrackingAllCategories: Boolean = true
+  private var pendingPoiTrackingStartRequest: PendingPoiTrackingStartRequest? = null
+  @Volatile private var poiTrackingServiceRequestStatus: String = "idle"
+  @Volatile private var poiTrackingServiceLastError: String? = null
   private var nativeVrModeActive = false
   private var previousRequestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 
@@ -100,18 +118,14 @@ class MainActivity : AppCompatActivity() {
         val granted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
           results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
 
-        val categories = pendingPoiTrackingCategories
-        val radiusMeters = pendingPoiTrackingRadiusMeters
-        val includePanoramas = pendingPoiTrackingPanoramasEnabled
-        val trackAllCategories = pendingPoiTrackingAllCategories
-        pendingPoiTrackingCategories = emptyList()
-        pendingPoiTrackingRadiusMeters = 250
-        pendingPoiTrackingPanoramasEnabled = true
-        pendingPoiTrackingAllCategories = true
-
         if (granted) {
-          startNearbyPoiTrackingService(categories, radiusMeters, includePanoramas, trackAllCategories)
+          continuePendingPoiTrackingStart()
         } else {
+          pendingPoiTrackingStartRequest = null
+          setPoiTrackingServiceRequestState(
+            "error",
+            getString(R.string.poi_tracking_permission_denied),
+          )
           Toast.makeText(
             this,
             getString(R.string.poi_tracking_permission_denied),
@@ -188,13 +202,13 @@ class MainActivity : AppCompatActivity() {
 
   private fun setupWebView() {
     CookieManager.getInstance().setAcceptCookie(true)
-    CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
+    CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
 
     webView.settings.apply {
       javaScriptEnabled = true
       domStorageEnabled = true
       setGeolocationEnabled(true)
-      mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+      mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
       userAgentString = "$userAgentString HaritaUrdupWebView/1.0"
     }
     webView.addJavascriptInterface(AndroidBridge(), "APDAndroid")
@@ -205,7 +219,15 @@ class MainActivity : AppCompatActivity() {
           val uri = request.url
           val scheme = uri.scheme?.lowercase() ?: return false
           return when (scheme) {
-            "http", "https" -> false
+            "http", "https" -> {
+              if (isTrustedWebUri(uri)) {
+                false
+              } else {
+                openExternalUrl(uri)
+                true
+              }
+            }
+            "about", "javascript" -> false
             else -> {
               openExternalUrl(uri)
               true
@@ -237,6 +259,11 @@ class MainActivity : AppCompatActivity() {
           origin: String,
           callback: GeolocationPermissions.Callback,
         ) {
+          if (!isTrustedWebOrigin(origin)) {
+            callback.invoke(origin, false, false)
+            return
+          }
+
           if (hasLocationPermission()) {
             callback.invoke(origin, true, false)
             return
@@ -344,6 +371,44 @@ class MainActivity : AppCompatActivity() {
     return fine || coarse
   }
 
+  private fun setPoiTrackingServiceRequestState(status: String, errorMessage: String? = null) {
+    poiTrackingServiceRequestStatus = status
+    poiTrackingServiceLastError = errorMessage?.trim()?.takeIf { it.isNotEmpty() }
+  }
+
+  private fun getPoiTrackingServiceLastError(): String? {
+    return NearbyPoiTrackingService.getLastStartupError() ?: poiTrackingServiceLastError
+  }
+
+  private fun getPoiTrackingServiceStartStatus(): String {
+    if (NearbyPoiTrackingService.isRunning) {
+      return "running"
+    }
+
+    if (!NearbyPoiTrackingService.getLastStartupError().isNullOrBlank()) {
+      return "error"
+    }
+
+    return poiTrackingServiceRequestStatus
+  }
+
+  private fun isTrustedWebOrigin(origin: String?): Boolean {
+    val parsedOrigin =
+      origin
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.let { runCatching { Uri.parse(it) }.getOrNull() }
+    return isTrustedWebUri(parsedOrigin)
+  }
+
+  private fun isTrustedWebUri(uri: Uri?): Boolean {
+    if (uri == null) return false
+    val scheme = uri.scheme?.lowercase() ?: return false
+    if (scheme != "http" && scheme != "https") return false
+    val host = uri.host?.lowercase() ?: return false
+    return TRUSTED_WEB_HOSTS.contains(host)
+  }
+
   private fun openExternalUrl(uri: Uri) {
     try {
       startActivity(Intent(Intent.ACTION_VIEW, uri))
@@ -354,7 +419,10 @@ class MainActivity : AppCompatActivity() {
 
   private fun resolveStartUrl(intent: Intent?): String {
     val targetUrl = intent?.getStringExtra(EXTRA_TARGET_URL)?.trim()
-    return if (targetUrl.isNullOrBlank()) START_URL else targetUrl
+    if (targetUrl.isNullOrBlank()) return START_URL
+
+    val targetUri = runCatching { Uri.parse(targetUrl) }.getOrNull() ?: return START_URL
+    return if (isTrustedWebUri(targetUri)) targetUrl else START_URL
   }
 
   private fun buildPoiTargetUrl(poiId: String?): String {
@@ -398,6 +466,62 @@ class MainActivity : AppCompatActivity() {
     manager.createNotificationChannel(channel)
   }
 
+  private fun getBestLastKnownLocation(maxAgeMs: Long = DEFAULT_NATIVE_LOCATION_MAX_AGE_MS): Location? {
+    if (!hasLocationPermission()) return null
+
+    val locationManager = getSystemService(LOCATION_SERVICE) as? LocationManager ?: return null
+    val now = System.currentTimeMillis()
+    val providers =
+      linkedSetOf(
+        LocationManager.GPS_PROVIDER,
+        LocationManager.NETWORK_PROVIDER,
+        LocationManager.PASSIVE_PROVIDER,
+      ).apply {
+        addAll(locationManager.getProviders(true))
+      }
+
+    var bestLocation: Location? = null
+    providers.forEach { provider ->
+      val candidate =
+        try {
+          locationManager.getLastKnownLocation(provider)
+        } catch (_: SecurityException) {
+          null
+        } ?: return@forEach
+
+      val candidateTime = candidate.time.takeIf { it > 0L } ?: return@forEach
+      val candidateAgeMs = now - candidateTime
+      if (candidateAgeMs < 0L) return@forEach
+      if (maxAgeMs > 0L && candidateAgeMs > maxAgeMs) return@forEach
+
+      val currentBest = bestLocation
+      bestLocation =
+        when {
+          currentBest == null -> candidate
+          candidateTime > currentBest.time -> candidate
+          candidateTime == currentBest.time && candidate.accuracy < currentBest.accuracy -> candidate
+          else -> currentBest
+        }
+    }
+
+    return bestLocation
+  }
+
+  private fun buildLocationPayload(location: Location): String {
+    return JSONObject().apply {
+      put("latitude", location.latitude)
+      put("longitude", location.longitude)
+      put("accuracy", location.accuracy.toDouble())
+      put("timestamp", location.time)
+      if (location.provider.isNullOrBlank()) {
+        put("provider", JSONObject.NULL)
+      } else {
+        put("provider", location.provider)
+      }
+      put("source", "android-last-known")
+    }.toString()
+  }
+
   private fun hasNotificationPermission(): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
     return ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
@@ -408,6 +532,17 @@ class MainActivity : AppCompatActivity() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
     if (hasNotificationPermission()) return
     notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+  }
+
+  private fun postNotificationIfPermitted(notificationId: Int, notification: Notification): Boolean {
+    if (!hasNotificationPermission()) return false
+
+    return try {
+      NotificationManagerCompat.from(this).notify(notificationId, notification)
+      true
+    } catch (_: SecurityException) {
+      false
+    }
   }
 
   private fun parsePoiTrackingCategories(payload: String?): List<String> {
@@ -448,16 +583,41 @@ class MainActivity : AppCompatActivity() {
     includePanoramas: Boolean,
     trackAllCategories: Boolean,
   ) {
-    pendingPoiTrackingCategories = categories
-    pendingPoiTrackingRadiusMeters = alertRadiusM
-    pendingPoiTrackingPanoramasEnabled = includePanoramas
-    pendingPoiTrackingAllCategories = trackAllCategories
+    pendingPoiTrackingStartRequest = PendingPoiTrackingStartRequest(
+      categories = categories,
+      alertRadiusMeters = alertRadiusM,
+      includePanoramas = includePanoramas,
+      trackAllCategories = trackAllCategories,
+    )
+    setPoiTrackingServiceRequestState("pending_location_permission")
     nativeTrackingLocationPermissionLauncher.launch(
       arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_COARSE_LOCATION,
       ),
     )
+  }
+
+  private fun continuePendingPoiTrackingStart() {
+    val request = pendingPoiTrackingStartRequest ?: return
+
+    pendingPoiTrackingStartRequest = null
+    startNearbyPoiTrackingService(
+      request.categories,
+      request.alertRadiusMeters,
+      request.includePanoramas,
+      request.trackAllCategories,
+    )
+  }
+
+  private fun mapPoiTrackingServiceStartError(error: Exception): String {
+    if (error is IllegalStateException &&
+      error.javaClass.name == "android.app.ForegroundServiceStartNotAllowedException"
+    ) {
+      return getString(R.string.poi_tracking_service_start_not_allowed)
+    }
+
+    return error.message?.takeIf { it.isNotBlank() } ?: getString(R.string.poi_tracking_service_start_failed)
   }
 
   private fun startNearbyPoiTrackingService(
@@ -467,13 +627,26 @@ class MainActivity : AppCompatActivity() {
     trackAllCategories: Boolean,
   ) {
     requestNotificationPermissionIfNeeded()
-    ContextCompat.startForegroundService(
-      this,
-      NearbyPoiTrackingService.buildStartIntent(this, categories, alertRadiusM, includePanoramas, trackAllCategories),
-    )
+    NearbyPoiTrackingService.clearStartupError()
+    setPoiTrackingServiceRequestState("starting")
+
+    try {
+      ContextCompat.startForegroundService(
+        this,
+        NearbyPoiTrackingService.buildStartIntent(this, categories, alertRadiusM, includePanoramas, trackAllCategories),
+      )
+    } catch (error: Exception) {
+      setPoiTrackingServiceRequestState("error", mapPoiTrackingServiceStartError(error))
+      val errorMessage =
+        getPoiTrackingServiceLastError() ?: getString(R.string.poi_tracking_service_start_failed)
+      Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
+    }
   }
 
   private fun stopNearbyPoiTrackingService() {
+    pendingPoiTrackingStartRequest = null
+    setPoiTrackingServiceRequestState("stopped")
+    NearbyPoiTrackingService.clearStartupError()
     startService(NearbyPoiTrackingService.buildStopIntent(this))
   }
 
@@ -546,7 +719,9 @@ class MainActivity : AppCompatActivity() {
         .build()
 
     PoiNotificationPreferenceStore.persistLastAlertAt(this, normalizedAlertId, System.currentTimeMillis())
-    NotificationManagerCompat.from(this).notify(notificationId, notification)
+    if (!postNotificationIfPermitted(notificationId, notification)) {
+      requestNotificationPermissionIfNeeded()
+    }
   }
 
   private fun showPoiAlertNotification(title: String, message: String, poiId: String?) {
@@ -609,8 +784,17 @@ class MainActivity : AppCompatActivity() {
         val includePanoramas = parsePoiTrackingFlag(includePanoramasPayload, true)
         val trackAllCategories = parsePoiTrackingFlag(trackAllCategoriesPayload, true)
 
+        NearbyPoiTrackingService.clearStartupError()
+        setPoiTrackingServiceRequestState("idle")
+
         if (hasLocationPermission()) {
-          startNearbyPoiTrackingService(categories, radiusMeters, includePanoramas, trackAllCategories)
+          pendingPoiTrackingStartRequest = PendingPoiTrackingStartRequest(
+            categories = categories,
+            alertRadiusMeters = radiusMeters,
+            includePanoramas = includePanoramas,
+            trackAllCategories = trackAllCategories,
+          )
+          continuePendingPoiTrackingStart()
         } else {
           requestNearbyPoiTrackingLocationPermission(categories, radiusMeters, includePanoramas, trackAllCategories)
         }
@@ -627,6 +811,27 @@ class MainActivity : AppCompatActivity() {
     @JavascriptInterface
     fun isPoiTrackingServiceRunning(): Boolean {
       return NearbyPoiTrackingService.isRunning
+    }
+
+    @JavascriptInterface
+    fun getPoiTrackingServiceStartStatus(): String {
+      return this@MainActivity.getPoiTrackingServiceStartStatus()
+    }
+
+    @JavascriptInterface
+    fun getPoiTrackingServiceLastError(): String? {
+      return this@MainActivity.getPoiTrackingServiceLastError()
+    }
+
+    @JavascriptInterface
+    fun getLastKnownLocation(maxAgeMsPayload: String?): String? {
+      val maxAgeMs =
+        maxAgeMsPayload
+          ?.toLongOrNull()
+          ?.coerceAtLeast(0L)
+          ?: DEFAULT_NATIVE_LOCATION_MAX_AGE_MS
+      val location = this@MainActivity.getBestLastKnownLocation(maxAgeMs) ?: return null
+      return this@MainActivity.buildLocationPayload(location)
     }
 
     @JavascriptInterface

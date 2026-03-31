@@ -373,9 +373,9 @@
                     <small class="text-muted">Oturum: </small>
                     <span class="badge bg-success" id="sessionStatus">Aktif</span>
                 </div>
-                <button type="button" class="btn btn-outline-warning btn-sm me-2" onclick="showPasswordChangeModal()"
+                <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="showPasswordChangeModal()"
                     id="changePasswordBtn">
-                    <i class="fas fa-key me-1"></i> Şifre Değiştir
+                    <i class="fas fa-key me-1"></i> Yönetici Tokeni
                 </button>
                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="logout()" id="logoutBtn">
                     <i class="fas fa-sign-out-alt me-1"></i> Çıkış
@@ -3276,109 +3276,9 @@
             }, 2000);
         }
 
-        // Password Change Functionality
+        // Admin token info
         function showPasswordChangeModal() {
-            const modal = document.createElement('div');
-            modal.className = 'modal fade';
-            modal.id = 'passwordChangeModal';
-            modal.innerHTML = `
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header bg-warning text-dark">
-                            <h5 class="modal-title fw-bold">
-                                <i class="fas fa-key me-2"></i>Şifre Değiştir
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="passwordChangeForm">
-                                <div class="mb-3">
-                                    <label for="currentPassword" class="form-label">
-                                        <i class="fas fa-lock me-1"></i>Mevcut Şifre
-                                    </label>
-                                    <div class="input-group">
-                                        <input type="password" class="form-control" id="currentPassword" 
-                                               name="current_password" required>
-                                        <button class="btn btn-outline-secondary" type="button" 
-                                                onclick="togglePasswordVisibility('currentPassword', this)">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="newPassword" class="form-label">
-                                        <i class="fas fa-key me-1"></i>Yeni Şifre
-                                    </label>
-                                    <div class="input-group">
-                                        <input type="password" class="form-control" id="newPassword" 
-                                               name="new_password" required>
-                                        <button class="btn btn-outline-secondary" type="button" 
-                                                onclick="togglePasswordVisibility('newPassword', this)">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </div>
-                                    <div class="form-text">
-                                        <small class="text-muted">
-                                            <i class="fas fa-info-circle me-1"></i>
-                                            Şifre en az 8 karakter olmalı ve büyük harf, küçük harf, rakam ve özel karakter içermelidir.
-                                        </small>
-                                    </div>
-                                    <div id="passwordStrength" class="mt-2"></div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="confirmPassword" class="form-label">
-                                        <i class="fas fa-check me-1"></i>Yeni Şifre Tekrar
-                                    </label>
-                                    <div class="input-group">
-                                        <input type="password" class="form-control" id="confirmPassword" 
-                                               name="confirm_password" required>
-                                        <button class="btn btn-outline-secondary" type="button" 
-                                                onclick="togglePasswordVisibility('confirmPassword', this)">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </div>
-                                    <div id="passwordMatch" class="mt-1"></div>
-                                </div>
-                                
-                                <div class="alert alert-info">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    <strong>Önemli:</strong> Şifre değiştirildikten sonra tüm aktif oturumlar sonlandırılacak 
-                                    ve yeniden giriş yapmanız gerekecek.
-                                </div>
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times me-1"></i>İptal
-                            </button>
-                            <button type="button" class="btn btn-warning" onclick="changePassword()" id="changePasswordSubmitBtn">
-                                <i class="fas fa-key me-1"></i>Şifreyi Değiştir
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            document.body.appendChild(modal);
-            const bsModal = new bootstrap.Modal(modal);
-            bsModal.show();
-
-            // Add event listeners for password validation
-            const newPasswordInput = modal.querySelector('#newPassword');
-            const confirmPasswordInput = modal.querySelector('#confirmPassword');
-
-            newPasswordInput.addEventListener('input', function () {
-                validatePasswordStrength(this.value);
-                checkPasswordMatch();
-            });
-
-            confirmPasswordInput.addEventListener('input', checkPasswordMatch);
-
-            modal.addEventListener('hidden.bs.modal', () => {
-                modal.remove();
-            });
+            showToast('Bu panel parola ile değil yönetici tokeni ile korunuyor. Token değişikliği sunucuda POI_ADMIN_TOKEN ortam değişkeni üzerinden yapılır.', 'info');
         }
 
         function togglePasswordVisibility(inputId, button) {
@@ -3472,77 +3372,7 @@
         }
 
         async function changePassword() {
-            const form = document.getElementById('passwordChangeForm');
-            const submitBtn = document.getElementById('changePasswordSubmitBtn');
-
-            if (!form) return;
-
-            const formData = new FormData(form);
-            const currentPassword = formData.get('current_password');
-            const newPassword = formData.get('new_password');
-            const confirmPassword = formData.get('confirm_password');
-
-            // Basic validation
-            if (!currentPassword || !newPassword || !confirmPassword) {
-                showToast('Lütfen tüm alanları doldurun', 'error');
-                return;
-            }
-
-            if (newPassword !== confirmPassword) {
-                showToast('Yeni şifre ve tekrarı eşleşmiyor', 'error');
-                return;
-            }
-
-            if (newPassword.length < 8) {
-                showToast('Yeni şifre en az 8 karakter olmalıdır', 'error');
-                return;
-            }
-
-            // Disable submit button
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Değiştiriliyor...';
-
-            try {
-                const response = await fetch('/auth/change-password', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({
-                        current_password: currentPassword,
-                        new_password: newPassword,
-                        confirm_password: confirmPassword,
-                        csrf_token: csrfToken
-                    })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    showToast('Şifre başarıyla değiştirildi. Yeniden giriş yapılıyor...', 'success');
-
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('passwordChangeModal'));
-                    if (modal) modal.hide();
-
-                    // Redirect to login after a short delay
-                    setTimeout(() => {
-                        window.location.href = '/auth/login';
-                    }, 2000);
-
-                } else {
-                    showToast(data.error || 'Şifre değiştirilemedi', 'error');
-                }
-
-            } catch (error) {
-                console.error('Password change error:', error);
-                showToast('Şifre değiştirirken hata oluştu', 'error');
-            } finally {
-                // Re-enable submit button
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-key me-1"></i>Şifreyi Değiştir';
-            }
+            showPasswordChangeModal();
         }
 
         // Kategori Yönetimi Fonksiyonları

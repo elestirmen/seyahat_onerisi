@@ -54,6 +54,19 @@ class NearbyPoiTrackingService : Service() {
     @Volatile
     var isRunning: Boolean = false
 
+    @Volatile
+    private var lastStartupErrorMessage: String? = null
+
+    fun getLastStartupError(): String? = lastStartupErrorMessage
+
+    fun clearStartupError() {
+      lastStartupErrorMessage = null
+    }
+
+    private fun setStartupError(message: String?) {
+      lastStartupErrorMessage = message?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
     fun buildStartIntent(
       context: Context,
       categories: List<String>,
@@ -111,6 +124,7 @@ class NearbyPoiTrackingService : Service() {
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     if (intent?.action == ACTION_STOP) {
+      clearStartupError()
       stopTracking()
       return START_NOT_STICKY
     }
@@ -129,13 +143,14 @@ class NearbyPoiTrackingService : Service() {
     includePanoramas = intent?.getBooleanExtra(EXTRA_INCLUDE_PANORAMAS, true) ?: true
     trackAllCategories = intent?.getBooleanExtra(EXTRA_TRACK_ALL_CATEGORIES, true) ?: true
     alertRadiusMeters = sanitizeAlertRadius(intent?.getIntExtra(EXTRA_ALERT_RADIUS_METERS, DEFAULT_ALERT_RADIUS_METERS))
+    clearStartupError()
     lastAlertAtByPoiId.clear()
     lastScannedLocation = null
     lastScanAt = 0L
 
+    isRunning = true
     startAsForeground()
     beginTracking()
-    isRunning = true
 
     return START_NOT_STICKY
   }
@@ -173,6 +188,7 @@ class NearbyPoiTrackingService : Service() {
     removeLocationUpdates()
 
     if (!hasLocationPermission()) {
+      setStartupError(getString(R.string.poi_tracking_permission_denied))
       updateTrackingNotification(getString(R.string.poi_tracking_notification_no_location))
       stopTracking()
       return
@@ -201,6 +217,7 @@ class NearbyPoiTrackingService : Service() {
           Looper.getMainLooper(),
         )
       } catch (_: SecurityException) {
+        setStartupError(getString(R.string.poi_tracking_permission_denied))
         updateTrackingNotification(getString(R.string.poi_tracking_notification_no_location))
         stopTracking()
         return
@@ -239,6 +256,22 @@ class NearbyPoiTrackingService : Service() {
 
     networkExecutor.execute {
       runNearbyScan(location)
+    }
+  }
+
+  private fun hasNotificationPermission(): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+    return ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+      PackageManager.PERMISSION_GRANTED
+  }
+
+  private fun postNotificationIfPermitted(notificationId: Int, notification: Notification) {
+    if (!hasNotificationPermission()) return
+
+    try {
+      NotificationManagerCompat.from(this).notify(notificationId, notification)
+    } catch (_: SecurityException) {
+      // Ignore transient permission/state mismatches; foreground tracking keeps running.
     }
   }
 
@@ -434,7 +467,7 @@ class NearbyPoiTrackingService : Service() {
         )
         .build()
 
-    NotificationManagerCompat.from(this).notify(notificationId, notification)
+    postNotificationIfPermitted(notificationId, notification)
   }
 
   private fun buildTrackingNotification(statusText: String? = null): Notification {
@@ -470,7 +503,7 @@ class NearbyPoiTrackingService : Service() {
   }
 
   private fun updateTrackingNotification(statusText: String? = null) {
-    NotificationManagerCompat.from(this).notify(
+    postNotificationIfPermitted(
       TRACKING_NOTIFICATION_ID,
       buildTrackingNotification(statusText),
     )
