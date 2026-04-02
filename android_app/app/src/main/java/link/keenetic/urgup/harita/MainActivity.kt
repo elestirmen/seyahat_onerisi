@@ -75,6 +75,7 @@ class MainActivity : AppCompatActivity() {
   private var geoPermissionCallback: GeolocationPermissions.Callback? = null
   private lateinit var locationPermissionLauncher: ActivityResultLauncher<Array<String>>
   private lateinit var nativeTrackingLocationPermissionLauncher: ActivityResultLauncher<Array<String>>
+  private lateinit var nativeTrackingBackgroundLocationPermissionLauncher: ActivityResultLauncher<String>
   private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
   private var pendingPoiTrackingStartRequest: PendingPoiTrackingStartRequest? = null
   @Volatile private var poiTrackingServiceRequestStatus: String = "idle"
@@ -130,6 +131,24 @@ class MainActivity : AppCompatActivity() {
             this,
             getString(R.string.poi_tracking_permission_denied),
             Toast.LENGTH_SHORT,
+          ).show()
+        }
+      }
+
+    nativeTrackingBackgroundLocationPermissionLauncher =
+      registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted || hasBackgroundLocationPermission()) {
+          continuePendingPoiTrackingStart()
+        } else {
+          pendingPoiTrackingStartRequest = null
+          setPoiTrackingServiceRequestState(
+            "error",
+            getString(R.string.poi_tracking_background_permission_denied),
+          )
+          Toast.makeText(
+            this,
+            getString(R.string.poi_tracking_background_permission_denied),
+            Toast.LENGTH_LONG,
           ).show()
         }
       }
@@ -371,6 +390,12 @@ class MainActivity : AppCompatActivity() {
     return fine || coarse
   }
 
+  private fun hasBackgroundLocationPermission(): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return true
+    return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
+      PackageManager.PERMISSION_GRANTED
+  }
+
   private fun setPoiTrackingServiceRequestState(status: String, errorMessage: String? = null) {
     poiTrackingServiceRequestStatus = status
     poiTrackingServiceLastError = errorMessage?.trim()?.takeIf { it.isNotEmpty() }
@@ -598,8 +623,33 @@ class MainActivity : AppCompatActivity() {
     )
   }
 
+  private fun requestNearbyPoiTrackingBackgroundLocationPermission() {
+    if (hasBackgroundLocationPermission()) {
+      continuePendingPoiTrackingStart()
+      return
+    }
+
+    setPoiTrackingServiceRequestState("pending_background_permission")
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ||
+      shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+    ) {
+      Toast.makeText(
+        this,
+        getString(R.string.poi_tracking_background_permission_rationale),
+        Toast.LENGTH_LONG,
+      ).show()
+    }
+
+    nativeTrackingBackgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+  }
+
   private fun continuePendingPoiTrackingStart() {
     val request = pendingPoiTrackingStartRequest ?: return
+
+    if (!hasBackgroundLocationPermission()) {
+      requestNearbyPoiTrackingBackgroundLocationPermission()
+      return
+    }
 
     pendingPoiTrackingStartRequest = null
     startNearbyPoiTrackingService(
