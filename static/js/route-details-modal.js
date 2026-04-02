@@ -1155,35 +1155,45 @@ class RouteDetailsModal {
         }
     }
 
+    getRouteMediaApiUrl(routeId) {
+        const apiBase = window.apiBase || '/api';
+        return `${apiBase}/routes/${routeId}/media`;
+    }
+
+    async fetchRouteMedia(routeId) {
+        const response = await fetch(this.getRouteMediaApiUrl(routeId));
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (Array.isArray(data)) {
+            return data;
+        }
+
+        if (Array.isArray(data.media)) {
+            return data.media;
+        }
+
+        if (Array.isArray(data.files)) {
+            return data.files;
+        }
+
+        return [];
+    }
+
     async loadMediaContent() {
         const mediaTabContent = document.querySelector('.route-details-tab-content[data-tab="media"]');
         if (!mediaTabContent) return;
 
         try {
             console.warn('🎬 Loading media content for route:', this.currentRoute.name);
+            const routeId = this.currentRoute.id || this.currentRoute._id;
+            console.warn('📡 Fetching media content from:', this.getRouteMediaApiUrl(routeId));
 
-            const apiBase = window.apiBase || '/api';
-            console.warn('📡 Fetching media content from:', `${apiBase}/admin/routes/${this.currentRoute.id}/media`);
-
-            const response = await fetch(`${apiBase}/admin/routes/${this.currentRoute.id}/media`, {
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
-            let mediaFiles = [];
-
-            // Handle different response formats
-            if (Array.isArray(data)) {
-                mediaFiles = data;
-            } else if (Array.isArray(data.media)) {
-                mediaFiles = data.media;
-            } else if (Array.isArray(data.files)) {
-                mediaFiles = data.files;
-            }
+            const mediaFiles = await this.fetchRouteMedia(routeId);
 
             if (mediaFiles.length === 0) {
                 mediaTabContent.innerHTML = `
@@ -1229,16 +1239,13 @@ class RouteDetailsModal {
 
         } catch (error) {
             console.error('❌ Error loading media content:', error);
-            const mediaContainer = document.getElementById('routeMediaGrid');
-            if (mediaContainer) {
-                mediaContainer.innerHTML = `
-                    <div class="route-media-empty">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h4>Medya Yüklenemedi</h4>
-                        <p>Medya dosyaları yüklenirken bir hata oluştu</p>
-                    </div>
-                `;
-            }
+            mediaTabContent.innerHTML = `
+                <div class="route-media-empty">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h4>Medya Yüklenemedi</h4>
+                    <p>Medya dosyaları yüklenirken bir hata oluştu</p>
+                </div>
+            `;
         }
     }
 
@@ -1717,33 +1724,9 @@ class RouteDetailsModal {
                 return;
             }
 
-            const apiBase = window.apiBase || '/api';
-            console.warn('📡 Fetching media from:', `${apiBase} /admin/routes / ${routeId}/media`);
+            console.warn('📡 Fetching media from:', this.getRouteMediaApiUrl(routeId));
 
-            const response = await fetch(`${apiBase}/admin/routes/${routeId}/media`, {
-                credentials: 'include'
-            });
-
-            console.warn('📡 Media API response status:', response.status, response.statusText);
-
-            if (!response.ok) {
-                console.warn('ℹ️ No media found for route or access denied:', response.status);
-                return;
-            }
-
-            const data = await response.json();
-            console.warn('📊 Raw media API response:', data);
-
-            let mediaFiles = [];
-
-            // Handle different response formats
-            if (Array.isArray(data)) {
-                mediaFiles = data;
-            } else if (Array.isArray(data.media)) {
-                mediaFiles = data.media;
-            } else if (Array.isArray(data.files)) {
-                mediaFiles = data.files;
-            }
+            const mediaFiles = await this.fetchRouteMedia(routeId);
 
             console.warn(`📊 Found ${mediaFiles.length} media files total`);
 
