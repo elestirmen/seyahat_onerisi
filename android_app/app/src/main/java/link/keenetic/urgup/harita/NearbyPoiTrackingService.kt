@@ -17,6 +17,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.os.Looper
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -29,6 +30,7 @@ import kotlin.math.roundToInt
 
 class NearbyPoiTrackingService : Service() {
   companion object {
+    private const val TAG = "NearbyPoiTracking"
     private const val ACTION_START = "link.keenetic.urgup.harita.action.START_POI_TRACKING"
     private const val ACTION_STOP = "link.keenetic.urgup.harita.action.STOP_POI_TRACKING"
     private const val EXTRA_CATEGORY = "extra_category"
@@ -96,6 +98,12 @@ class NearbyPoiTrackingService : Service() {
     val typeLabel: String,
     val distanceMeters: Int,
     val targetUrl: String,
+  )
+
+  private data class NearbyScanResult(
+    val items: List<NearbyAlertItem>,
+    val attemptedSources: Int,
+    val successfulSources: Int,
   )
 
   private lateinit var locationManager: LocationManager
@@ -277,8 +285,14 @@ class NearbyPoiTrackingService : Service() {
 
   private fun runNearbyScan(location: Location) {
     try {
-      val alertItems = fetchNearbyAlertItems(location)
+      val scanResult = fetchNearbyAlertItems(location)
+      val alertItems = scanResult.items
       if (alertItems.isEmpty()) {
+        if (scanResult.attemptedSources > 0 && scanResult.successfulSources == 0) {
+          updateTrackingNotification(getString(R.string.poi_tracking_notification_error))
+          return
+        }
+
         updateTrackingNotification(
           getString(
             R.string.poi_tracking_notification_empty,
@@ -316,20 +330,41 @@ class NearbyPoiTrackingService : Service() {
         lastAlertAtByPoiId[alertItem.id] = now
         PoiNotificationPreferenceStore.persistLastAlertAt(this, alertItem.id, now)
       }
-    } catch (_: Exception) {
+    } catch (error: Exception) {
+      Log.w(TAG, "Nearby content scan failed", error)
       updateTrackingNotification(getString(R.string.poi_tracking_notification_error))
     }
   }
 
-  private fun fetchNearbyAlertItems(location: Location): List<NearbyAlertItem> {
+  private fun fetchNearbyAlertItems(location: Location): NearbyScanResult {
     val items = mutableListOf<NearbyAlertItem>()
+    var attemptedSources = 0
+    var successfulSources = 0
+
     if (trackAllCategories || selectedCategories.isNotEmpty()) {
-      items += fetchNearbyPois(location)
+      attemptedSources += 1
+      try {
+        items += fetchNearbyPois(location)
+        successfulSources += 1
+      } catch (error: Exception) {
+        Log.w(TAG, "Nearby POI scan failed", error)
+      }
     }
     if (includePanoramas) {
-      items += fetchNearbyPanoramas(location)
+      attemptedSources += 1
+      try {
+        items += fetchNearbyPanoramas(location)
+        successfulSources += 1
+      } catch (error: Exception) {
+        Log.w(TAG, "Nearby panorama scan failed", error)
+      }
     }
-    return items.sortedBy { it.distanceMeters }
+
+    return NearbyScanResult(
+      items = items.sortedBy { it.distanceMeters },
+      attemptedSources = attemptedSources,
+      successfulSources = successfulSources,
+    )
   }
 
   private fun fetchNearbyPois(location: Location): List<NearbyAlertItem> {
@@ -404,6 +439,10 @@ class NearbyPoiTrackingService : Service() {
 
     return try {
       val responseCode = connection.responseCode
+      if (responseCode == HttpURLConnection.HTTP_NOT_FOUND || responseCode == HttpURLConnection.HTTP_BAD_METHOD) {
+        Log.w(TAG, "Nearby panorama endpoint is unavailable ($responseCode); skipping panorama alerts")
+        return emptyList()
+      }
       if (responseCode !in 200..299) {
         throw IllegalStateException("Nearby panorama request failed: $responseCode")
       }

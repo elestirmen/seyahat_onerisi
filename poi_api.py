@@ -27,6 +27,7 @@ import queue
 import math
 import logging
 from typing import List, Tuple, Set, Dict, Any
+from app.services.media_service import media_service as modular_media_service
 
 # Database connection helper
 def get_db_conn():
@@ -2765,6 +2766,46 @@ def list_route_panoramas():
         except Exception:
             pass
         return jsonify({'error': f'Error fetching route panoramas: {str(e)}'}), 500
+
+
+@app.route('/api/panoramas/nearby', methods=['GET'])
+def nearby_panoramas():
+    """Konuma göre yakındaki bağımsız ve rota panoramalarını listele."""
+    lat_raw = (request.args.get('lat') or '').strip()
+    lng_raw = (request.args.get('lng') or '').strip()
+    if not lat_raw or not lng_raw:
+        return jsonify({'error': 'lat and lng query params are required'}), 400
+
+    try:
+        lat = float(lat_raw)
+        lng = float(lng_raw)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'lat and lng must be numbers'}), 400
+
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return jsonify({'error': 'lat/lng out of range'}), 400
+
+    try:
+        radius_m = int(float(request.args.get('radius_m', 1000)))
+    except (TypeError, ValueError):
+        radius_m = 1000
+
+    try:
+        limit = int(float(request.args.get('limit', 20)))
+    except (TypeError, ValueError):
+        limit = 20
+
+    try:
+        payload = modular_media_service.search_nearby_panoramas(
+            lat=lat,
+            lng=lng,
+            radius_m=radius_m,
+            limit=limit,
+        )
+        return jsonify(payload), 200
+    except Exception as e:
+        logger.error(f"Error fetching nearby panoramas: {e}")
+        return jsonify({'error': f'Error fetching nearby panoramas: {str(e)}'}), 500
 
 
 @app.route('/api/panoramas/<pano_id>', methods=['DELETE'])

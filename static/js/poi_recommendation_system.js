@@ -14013,21 +14013,40 @@ function initializeNearbyPOIsUI() {
         nearbyPOIState.lastLiveAlertScanLatLng = { lat, lng };
 
         try {
-            const [poiPayload, panoramaPayload] = await Promise.all([
-                hasPoiAlertSelection()
+            const shouldFetchPois = hasPoiAlertSelection();
+            const shouldFetchPanoramas = isPanoramaAlertsEnabled();
+            const [poiResult, panoramaResult] = await Promise.allSettled([
+                shouldFetchPois
                     ? fetchNearby(lat, lng, {
                         radiusM: getAlertRadiusMeters(),
                         limit: 20,
                         categories: getSelectedAlertCategories(),
                     })
                     : Promise.resolve({ pois: [] }),
-                isPanoramaAlertsEnabled()
+                shouldFetchPanoramas
                     ? fetchNearbyPanoramas(lat, lng, {
                         radiusM: getAlertRadiusMeters(),
                         limit: 20,
                     })
                     : Promise.resolve({ panoramas: [] }),
             ]);
+
+            if (poiResult.status === 'rejected' && shouldFetchPois) {
+                console.warn('Live alert POI scan failed:', poiResult.reason);
+            }
+            if (panoramaResult.status === 'rejected' && shouldFetchPanoramas) {
+                console.warn('Live alert panorama scan failed:', panoramaResult.reason);
+            }
+
+            const poiPayload = poiResult.status === 'fulfilled' ? poiResult.value : { pois: [] };
+            const panoramaPayload = panoramaResult.status === 'fulfilled' ? panoramaResult.value : { panoramas: [] };
+            const successfulSourceCount = [poiResult, panoramaResult].filter((result) => result.status === 'fulfilled').length;
+            const requestedSourceCount = (shouldFetchPois ? 1 : 0) + (shouldFetchPanoramas ? 1 : 0);
+
+            if (requestedSourceCount > 0 && successfulSourceCount === 0) {
+                const failureReason = poiResult.status === 'rejected' ? poiResult.reason : panoramaResult.status === 'rejected' ? panoramaResult.reason : null;
+                throw failureReason || new Error('Canlı uyarı taraması yapılamadı.');
+            }
 
             const nearbyAlertItems = [
                 ...(Array.isArray(poiPayload?.pois) ? poiPayload.pois : []),
