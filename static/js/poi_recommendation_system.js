@@ -12790,6 +12790,12 @@ function normalizeNearbyAlertPoiId(poiId) {
     return String(poiId ?? '').trim();
 }
 
+function dispatchNearbyAlertMuteStateChanged() {
+    try {
+        window.dispatchEvent(new CustomEvent('nearby-alert-mutes-changed'));
+    } catch (_) {}
+}
+
 function loadStoredNearbyAlertPreferences() {
     const defaults = getDefaultNearbyAlertPreferences();
 
@@ -12921,6 +12927,29 @@ function setPoiNotificationMutedLocally(poiId, muted) {
     saveStoredNearbyAlertPreferences(preferences);
 }
 
+function getStoredMutedPoiIds() {
+    const preferences = loadStoredNearbyAlertPreferences();
+    let mutedPoiIds = Array.isArray(preferences.mutedPoiIds)
+        ? preferences.mutedPoiIds.map((poiId) => normalizeNearbyAlertPoiId(poiId)).filter(Boolean)
+        : [];
+
+    try {
+        if (window.APDAndroid && typeof window.APDAndroid.getMutedPoiIds === 'function') {
+            const nativeMutedIdsRaw = window.APDAndroid.getMutedPoiIds();
+            const nativeMutedIds = JSON.parse(String(nativeMutedIdsRaw || '[]'));
+            if (Array.isArray(nativeMutedIds)) {
+                mutedPoiIds = nativeMutedIds.map((poiId) => normalizeNearbyAlertPoiId(poiId)).filter(Boolean);
+                preferences.mutedPoiIds = mutedPoiIds;
+                saveStoredNearbyAlertPreferences(preferences);
+            }
+        }
+    } catch (error) {
+        console.warn('Native muted alert list could not be read:', error);
+    }
+
+    return mutedPoiIds;
+}
+
 function isPoiNotificationMutedForCurrentDevice(poiId) {
     const normalizedPoiId = normalizeNearbyAlertPoiId(poiId);
     if (!normalizedPoiId) return false;
@@ -12952,6 +12981,34 @@ function setPoiNotificationMutedForCurrentDevice(poiId, muted) {
     } catch (error) {
         console.warn('Native POI mute state could not be updated:', error);
     }
+
+    dispatchNearbyAlertMuteStateChanged();
+}
+
+function clearAllMutedPoiNotificationsForCurrentDevice() {
+    const mutedPoiIds = getStoredMutedPoiIds();
+    if (!mutedPoiIds.length) return 0;
+
+    const preferences = loadStoredNearbyAlertPreferences();
+    preferences.mutedPoiIds = [];
+    saveStoredNearbyAlertPreferences(preferences);
+
+    try {
+        if (window.APDAndroid && typeof window.APDAndroid.clearAllMutedPoiNotifications === 'function') {
+            window.APDAndroid.clearAllMutedPoiNotifications();
+        } else if (window.APDAndroid && typeof window.APDAndroid.setPoiNotificationMuted === 'function') {
+            mutedPoiIds.forEach((poiId) => {
+                try {
+                    window.APDAndroid.setPoiNotificationMuted(poiId, false);
+                } catch (_) {}
+            });
+        }
+    } catch (error) {
+        console.warn('Native muted alert state could not be reset:', error);
+    }
+
+    dispatchNearbyAlertMuteStateChanged();
+    return mutedPoiIds.length;
 }
 
 function hasPoiAlertCooldownActive(poiId, now = Date.now()) {
@@ -12983,6 +13040,7 @@ function initializeNearbyPOIsUI() {
     const alertCategoryListEl = document.getElementById('nearbyAlertCategoryList');
     const alertSelectAllBtn = document.getElementById('nearbyAlertSelectAllBtn');
     const alertClearBtn = document.getElementById('nearbyAlertClearBtn');
+    const alertResetMutedBtn = document.getElementById('nearbyAlertResetMutedBtn');
 
     if (!locateBtn || !pickBtn || !useBtn || !radiusSelect || !statusEl || !resultsEl) return;
     const canRunLiveAlerts = Boolean(alertDistanceSelect && alertToggleBtn && alertStatusEl && alertFeedEl);
@@ -13102,11 +13160,28 @@ function initializeNearbyPOIsUI() {
         alertPreferenceSummaryEl.textContent = `Uyarı türleri: ${getAlertCategorySummary()}`;
     };
 
+    const syncMutedAlertResetButton = () => {
+        if (!alertResetMutedBtn) return;
+
+        const mutedCount = getStoredMutedPoiIds().length;
+        alertResetMutedBtn.hidden = mutedCount === 0;
+        alertResetMutedBtn.disabled = mutedCount === 0;
+        alertResetMutedBtn.innerHTML = `<i class="fas fa-bell"></i> Sessizleri Aç${mutedCount > 0 ? ` (${mutedCount})` : ''}`;
+
+        if (alertCategoryToolsEl) {
+            const hasVisibleTool = [alertSelectAllBtn, alertClearBtn, alertResetMutedBtn].some((button) => button && !button.hidden);
+            alertCategoryToolsEl.hidden = !hasVisibleTool;
+        }
+    };
+
     const syncAlertCategoryInputs = () => {
         if (!canRunLiveAlerts || !alertCategoryListEl) return;
 
         const useAllCategories = nearbyPreferences.alertAllCategories;
         const checkboxes = Array.from(alertCategoryListEl.querySelectorAll('input[data-alert-category]'));
+        const hasEmptyState = Boolean(alertCategoryListEl.querySelector('.nearby-alert-category-empty'));
+        const showCategorySelectionTools = !useAllCategories && checkboxes.length > 0;
+        const hasMutedAlerts = getStoredMutedPoiIds().length > 0;
 
         checkboxes.forEach((input) => {
             const label = input.closest('.nearby-alert-category-option');
@@ -13117,18 +13192,26 @@ function initializeNearbyPOIsUI() {
             input.disabled = useAllCategories;
         });
 
-        if (alertCategoryToolsEl) {
-            alertCategoryToolsEl.hidden = useAllCategories || checkboxes.length === 0;
-        }
-
-        alertCategoryListEl.hidden = useAllCategories || checkboxes.length === 0;
+        alertCategoryListEl.hidden = checkboxes.length > 0 ? useAllCategories : !hasEmptyState;
 
         if (alertSelectAllBtn) {
-            alertSelectAllBtn.disabled = useAllCategories || checkboxes.length === 0;
+            alertSelectAllBtn.hidden = !showCategorySelectionTools;
+            alertSelectAllBtn.disabled = !showCategorySelectionTools;
         }
 
         if (alertClearBtn) {
-            alertClearBtn.disabled = useAllCategories || checkboxes.length === 0;
+            alertClearBtn.hidden = !showCategorySelectionTools;
+            alertClearBtn.disabled = !showCategorySelectionTools;
+        }
+
+        if (alertResetMutedBtn) {
+            alertResetMutedBtn.hidden = !hasMutedAlerts;
+            alertResetMutedBtn.disabled = !hasMutedAlerts;
+        }
+
+        if (alertCategoryToolsEl) {
+            const hasVisibleTool = [alertSelectAllBtn, alertClearBtn, alertResetMutedBtn].some((button) => button && !button.hidden);
+            alertCategoryToolsEl.hidden = !hasVisibleTool;
         }
 
         if (alertAllCategoriesToggle) {
@@ -13147,11 +13230,9 @@ function initializeNearbyPOIsUI() {
         nearbyPreferences.alertCategories = getNormalizedAlertCategoryNames();
 
         if (!nearbyCategoryOptions.length) {
-            alertCategoryListEl.innerHTML = '<p class="nearby-alert-category-empty">Kategori listesi yüklenemedi. Varsayılan olarak tüm türler izlenecek.</p>';
-            nearbyPreferences.alertAllCategories = true;
+            alertCategoryListEl.innerHTML = '<p class="nearby-alert-category-empty">Kategori listesi şu anda yüklenemedi. Mevcut canlı uyarı türleri korunuyor.</p>';
             syncAlertCategoryInputs();
             syncAlertPreferenceSummary();
-            persistNearbyPreferences(nearbyPreferences);
             return;
         }
 
@@ -13364,6 +13445,11 @@ function initializeNearbyPOIsUI() {
     };
 
     const clearPickingMode = () => {
+        nearbyPOIState.pendingLatLng = null;
+        if (nearbyPOIState.pendingMarker && map) {
+            try { map.removeLayer(nearbyPOIState.pendingMarker); } catch (_) {}
+        }
+        nearbyPOIState.pendingMarker = null;
         nearbyPOIState.pickingMode = false;
         if (nearbyPOIState.mapClickHandler && map) {
             try { map.off('click', nearbyPOIState.mapClickHandler); } catch (_) {}
@@ -13371,6 +13457,7 @@ function initializeNearbyPOIsUI() {
         nearbyPOIState.mapClickHandler = null;
         pickBtn.classList.remove('active');
         pickBtn.innerHTML = '<i class="fas fa-hand-pointer"></i> Haritadan Seç';
+        useBtn.disabled = true;
     };
 
     const setCenterOverlays = (lat, lng, { pending = false } = {}) => {
@@ -13390,6 +13477,11 @@ function initializeNearbyPOIsUI() {
                 nearbyPOIState.pendingMarker.setLatLng(latlng);
             }
             return;
+        }
+
+        if (nearbyPOIState.pendingMarker) {
+            try { map.removeLayer(nearbyPOIState.pendingMarker); } catch (_) {}
+            nearbyPOIState.pendingMarker = null;
         }
 
         // Active center marker
@@ -13510,6 +13602,7 @@ function initializeNearbyPOIsUI() {
 
     const resetLiveAlertState = () => {
         nearbyPOIState.liveAlertStatesById.clear();
+        nearbyPOIState.liveAlertScanInFlight = false;
         nearbyPOIState.lastLiveAlertScanAt = 0;
         nearbyPOIState.lastLiveAlertScanLatLng = null;
     };
@@ -14171,6 +14264,7 @@ function initializeNearbyPOIsUI() {
         if (!canRunLiveAlerts) return;
         if (nearbyPOIState.liveAlertMode === 'native' || nearbyPOIState.liveAlertWatchId != null) return;
         ensureValidAlertSelection();
+        clearPickingMode();
 
         let nativeStartError = null;
 
@@ -14307,8 +14401,6 @@ function initializeNearbyPOIsUI() {
 
     locateBtn.addEventListener('click', async () => {
         clearPickingMode();
-        useBtn.disabled = true;
-        nearbyPOIState.pendingLatLng = null;
 
         try {
             setStatus('Konumunuz alınıyor...', '');
@@ -14344,14 +14436,8 @@ function initializeNearbyPOIsUI() {
         pickBtn.classList.add('active');
         pickBtn.innerHTML = '<i class="fas fa-times"></i> Seçimi İptal';
         setStatus('Haritaya tıklayın, sonra “Bu konumu kullan”a basın.', '');
-        useBtn.disabled = true;
         nearbyPOIState.pendingLatLng = null;
-
-        // Ensure pending marker is cleared/ready
-        if (nearbyPOIState.pendingMarker) {
-            try { map.removeLayer(nearbyPOIState.pendingMarker); } catch (_) {}
-            nearbyPOIState.pendingMarker = null;
-        }
+        useBtn.disabled = true;
 
         const handler = (ev) => {
             const latlng = ev?.latlng;
@@ -14370,15 +14456,9 @@ function initializeNearbyPOIsUI() {
         if (!nearbyPOIState.pendingLatLng) return;
         const { lat, lng } = nearbyPOIState.pendingLatLng;
         clearPickingMode();
-        useBtn.disabled = true;
 
         // Move pending -> active
         nearbyPOIState.activeLatLng = { lat, lng };
-        nearbyPOIState.pendingLatLng = null;
-        if (nearbyPOIState.pendingMarker) {
-            try { map.removeLayer(nearbyPOIState.pendingMarker); } catch (_) {}
-            nearbyPOIState.pendingMarker = null;
-        }
 
         try {
             await ensureMapReadyAndVisible();
@@ -14482,6 +14562,32 @@ function initializeNearbyPOIsUI() {
                 } catch (error) {
                     setAlertStatus(error.message || 'Uyarı tercihleri güncellenemedi.', 'error');
                 }
+            });
+        }
+
+        if (alertResetMutedBtn) {
+            const handleNearbyAlertMuteStateChanged = () => {
+                syncMutedAlertResetButton();
+                if (currentPOIData) {
+                    try { updatePOIAlertMuteButton(currentPOIData); } catch (_) {}
+                }
+            };
+
+            syncMutedAlertResetButton();
+            window.addEventListener('nearby-alert-mutes-changed', handleNearbyAlertMuteStateChanged);
+
+            alertResetMutedBtn.addEventListener('click', () => {
+                const clearedCount = clearAllMutedPoiNotificationsForCurrentDevice();
+                syncMutedAlertResetButton();
+                if (!clearedCount) {
+                    setAlertStatus('Susturulmuş canlı uyarı bulunmuyor.', '');
+                    return;
+                }
+
+                setAlertStatus(
+                    `${clearedCount} içerik için susturma kaldırıldı. Yeni girişte bildirimler tekrar gösterilecek.`,
+                    'success',
+                );
             });
         }
 

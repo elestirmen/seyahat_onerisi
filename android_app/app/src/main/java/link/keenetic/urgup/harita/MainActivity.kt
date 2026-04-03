@@ -822,6 +822,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     @JavascriptInterface
+    fun getMutedPoiIds(): String {
+      return JSONArray(PoiNotificationPreferenceStore.getMutedPoiIds(this@MainActivity)).toString()
+    }
+
+    @JavascriptInterface
+    fun clearAllMutedPoiNotifications() {
+      PoiNotificationPreferenceStore.clearMutedPoiIds(this@MainActivity)
+    }
+
+    @JavascriptInterface
     fun startPoiTrackingService(
       categoriesPayload: String?,
       alertRadiusMeters: String?,

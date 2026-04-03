@@ -45,6 +45,23 @@ object PoiNotificationPreferenceStore {
       .apply()
   }
 
+  fun getMutedPoiIds(context: Context): Set<String> {
+    return context
+      .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      .getStringSet(PREF_KEY_MUTED_POI_IDS, emptySet())
+      .orEmpty()
+      .map { storedPoiId -> normalizePoiId(storedPoiId) }
+      .filter { storedPoiId -> storedPoiId.isNotEmpty() }
+      .toSet()
+  }
+
+  fun clearMutedPoiIds(context: Context) {
+    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      .edit()
+      .putStringSet(PREF_KEY_MUTED_POI_IDS, emptySet())
+      .apply()
+  }
+
   fun getLastAlertAt(context: Context, poiId: String?): Long {
     val normalizedPoiId = normalizePoiId(poiId)
     if (normalizedPoiId.isEmpty()) return 0L

@@ -109,6 +109,7 @@ class NearbyPoiTrackingService : Service() {
   private lateinit var locationManager: LocationManager
   private val networkExecutor = Executors.newSingleThreadExecutor()
   private val lastAlertAtByPoiId = ConcurrentHashMap<String, Long>()
+  private val insideAlertIds = ConcurrentHashMap<String, Boolean>()
 
   private var selectedCategories: List<String> = emptyList()
   private var includePanoramas: Boolean = true
@@ -153,6 +154,7 @@ class NearbyPoiTrackingService : Service() {
     alertRadiusMeters = sanitizeAlertRadius(intent?.getIntExtra(EXTRA_ALERT_RADIUS_METERS, DEFAULT_ALERT_RADIUS_METERS))
     clearStartupError()
     lastAlertAtByPoiId.clear()
+    insideAlertIds.clear()
     lastScannedLocation = null
     lastScanAt = 0L
 
@@ -293,6 +295,7 @@ class NearbyPoiTrackingService : Service() {
           return
         }
 
+        insideAlertIds.clear()
         updateTrackingNotification(
           getString(
             R.string.poi_tracking_notification_empty,
@@ -313,22 +316,41 @@ class NearbyPoiTrackingService : Service() {
       )
 
       val now = System.currentTimeMillis()
+      val visibleAlertIds = alertItems
+        .map { it.id.trim() }
+        .filter { it.isNotEmpty() }
+        .toSet()
+      insideAlertIds.keys
+        .filter { storedAlertId -> !visibleAlertIds.contains(storedAlertId) }
+        .forEach { staleAlertId ->
+          insideAlertIds.remove(staleAlertId)
+        }
+
       alertItems.forEach { alertItem ->
+        val alertId = alertItem.id.trim()
+        if (alertId.isBlank()) {
+          return@forEach
+        }
+
+        val wasInside = insideAlertIds.put(alertId, true) == true
         if (PoiNotificationPreferenceStore.isPoiMuted(this, alertItem.id)) {
+          return@forEach
+        }
+        if (wasInside) {
           return@forEach
         }
 
         val lastAlertAt = maxOf(
-          lastAlertAtByPoiId[alertItem.id] ?: 0L,
-          PoiNotificationPreferenceStore.getLastAlertAt(this, alertItem.id),
+          lastAlertAtByPoiId[alertId] ?: 0L,
+          PoiNotificationPreferenceStore.getLastAlertAt(this, alertId),
         )
         if ((now - lastAlertAt) < ALERT_COOLDOWN_MS) {
           return@forEach
         }
 
         showNearbyAlertNotification(alertItem)
-        lastAlertAtByPoiId[alertItem.id] = now
-        PoiNotificationPreferenceStore.persistLastAlertAt(this, alertItem.id, now)
+        lastAlertAtByPoiId[alertId] = now
+        PoiNotificationPreferenceStore.persistLastAlertAt(this, alertId, now)
       }
     } catch (error: Exception) {
       Log.w(TAG, "Nearby content scan failed", error)
@@ -700,6 +722,7 @@ class NearbyPoiTrackingService : Service() {
   private fun stopTracking() {
     removeLocationUpdates()
     isRunning = false
+    insideAlertIds.clear()
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
       stopForeground(STOP_FOREGROUND_REMOVE)
