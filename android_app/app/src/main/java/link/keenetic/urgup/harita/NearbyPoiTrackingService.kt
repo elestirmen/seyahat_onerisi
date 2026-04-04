@@ -6,8 +6,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.location.Location
@@ -110,6 +112,14 @@ class NearbyPoiTrackingService : Service() {
   private val networkExecutor = Executors.newSingleThreadExecutor()
   private val lastAlertAtByPoiId = ConcurrentHashMap<String, Long>()
   private val insideAlertIds = ConcurrentHashMap<String, Boolean>()
+  private val providersChangedReceiver =
+    object : BroadcastReceiver() {
+      override fun onReceive(context: Context?, intent: Intent?) {
+        if (intent?.action != LocationManager.PROVIDERS_CHANGED_ACTION) return
+        if (!isRunning) return
+        beginTracking()
+      }
+    }
 
   private var selectedCategories: List<String> = emptyList()
   private var includePanoramas: Boolean = true
@@ -128,6 +138,12 @@ class NearbyPoiTrackingService : Service() {
   override fun onCreate() {
     super.onCreate()
     locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    ContextCompat.registerReceiver(
+      this,
+      providersChangedReceiver,
+      IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION),
+      ContextCompat.RECEIVER_EXPORTED,
+    )
     createNotificationChannels()
   }
 
@@ -159,7 +175,11 @@ class NearbyPoiTrackingService : Service() {
     lastScanAt = 0L
 
     isRunning = true
-    startAsForeground()
+    if (!startAsForeground()) {
+      isRunning = false
+      stopSelf()
+      return START_NOT_STICKY
+    }
     beginTracking()
 
     return START_NOT_STICKY
@@ -169,6 +189,11 @@ class NearbyPoiTrackingService : Service() {
 
   override fun onDestroy() {
     removeLocationUpdates()
+    try {
+      unregisterReceiver(providersChangedReceiver)
+    } catch (_: Exception) {
+      // Ignore cleanup failures if the receiver was never registered or was already removed.
+    }
     networkExecutor.shutdownNow()
     isRunning = false
     super.onDestroy()
@@ -181,16 +206,36 @@ class NearbyPoiTrackingService : Service() {
     )
   }
 
-  private fun startAsForeground() {
+  private fun startAsForeground(): Boolean {
     val notification = buildTrackingNotification()
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      startForeground(
-        TRACKING_NOTIFICATION_ID,
-        notification,
-        ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION,
-      )
-    } else {
-      startForeground(TRACKING_NOTIFICATION_ID, notification)
+    return try {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        startForeground(
+          TRACKING_NOTIFICATION_ID,
+          notification,
+          ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION,
+        )
+      } else {
+        startForeground(TRACKING_NOTIFICATION_ID, notification)
+      }
+      true
+    } catch (error: Exception) {
+      Log.w(TAG, "Unable to start tracking service in foreground", error)
+      setStartupError(mapForegroundStartError(error))
+      false
+    }
+  }
+
+  private fun mapForegroundStartError(error: Exception): String {
+    val className = error.javaClass.name
+    return when {
+      className.endsWith("ForegroundServiceStartNotAllowedException") ->
+        getString(R.string.poi_tracking_service_start_not_allowed)
+      error is SecurityException ->
+        getString(R.string.poi_tracking_notification_permission_denied)
+      else ->
+        error.message?.trim()?.takeIf { it.isNotEmpty() }
+          ?: getString(R.string.poi_tracking_service_start_failed)
     }
   }
 
@@ -239,15 +284,26 @@ class NearbyPoiTrackingService : Service() {
   }
 
   private fun seedLastKnownLocation(providers: List<String>) {
+    var bestLastKnownLocation: Location? = null
+
     providers.forEach { provider ->
       try {
         val lastKnownLocation = locationManager.getLastKnownLocation(provider) ?: return@forEach
-        handleLocationUpdate(lastKnownLocation)
-        return
+        bestLastKnownLocation =
+          when (val currentBest = bestLastKnownLocation) {
+            null -> lastKnownLocation
+            else -> when {
+              lastKnownLocation.time > currentBest.time -> lastKnownLocation
+              lastKnownLocation.time == currentBest.time && lastKnownLocation.accuracy < currentBest.accuracy -> lastKnownLocation
+              else -> currentBest
+            }
+          }
       } catch (_: SecurityException) {
-        return
+        return@forEach
       }
     }
+
+    bestLastKnownLocation?.let(::handleLocationUpdate)
   }
 
   private fun handleLocationUpdate(location: Location) {

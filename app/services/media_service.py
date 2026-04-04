@@ -588,6 +588,7 @@ class MediaService:
                 return
 
             seen_ids.add(alert_id)
+            normalized_distance_m = int(round(distance_m))
 
             title = str(item.get("caption") or "").strip()
             if not title:
@@ -597,6 +598,8 @@ class MediaService:
                 {
                     "id": alert_id,
                     "_id": alert_id,
+                    "stable_id": alert_id,
+                    "alert_id": alert_id,
                     "name": title,
                     "caption": str(item.get("caption") or "").strip(),
                     "entity_type": "panorama",
@@ -605,7 +608,7 @@ class MediaService:
                     "longitude": item_lng,
                     "lat": item_lat,
                     "lng": item_lng,
-                    "distance_m": round(distance_m, 1),
+                    "distance_m": normalized_distance_m,
                     "path": self._to_relative_media_path(item.get("path")),
                     "original_path": self._to_relative_media_path(item.get("original_path")),
                     "pyramid_levels": item.get("pyramid_levels") if isinstance(item.get("pyramid_levels"), list) else [],

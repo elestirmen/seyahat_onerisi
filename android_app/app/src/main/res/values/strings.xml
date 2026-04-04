@@ -22,6 +22,7 @@
   <string name="poi_tracking_permission_denied">Konum izni verilmeden arka plan takibi başlatılamaz</string>
   <string name="poi_tracking_background_permission_rationale">Arka planda yakın içerik uyarıları için konum iznini \"Her zaman izin ver\" olarak açın.</string>
   <string name="poi_tracking_background_permission_denied">Arka plan canlı uyarıları için \"Her zaman izin ver\" konum izni gerekli.</string>
+  <string name="poi_tracking_notification_permission_denied">Arka plan takibi için bildirim izni gerekli.</string>
   <string name="poi_tracking_service_start_failed">Arka plan takibi başlatılamadı. Uygulamayı açık tutup tekrar deneyin.</string>
   <string name="poi_tracking_service_start_not_allowed">Arka plan takibi şu anda başlatılamıyor. Uygulamayı açıkken tekrar deneyin.</string>
 </resources>

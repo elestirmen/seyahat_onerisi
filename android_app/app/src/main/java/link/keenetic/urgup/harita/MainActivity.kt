@@ -212,6 +212,12 @@ class MainActivity : AppCompatActivity() {
     if (targetUrl != START_URL) {
       webView.loadUrl(targetUrl)
     }
+    syncPoiTrackingServiceState()
+  }
+
+  override fun onResume() {
+    super.onResume()
+    syncPoiTrackingServiceState()
   }
 
   override fun onSaveInstanceState(outState: Bundle) {
@@ -406,6 +412,7 @@ class MainActivity : AppCompatActivity() {
   }
 
   private fun getPoiTrackingServiceStartStatus(): String {
+    syncPoiTrackingServiceState()
     if (NearbyPoiTrackingService.isRunning) {
       return "running"
     }
@@ -415,6 +422,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     return poiTrackingServiceRequestStatus
+  }
+
+  private fun syncPoiTrackingServiceState() {
+    val serviceRunning = NearbyPoiTrackingService.isRunning
+    val lastError = NearbyPoiTrackingService.getLastStartupError()?.trim()?.takeIf { it.isNotEmpty() }
+
+    if (serviceRunning) {
+      setPoiTrackingServiceRequestState("running")
+      return
+    }
+
+    if (!lastError.isNullOrEmpty()) {
+      setPoiTrackingServiceRequestState("error", lastError)
+      return
+    }
+
+    when (poiTrackingServiceRequestStatus) {
+      "running", "starting", "pending_location_permission", "pending_background_permission" -> {
+        setPoiTrackingServiceRequestState("idle")
+      }
+    }
   }
 
   private fun isTrustedWebOrigin(origin: String?): Boolean {
@@ -661,10 +689,12 @@ class MainActivity : AppCompatActivity() {
   }
 
   private fun mapPoiTrackingServiceStartError(error: Exception): String {
-    if (error is IllegalStateException &&
-      error.javaClass.name == "android.app.ForegroundServiceStartNotAllowedException"
-    ) {
+    if (error.javaClass.name.endsWith("ForegroundServiceStartNotAllowedException")) {
       return getString(R.string.poi_tracking_service_start_not_allowed)
+    }
+
+    if (error is SecurityException) {
+      return getString(R.string.poi_tracking_notification_permission_denied)
     }
 
     return error.message?.takeIf { it.isNotBlank() } ?: getString(R.string.poi_tracking_service_start_failed)
@@ -735,9 +765,9 @@ class MainActivity : AppCompatActivity() {
       targetUrl?.trim().takeUnless { it.isNullOrBlank() } ?: when {
         normalizedAlertId.startsWith("route-panorama:") -> buildPanoramaTargetUrl(normalizedAlertId, "route")
         normalizedAlertId.startsWith("panorama:") -> buildPanoramaTargetUrl(normalizedAlertId, "standalone")
-        else -> buildPoiTargetUrl(alertId)
+        else -> buildPoiTargetUrl(normalizedAlertId)
       }
-    val notificationId = safeTargetUrl.hashCode()
+    val notificationId = normalizedAlertId.hashCode()
     val intent =
       Intent(this, MainActivity::class.java).apply {
         putExtra(EXTRA_TARGET_URL, safeTargetUrl)
@@ -747,7 +777,7 @@ class MainActivity : AppCompatActivity() {
     val pendingIntent =
       PendingIntent.getActivity(
         this,
-        safeTargetUrl.hashCode(),
+        notificationId,
         intent,
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
       )

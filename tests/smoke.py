@@ -31,7 +31,7 @@ def build_test_app():
 
     # Stub services to avoid real database usage during tests
     from app.middleware.error_handler import APIError
-    from app.services import route_service, poi_service
+    from app.services import route_service, poi_service, media_service
 
     def _stub_route_list(*args, **kwargs):
         page = kwargs.get("page", 1)
@@ -80,9 +80,35 @@ def build_test_app():
     def _stub_poi_get(*args, **kwargs):
         raise APIError("POI not found", "NOT_FOUND", 404)
 
+    def _stub_poi_nearby(*args, **kwargs):
+        lat = kwargs.get("lat", 0.0)
+        lng = kwargs.get("lng", 0.0)
+        radius_m = kwargs.get("radius_m", 1000)
+        return {
+            "center": {"lat": lat, "lng": lng},
+            "radius_m": radius_m,
+            "count": 0,
+            "category": kwargs.get("category"),
+            "categories": kwargs.get("categories") or [],
+            "pois": [],
+        }
+
+    def _stub_nearby_panoramas(*args, **kwargs):
+        lat = kwargs.get("lat", 0.0)
+        lng = kwargs.get("lng", 0.0)
+        radius_m = kwargs.get("radius_m", 1000)
+        return {
+            "center": {"lat": lat, "lng": lng},
+            "radius_m": radius_m,
+            "count": 0,
+            "panoramas": [],
+        }
+
     poi_service.list_pois = _stub_poi_list  # type: ignore[assignment]
     poi_service.search_pois = _stub_poi_search  # type: ignore[assignment]
     poi_service.get_poi = _stub_poi_get  # type: ignore[assignment]
+    poi_service.search_nearby_pois = _stub_poi_nearby  # type: ignore[assignment]
+    media_service.search_nearby_panoramas = _stub_nearby_panoramas  # type: ignore[assignment]
 
     return flask_app
 
@@ -95,6 +121,8 @@ def main() -> int:
         ("GET /health", client.get("/health"), (200,)),
         ("GET /api/pois", client.get("/api/pois?limit=2"), (200,)),
         ("GET /api/search?q=test", client.get("/api/search?q=test&limit=5"), (200,)),
+        ("GET /api/pois/nearby", client.get("/api/pois/nearby?lat=38.63&lng=34.91&radius_m=500&limit=5"), (200,)),
+        ("GET /api/panoramas/nearby", client.get("/api/panoramas/nearby?lat=38.63&lng=34.91&radius_m=500&limit=5"), (200,)),
         ("GET /api/routes", client.get("/api/routes?limit=2"), (200,)),
         ("GET /api/routes/statistics", client.get("/api/routes/statistics"), (200,)),
         ("GET /api/admin/routes (unauth)", client.get("/api/admin/routes", headers={"Content-Type": "application/json"}), (401,)),

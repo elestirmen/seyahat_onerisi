@@ -101,6 +101,19 @@ def _compat_error_response(error: APIError):
     return jsonify({"error": message}), status_code
 
 
+def _parse_clamped_int_param(name: str, raw_value, default: int, minimum: int, maximum: int) -> int:
+    value_text = str(raw_value or "").strip()
+    if not value_text:
+        return default
+
+    try:
+        parsed_value = int(float(value_text))
+    except (TypeError, ValueError, OverflowError):
+        raise APIError(f"{name} must be a number", "BAD_REQUEST", 400)
+
+    return max(minimum, min(maximum, parsed_value))
+
+
 @compat_bp.route("/api/categories", methods=["GET", "POST", "PUT", "DELETE"])
 def categories():
     if request.method == "GET":
@@ -232,15 +245,8 @@ def nearby_panoramas():
     if not (-90 <= lat <= 90 and -180 <= lng <= 180):
         return jsonify({"error": "lat/lng out of range"}), 400
 
-    try:
-        radius_m = int(float(request.args.get("radius_m", 1000)))
-    except (TypeError, ValueError):
-        radius_m = 1000
-
-    try:
-        limit = int(float(request.args.get("limit", 20)))
-    except (TypeError, ValueError):
-        limit = 20
+    radius_m = _parse_clamped_int_param("radius_m", request.args.get("radius_m"), 1000, 50, 10_000)
+    limit = _parse_clamped_int_param("limit", request.args.get("limit"), 20, 1, 100)
 
     try:
         return jsonify(media_service.search_nearby_panoramas(lat=lat, lng=lng, radius_m=radius_m, limit=limit)), 200

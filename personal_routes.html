@@ -909,6 +909,7 @@
 	      padding: 14px;
 	      backdrop-filter: blur(8px);
 	      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+	      overflow: hidden;
 	    }
 	    .nearby-poi-subtitle {
 	      margin: 6px 0 0 0;
@@ -918,10 +919,10 @@
 	    }
 	    .nearby-poi-controls {
 	      margin-top: 10px;
-	      display: flex;
+	      display: grid;
+	      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 	      gap: 10px;
-	      flex-wrap: wrap;
-	      align-items: center;
+	      align-items: stretch;
 	    }
 	    .nearby-poi-btn {
 	      border: 1px solid rgba(0,0,0,0.10);
@@ -933,6 +934,12 @@
 	      display: inline-flex;
 	      align-items: center;
 	      gap: 8px;
+	      justify-content: center;
+	      min-height: 44px;
+	      width: 100%;
+	      min-width: 0;
+	      text-align: center;
+	      white-space: normal;
 	      transition: all 0.2s ease;
 	      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 	    }
@@ -961,11 +968,16 @@
 	      border-radius: 12px;
 	      background: rgba(241,245,249,0.9);
 	      border: 1px solid rgba(0,0,0,0.06);
+	      width: 100%;
+	      min-width: 0;
+	      justify-content: space-between;
+	      flex-wrap: wrap;
 	    }
 	    .nearby-poi-radius label {
 	      color: #334155;
 	      font-size: 0.9rem;
 	      font-weight: 600;
+	      min-width: 0;
 	    }
 	    .nearby-poi-radius select {
 	      border: 1px solid rgba(0,0,0,0.12);
@@ -973,11 +985,17 @@
 	      padding: 6px 10px;
 	      background: #fff;
 	      outline: none;
+	      min-width: 0;
+	      width: 100%;
+	      max-width: 160px;
 	    }
 	    .nearby-poi-status {
 	      margin-top: 10px;
 	      color: #475569;
 	      font-size: 0.9rem;
+	      line-height: 1.5;
+	      min-height: 1.5em;
+	      overflow-wrap: anywhere;
 	    }
 	    .nearby-alert-section {
 	      margin-top: 14px;
@@ -993,29 +1011,35 @@
 	      color: #0f172a;
 	    }
 	    .nearby-alert-header {
-	      display: flex;
+	      display: grid;
+	      grid-template-columns: minmax(0, 1fr) auto;
 	      justify-content: space-between;
-	      align-items: flex-start;
+	      align-items: center;
 	      gap: 12px;
+	    }
+	    .nearby-alert-header > div {
+	      min-width: 0;
 	    }
 	    .nearby-alert-header p {
 	      margin: 0;
 	      color: #475569;
 	      font-size: 0.92rem;
 	      line-height: 1.5;
+	      overflow-wrap: anywhere;
 	    }
 	    .nearby-alert-controls {
 	      margin-top: 12px;
-	      display: flex;
-	      flex-wrap: wrap;
+	      display: grid;
+	      grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
 	      gap: 10px;
-	      align-items: center;
+	      align-items: stretch;
 	    }
 	    .nearby-alert-preference-note {
 	      margin-top: 10px;
 	      color: #1e3a8a;
 	      font-size: 0.9rem;
 	      font-weight: 600;
+	      overflow-wrap: anywhere;
 	    }
 	    .nearby-alert-preferences {
 	      margin-top: 12px;
@@ -1023,6 +1047,8 @@
 	      border-radius: 14px;
 	      background: rgba(255,255,255,0.92);
 	      border: 1px solid rgba(15,23,42,0.08);
+	      display: grid;
+	      gap: 12px;
 	    }
 	    .nearby-alert-toggle {
 	      display: inline-flex;
@@ -1032,6 +1058,8 @@
 	      font-size: 0.92rem;
 	      font-weight: 600;
 	      cursor: pointer;
+	      min-width: 0;
+	      line-height: 1.45;
 	    }
 	    .nearby-alert-toggle input {
 	      width: 18px;
@@ -1047,7 +1075,7 @@
 	    .nearby-alert-category-grid {
 	      margin-top: 12px;
 	      display: grid;
-	      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 	      gap: 8px;
 	    }
 	    .nearby-alert-category-option {
@@ -1086,6 +1114,7 @@
 	      margin: 0;
 	      color: #64748b;
 	      font-size: 0.88rem;
+	      line-height: 1.5;
 	    }
 	    .nearby-alert-feed {
 	      display: grid;
@@ -1098,18 +1127,21 @@
 	      border-radius: 14px;
 	      padding: 12px 14px;
 	      box-shadow: 0 6px 18px rgba(15,23,42,0.05);
+	      min-width: 0;
 	    }
 	    .nearby-alert-item-header {
 	      display: flex;
 	      align-items: flex-start;
 	      justify-content: space-between;
 	      gap: 12px;
+	      min-width: 0;
 	    }
 	    .nearby-alert-item-title {
 	      margin: 0;
 	      font-size: 0.96rem;
 	      font-weight: 800;
 	      color: #0f172a;
+	      overflow-wrap: anywhere;
 	    }
 	    .nearby-alert-item-meta {
 	      margin-top: 6px;
@@ -1118,11 +1150,12 @@
 	      gap: 8px;
 	      color: #475569;
 	      font-size: 0.86rem;
+	      min-width: 0;
 	    }
 	    .nearby-alert-item-actions {
 	      margin-top: 10px;
-	      display: flex;
-	      flex-wrap: wrap;
+	      display: grid;
+	      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 	      gap: 8px;
 	    }
 	    .nearby-alert-feed-btn {
@@ -1134,6 +1167,10 @@
 	      font-size: 0.84rem;
 	      font-weight: 700;
 	      cursor: pointer;
+	      width: 100%;
+	      min-width: 0;
+	      min-height: 40px;
+	      white-space: normal;
 	    }
 	    .nearby-alert-feed-btn.secondary {
 	      border-color: rgba(15,23,42,0.08);
@@ -1229,12 +1266,18 @@
 	    .nearby-poi-action-btn:hover { opacity: 0.92; }
 	    @media (max-width: 768px) {
 	      .nearby-poi-results { grid-template-columns: 1fr; }
-	      .nearby-poi-controls { gap: 8px; }
-	      .nearby-alert-controls { gap: 8px; }
-	      .nearby-poi-btn { width: 100%; justify-content: center; }
-	      .nearby-poi-radius { width: 100%; justify-content: space-between; }
-	      .nearby-poi-radius select { width: 130px; }
-	      .nearby-alert-item-header { flex-direction: column; }
+	      .nearby-poi-section { padding: 12px; border-radius: 14px; }
+	      .nearby-poi-header h3 { font-size: 1.25rem; line-height: 1.2; }
+	      .nearby-poi-subtitle { font-size: 0.9rem; }
+	      .nearby-poi-controls { grid-template-columns: 1fr; }
+	      .nearby-alert-controls { grid-template-columns: 1fr; }
+	      .nearby-poi-radius { align-items: center; }
+	      .nearby-poi-radius select { max-width: none; width: 100%; }
+	      .nearby-alert-header { grid-template-columns: 1fr; align-items: start; }
+	      .nearby-alert-preferences { max-height: 52vh; overflow: auto; }
+	      .nearby-alert-category-grid { grid-template-columns: 1fr; }
+	      .nearby-alert-item-actions { grid-template-columns: 1fr; }
+	      .nearby-alert-feed-btn { width: 100%; }
 	    }
 	  </style>
 

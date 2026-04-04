@@ -41,6 +41,19 @@ def _parse_category_filters() -> List[str]:
     return normalized
 
 
+def _parse_clamped_int_param(name: str, raw_value, default: int, minimum: int, maximum: int) -> int:
+    value_text = str(raw_value or "").strip()
+    if not value_text:
+        return default
+
+    try:
+        parsed_value = int(float(value_text))
+    except (TypeError, ValueError, OverflowError):
+        raise bad_request(f"{name} must be a number")
+
+    return max(minimum, min(maximum, parsed_value))
+
+
 @poi_bp.route('/pois', methods=['GET'])
 def list_pois():
     """
@@ -171,15 +184,8 @@ def nearby_pois():
         if not (-90 <= lat <= 90 and -180 <= lng <= 180):
             raise bad_request("lat/lng out of range")
 
-        try:
-            radius_m = int(float(request.args.get('radius_m', 1000)))
-        except (TypeError, ValueError):
-            radius_m = 1000
-
-        try:
-            limit = int(float(request.args.get('limit', 50)))
-        except (TypeError, ValueError):
-            limit = 50
+        radius_m = _parse_clamped_int_param('radius_m', request.args.get('radius_m'), 1000, 50, 50000)
+        limit = _parse_clamped_int_param('limit', request.args.get('limit'), 50, 1, 200)
 
         categories = _parse_category_filters()
         category = (request.args.get('category') or '').strip() or None

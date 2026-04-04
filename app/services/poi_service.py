@@ -221,6 +221,30 @@ class POIService:
                 poi['lng'] = poi['longitude']
         return poi
 
+    def _normalize_nearby_poi_record(self, record: Any) -> Dict[str, Any]:
+        """Normalize nearby POI payloads for mobile and web consumers."""
+        mapped = self._ensure_client_compat(self._map_poi_record(record))
+
+        raw_id = mapped.get("id")
+        stable_id = str(raw_id).strip() if raw_id is not None else ""
+        if stable_id:
+            mapped["id"] = stable_id
+            mapped["_id"] = stable_id
+            mapped["poi_id"] = stable_id
+            mapped["stable_id"] = stable_id
+        else:
+            mapped.setdefault("id", None)
+            mapped["_id"] = ""
+            mapped["poi_id"] = ""
+            mapped["stable_id"] = ""
+
+        try:
+            mapped["distance_m"] = int(round(float(mapped.get("distance_m") or 0)))
+        except (TypeError, ValueError):
+            mapped["distance_m"] = 0
+
+        return mapped
+
     def _map_poi_record(self, record: Any) -> Dict[str, Any]:
         """Normalize database record structures before returning to clients."""
         if record is None:
@@ -461,13 +485,7 @@ class POIService:
 
         pois: List[Dict[str, Any]] = []
         for row in rows:
-            mapped = self._ensure_client_compat(self._map_poi_record(row))
-            mapped["_id"] = mapped.get("id")
-            try:
-                mapped["distance_m"] = int(round(float(mapped.get("distance_m") or 0)))
-            except (TypeError, ValueError):
-                mapped["distance_m"] = 0
-            pois.append(mapped)
+            pois.append(self._normalize_nearby_poi_record(row))
 
         return {
             "center": {"lat": lat, "lng": lng},

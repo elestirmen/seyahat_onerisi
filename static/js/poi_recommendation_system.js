@@ -3252,22 +3252,18 @@ async function createSimpleRoute(waypoints) {
 // Show notification
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
     notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${type === 'error' ? '#e74c3c' : type === 'success' ? '#27ae60' : '#3498db'};
-                color: white;
-                padding: 12px 20px;
-                border-radius: 8px;
-                font-size: 14px;
-                z-index: 10000;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                max-width: 300px;
-            `;
+        ${getFloatingNotificationShellStyles(type)}
+        font-size: 14px;
+    `;
     notification.textContent = message;
 
     document.body.appendChild(notification);
+
+    requestAnimationFrame(() => {
+        notification.style.transform = isCompactNotificationViewport() ? 'translateY(0)' : 'translateX(0)';
+    });
 
     setTimeout(() => {
         notification.remove();
@@ -3278,44 +3274,35 @@ function showNotification(message, type = 'info') {
 function showNotificationWithAction(message, type = 'info', actionText, actionCallback, actionText2 = null, actionCallback2 = null) {
     // Remove existing notifications
     document.querySelectorAll('.notification').forEach(n => n.remove());
-    
+
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    
-    // Get notification color (using the same logic as the other function)
-    const getNotificationColor = (type) => {
-        const colors = {
-            'success': 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-            'error': 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-            'warning': 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)',
-            'info': 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)'
-        };
-        return colors[type] || colors.info;
-    };
-    
+    const compact = isCompactNotificationViewport();
+
     notification.style.cssText = `
-        position: fixed; top: 20px; right: 20px; z-index: 10000;
-        background: ${getNotificationColor(type)}; color: white;
-        padding: 15px 20px; border-radius: 10px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-        transform: translateX(400px);
-        transition: all 0.4s ease; max-width: 450px;
+        ${getFloatingNotificationShellStyles(type, true)}
+        transition: transform 0.35s ease, opacity 0.35s ease;
+        opacity: 0;
     `;
-    
+
     const actionId = 'action_' + Math.random().toString(36).substr(2, 9);
     const actionId2 = actionText2 ? 'action2_' + Math.random().toString(36).substr(2, 9) : null;
-    
+
+    const buttonBaseStyle = compact
+        ? 'width: 100%;'
+        : '';
+
     const buttonsHtml = `
         <button id="${actionId}" 
                 style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); 
-                       color: white; cursor: pointer; padding: 6px 12px; border-radius: 6px;
+                       color: white; cursor: pointer; padding: 6px 12px; border-radius: 6px; ${buttonBaseStyle}
                        font-size: 12px; font-weight: 500; transition: all 0.2s ease;">
             ${actionText}
         </button>
         ${actionText2 ? `
         <button id="${actionId2}" 
                 style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); 
-                       color: white; cursor: pointer; padding: 6px 12px; border-radius: 6px;
+                       color: white; cursor: pointer; padding: 6px 12px; border-radius: 6px; ${buttonBaseStyle}
                        font-size: 12px; font-weight: 500; transition: all 0.2s ease;">
             ${actionText2}
         </button>` : ''}
@@ -3324,18 +3311,18 @@ function showNotificationWithAction(message, type = 'info', actionText, actionCa
             <i class="fas fa-times"></i>
         </button>
     `;
-    
+
     notification.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
-            <span style="flex: 1;">${message}</span>
-            <div style="display: flex; gap: 8px; align-items: center;">
+        <div style="display: flex; ${compact ? 'flex-direction: column;' : 'align-items: center; justify-content: space-between;'} gap: 15px;">
+            <span style="flex: 1; line-height: 1.45;">${message}</span>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; ${compact ? 'width: 100%; flex-direction: column; align-items: stretch;' : ''}">
                 ${buttonsHtml}
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(notification);
-    
+
     // Add event listener for action button
     document.getElementById(actionId).addEventListener('click', () => {
         actionCallback();
@@ -3349,13 +3336,17 @@ function showNotificationWithAction(message, type = 'info', actionText, actionCa
             notification.remove();
         });
     }
-    
+
     // Animate in
-    setTimeout(() => notification.style.transform = 'translateX(0)', 100);
-    
+    requestAnimationFrame(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = compact ? 'translateY(0)' : 'translateX(0)';
+    });
+
     // Auto remove after 8 seconds (longer for action notifications)
     setTimeout(() => {
-        notification.style.transform = 'translateX(400px)';
+        notification.style.opacity = '0';
+        notification.style.transform = compact ? 'translateY(18px)' : 'translateX(400px)';
         setTimeout(() => notification.remove(), 400);
     }, 8000);
 }
@@ -4761,6 +4752,10 @@ function normalizeGeolocationOptions(options = {}) {
     };
 }
 
+function shouldPreferNativeCachedLocation(options = {}) {
+    return Boolean(options && options.preferNativeCached === true);
+}
+
 function isSecureLocationContext() {
     return window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
 }
@@ -4969,13 +4964,19 @@ function requestActualLocation(options = {}) {
 // Get user's current location with native browser dialog
 async function getCurrentLocation(options = {}) {
     const normalizedOptions = normalizeGeolocationOptions(options);
-    const nativeLocation = resolveNativeLocation(normalizedOptions);
-    if (nativeLocation) {
-        return nativeLocation;
+    if (shouldPreferNativeCachedLocation(options)) {
+        const nativeLocation = resolveNativeLocation(normalizedOptions);
+        if (nativeLocation) {
+            return nativeLocation;
+        }
     }
 
     if (!navigator.geolocation) {
         console.error('❌ Geolocation not supported');
+        const fallbackLocation = resolveNativeLocation(normalizedOptions);
+        if (fallbackLocation) {
+            return fallbackLocation;
+        }
         const error = new Error('Bu tarayıcı konum hizmetlerini desteklemiyor');
         error.helpText = 'Lütfen güncel bir tarayıcı kullanın (Chrome, Firefox, Safari, Edge)';
         throw error;
@@ -4983,6 +4984,10 @@ async function getCurrentLocation(options = {}) {
 
     if (!isSecureLocationContext()) {
         console.error('❌ Not secure context');
+        const fallbackLocation = resolveNativeLocation(normalizedOptions);
+        if (fallbackLocation) {
+            return fallbackLocation;
+        }
         const error = new Error('Konum servisleri güvenli bağlantı gerektiriyor');
         error.helpText = 'Sayfayı HTTPS üzerinden açın veya localhost kullanın';
         throw error;
@@ -12767,11 +12772,15 @@ const nearbyPOIState = {
     liveAlertScanInFlight: false,
     lastLiveAlertScanAt: 0,
     lastLiveAlertScanLatLng: null,
+    liveAlertRecentDeliveries: new Map(),
+    liveAlertVisibilityPaused: false,
+    liveAlertAutoResumeRequested: false,
 };
 
 const NEARBY_ALERT_PREFERENCES_STORAGE_KEY = 'nearby_poi_preferences_v1';
 const NEARBY_ALERT_POI_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 const NEARBY_ALERT_HISTORY_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const LIVE_ALERT_DUPLICATE_SUPPRESSION_MS = 10 * 1000;
 
 function getDefaultNearbyAlertPreferences() {
     return {
@@ -13014,6 +13023,85 @@ function clearAllMutedPoiNotificationsForCurrentDevice() {
 function hasPoiAlertCooldownActive(poiId, now = Date.now()) {
     const lastAlertAt = getStoredPoiAlertTimestamp(poiId);
     return Boolean(lastAlertAt && (now - lastAlertAt) < NEARBY_ALERT_POI_COOLDOWN_MS);
+}
+
+function isCompactNotificationViewport() {
+    if (typeof window.matchMedia === 'function') {
+        try {
+            return window.matchMedia('(max-width: 768px)').matches;
+        } catch (_) {}
+    }
+
+    return window.innerWidth <= 768;
+}
+
+function shouldPauseWebLiveAlertsWhenHidden() {
+    if (window.APDAndroid) {
+        return true;
+    }
+
+    try {
+        if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+            return navigator.userAgentData.mobile;
+        }
+    } catch (_) {}
+
+    const userAgent = String(navigator.userAgent || '');
+    if (/android|iphone|ipad|ipod|mobile/i.test(userAgent)) {
+        return true;
+    }
+
+    try {
+        return window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(hover: none)').matches;
+    } catch (_) {
+        return false;
+    }
+}
+
+function getFloatingNotificationShellStyles(type = 'info', interactive = false) {
+    const backgroundByType = {
+        success: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+        error: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+        warning: 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)',
+        info: 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)',
+    };
+    const compact = isCompactNotificationViewport();
+
+    return `
+        position: fixed;
+        z-index: 10000;
+        background: ${backgroundByType[type] || backgroundByType.info};
+        color: white;
+        border-radius: ${compact ? '14px' : '10px'};
+        box-shadow: 0 10px 28px rgba(0,0,0,0.24);
+        max-width: ${compact ? 'calc(100vw - 24px)' : '450px'};
+        ${compact
+            ? 'left: 12px; right: 12px; bottom: 12px; top: auto; transform: translateY(18px);'
+            : 'top: 20px; right: 20px; transform: translateX(400px);'}
+        ${interactive ? 'padding: 16px 18px;' : 'padding: 12px 18px;'}
+    `;
+}
+
+function registerLiveAlertDelivery(alertItemId, channel = 'in-app') {
+    const normalizedAlertId = normalizeNearbyAlertPoiId(alertItemId);
+    if (!normalizedAlertId) return;
+
+    nearbyPOIState.liveAlertRecentDeliveries.set(normalizedAlertId, {
+        at: Date.now(),
+        channel,
+    });
+}
+
+function shouldSuppressLiveAlertDelivery(alertItemId, now = Date.now()) {
+    const normalizedAlertId = normalizeNearbyAlertPoiId(alertItemId);
+    if (!normalizedAlertId) return false;
+
+    const lastDelivery = nearbyPOIState.liveAlertRecentDeliveries.get(normalizedAlertId);
+    return Boolean(lastDelivery && (now - lastDelivery.at) < LIVE_ALERT_DUPLICATE_SUPPRESSION_MS);
+}
+
+function clearLiveAlertDeliveryHistory() {
+    nearbyPOIState.liveAlertRecentDeliveries.clear();
 }
 
 function initializeNearbyPOIsUI() {
@@ -13988,6 +14076,13 @@ function initializeNearbyPOIsUI() {
         const distanceLabel = formatDistance(distanceM || item.distance_m);
         const title = isPanorama ? '360° panorama yakınınızda' : `${itemTypeLabel} POI yakınınızda`;
         const message = `${itemName} ${distanceLabel ? `${distanceLabel} mesafede.` : 'yakınınızda.'}`;
+        const now = Date.now();
+
+        if (shouldSuppressLiveAlertDelivery(alertItemId, now)) {
+            return;
+        }
+
+        registerLiveAlertDelivery(alertItemId, 'scan');
 
         setAlertStatus(message, 'success');
         addAlertFeedItem(item, distanceM || item.distance_m);
@@ -14039,6 +14134,11 @@ function initializeNearbyPOIsUI() {
                 const notification = new Notification(title, {
                     body: message,
                     tag: `nearby-alert-${alertItemId}`,
+                    renotify: false,
+                    data: {
+                        alertItemId,
+                        type: isPanorama ? 'panorama' : 'poi',
+                    },
                 });
 
                 notification.onclick = async () => {
@@ -14099,6 +14199,7 @@ function initializeNearbyPOIsUI() {
         if (!canRunLiveAlerts) return;
         if (nearbyPOIState.liveAlertScanInFlight && !force) return;
         if (!shouldRunLiveAlertScan(lat, lng, { force })) return;
+        if (document.hidden && nearbyPOIState.liveAlertMode === 'web' && shouldPauseWebLiveAlertsWhenHidden() && !force) return;
         ensureValidAlertSelection();
 
         nearbyPOIState.liveAlertScanInFlight = true;
@@ -14214,7 +14315,7 @@ function initializeNearbyPOIsUI() {
         }
     };
 
-    const stopLiveAlerts = ({ preserveFeed = true } = {}) => {
+    const stopLiveAlerts = ({ preserveFeed = true, preserveDeliveryHistory = false, preserveVisibilityState = false } = {}) => {
         if (nearbyPOIState.liveAlertMode === 'native' && hasNativePoiTrackingService()) {
             try {
                 window.APDAndroid.stopPoiTrackingService();
@@ -14231,6 +14332,15 @@ function initializeNearbyPOIsUI() {
         nearbyPOIState.liveAlertMode = null;
         resetLiveAlertState();
 
+        if (!preserveDeliveryHistory) {
+            clearLiveAlertDeliveryHistory();
+        }
+
+        if (!preserveVisibilityState) {
+            nearbyPOIState.liveAlertVisibilityPaused = false;
+            nearbyPOIState.liveAlertAutoResumeRequested = false;
+        }
+
         if (!preserveFeed) {
             nearbyPOIState.liveAlertFeed = [];
             nearbyPOIState.liveAlertFeedById.clear();
@@ -14238,6 +14348,48 @@ function initializeNearbyPOIsUI() {
         }
 
         updateAlertToggleButton();
+    };
+
+    const pauseWebLiveAlertsForVisibility = () => {
+        if (!shouldPauseWebLiveAlertsWhenHidden()) {
+            return;
+        }
+
+        if (nearbyPOIState.liveAlertMode !== 'web' || nearbyPOIState.liveAlertWatchId == null) {
+            return;
+        }
+
+        nearbyPOIState.liveAlertVisibilityPaused = true;
+        nearbyPOIState.liveAlertAutoResumeRequested = true;
+        stopLiveAlerts({
+            preserveFeed: true,
+            preserveDeliveryHistory: true,
+            preserveVisibilityState: true,
+        });
+        setAlertStatus('Sekme arka plana alındı, canlı uyarı geçici olarak duraklatıldı.', '');
+    };
+
+    const resumeWebLiveAlertsAfterVisibility = async () => {
+        if (!nearbyPOIState.liveAlertVisibilityPaused || !nearbyPOIState.liveAlertAutoResumeRequested) {
+            return;
+        }
+
+        nearbyPOIState.liveAlertVisibilityPaused = false;
+        nearbyPOIState.liveAlertAutoResumeRequested = false;
+
+        if (nearbyPOIState.liveAlertMode != null || nearbyPOIState.liveAlertWatchId != null) {
+            return;
+        }
+
+        try {
+            await startLiveAlerts({ allowNativeTracking: false, preserveDeliveryHistory: true });
+            if (nearbyPOIState.liveAlertMode === 'web') {
+                setAlertStatus('Sekme yeniden görünür oldu, canlı uyarı devam ediyor.', 'success');
+            }
+        } catch (error) {
+            console.warn('Live alerts could not be resumed after visibility change:', error);
+            setAlertStatus(error.message || 'Canlı uyarı yeniden başlatılamadı.', 'error');
+        }
     };
 
     const restartNativePoiTrackingService = async () => {
@@ -14260,15 +14412,21 @@ function initializeNearbyPOIsUI() {
         );
     };
 
-    const startLiveAlerts = async () => {
+    const startLiveAlerts = async ({ allowNativeTracking = true, preserveDeliveryHistory = false } = {}) => {
         if (!canRunLiveAlerts) return;
         if (nearbyPOIState.liveAlertMode === 'native' || nearbyPOIState.liveAlertWatchId != null) return;
         ensureValidAlertSelection();
         clearPickingMode();
+        nearbyPOIState.liveAlertVisibilityPaused = false;
+        nearbyPOIState.liveAlertAutoResumeRequested = false;
+
+        if (!preserveDeliveryHistory) {
+            clearLiveAlertDeliveryHistory();
+        }
 
         let nativeStartError = null;
 
-        if (hasNativePoiTrackingService()) {
+        if (allowNativeTracking && hasNativePoiTrackingService()) {
             try {
                 await restartNativePoiTrackingService();
                 return;
@@ -14321,12 +14479,16 @@ function initializeNearbyPOIsUI() {
                 let message = 'Canlı konum takibi durdu';
                 if (error && error.code === error.PERMISSION_DENIED) {
                     message = 'Konum izni reddedildi, canlı uyarı durduruldu';
+                    stopLiveAlerts();
+                    setAlertStatus(message, 'error');
+                    return;
                 } else if (error && error.code === error.TIMEOUT) {
                     message = 'Konum güncellemesi zaman aşımına uğradı';
+                    setAlertStatus(message, '');
+                    return;
                 }
 
-                stopLiveAlerts();
-                setAlertStatus(message, 'error');
+                setAlertStatus(`${message}. Takip yeniden denenecek.`, 'error');
             },
             {
                 enableHighAccuracy: true,
@@ -14687,10 +14849,33 @@ function initializeNearbyPOIsUI() {
         console.warn('Nearby category filter initialization failed:', error);
     });
 
+    const handleLiveAlertVisibilityChange = async () => {
+        if (document.hidden) {
+            if (shouldPauseWebLiveAlertsWhenHidden()) {
+                pauseWebLiveAlertsForVisibility();
+            }
+            return;
+        }
+
+        await resumeWebLiveAlertsAfterVisibility();
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        void handleLiveAlertVisibilityChange();
+    });
+
+    window.addEventListener('pagehide', () => {
+        if (document.hidden && shouldPauseWebLiveAlertsWhenHidden()) {
+            pauseWebLiveAlertsForVisibility();
+        }
+    });
+
     window.addEventListener('beforeunload', () => {
         if (nearbyPOIState.liveAlertMode === 'native') {
             nearbyPOIState.liveAlertMode = null;
             nearbyPOIState.liveAlertWatchId = null;
+            nearbyPOIState.liveAlertVisibilityPaused = false;
+            nearbyPOIState.liveAlertAutoResumeRequested = false;
             return;
         }
 

@@ -194,25 +194,50 @@ class TouchOptimizer {
 
             L.DomEvent.on(locationBtn, 'click', function(e) {
                 L.DomEvent.stopPropagation(e);
-                if (navigator.geolocation) {
-                    locationBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                            const lat = position.coords.latitude;
-                            const lng = position.coords.longitude;
-                            map.setView([lat, lng], 15);
-                            locationBtn.innerHTML = '<i class="fas fa-location-arrow"></i>';
-                            // Add haptic feedback
-                            if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
-                        },
-                        (error) => {
-                            console.error('Geolocation error:', error);
-                            locationBtn.innerHTML = '<i class="fas fa-location-arrow"></i>';
-                            // Show error feedback
-                            if (navigator.vibrate) navigator.vibrate([100, 100, 100]);
-                        }
-                    );
+                locationBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                const restoreButton = () => {
+                    locationBtn.innerHTML = '<i class="fas fa-location-arrow"></i>';
+                };
+
+                const handleSuccess = (latitude, longitude) => {
+                    map.setView([latitude, longitude], 15);
+                    restoreButton();
+                    if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
+                };
+
+                const handleError = (error) => {
+                    console.error('Geolocation error:', error);
+                    restoreButton();
+                    if (navigator.vibrate) navigator.vibrate([100, 100, 100]);
+                    if (typeof showNotification === 'function') {
+                        const message = error && error.message ? error.message : 'Konum alınamadı';
+                        showNotification(message, 'error');
+                    }
+                };
+
+                if (typeof window.getCurrentLocation === 'function') {
+                    window.getCurrentLocation({ enableHighAccuracy: true, timeout: 12000, maximumAge: 120000 })
+                        .then((location) => handleSuccess(location.latitude, location.longitude))
+                        .catch(handleError);
+                    return;
                 }
+
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => handleSuccess(position.coords.latitude, position.coords.longitude),
+                        handleError,
+                        {
+                            enableHighAccuracy: true,
+                            timeout: 12000,
+                            maximumAge: 120000,
+                        },
+                    );
+                    return;
+                }
+
+                restoreButton();
+                handleError(new Error('Bu cihazda konum desteği yok'));
             });
 
             // Prevent map events on control container

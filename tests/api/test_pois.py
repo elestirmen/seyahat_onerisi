@@ -82,6 +82,34 @@ def test_nearby_pois_returns_payload(client, monkeypatch):
     assert data["pois"][0]["distance_m"] == 120
 
 
+def test_nearby_pois_clamps_radius_and_limit(client, monkeypatch):
+    from app.services import poi_service
+
+    def _stub_nearby(**kwargs):
+        assert kwargs["radius_m"] == 50
+        assert kwargs["limit"] == 200
+        return {
+            "center": {"lat": kwargs["lat"], "lng": kwargs["lng"]},
+            "radius_m": kwargs["radius_m"],
+            "count": 0,
+            "category": kwargs["category"],
+            "categories": kwargs["categories"],
+            "pois": [],
+        }
+
+    monkeypatch.setattr(poi_service, "search_nearby_pois", _stub_nearby, raising=False)
+
+    resp = client.get("/api/pois/nearby?lat=38.63&lng=34.91&radius_m=5&limit=9999")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["radius_m"] == 50
+
+
+def test_nearby_pois_rejects_invalid_radius(client):
+    resp = client.get("/api/pois/nearby?lat=38.63&lng=34.91&radius_m=invalid")
+    assert resp.status_code == 400
+
+
 def test_nearby_pois_accepts_multiple_categories(client, monkeypatch):
     from app.services import poi_service
 
