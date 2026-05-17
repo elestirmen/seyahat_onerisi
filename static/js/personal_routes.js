@@ -418,6 +418,12 @@
       valueDisplay.title = preferenceData.description;
     }
 
+    // Accessibility: expose the textual level for screen readers
+    // (slider value is 0-4, which is meaningless without context).
+    try {
+      slider.setAttribute('aria-valuetext', preferenceData.text);
+    } catch (_) {}
+
     // Update level indicator if exists
     if (indicator) {
       const levelIndicator = indicator.querySelector('.level-indicator');
@@ -956,6 +962,9 @@
       // Initialize sliders
       initializeSliders();
 
+      // Initialize intent chips
+      initializeIntentDiscovery();
+
       // Initialize quick selection buttons
       initializeQuickSelection();
 
@@ -1016,8 +1025,133 @@
       const initialValue = parseInt(slider.value);
       if (valueDisplay) {
         updateEnhancedSliderDisplay(slider, valueDisplay);
+      } else {
+        // Even without a value display, expose aria-valuetext at boot.
+        const initialLevel = preferenceLevels[initialValue];
+        if (initialLevel) {
+          try { slider.setAttribute('aria-valuetext', initialLevel.text); } catch (_) {}
+        }
       }
     });
+  }
+
+  function initializeIntentDiscovery() {
+    const intentButtons = document.querySelectorAll('.intent-chip[data-intent]');
+    if (!intentButtons.length) return;
+
+    intentButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const intent = button.dataset.intent;
+        if (!intent) return;
+
+        intentButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        setTimeout(() => button.classList.remove('active'), 2200);
+
+        handleIntentSelection(intent);
+      });
+    });
+  }
+
+  function handleIntentSelection(intent) {
+    const dynamicIntentPresets = {
+      scenic: 'scenic',
+      food: 'food',
+      history: 'culture',
+      family: 'family',
+      evening: 'evening'
+    };
+
+    if (intent === 'nearby') {
+      focusNearbyDiscovery();
+      return;
+    }
+
+    if (intent === 'two_hours') {
+      openPredefinedRoutesWithFilters(
+        { duration: '60-180' },
+        '1-3 saatlik hazır rotalar açılıyor.'
+      );
+      return;
+    }
+
+    if (intent === 'walking') {
+      openPredefinedRoutesWithFilters(
+        { routeType: 'walking' },
+        'Yürüyüş rotaları açılıyor.'
+      );
+      return;
+    }
+
+    const presetName = dynamicIntentPresets[intent];
+    if (!presetName) return;
+
+    applyPreset(presetName);
+    triggerRecommendations(300);
+
+    const intentMessages = {
+      scenic: 'Manzara için doğa, macera ve rahatlatıcı tercihleri öne çıkarıldı.',
+      food: 'Yemek odaklı öneriler hazırlanıyor.',
+      history: 'Tarih ve kültür odaklı öneriler hazırlanıyor.',
+      family: 'Çocukla gezmeye daha uygun olabilecek sakin ve erişilebilir tercihler öne çıkarıldı.',
+      evening: 'Akşam planı için yemek, eğlence ve gece hayatı tercihleri öne çıkarıldı.'
+    };
+    notifyIntent(intentMessages[intent] || 'Tercihler uygulandı.');
+  }
+
+  function focusNearbyDiscovery() {
+    const nearbySection = document.getElementById('nearbyPOISection');
+    if (nearbySection) {
+      nearbySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    const locateBtn = document.getElementById('nearbyLocateBtn');
+    if (locateBtn && !locateBtn.disabled) {
+      locateBtn.click();
+      setTimeout(() => locateBtn.focus(), 350);
+    }
+
+    notifyIntent('Yakındaki yerler için konum araması başlatıldı.');
+  }
+
+  function openPredefinedRoutesWithFilters(filters, message) {
+    const payload = {
+      type: 'intent:predefined-filter',
+      filters,
+      source: 'personal-routes',
+      ts: Date.now()
+    };
+
+    try {
+      localStorage.setItem('pendingPredefinedIntentFilters', JSON.stringify(payload));
+    } catch (_) {}
+
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(payload, '*');
+    } else {
+      window.location.href = 'predefined_routes.html';
+    }
+
+    notifyIntent(message);
+  }
+
+  function triggerRecommendations(delay = 0) {
+    const recommendBtn = document.getElementById('recommendBtn');
+    if (!recommendBtn || recommendBtn.disabled) return;
+
+    setTimeout(() => {
+      if (!recommendBtn.disabled) {
+        recommendBtn.click();
+      }
+    }, delay);
+  }
+
+  function notifyIntent(message) {
+    if (typeof window.showNotification === 'function') {
+      window.showNotification(message, 'info');
+      return;
+    }
+    console.warn(message);
   }
 
   // Initialize quick selection buttons
@@ -1128,6 +1262,30 @@
         'doga': 0,
         'tarihi': 1,
         'rahatlatici': 1
+      },
+      'scenic': {
+        'doga': 4,
+        'macera': 3,
+        'rahatlatici': 3,
+        'tarihi': 2,
+        'sanat_kultur': 1,
+        'yemek': 2,
+        'spor': 1,
+        'eglence': 1,
+        'alisveris': 0,
+        'gece_hayati': 0
+      },
+      'evening': {
+        'yemek': 4,
+        'eglence': 3,
+        'gece_hayati': 3,
+        'rahatlatici': 2,
+        'sanat_kultur': 2,
+        'tarihi': 1,
+        'alisveris': 1,
+        'doga': 0,
+        'macera': 0,
+        'spor': 0
       },
       'shopping': {
         'alisveris': 4,

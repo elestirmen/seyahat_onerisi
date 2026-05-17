@@ -100,6 +100,8 @@ class NearbyPoiTrackingService : Service() {
     val typeLabel: String,
     val distanceMeters: Int,
     val targetUrl: String,
+    val panoramaPath: String? = null,
+    val panoramaOriginalPath: String? = null,
   )
 
   private data class NearbyScanResult(
@@ -545,7 +547,15 @@ class NearbyPoiTrackingService : Service() {
             name = panoramaName,
             typeLabel = getString(R.string.poi_tracking_panorama_label),
             distanceMeters = panoramaDistanceMeters,
-            targetUrl = buildPanoramaTargetUrl(alertId, sourceType),
+            targetUrl = buildPanoramaTargetUrl(
+              alertId,
+              sourceType,
+              item.optString("path").trim().ifBlank { null },
+              item.optString("original_path").trim().ifBlank { null },
+              panoramaName,
+            ),
+            panoramaPath = item.optString("path").trim().ifBlank { null },
+            panoramaOriginalPath = item.optString("original_path").trim().ifBlank { null },
           ),
         )
       }
@@ -665,11 +675,28 @@ class NearbyPoiTrackingService : Service() {
       .toString()
   }
 
-  private fun buildPanoramaTargetUrl(alertId: String, sourceType: String): String {
+  private fun buildPanoramaTargetUrl(
+    alertId: String,
+    sourceType: String,
+    panoramaPath: String? = null,
+    panoramaOriginalPath: String? = null,
+    panoramaTitle: String? = null,
+  ): String {
     return Uri.parse(PERSONAL_ROUTES_URL)
       .buildUpon()
       .appendQueryParameter("panorama", alertId)
       .appendQueryParameter("panoramaSource", sourceType.ifBlank { "standalone" })
+      .apply {
+        panoramaPath?.trim()?.takeIf { it.isNotEmpty() }?.let {
+          appendQueryParameter("panoramaPath", it)
+        }
+        panoramaOriginalPath?.trim()?.takeIf { it.isNotEmpty() }?.let {
+          appendQueryParameter("panoramaOriginalPath", it)
+        }
+        panoramaTitle?.trim()?.takeIf { it.isNotEmpty() }?.let {
+          appendQueryParameter("panoramaTitle", it)
+        }
+      }
       .build()
       .toString()
   }

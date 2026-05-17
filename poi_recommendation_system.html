@@ -95,33 +95,100 @@
 </head>
 
 <body>
-  <nav class="tabs">
-    <div class="tab active" data-target="#pane-personal">Keşfedilecek Yerler</div>
-    <div class="tab" data-target="#pane-predef">Hazır Rotalar</div>
+  <nav class="tabs" role="tablist" aria-label="Sayfa sekmeleri">
+    <div class="tab active" data-target="#pane-personal" role="tab" tabindex="0"
+         id="tab-personal" aria-controls="pane-personal" aria-selected="true">Keşfedilecek Yerler</div>
+    <div class="tab" data-target="#pane-predef" role="tab" tabindex="-1"
+         id="tab-predef" aria-controls="pane-predef" aria-selected="false">Hazır Rotalar</div>
   </nav>
   <section class="panes">
-    <div class="pane active" id="pane-personal">
-      <iframe src="personal_routes.html?v=20260403-live-alert-fixes1" allow="geolocation; fullscreen; notifications"></iframe>
+    <div class="pane active" id="pane-personal" role="tabpanel" aria-labelledby="tab-personal">
+      <iframe src="personal_routes.html?v=20260403-live-alert-fixes1" allow="geolocation; fullscreen; notifications" title="Keşfedilecek Yerler"></iframe>
     </div>
-    <div class="pane" id="pane-predef">
-      <iframe src="predefined_routes.html?v=20260403-live-alert-fixes1" loading="lazy" allow="geolocation; fullscreen; notifications"></iframe>
+    <div class="pane" id="pane-predef" role="tabpanel" aria-labelledby="tab-predef" hidden>
+      <iframe src="predefined_routes.html?v=20260403-live-alert-fixes1" loading="lazy" allow="geolocation; fullscreen; notifications" title="Hazır Rotalar"></iframe>
     </div>
   </section>
   <script>
     const tabs = Array.from(document.querySelectorAll('.tab'));
     const panes = Array.from(document.querySelectorAll('.pane'));
-    tabs.forEach(t => t.addEventListener('click', () => {
+
+    function syncTabAria() {
+      tabs.forEach(tab => {
+        const isActive = tab.classList.contains('active');
+        tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        tab.setAttribute('tabindex', isActive ? '0' : '-1');
+      });
+      panes.forEach(pane => {
+        const isActive = pane.classList.contains('active');
+        if (isActive) pane.removeAttribute('hidden');
+        else pane.setAttribute('hidden', '');
+      });
+    }
+
+    tabs.forEach(t => {
+      t.addEventListener('click', () => {
+        tabs.forEach(x => x.classList.remove('active'));
+        panes.forEach(p => p.classList.remove('active'));
+        t.classList.add('active');
+        const pane = document.querySelector(t.dataset.target);
+        if (pane) pane.classList.add('active');
+        syncTabAria();
+      });
+
+      // Keyboard arrow navigation between tabs (WAI-ARIA tabs pattern)
+      t.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'Home' && e.key !== 'End') return;
+        e.preventDefault();
+        const currentIdx = tabs.indexOf(t);
+        let nextIdx = currentIdx;
+        if (e.key === 'ArrowRight') nextIdx = (currentIdx + 1) % tabs.length;
+        else if (e.key === 'ArrowLeft') nextIdx = (currentIdx - 1 + tabs.length) % tabs.length;
+        else if (e.key === 'Home') nextIdx = 0;
+        else if (e.key === 'End') nextIdx = tabs.length - 1;
+        tabs[nextIdx].focus();
+        tabs[nextIdx].click();
+      });
+    });
+
+    function activatePane(targetSelector) {
+      const targetTab = tabs.find(tab => tab.dataset.target === targetSelector);
+      const pane = document.querySelector(targetSelector);
+      if (!targetTab || !pane) return;
+
       tabs.forEach(x => x.classList.remove('active'));
       panes.forEach(p => p.classList.remove('active'));
-      t.classList.add('active');
-      const pane = document.querySelector(t.dataset.target);
-      if (pane) pane.classList.add('active');
-    }));
+      targetTab.classList.add('active');
+      pane.classList.add('active');
+      syncTabAria();
+    }
 
-    // Parent <-> iframe bridge (optional skeleton)
+    function sendToPredefinedFrame(message) {
+      const iframe = document.querySelector('#pane-predef iframe');
+      if (!iframe) return;
+
+      const send = () => {
+        try {
+          iframe.contentWindow.postMessage(message, '*');
+        } catch (_) {}
+      };
+
+      iframe.addEventListener('load', send, { once: true });
+      setTimeout(send, 250);
+      setTimeout(send, 900);
+    }
+
+    // Parent <-> iframe bridge
     window.addEventListener('message', (e) => {
-      // Future: handle notifications from iframes
-      // console.debug('Shell received:', e.data);
+      const message = e.data || {};
+      if (message.type === 'intent:predefined-filter') {
+        activatePane('#pane-predef');
+        sendToPredefinedFrame({
+          type: 'predefined:apply-filters',
+          filters: message.filters || {},
+          source: message.source || 'shell'
+        });
+      }
     });
   </script>
 </body>

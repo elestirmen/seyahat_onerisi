@@ -8734,10 +8734,45 @@ async function initializeMapForRoute() {
 // --------- Standalone 360° Panoramas on User Map ---------
 let panoramaLayer;
 const panoramaMarkersByAlertId = new Map();
+let lastOpenedPanoramaDeepLinkKey = '';
 
 function normalizePanoramaMediaPath(path) {
     if (!path || typeof path !== 'string') return '';
     return path.startsWith('/') ? path : `/${path}`;
+}
+
+function sanitizePanoramaAlertIdSegment(value) {
+    const normalized = String(value || '')
+        .normalize('NFKD')
+        .replace(/[^\x00-\x7F]/g, '')
+        .replace(/[^A-Za-z0-9._-]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+    return normalized || '';
+}
+
+function getPanoramaFallbackStem(panorama) {
+    const rawPath = String(panorama?.filename || panorama?.path || panorama?.original_path || '').trim();
+    if (!rawPath) return 'panorama';
+
+    const pathWithoutQuery = rawPath.split(/[?#]/, 1)[0];
+    const filename = pathWithoutQuery.split('/').pop() || pathWithoutQuery;
+    const stem = filename.replace(/\.[^.]+$/, '');
+    return sanitizePanoramaAlertIdSegment(stem) || 'panorama';
+}
+
+function derivePanoramaAlertId(panorama, resolvedSourceType) {
+    const existingId = String(panorama?.alert_id || panorama?.id || panorama?._id || '').trim();
+    if (existingId.startsWith('panorama:') || existingId.startsWith('route-panorama:')) {
+        return existingId;
+    }
+
+    if (resolvedSourceType === 'route') {
+        const routeId = sanitizePanoramaAlertIdSegment(String(panorama?.route_id || '').trim()) || 'unknown';
+        return `route-panorama:${routeId}:${getPanoramaFallbackStem(panorama)}`;
+    }
+
+    const standaloneId = sanitizePanoramaAlertIdSegment(existingId) || getPanoramaFallbackStem(panorama);
+    return `panorama:${standaloneId}`;
 }
 
 function createPanoramaAlertRecord(panorama, sourceType = '') {
@@ -8745,7 +8780,7 @@ function createPanoramaAlertRecord(panorama, sourceType = '') {
     const lat = typeof panorama?.lat === 'number' ? panorama.lat : parseFloat(panorama?.lat ?? panorama?.latitude);
     const lng = typeof panorama?.lng === 'number' ? panorama.lng : parseFloat(panorama?.lng ?? panorama?.longitude);
     const caption = String(panorama?.caption || panorama?.name || '').trim();
-    const alertId = String(panorama?.alert_id || panorama?.id || panorama?._id || '').trim();
+    const alertId = derivePanoramaAlertId(panorama, resolvedSourceType);
 
     return {
         ...(panorama && typeof panorama === 'object' ? panorama : {}),
@@ -8770,13 +8805,42 @@ function buildPanoramaDeepLink(panorama) {
     const alertItem = createPanoramaAlertRecord(panorama);
     if (!alertItem.id) return '';
 
-    const params = new URLSearchParams();
-    params.set('panorama', alertItem.id);
+    const targetUrl = new URL('/personal_routes.html', window.location.origin);
+    targetUrl.searchParams.set('panorama', alertItem.id);
     if (alertItem.source_type) {
-        params.set('panoramaSource', alertItem.source_type);
+        targetUrl.searchParams.set('panoramaSource', alertItem.source_type);
+    }
+    if (alertItem.path) {
+        targetUrl.searchParams.set('panoramaPath', alertItem.path);
+    }
+    if (alertItem.original_path) {
+        targetUrl.searchParams.set('panoramaOriginalPath', alertItem.original_path);
+    }
+    if (alertItem.caption || alertItem.name) {
+        targetUrl.searchParams.set('panoramaTitle', alertItem.caption || alertItem.name);
     }
 
-    return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+    return targetUrl.toString();
+}
+
+function buildPanoramaQueryFallback(params) {
+    const panoramaPath = String(params?.get('panoramaPath') || '').trim();
+    if (!panoramaPath) return null;
+
+    const panoramaId = String(params?.get('panorama') || '').trim();
+    const sourceType = String(params?.get('panoramaSource') || '').trim() || 'standalone';
+    const panoramaOriginalPath = String(params?.get('panoramaOriginalPath') || '').trim();
+    const panoramaTitle = String(params?.get('panoramaTitle') || '').trim() || '360° Panorama';
+
+    return createPanoramaAlertRecord({
+        id: panoramaId,
+        alert_id: panoramaId,
+        source_type: sourceType,
+        path: panoramaPath,
+        original_path: panoramaOriginalPath,
+        caption: panoramaTitle,
+        name: panoramaTitle,
+    }, sourceType);
 }
 
 async function fetchPanoramaAlertItemById(alertId, preferredSourceType = '') {
@@ -8818,6 +8882,31 @@ async function fetchPanoramaAlertItemById(alertId, preferredSourceType = '') {
     }
 
     return null;
+}
+
+async function openPanoramaDeepLinkById(alertId, preferredSourceType = '', { focusMap = true } = {}) {
+    const normalizedAlertId = String(alertId || '').trim();
+    if (!normalizedAlertId) return false;
+
+    const normalizedSourceType = String(preferredSourceType || '').trim();
+    const deepLinkKey = `${normalizedSourceType}:${normalizedAlertId}`;
+    if (lastOpenedPanoramaDeepLinkKey === deepLinkKey) {
+        return true;
+    }
+
+    const panorama = await fetchPanoramaAlertItemById(normalizedAlertId, normalizedSourceType);
+    if (!panorama) return false;
+
+    lastOpenedPanoramaDeepLinkKey = deepLinkKey;
+
+    try {
+        return await openPanoramaAlertItem(panorama, { focusMap });
+    } catch (error) {
+        if (lastOpenedPanoramaDeepLinkKey === deepLinkKey) {
+            lastOpenedPanoramaDeepLinkKey = '';
+        }
+        throw error;
+    }
 }
 
 async function focusPanoramaOnMap(panorama) {
@@ -8889,6 +8978,7 @@ async function openPanoramaAlertItem(panorama, { focusMap = true } = {}) {
 }
 
 window.fetchPanoramaAlertItemById = fetchPanoramaAlertItemById;
+window.openPanoramaDeepLinkById = openPanoramaDeepLinkById;
 window.focusPanoramaOnMap = focusPanoramaOnMap;
 window.openPanoramaAlertItem = openPanoramaAlertItem;
 
@@ -9143,19 +9233,6 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
             overlay.style.padding = immersive ? '0' : '16px';
             overlay.style.background = immersive ? '#000' : 'rgba(0,0,0,.88)';
             container.style.cssText = immersive ? vrContainerStyle : normalContainerStyle;
-        };
-
-        const isLikelyMobileVrDevice = () => {
-            try {
-                const coarsePointer = typeof window.matchMedia === 'function'
-                    ? window.matchMedia('(pointer: coarse)').matches
-                    : false;
-                const touchPoints = Number(navigator.maxTouchPoints || 0);
-                const compactViewport = Math.max(window.innerWidth || 0, window.innerHeight || 0) <= 1180;
-                return coarsePointer || (touchPoints > 0 && compactViewport);
-            } catch (_) {
-                return false;
-            }
         };
 
         const normalizePanoramaUrl = (value) => {
@@ -9774,6 +9851,25 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
             return true;
         };
 
+        const startViewerOrientation = async (viewer) => {
+            if (!viewer || typeof viewer.startOrientation !== 'function') {
+                return false;
+            }
+            try {
+                const result = viewer.startOrientation();
+                if (result && typeof result.then === 'function') {
+                    await result;
+                }
+                return !!(
+                    typeof viewer.isOrientationActive === 'function'
+                        ? viewer.isOrientationActive()
+                        : true
+                );
+            } catch (_) {
+                return false;
+            }
+        };
+
         const applyStereoLook = (yaw, pitch, hfov) => {
             if (!stereoLeftViewer || !stereoRightViewer) return;
             const y = normalizeYaw(yaw);
@@ -9901,7 +9997,6 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
         const initStereoViewer = async (immersivePromise = null) => {
             if (isClosing) return false;
             const settledImmersivePromise = immersivePromise || enterVrImmersiveMode();
-            const preferManualStereo = isLikelyMobileVrDevice();
             let seedHfov = 100;
             if (normalViewer && typeof normalViewer.getHfov === 'function') {
                 try { seedHfov = Number(normalViewer.getHfov()) || 100; } catch (_) {}
@@ -9976,7 +10071,7 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
                 }
             };
 
-            if (!preferManualStereo && await initOfficialStereo()) return true;
+            if (await initOfficialStereo()) return true;
             if (!await ensurePannellum()) return false;
 
             let initialYaw = 0;
@@ -10041,14 +10136,11 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
                 const motionGranted = await requestMotionPermission();
                 if (motionGranted) {
                     try {
-                        if (typeof stereoLeftViewer.startOrientation === 'function') {
-                            stereoLeftViewer.startOrientation();
-                            stereoOrientationActive = !!(
-                                typeof stereoLeftViewer.isOrientationActive === 'function'
-                                    ? stereoLeftViewer.isOrientationActive()
-                                    : true
-                            );
-                        }
+                        const [leftOrientationActive, rightOrientationActive] = await Promise.all([
+                            startViewerOrientation(stereoLeftViewer),
+                            startViewerOrientation(stereoRightViewer),
+                        ]);
+                        stereoOrientationActive = leftOrientationActive || rightOrientationActive;
                     } catch (_) {
                         stereoOrientationActive = false;
                     }
@@ -12737,13 +12829,16 @@ async function initializeApp() {
         const panoramaParam = params.get('panorama');
         const panoramaSourceParam = params.get('panoramaSource') || '';
         if (panoramaParam) {
-            const panorama = await fetchPanoramaAlertItemById(panoramaParam, panoramaSourceParam);
-            if (panorama) {
-                try {
-                    await openPanoramaAlertItem(panorama, { focusMap: true });
-                } catch (error) {
-                    console.warn('Panorama deep-link open failed:', error);
+            try {
+                const opened = await openPanoramaDeepLinkById(panoramaParam, panoramaSourceParam, { focusMap: true });
+                if (!opened) {
+                    const fallbackPanorama = buildPanoramaQueryFallback(params);
+                    if (fallbackPanorama) {
+                        await openPanoramaAlertItem(fallbackPanorama, { focusMap: true });
+                    }
                 }
+            } catch (error) {
+                console.warn('Panorama deep-link open failed:', error);
             }
         }
     } catch (e) {
@@ -14944,57 +15039,32 @@ function initializeEnhancedFilters() {
 }
 
 function initializeFilterChips() {
-    // Route type chips
-    const routeTypeChips = document.querySelectorAll('#routeTypeChips .filter-chip');
-    routeTypeChips.forEach(chip => {
-        chip.addEventListener('click', () => {
-            routeTypeChips.forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
+    // Debounced auto-apply so that switching chips quickly doesn't thrash the list
+    let _chipApplyTimer = null;
+    const scheduleAutoApply = () => {
+        if (_chipApplyTimer) clearTimeout(_chipApplyTimer);
+        _chipApplyTimer = setTimeout(() => {
+            _chipApplyTimer = null;
+            if (typeof applyRouteFilters === 'function') applyRouteFilters();
+        }, 180);
+    };
 
-            if (window.innerWidth <= 768) {
-                setTimeout(applyRouteFilters, 300);
-            }
+    const wireChipGroup = (selector) => {
+        const chips = document.querySelectorAll(selector + ' .filter-chip');
+        chips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                chips.forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                // Auto-apply on every device (desktop + mobile) for instant feedback.
+                scheduleAutoApply();
+            });
         });
-    });
+    };
 
-    // Difficulty chips
-    const difficultyChips = document.querySelectorAll('#difficultyChips .filter-chip');
-    difficultyChips.forEach(chip => {
-        chip.addEventListener('click', () => {
-            difficultyChips.forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-
-            if (window.innerWidth <= 768) {
-                setTimeout(applyRouteFilters, 300);
-            }
-        });
-    });
-
-    // Duration chips
-    const durationChips = document.querySelectorAll('#durationChips .filter-chip');
-    durationChips.forEach(chip => {
-        chip.addEventListener('click', () => {
-            durationChips.forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-
-            if (window.innerWidth <= 768) {
-                setTimeout(applyRouteFilters, 300);
-            }
-        });
-    });
-
-    // Favorite chips
-    const favoriteChips = document.querySelectorAll('#favoriteChips .filter-chip');
-    favoriteChips.forEach(chip => {
-        chip.addEventListener('click', () => {
-            favoriteChips.forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-
-            if (window.innerWidth <= 768) {
-                setTimeout(applyRouteFilters, 300);
-            }
-        });
-    });
+    wireChipGroup('#routeTypeChips');
+    wireChipGroup('#difficultyChips');
+    wireChipGroup('#durationChips');
+    wireChipGroup('#favoriteChips');
 }
 
 function clearAllFilters() {

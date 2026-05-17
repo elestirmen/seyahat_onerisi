@@ -63,6 +63,11 @@ class MainActivity : AppCompatActivity() {
     val trackAllCategories: Boolean,
   )
 
+  private data class PendingPanoramaDeepLinkRequest(
+    val alertId: String,
+    val sourceType: String,
+  )
+
   private lateinit var rootContainer: FrameLayout
   private lateinit var webView: WebView
 
@@ -78,6 +83,8 @@ class MainActivity : AppCompatActivity() {
   private lateinit var nativeTrackingBackgroundLocationPermissionLauncher: ActivityResultLauncher<String>
   private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
   private var pendingPoiTrackingStartRequest: PendingPoiTrackingStartRequest? = null
+  private var pendingPanoramaDeepLinkRequest: PendingPanoramaDeepLinkRequest? = null
+  private var pendingPanoramaDeepLinkAttempts = 0
   @Volatile private var poiTrackingServiceRequestStatus: String = "idle"
   @Volatile private var poiTrackingServiceLastError: String? = null
   private var nativeVrModeActive = false
@@ -162,6 +169,7 @@ class MainActivity : AppCompatActivity() {
     createPoiAlertChannel()
 
     val initialUrl = resolveStartUrl(intent)
+    updatePendingPanoramaDeepLink(initialUrl)
     if (savedInstanceState != null) {
       webView.restoreState(savedInstanceState)
       if (initialUrl != START_URL) {
@@ -209,6 +217,7 @@ class MainActivity : AppCompatActivity() {
     setIntent(intent)
 
     val targetUrl = resolveStartUrl(intent)
+    updatePendingPanoramaDeepLink(targetUrl)
     if (targetUrl != START_URL) {
       webView.loadUrl(targetUrl)
     }
@@ -258,6 +267,11 @@ class MainActivity : AppCompatActivity() {
               true
             }
           }
+        }
+
+        override fun onPageFinished(view: WebView, url: String?) {
+          super.onPageFinished(view, url)
+          dispatchPendingPanoramaDeepLink(url)
         }
       }
 
@@ -478,6 +492,136 @@ class MainActivity : AppCompatActivity() {
     return if (isTrustedWebUri(targetUri)) targetUrl else START_URL
   }
 
+  private fun isPersonalRoutesUri(uri: Uri?): Boolean {
+    if (!isTrustedWebUri(uri)) return false
+
+    val expectedPath = Uri.parse(PERSONAL_ROUTES_URL).path?.trimEnd('/').orEmpty()
+    val currentPath = uri?.path?.trimEnd('/').orEmpty()
+    return expectedPath.isNotEmpty() && currentPath == expectedPath
+  }
+
+  private fun updatePendingPanoramaDeepLink(targetUrl: String?) {
+    val targetUri =
+      targetUrl
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.let { runCatching { Uri.parse(it) }.getOrNull() }
+
+    val alertId = targetUri?.getQueryParameter("panorama")?.trim().orEmpty()
+    if (alertId.isBlank()) {
+      pendingPanoramaDeepLinkRequest = null
+      pendingPanoramaDeepLinkAttempts = 0
+      return
+    }
+
+    pendingPanoramaDeepLinkRequest =
+      PendingPanoramaDeepLinkRequest(
+        alertId = alertId,
+        sourceType = targetUri?.getQueryParameter("panoramaSource")?.trim().orEmpty(),
+      )
+    pendingPanoramaDeepLinkAttempts = 0
+  }
+
+  private fun dispatchPendingPanoramaDeepLink(currentUrl: String? = webView.url) {
+    val request = pendingPanoramaDeepLinkRequest ?: return
+    val targetUrl = buildPanoramaTargetUrl(request.alertId, request.sourceType)
+    val currentUri =
+      currentUrl
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.let { runCatching { Uri.parse(it) }.getOrNull() }
+
+    if (!isPersonalRoutesUri(currentUri)) {
+      if (pendingPanoramaDeepLinkAttempts >= 12) {
+        pendingPanoramaDeepLinkRequest = null
+        pendingPanoramaDeepLinkAttempts = 0
+        return
+      }
+
+      pendingPanoramaDeepLinkAttempts += 1
+      val activeUrl = currentUri?.toString()?.trim().orEmpty()
+      if (activeUrl != targetUrl) {
+        webView.loadUrl(targetUrl)
+        return
+      }
+
+      webView.postDelayed({ dispatchPendingPanoramaDeepLink() }, 400L)
+      return
+    }
+
+    val safeAlertId = JSONObject.quote(request.alertId)
+    val safeSourceType = JSONObject.quote(request.sourceType)
+
+    webView.evaluateJavascript(
+      """
+      (async function() {
+        try {
+          if (typeof window.openPanoramaDeepLinkById !== 'function') {
+            const params = new URLSearchParams(window.location.search || '');
+            const panoramaPath = String(params.get('panoramaPath') || '').trim();
+            if (!panoramaPath || typeof window.openPanoramaAlertItem !== 'function') {
+              return 'missing-handler';
+            }
+
+            const fallbackPanorama = {
+              id: $safeAlertId,
+              alert_id: $safeAlertId,
+              source_type: $safeSourceType || 'standalone',
+              path: panoramaPath,
+              original_path: String(params.get('panoramaOriginalPath') || '').trim(),
+              caption: String(params.get('panoramaTitle') || '').trim() || '360° Panorama',
+              name: String(params.get('panoramaTitle') || '').trim() || '360° Panorama',
+            };
+            const fallbackOpened = await window.openPanoramaAlertItem(fallbackPanorama, { focusMap: true });
+            return fallbackOpened ? 'opened' : 'not-found';
+          }
+
+          const opened = await window.openPanoramaDeepLinkById($safeAlertId, $safeSourceType, { focusMap: true });
+          if (opened) {
+            return 'opened';
+          }
+
+          const params = new URLSearchParams(window.location.search || '');
+          const panoramaPath = String(params.get('panoramaPath') || '').trim();
+          if (!panoramaPath || typeof window.openPanoramaAlertItem !== 'function') {
+            return 'not-found';
+          }
+
+          const fallbackPanorama = {
+            id: $safeAlertId,
+            alert_id: $safeAlertId,
+            source_type: $safeSourceType || 'standalone',
+            path: panoramaPath,
+            original_path: String(params.get('panoramaOriginalPath') || '').trim(),
+            caption: String(params.get('panoramaTitle') || '').trim() || '360° Panorama',
+            name: String(params.get('panoramaTitle') || '').trim() || '360° Panorama',
+          };
+          const fallbackOpened = await window.openPanoramaAlertItem(fallbackPanorama, { focusMap: true });
+          return fallbackOpened ? 'opened' : 'not-found';
+        } catch (error) {
+          return 'error:' + (error && error.message ? error.message : String(error));
+        }
+      })();
+      """.trimIndent(),
+    ) { result ->
+      val normalizedResult = result?.trim()?.removeSurrounding("\"").orEmpty()
+      if (normalizedResult == "opened") {
+        pendingPanoramaDeepLinkRequest = null
+        pendingPanoramaDeepLinkAttempts = 0
+        return@evaluateJavascript
+      }
+
+      if (pendingPanoramaDeepLinkAttempts >= 12) {
+        pendingPanoramaDeepLinkRequest = null
+        pendingPanoramaDeepLinkAttempts = 0
+        return@evaluateJavascript
+      }
+
+      pendingPanoramaDeepLinkAttempts += 1
+      webView.postDelayed({ dispatchPendingPanoramaDeepLink() }, 400L)
+    }
+  }
+
   private fun buildPoiTargetUrl(poiId: String?): String {
     if (poiId.isNullOrBlank()) {
       return PERSONAL_ROUTES_URL
@@ -490,7 +634,13 @@ class MainActivity : AppCompatActivity() {
       .toString()
   }
 
-  private fun buildPanoramaTargetUrl(alertId: String?, sourceType: String?): String {
+  private fun buildPanoramaTargetUrl(
+    alertId: String?,
+    sourceType: String?,
+    panoramaPath: String? = null,
+    panoramaOriginalPath: String? = null,
+    panoramaTitle: String? = null,
+  ): String {
     val normalizedAlertId = alertId?.trim().orEmpty()
     if (normalizedAlertId.isBlank()) {
       return PERSONAL_ROUTES_URL
@@ -500,6 +650,17 @@ class MainActivity : AppCompatActivity() {
       .buildUpon()
       .appendQueryParameter("panorama", normalizedAlertId)
       .appendQueryParameter("panoramaSource", sourceType?.trim().takeUnless { it.isNullOrBlank() } ?: "standalone")
+      .apply {
+        panoramaPath?.trim()?.takeIf { it.isNotEmpty() }?.let {
+          appendQueryParameter("panoramaPath", it)
+        }
+        panoramaOriginalPath?.trim()?.takeIf { it.isNotEmpty() }?.let {
+          appendQueryParameter("panoramaOriginalPath", it)
+        }
+        panoramaTitle?.trim()?.takeIf { it.isNotEmpty() }?.let {
+          appendQueryParameter("panoramaTitle", it)
+        }
+      }
       .build()
       .toString()
   }

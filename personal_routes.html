@@ -96,6 +96,55 @@
     <div class="content p-6 md:p-8 lg:p-12">
       <!-- Kişisel (dinamik) rotalar içeriği -->
       <div class="tab-content active" id="dynamicRoutesContent">
+        <div class="intent-discovery-section" aria-label="Hızlı gezi başlangıcı">
+          <div class="intent-discovery-copy">
+            <h2 class="section-title"><i class="fas fa-compass"></i> Nasıl gezmek istersiniz?</h2>
+            <p>Mevcut POI, rota süresi ve konum verisini kullanarak hızlı bir başlangıç seçin. Veri eksik olan seçenekler kural tabanlı çalışır.</p>
+          </div>
+          <div class="intent-chip-grid">
+            <button class="intent-chip" type="button" data-intent="nearby">
+              <i class="fas fa-location-dot"></i>
+              <span class="intent-chip-main">Yakınımda</span>
+              <span class="intent-chip-meta">Konum verisi</span>
+            </button>
+            <button class="intent-chip" type="button" data-intent="two_hours">
+              <i class="fas fa-clock"></i>
+              <span class="intent-chip-main">2 saat</span>
+              <span class="intent-chip-meta">1-3 saat rota</span>
+            </button>
+            <button class="intent-chip" type="button" data-intent="walking">
+              <i class="fas fa-walking"></i>
+              <span class="intent-chip-main">Yürüyerek</span>
+              <span class="intent-chip-meta">Rota tipi</span>
+            </button>
+            <button class="intent-chip" type="button" data-intent="scenic">
+              <i class="fas fa-mountain"></i>
+              <span class="intent-chip-main">Manzara</span>
+              <span class="intent-chip-meta">Doğa / seyir</span>
+            </button>
+            <button class="intent-chip" type="button" data-intent="food">
+              <i class="fas fa-utensils"></i>
+              <span class="intent-chip-main">Yemek</span>
+              <span class="intent-chip-meta">Kategori puanı</span>
+            </button>
+            <button class="intent-chip" type="button" data-intent="history">
+              <i class="fas fa-landmark"></i>
+              <span class="intent-chip-main">Tarih</span>
+              <span class="intent-chip-meta">Kategori puanı</span>
+            </button>
+            <button class="intent-chip is-estimated" type="button" data-intent="family">
+              <i class="fas fa-child"></i>
+              <span class="intent-chip-main">Çocukla</span>
+              <span class="intent-chip-meta">Kural tabanlı</span>
+            </button>
+            <button class="intent-chip is-estimated" type="button" data-intent="evening">
+              <i class="fas fa-moon"></i>
+              <span class="intent-chip-main">Akşam</span>
+              <span class="intent-chip-meta">Saat verisi yok</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Extracted from poi_recommendation_system.html: dynamic routes section -->
         <div class="preferences-section">
           <h2 class="section-title">
@@ -471,7 +520,7 @@
   </div>
 
   <!-- Shared overlays and modals used by this page -->
-  <div id="routeContextMenu" class="route-context-menu">
+  <div id="routeContextMenu" class="route-context-menu" role="dialog" aria-modal="false" aria-labelledby="routeContextMenuTitle">
     <div class="route-context-menu-header">
       <h3 class="route-context-menu-title"><i class="fas fa-route"></i> <span id="routeContextMenuTitle">Rota Seçenekleri</span></h3>
       <p class="route-context-menu-subtitle" id="routeContextMenuSubtitle">Rotanız için mevcut işlemler</p>
@@ -505,7 +554,7 @@
     <button class="route-context-menu-item danger" onclick="RouteContextMenu.clearRoute()"><i class="route-context-menu-icon fas fa-trash"></i><div class="route-context-menu-text"><div class="main-text">Rotayı Temizle</div><div class="sub-text">Tüm durakları kaldır ve baştan başla</div></div><i class="route-context-menu-arrow fas fa-chevron-right"></i></button>
   </div>
 
-  <div id="mediaModal" class="media-modal">
+  <div id="mediaModal" class="media-modal" role="dialog" aria-modal="true" aria-labelledby="mediaModalTitle" aria-hidden="true">
     <div class="media-modal-content">
       <div class="media-modal-header">
         <h3 class="media-modal-title" id="mediaModalTitle">Medya Görüntüleyici</h3>
@@ -638,6 +687,20 @@
     // Smart preset lock mekanizması
     let smartPresetLock = false;
     let smartPresetValues = {};
+
+    // Debug logging only when the page is opened with ?debug=1
+    // (or window.__SMART_PRESET_DEBUG__ is set), so production stays quiet.
+    // We shadow console only inside this script block; the rest of the app
+    // is unaffected.
+    const __SP_DEBUG__ = (function(){
+      try {
+        return /(?:^|[?&])debug=1\b/.test(window.location.search)
+          || !!window.__SMART_PRESET_DEBUG__;
+      } catch (_) { return false; }
+    })();
+    const console = __SP_DEBUG__ ? window.console : {
+      log() {}, warn() {}, error: window.console ? window.console.error.bind(window.console) : function(){}
+    };
 
     // Global debug fonksiyonları
     window.testSmartPreset = function(type) {
@@ -802,9 +865,22 @@
         'aksam-yemegi': 'Akşam Yemeği ayarları uygulandı! 🌙'
       };
 
-      // Simple alert for feedback (can be replaced with better notification)
+      const text = messages[type] || 'Ayarlar uygulandı!';
+      // Use existing toast/notification if available; fall back to alert
+      // only when no notification system is loaded (safety net for early load).
       setTimeout(() => {
-        alert(messages[type] || 'Ayarlar uygulandı!');
+        try {
+          if (typeof window.showNotification === 'function') {
+            window.showNotification(text, 'success');
+          } else if (window.parent && window.parent !== window
+                     && typeof window.parent.showNotification === 'function') {
+            window.parent.showNotification(text, 'success');
+          } else {
+            alert(text);
+          }
+        } catch (_) {
+          alert(text);
+        }
       }, 100);
     }
 

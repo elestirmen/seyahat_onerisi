@@ -163,14 +163,20 @@
             <div id="predefinedRoutesList" class="predefined-routes-list" aria-live="polite"></div>
           </div>
 
-          <div id="noRoutesMessage" class="no-routes-message" style="display: none;"><i class="fas fa-info-circle"></i><p>Seçilen kriterlere uygun rota bulunamadı.</p></div>
+          <div id="noRoutesMessage" class="no-routes-message" style="display: none;" role="status" aria-live="polite">
+            <i class="fas fa-info-circle"></i>
+            <p>Seçilen kriterlere uygun rota bulunamadı.</p>
+            <button type="button" id="noRoutesResetBtn" class="filter-clear-btn" style="margin-top: 12px;">
+              <i class="fas fa-rotate-left"></i> <span>Filtreleri Sıfırla</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Shared overlays and modals used by this page -->
-  <div id="routeContextMenu" class="route-context-menu">
+  <div id="routeContextMenu" class="route-context-menu" role="dialog" aria-modal="false" aria-labelledby="routeContextMenuTitle">
     <div class="route-context-menu-header">
       <h3 class="route-context-menu-title"><i class="fas fa-route"></i> <span id="routeContextMenuTitle">Rota Seçenekleri</span></h3>
       <p class="route-context-menu-subtitle" id="routeContextMenuSubtitle">Rotanız için mevcut işlemler</p>
@@ -204,7 +210,7 @@
     <button class="route-context-menu-item danger" onclick="RouteContextMenu.clearRoute()"><i class="route-context-menu-icon fas fa-trash"></i><div class="route-context-menu-text"><div class="main-text">Rotayı Temizle</div><div class="sub-text">Tüm durakları kaldır ve baştan başla</div></div><i class="route-context-menu-arrow fas fa-chevron-right"></i></button>
   </div>
 
-  <div id="mediaModal" class="media-modal">
+  <div id="mediaModal" class="media-modal" role="dialog" aria-modal="true" aria-labelledby="mediaModalTitle" aria-hidden="true">
     <div class="media-modal-content">
       <div class="media-modal-header"><h3 class="media-modal-title" id="mediaModalTitle">Medya Görüntüleyici</h3><button class="media-modal-close" id="mediaModalClose" aria-label="Kapat"><i class="fas fa-times"></i></button></div>
       <div class="media-modal-body" id="mediaModalBody"><div class="loading"><div class="loading__spinner"></div><p class="loading__text">Medya yükleniyor...</p></div></div>

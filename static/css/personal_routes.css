@@ -3,6 +3,110 @@
 
 /* Page-local overrides or additions can go below if needed */
 
+/* Intent discovery */
+.intent-discovery-section {
+  margin-bottom: 28px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+}
+
+.intent-discovery-copy {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.intent-discovery-copy .section-title {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.intent-discovery-copy p {
+  max-width: 620px;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.intent-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.intent-chip {
+  min-height: 74px;
+  padding: 12px;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #1e293b;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  grid-template-areas:
+    "icon main"
+    "icon meta";
+  column-gap: 10px;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
+  touch-action: manipulation;
+}
+
+.intent-chip i {
+  grid-area: icon;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #e0f2fe;
+  color: #0369a1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+
+.intent-chip-main {
+  grid-area: main;
+  font-weight: 750;
+  line-height: 1.15;
+}
+
+.intent-chip-meta {
+  grid-area: meta;
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.2;
+}
+
+.intent-chip:hover,
+.intent-chip.active {
+  transform: translateY(-1px);
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
+}
+
+.intent-chip.is-estimated i {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.intent-chip.is-estimated.active,
+.intent-chip.is-estimated:hover {
+  border-color: #d97706;
+  background: #fffbeb;
+  box-shadow: 0 8px 20px rgba(217, 119, 6, 0.12);
+}
+
 /* Quick Selection Buttons Enhancement */
 .quick-selection-section {
   margin-top: 30px;
@@ -166,6 +270,34 @@
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+  .intent-discovery-section {
+    padding: 18px;
+    margin-bottom: 22px;
+  }
+
+  .intent-discovery-copy {
+    display: block;
+  }
+
+  .intent-discovery-copy .section-title {
+    white-space: normal;
+    margin-bottom: 8px;
+  }
+
+  .intent-discovery-copy p {
+    max-width: none;
+    text-align: left;
+    font-size: 0.9rem;
+  }
+
+  .intent-chip-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .intent-chip {
+    min-height: 68px;
+  }
+
   .quick-selection-buttons {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
@@ -184,6 +316,10 @@
 }
 
 @media (max-width: 480px) {
+  .intent-chip-grid {
+    grid-template-columns: 1fr;
+  }
+
   .quick-selection-buttons {
     grid-template-columns: 1fr;
   }
@@ -334,13 +470,33 @@ body:has(.leaflet-pseudo-fullscreen) .explore-bottom-section {
     flex-direction: column;
     align-items: center;
     gap: 15px;
+
+    /* Make the "Önerilerimi Getir" CTA always reachable on mobile so the user
+       doesn't have to scroll past 10 sliders before they can act. */
+    position: sticky;
+    bottom: 0;
+    z-index: 90;
+    margin: 0 -16px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.95) 30%, #ffffff 100%);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 -6px 18px rgba(15, 23, 42, 0.06);
   }
-  
+
   .explore-btn,
   .recommend-btn {
     min-width: 250px;
     width: 100%;
     max-width: 300px;
+  }
+
+  /* Hide the sticky CTA when map is fullscreen so it doesn't cover the map */
+  body.personal-routes-map-fullscreen .action-buttons-section,
+  body:has(#mapContainer.fullscreen) .action-buttons-section,
+  body:has(#mapContainer:fullscreen) .action-buttons-section,
+  body:has(.leaflet-fullscreen-on) .action-buttons-section,
+  body:has(.leaflet-pseudo-fullscreen) .action-buttons-section {
+    display: none !important;
   }
 }
 

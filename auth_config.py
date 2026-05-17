@@ -61,8 +61,8 @@ class AuthConfig:
         return {
             # Prevent MIME type sniffing
             "X-Content-Type-Options": "nosniff",
-            # Prevent clickjacking attacks
-            "X-Frame-Options": "DENY",
+            # The public shell embeds same-origin route pages in iframes.
+            "X-Frame-Options": "SAMEORIGIN",
             # Enable XSS protection (legacy but still useful)
             "X-XSS-Protection": "1; mode=block",
             # Force HTTPS (only if running on HTTPS)
@@ -84,7 +84,7 @@ class AuthConfig:
             "Referrer-Policy": "strict-origin-when-cross-origin",
             # Permissions policy (formerly Feature Policy)
             "Permissions-Policy": (
-                "geolocation=(), microphone=(), camera=(), payment=(), usb=(), "
+                "geolocation=(self), microphone=(), camera=(), payment=(), usb=(), "
                 "magnetometer=(), gyroscope=(), accelerometer=()"
             ),
             # Cache control for sensitive pages
@@ -95,4 +95,3 @@ class AuthConfig:
 
 
 auth_config = AuthConfig()
-
