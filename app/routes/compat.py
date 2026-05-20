@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, List
 
 from flask import Blueprint, current_app, jsonify, request, send_from_directory
 from werkzeug.exceptions import NotFound

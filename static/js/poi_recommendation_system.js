@@ -5093,7 +5093,12 @@ async function setStartLocation() {
             createRoute();
         }
 
-        alert(`✅ Başlangıç noktası belirlendi!\nKonum: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}\nDoğruluk: ±${Math.round(location.accuracy)}m`);
+        const _locMsg = `Konum: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}\nDoğruluk: ±${Math.round(location.accuracy)}m`;
+        if (typeof window.showToast === 'function') {
+            window.showToast(_locMsg, 'success', { title: 'Başlangıç noktası belirlendi' });
+        } else {
+            alert('Başlangıç noktası belirlendi!\n' + _locMsg);
+        }
 
     } catch (error) {
         console.error('❌ Location error:', error);
@@ -5242,7 +5247,12 @@ function showManualLocationHelp() {
 // Advanced route optimization using 2-opt algorithm
 function optimizeRouteAdvanced() {
     if (selectedPOIs.length < 3) {
-        alert('Optimize etmek için en az 3 POI seçmelisiniz.');
+        const _optMsg = 'Optimize etmek için en az 3 POI seçmelisiniz.';
+        if (typeof window.showToast === 'function') {
+            window.showToast(_optMsg, 'warning');
+        } else {
+            alert(_optMsg);
+        }
         return;
     }
 
@@ -17393,8 +17403,9 @@ function showPOIModalError(message) {
                 <p class="text-danger mt-2">${message}</p>
             </div>
         `;
+    } else if (typeof window.showToast === 'function') {
+        window.showToast(message, 'error');
     } else {
-        // Fallback: show alert if modal elements are not found
         alert('Hata: ' + message);
     }
 }

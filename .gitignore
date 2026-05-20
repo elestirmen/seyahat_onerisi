@@ -161,3 +161,12 @@ android_app/**/*.iml
 
 # Local toolchain artifacts (optional)
 .tooling/
+
+# Generated artifacts (do not commit)
+tum_kategoriler_optimized_rotasi.html
+# OSMnx road network graphs (large, regenerable). Runtime loads from working tree.
+*.graphml
+# Runtime production venv with site-packages (kept local)
+.venv_prod/
+# systemd override proposal (local-only deployment artifact)
+.systemd_proposal/

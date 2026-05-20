@@ -909,9 +909,8 @@ function cleanupMediaEventListeners() {
  * Initialize the modal jitter fix when DOM is ready
  */
 function initializeWithModalManager() {
-    // Wait for modal manager then only init core; feature patches are enabled via wrappers
     if (window.modalManager && window.modalManager.isInitialized) {
-        ensureCoreInitialized();
+        initializeModalJitterFix({ enableRoute: true, enablePOI: true });
     } else {
         setTimeout(initializeWithModalManager, 100);
     }
