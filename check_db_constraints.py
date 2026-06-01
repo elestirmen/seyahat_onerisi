@@ -32,22 +32,16 @@ def check_db_constraints():
         for constraint in constraints:
             print(f"  - {constraint['conname']}: {constraint['definition']}")
         
-        # Check valid media types from constraint
-        cur.execute("""
-            SELECT unnest(enum_range(NULL::media_type_enum)) as valid_type
-        """)
-        valid_types = cur.fetchall()
-        
-        if valid_types:
-            print(f"\n📊 Valid media types:")
-            for t in valid_types:
-                print(f"  - {t['valid_type']}")
+        print(f"\n📊 Media type constraints:")
+        media_type_constraints = [
+            constraint for constraint in constraints
+            if 'media_type' in constraint['definition']
+        ]
+        if media_type_constraints:
+            for constraint in media_type_constraints:
+                print(f"  - {constraint['conname']}: {constraint['definition']}")
         else:
-            print(f"\n📊 No enum found, checking constraint definition...")
-            # Try to extract from constraint definition
-            for constraint in constraints:
-                if 'media_type' in constraint['definition']:
-                    print(f"  Media type constraint: {constraint['definition']}")
+            print("  - No media type constraint found")
         
     except Exception as e:
         print(f"❌ Error: {e}")

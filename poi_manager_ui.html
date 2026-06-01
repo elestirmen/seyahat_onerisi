@@ -772,8 +772,8 @@
                                             </div>
 
                                             <div class="d-grid gap-2">
-                                                <button type="button" class="btn btn-primary" id="saveBtn"
-                                                    onclick="handleFormSubmit(event)">💾 Kaydet</button>
+                                                <button type="submit" class="btn btn-primary" id="saveBtn">💾
+                                                    Kaydet</button>
                                                 <button type="button" class="btn btn-outline-danger d-none"
                                                     id="deleteBtn" onclick="deleteCurrentPOI()">
                                                     🗑️ POI'yi Sil
@@ -2036,6 +2036,10 @@
 
             console.log('🚀 Form submit başladı');
 
+            if (!validatePOIForm()) {
+                return false;
+            }
+
             // Çift submit'i önle
             const submitBtn = document.getElementById('saveBtn');
             if (submitBtn.disabled) {
@@ -2101,7 +2105,8 @@
 
                     await fetchPOIs(document.getElementById('filterCategory').value);
                 } else {
-                    throw new Error('İşlem başarısız');
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'İşlem başarısız');
                 }
             } catch (error) {
                 showToast('İşlem sırasında hata oluştu: ' + error.message, 'error');
@@ -2232,87 +2237,7 @@
             return true;
         }
 
-        // Form submit handler
-        document.getElementById('poiForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-
-            if (!validatePOIForm()) {
-                return;
-            }
-
-            showLoading();
-            try {
-                const idVal = document.getElementById('poiId').value;
-                const name = document.getElementById('poiName').value.trim();
-                const latitude = parseFloat(document.getElementById('poiLat').value);
-                const longitude = parseFloat(document.getElementById('poiLon').value);
-                const category = document.getElementById('poiCategory').value;
-                const description = document.getElementById('poiDesc').value.trim();
-                const tags = document.getElementById('poiTags').value.trim();
-
-                const poiData = {
-                    name, category, latitude, longitude,
-                    description, tags
-                };
-
-                let response;
-                if (idVal) {
-                    // Güncelle
-                    response = await fetch(`${apiBase}/poi/${idVal}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(poiData)
-                    });
-                } else {
-                    // Ekle
-                    response = await fetch(`${apiBase}/poi`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(poiData)
-                    });
-                }
-
-                if (response.ok) {
-                    const isUpdate = idVal ? true : false;
-                    let finalPoiId = idVal;
-
-                    // Yeni POI eklendiyse response'dan ID'yi al
-                    if (!isUpdate) {
-                        const responseData = await response.json();
-                        finalPoiId = responseData.id;
-                    }
-
-                    // Rating'leri kaydet
-                    const ratings = getRatingValues();
-                    const ratingSaved = await savePOIRatings(finalPoiId, ratings);
-
-                    showToast(isUpdate ? 'POI başarıyla güncellendi!' : 'POI başarıyla eklendi!', 'success');
-
-                    if (ratingSaved) {
-                        showToast('Rating\'ler kaydedildi', 'success');
-                    } else {
-                        showToast('Rating kaydetme sırasında sorun oluştu', 'warning');
-                    }
-
-                    if (isUpdate) {
-                        // Güncelleme sonrası detayları yenile
-                        await showPOIDetail(finalPoiId);
-                        showToast('POI detayları güncellendi', 'info');
-                    } else {
-                        // Yeni POI eklendikten sonra formu temizle
-                        clearForm();
-                    }
-
-                    await fetchPOIs(document.getElementById('filterCategory').value);
-                } else {
-                    throw new Error('İşlem başarısız');
-                }
-            } catch (error) {
-                showToast('İşlem sırasında hata oluştu: ' + error.message, 'error');
-            } finally {
-                hideLoading();
-            }
-        });
+        document.getElementById('poiForm').addEventListener('submit', handleFormSubmit);
 
         // Event listeners
         document.getElementById('searchPOI').addEventListener('input', filterAndSortPOIs);

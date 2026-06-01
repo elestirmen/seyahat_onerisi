@@ -1963,7 +1963,7 @@ class POIMediaManager:
                         file_path,
                         lat,
                         lng,
-                        'photo',  # Default to photo for images
+                        'image',
                         datetime.now(),
                         '',  # Empty caption
                         False  # Not primary
@@ -2053,22 +2053,11 @@ class POIMediaManager:
                 if existing_record:
                     print(f"✅ Found existing media record, removing location...")
                     
-                    # Check if this is a photo that requires coordinates
-                    if existing_record['media_type'] == 'photo':
-                        print(f"⚠️ Photo type requires coordinates, changing to 'promotional' type...")
-                        # Update the record to set lat/lng to NULL and change media_type to 'promotional'
-                        cur.execute("""
-                            UPDATE route_media 
-                            SET lat = NULL, lng = NULL, media_type = 'promotional'
-                            WHERE id = %s
-                        """, (existing_record['id'],))
-                    else:
-                        # For non-photo types, just set lat/lng to NULL
-                        cur.execute("""
-                            UPDATE route_media 
-                            SET lat = NULL, lng = NULL 
-                            WHERE id = %s
-                        """, (existing_record['id'],))
+                    cur.execute("""
+                        UPDATE route_media
+                        SET lat = NULL, lng = NULL
+                        WHERE id = %s
+                    """, (existing_record['id'],))
                     
                     # Commit the changes
                     conn.commit()

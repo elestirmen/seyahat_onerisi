@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-Migration script to add the missing filename column to route_media table.
-This fixes the issue where the API tries to query by filename but the column doesn't exist.
+Optional compatibility migration for a derived route_media.filename column.
+
+The API uses file_path as the source of truth. If an external integration needs
+filename, keep it generated so uploads that only write file_path remain valid.
 """
 
 import os
@@ -33,8 +35,9 @@ def check_column_exists(cursor, table_name, column_name):
     return cursor.fetchone() is not None
 
 def add_filename_column():
-    """Add filename column to route_media table if it doesn't exist"""
+    """Add a generated filename column to route_media if it doesn't exist."""
     conn = None
+    cur = None
     try:
         conn = get_db_conn()
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -44,16 +47,16 @@ def add_filename_column():
         if not check_column_exists(cur, 'route_media', 'filename'):
             print("📝 Adding filename column to route_media table...")
             
-            # Add the filename column
             cur.execute("""
-                ALTER TABLE route_media 
-                ADD COLUMN filename VARCHAR(255);
+                ALTER TABLE route_media
+                ADD COLUMN filename VARCHAR(255)
+                GENERATED ALWAYS AS (regexp_replace(file_path, '^.*/', '')) STORED;
             """)
             
             # Add a comment explaining the column
             cur.execute("""
                 COMMENT ON COLUMN route_media.filename IS 
-                'Filename extracted from file_path for easier querying';
+                'Generated filename extracted from file_path for compatibility';
             """)
             
             # Create an index on filename for better performance
@@ -61,35 +64,7 @@ def add_filename_column():
                 CREATE INDEX IF NOT EXISTS idx_route_media_filename 
                 ON route_media(filename);
             """)
-            
-            print("✅ filename column added successfully")
-            
-            # Now populate existing records with filename extracted from file_path
-            print("🔄 Populating filename column for existing records...")
-            cur.execute("""
-                UPDATE route_media 
-                SET filename = CASE 
-                    WHEN file_path IS NOT NULL THEN 
-                        CASE 
-                            WHEN file_path LIKE '%/%' THEN 
-                                split_part(file_path, '/', -1)
-                            ELSE file_path
-                        END
-                    ELSE NULL
-                END
-                WHERE filename IS NULL;
-            """)
-            
-            updated_count = cur.rowcount
-            print(f"✅ Updated {updated_count} existing records with filename")
-            
-            # Make filename NOT NULL after populating
-            cur.execute("""
-                ALTER TABLE route_media 
-                ALTER COLUMN filename SET NOT NULL;
-            """)
-            
-            print("✅ filename column set to NOT NULL")
+            print("✅ Generated filename column added successfully")
             
         else:
             print("ℹ️ filename column already exists in route_media table")

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory, redirect, url_for, Blueprint, abort
+from flask import Flask, request, jsonify, send_from_directory, redirect, url_for, Blueprint
 from flask_cors import CORS
 from poi_database_adapter import POIDatabaseFactory
 from poi_media_manager import POIMediaManager
@@ -46,6 +46,59 @@ def get_db_conn():
         user=os.getenv("POI_DB_USER", "poi_user"),
         password=os.getenv("POI_DB_PASSWORD"),
     )
+
+
+def validate_poi_payload(payload, partial=False):
+    """Validate and normalize POI writes before they reach the database."""
+    if not isinstance(payload, dict):
+        return None, "Request body must be a JSON object"
+
+    cleaned = dict(payload)
+    cleaned.pop("csrf_token", None)
+    if not partial:
+        for field in ("name", "category", "latitude", "longitude"):
+            if field not in cleaned:
+                return None, f"Missing required field: {field}"
+    elif not cleaned:
+        return None, "No fields to update"
+
+    if "name" in cleaned:
+        if not isinstance(cleaned["name"], str):
+            return None, "POI name must be a string"
+        cleaned["name"] = cleaned["name"].strip()
+        if len(cleaned["name"]) < 2:
+            return None, "POI name must be at least 2 characters"
+
+    if "category" in cleaned:
+        if not isinstance(cleaned["category"], str) or not cleaned["category"].strip():
+            return None, "POI category is required"
+        cleaned["category"] = cleaned["category"].strip()
+
+    if "ratings" in cleaned and not isinstance(cleaned["ratings"], dict):
+        return None, "Ratings must be a JSON object"
+
+    has_latitude = "latitude" in cleaned
+    has_longitude = "longitude" in cleaned
+    if has_latitude != has_longitude:
+        return None, "Latitude and longitude must be provided together"
+
+    if has_latitude:
+        try:
+            latitude = float(cleaned["latitude"])
+            longitude = float(cleaned["longitude"])
+        except (TypeError, ValueError):
+            return None, "Latitude and longitude must be numeric"
+
+        if not math.isfinite(latitude) or not -90 <= latitude <= 90:
+            return None, "Latitude must be between -90 and 90"
+        if not math.isfinite(longitude) or not -180 <= longitude <= 180:
+            return None, "Longitude must be between -180 and 180"
+
+        cleaned["latitude"] = latitude
+        cleaned["longitude"] = longitude
+
+    return cleaned, None
+
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -216,7 +269,7 @@ def login_page():
       }
 
       async function autoLoginIfPresent() {
-        const existing = localStorage.getItem(TOKEN_KEY) || '';
+        const existing = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY) || '';
         if (!existing) return;
         try {
           setLoading(true);
@@ -224,6 +277,7 @@ def login_page():
           if (ok) {
             window.location.href = getNext();
           } else {
+            sessionStorage.removeItem(TOKEN_KEY);
             localStorage.removeItem(TOKEN_KEY);
           }
         } finally {
@@ -240,10 +294,12 @@ def login_page():
         try {
           const ok = await validateToken(token);
           if (ok) {
-            localStorage.setItem(TOKEN_KEY, token);
+            sessionStorage.setItem(TOKEN_KEY, token);
+            localStorage.removeItem(TOKEN_KEY);
             show('✅ Token doğrulandı', true);
             setTimeout(() => window.location.href = getNext(), 200);
           } else {
+            sessionStorage.removeItem(TOKEN_KEY);
             localStorage.removeItem(TOKEN_KEY);
             show('❌ Token geçersiz veya sunucu yapılandırılmadı', false);
             tokenInput.value = '';
@@ -734,9 +790,8 @@ def index():
     return redirect('/poi_recommendation_system.html')
 
 @app.route('/admin')
-@auth_middleware.require_auth
 def admin_panel():
-    """Admin paneli - POI yönetim paneline yönlendir."""
+    """Admin shell redirect. API requests remain token-protected."""
     return redirect('/poi_manager_ui.html')
 
 @app.route('/admin-dashboard')
@@ -861,7 +916,6 @@ def serve_poi_recommendation_system():
         return f'<h1>❌ Hata</h1><p>Dosya okunurken hata oluştu: {str(e)}</p>', 500
 
 @app.route('/poi_manager_ui.html')
-@auth_middleware.require_auth
 def serve_ui():
     try:
         # HTML dosyasını oku ve görsel desteği ekle
@@ -1850,10 +1904,12 @@ def get_poi(poi_id):
 @app.route('/api/poi', methods=['POST'])
 @auth_middleware.require_auth
 def add_poi():
+    poi_data, validation_error = validate_poi_payload(request.get_json(silent=True))
+    if validation_error:
+        return jsonify({'error': validation_error}), 400
+
     if JSON_FALLBACK:
         try:
-            poi_data = request.json
-            
             # Yeni POI için ID oluştur
             new_id = str(uuid.uuid4())
             
@@ -1892,18 +1948,28 @@ def add_poi():
     db = get_db()
     if not db:
         return jsonify({'error': 'Database connection failed'}), 500
-    
-    poi_data = request.json
-    poi_id = db.add_poi(poi_data)
-    db.disconnect()
-    return jsonify({'id': poi_id}), 201
+
+    try:
+        poi_id = db.add_poi(poi_data)
+        return jsonify({'id': poi_id}), 201
+    except Exception as e:
+        logger.exception("Error adding POI")
+        return jsonify({'error': f'Error adding POI: {str(e)}'}), 500
+    finally:
+        db.disconnect()
 
 @app.route('/api/poi/<poi_id>', methods=['PUT'])
 @auth_middleware.require_auth
 def update_poi(poi_id):
+    update_data, validation_error = validate_poi_payload(
+        request.get_json(silent=True),
+        partial=True,
+    )
+    if validation_error:
+        return jsonify({'error': validation_error}), 400
+
     if JSON_FALLBACK:
         try:
-            update_data = request.json
             test_data = load_test_data()
             
             # POI'yi bul ve güncelle
@@ -1950,13 +2016,17 @@ def update_poi(poi_id):
     db = get_db()
     if not db:
         return jsonify({'error': 'Database connection failed'}), 500
-    
-    update_data = request.json
-    result = db.update_poi(poi_id, update_data)
-    db.disconnect()
-    if result:
-        return jsonify({'success': True})
-    return jsonify({'error': 'Update failed'}), 400
+
+    try:
+        result = db.update_poi(poi_id, update_data)
+        if result:
+            return jsonify({'success': True})
+        return jsonify({'error': 'POI not found or no changes applied'}), 404
+    except Exception as e:
+        logger.exception("Error updating POI %s", poi_id)
+        return jsonify({'error': f'Error updating POI: {str(e)}'}), 500
+    finally:
+        db.disconnect()
 
 @app.route('/api/poi/<poi_id>', methods=['DELETE'])
 @auth_middleware.require_auth
@@ -1993,12 +2063,17 @@ def delete_poi(poi_id):
     if not db:
         return jsonify({'error': 'Database connection failed'}), 500
     
-    # Silme için isActive = False yapıyoruz (soft delete)
-    result = db.update_poi(poi_id, {'isActive': False})
-    db.disconnect()
-    if result:
-        return jsonify({'success': True})
-    return jsonify({'error': 'Delete failed'}), 400
+    try:
+        # Silme için isActive = False yapıyoruz (soft delete)
+        result = db.update_poi(poi_id, {'isActive': False})
+        if result:
+            return jsonify({'success': True})
+        return jsonify({'error': 'POI not found or already deleted'}), 404
+    except Exception as e:
+        logger.exception("Error deleting POI %s", poi_id)
+        return jsonify({'error': f'Error deleting POI: {str(e)}'}), 500
+    finally:
+        db.disconnect()
 
 # Rating sistemi endpoint'leri
 @app.route('/api/poi/<poi_id>/ratings', methods=['GET'])
@@ -2047,9 +2122,11 @@ def update_poi_ratings(poi_id):
     except (ValueError, TypeError):
         return jsonify({'error': 'Invalid POI ID format'}), 400
     
-    ratings_data = request.json
-    if not ratings_data or 'ratings' not in ratings_data:
+    ratings_data = request.get_json(silent=True)
+    if not isinstance(ratings_data, dict) or 'ratings' not in ratings_data:
         return jsonify({'error': 'Ratings data required'}), 400
+    if not isinstance(ratings_data['ratings'], dict):
+        return jsonify({'error': 'Ratings must be a JSON object'}), 400
     
     db = get_db()
     if not db:
@@ -3069,15 +3146,12 @@ def admin_create_route():
         existing_route = route_service.get_route_by_name(data['name'])
         if existing_route:
             success = route_service.update_route(existing_route['id'], data)
-            route_service.disconnect()
             if success:
                 return jsonify({'id': existing_route['id'], 'message': 'Route updated successfully'}), 200
             else:
                 return jsonify({'error': 'Failed to update route'}), 500
 
         route_id = route_service.create_route(data)
-        route_service.disconnect()
-
         if route_id:
             return jsonify({'id': route_id, 'message': 'Route created successfully'}), 201
         else:
@@ -3086,6 +3160,8 @@ def admin_create_route():
     except Exception as e:
         print(f"❌ Route creation error: {e}")
         return jsonify({'error': f'Failed to create route: {str(e)}'}), 500
+    finally:
+        route_service.disconnect()
 
 @app.route('/api/admin/routes/<int:route_id>', methods=['PUT'])
 @auth_middleware.require_auth
@@ -3099,8 +3175,6 @@ def admin_update_route(route_id):
             return jsonify({'error': 'Database connection failed'}), 500
         
         success = route_service.update_route(route_id, data)
-        route_service.disconnect()
-        
         if success:
             return jsonify({'message': 'Route updated successfully'})
         else:
@@ -3109,6 +3183,8 @@ def admin_update_route(route_id):
     except Exception as e:
         print(f"❌ Route update error: {e}")
         return jsonify({'error': f'Failed to update route: {str(e)}'}), 500
+    finally:
+        route_service.disconnect()
 
 @app.route('/api/admin/routes/<int:route_id>', methods=['DELETE'])
 @auth_middleware.require_auth
@@ -3122,8 +3198,6 @@ def admin_delete_route(route_id):
             return jsonify({'error': 'Database connection failed'}), 500
         
         success = route_service.delete_route(route_id)
-        route_service.disconnect()
-        
         if success:
             logger.info(f"✅ Route {route_id} deleted successfully")
             return jsonify({'message': 'Route deleted successfully'})
@@ -3134,6 +3208,8 @@ def admin_delete_route(route_id):
     except Exception as e:
         print(f"❌ Route deletion error: {e}")
         return jsonify({'error': f'Failed to delete route: {str(e)}'}), 500
+    finally:
+        route_service.disconnect()
 
 @app.route('/api/admin/routes/<int:route_id>/pois', methods=['GET'])
 @auth_middleware.require_auth
@@ -4571,12 +4647,13 @@ def get_route_media(route_id: int):
     try:
         # Check if route exists
         conn = None
+        cur = None
         try:
             conn = get_db_conn()
             cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("SELECT 1 FROM public.routes WHERE id=%s", (route_id,))
             if cur.fetchone() is None:
-                abort(404, description="Route not found")
+                return jsonify({'success': False, 'error': 'Route not found'}), 404
         finally:
             if cur:
                 cur.close()
@@ -4591,7 +4668,7 @@ def get_route_media(route_id: int):
         
     except Exception as e:
         logger.error(f"Error fetching route media {route_id}: {e}")
-        abort(500, "Database error")
+        return jsonify({'success': False, 'error': 'Database error'}), 500
 
 @app.get('/api/admin/routes/<int:route_id>/media')
 @auth_middleware.require_auth
@@ -4600,12 +4677,13 @@ def get_admin_route_media(route_id: int):
     try:
         # Check if route exists
         conn = None
+        cur = None
         try:
             conn = get_db_conn()
             cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("SELECT 1 FROM public.routes WHERE id=%s", (route_id,))
             if cur.fetchone() is None:
-                abort(404, description="Route not found")
+                return jsonify({'success': False, 'error': 'Route not found'}), 404
         finally:
             if cur:
                 cur.close()
@@ -4620,7 +4698,7 @@ def get_admin_route_media(route_id: int):
         
     except Exception as e:
         logger.error(f"Error fetching admin route media {route_id}: {e}")
-        abort(500, "Database error")
+        return jsonify({'success': False, 'error': 'Database error'}), 500
 
 
 # --- Acceptance (manual) tests (do not run automatically) ---

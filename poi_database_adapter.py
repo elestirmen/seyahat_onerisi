@@ -121,7 +121,7 @@ class PostgreSQLPOIDatabase(POIDatabase):
         """Kategori bazında POI'leri getir"""
         if not self.conn:
             raise RuntimeError("Veritabanı bağlantısı yok")
-            
+
         query = """
             SELECT 
                 name,
@@ -303,6 +303,11 @@ class PostgreSQLPOIDatabase(POIDatabase):
         """
         if not self.conn:
             raise RuntimeError("Veritabanı bağlantısı yok")
+
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM pois WHERE id = %s", (poi_id,))
+            if not cur.fetchone():
+                return False
         
         # Valid database columns
         valid_columns = {
@@ -379,7 +384,7 @@ class PostgreSQLPOIDatabase(POIDatabase):
             return cur.rowcount > 0
 
     def validate_ratings(self, ratings: Dict[str, Any]) -> Dict[str, int]:
-        """Rating verilerini validate et ve temizle. Sadece 0'dan büyük değerleri kaydet."""
+        """Rating verilerini validate et ve temizle. Sıfır değerleri de kaydet."""
         valid_categories = {
             'tarihi', 'sanat_kultur', 'doga', 'eglence', 'alisveris', 
             'spor', 'macera', 'rahatlatici', 'yemek', 'gece_hayati'
@@ -389,9 +394,7 @@ class PostgreSQLPOIDatabase(POIDatabase):
             if category in valid_categories:
                 try:
                     value_int = int(value)
-                    # Sadece 0'dan büyük değerleri kaydet
-                    if value_int > 0:
-                        validated[category] = max(0, min(100, value_int))
+                    validated[category] = max(0, min(100, value_int))
                 except (ValueError, TypeError):
                     pass  # Geçersiz değerleri atla
             else:

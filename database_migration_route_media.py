@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Route Media Database Migration (robust)
-- route_media tablosu (konum opsiyonel; 'photo' için zorunlu)
+- route_media tablosu (konum tüm medya türleri için opsiyonel)
 - routes.preview_image kolonu
 - routes meta kolonları (total_distance, difficulty_level, estimated_duration, updated_at)
 - Trigram indeksleri (varsa name/description)
@@ -95,12 +95,12 @@ def create_route_media_table(cursor):
             lng             DOUBLE PRECISION,             -- opsiyonel boylam
             caption         TEXT,
             is_primary      BOOLEAN DEFAULT FALSE,        -- ana görsel
-            media_type      VARCHAR(20) DEFAULT 'image',  -- 'image','video','audio','model_3d'
+            media_type      VARCHAR(20) DEFAULT 'image',  -- 'image','video','audio','model_3d','panorama'
             uploaded_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
             -- Geçerlilik kontrolleri
             CONSTRAINT valid_media_type CHECK (
-                media_type IN ('image','video','audio','model_3d')
+                media_type IN ('image','video','audio','model_3d','panorama')
             ),
             -- lat ve lng birlikte NULL ya da birlikte dolu olmalı
             CONSTRAINT both_or_none CHECK ((lat IS NULL) = (lng IS NULL)),
@@ -220,6 +220,13 @@ def ensure_route_media_columns(cursor):
     else:
         print("  ℹ️ route_media.preview_path already exists")
     
+    # Coordinates are optional for all supported media types. Remove the
+    # obsolete photo-only rule before normalizing the allowed values.
+    cursor.execute("""
+        ALTER TABLE route_media
+        DROP CONSTRAINT IF EXISTS coords_required_for_photos;
+    """)
+
     # Update media_type constraint if needed (include panorama)
     try:
         cursor.execute("""

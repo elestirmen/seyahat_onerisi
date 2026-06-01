@@ -31,6 +31,7 @@ from datetime import datetime
 import logging
 import time
 import hashlib
+import threading
 from functools import wraps
 from elevation_service import ElevationService
 
@@ -111,7 +112,19 @@ class RouteService:
                 
                 self.connection_string = f"postgresql://{user}:{password}@{host}:{port}/{database}"
         
+        # Gunicorn uses threaded workers in production. Keep each thread's
+        # connection isolated so concurrent requests cannot close each other's
+        # database handle.
+        self._thread_local = threading.local()
         self.conn = None
+
+    @property
+    def conn(self):
+        return getattr(self._thread_local, "conn", None)
+
+    @conn.setter
+    def conn(self, value):
+        self._thread_local.conn = value
     
     def connect(self):
         """Veritabanına bağlan"""

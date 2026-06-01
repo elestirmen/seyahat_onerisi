@@ -10231,16 +10231,6 @@ function getDifficultyStars(level) {
     return stars;
 }
 
-function getRouteTypeDisplayName(type) {
-    const typeNames = {
-        'walking': 'Yürüyüş',
-        'hiking': 'Doğa Yürüyüşü',
-        'cycling': 'Bisiklet',
-        'driving': 'Araç'
-    };
-    return typeNames[type] || type;
-}
-
 // Route preview map functionality
 let previewMaps = new Map(); // Store multiple preview maps
 
@@ -17523,30 +17513,6 @@ function setupPOIModalEventListeners() {
     };
     
     document.addEventListener('keydown', handleModalKeydown);
-}
-
-// Focus on map location
-function focusOnMap(lat, lng) {
-    if (map) {
-        map.setView([lat, lng], Math.max(map.getZoom(), 16), {
-            animate: true,
-            duration: 1
-        });
-        
-        // Add temporary highlight marker
-        const highlightMarker = L.circleMarker([lat, lng], {
-            color: '#ff0000',
-            fillColor: '#ff0000',
-            fillOpacity: 0.3,
-            radius: 20,
-            weight: 3
-        }).addTo(map);
-        
-        // Remove highlight after 3 seconds
-        setTimeout(() => {
-            map.removeLayer(highlightMarker);
-        }, 3000);
-    }
 }
 
 // Share POI
