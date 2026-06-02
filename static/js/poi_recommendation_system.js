@@ -6951,20 +6951,21 @@ async function loadRouteMediaForCard(route) {
     }, MEDIA_CONFIG.fallbackTimeout);
     
     try {
-        let response = await fetch(`${apiBase}/admin/routes/${rid}/media`, {
-            credentials: 'include'
-        });
-        
+        // Public endpoint first: it returns the same data as the admin one but
+        // needs no auth, so the public routes page no longer spams 401s (and we
+        // save one request per card). Fall back to the admin endpoint for
+        // authenticated contexts where the public one might be unavailable.
+        let response = await fetch(`${apiBase}/routes/${rid}/media`);
+
         // Clear the timeout since we got a response
         clearTimeout(timeoutId);
-        
+
         if (!response.ok) {
-            // Try public endpoint if admin requires auth
-            if (response.status === 401 || response.status === 403) {
-                try {
-                    response = await fetch(`${apiBase}/routes/${rid}/media`);
-                } catch (e) { /* ignore */ }
-            }
+            try {
+                response = await fetch(`${apiBase}/admin/routes/${rid}/media`, {
+                    credentials: 'include'
+                });
+            } catch (e) { /* ignore */ }
         }
         if (!response.ok) {
             console.warn(`Failed to load media for route ${rid}:`, response.status);

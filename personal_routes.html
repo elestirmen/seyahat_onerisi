@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="static/css/components.css"/>
   <link rel="stylesheet" href="static/css/ux-enhancements.css"/>
   <!-- Page specific CSS -->
-  <link rel="stylesheet" href="static/css/personal_routes.css?v=20260323-mobile-fs-fix2"/>
+  <link rel="stylesheet" href="static/css/personal_routes.css?v=20260602-mapfirst1"/>
   <!-- Shared feature CSS used by this page -->
   <link rel="stylesheet" href="static/css/route-details-modal.css"/>
   <link rel="stylesheet" href="static/css/poi-hover-stability-fix.css"/>
@@ -676,7 +676,7 @@
   <script src="static/js/modal-jitter-fix.js?v=20260520-jitter-cleanup"></script>
 
   <!-- Main app logic (shared) + page wrapper (isolated) -->
-  <script src="static/js/poi_recommendation_system.js?v=20260601-stability1"></script>
+  <script src="static/js/poi_recommendation_system.js?v=20260602-mapfirst1"></script>
   <script src="static/js/personal_routes.js?v=20260323-mobile-fs-fix2"></script>
 
   <!-- Simple smart preset functions -->
@@ -1354,6 +1354,90 @@
 	      .nearby-alert-feed-btn { width: 100%; }
 	    }
 	  </style>
+
+  <!-- Mobile map-first discover layout (≤768px). Self-contained; reuses the
+       existing explore flow and Leaflet map. Desktop is untouched. -->
+  <script>
+  (function () {
+    'use strict';
+    var MOBILE = window.matchMedia('(max-width: 768px)');
+    var laidOut = false;   // collapsibles + map relocation done
+    var populated = false; // map auto-loaded once
+
+    function makeCollapsible(section, label, iconClass) {
+      if (!section || section.classList.contains('m-collapsible')) return;
+      section.classList.add('m-collapsible', 'is-collapsed');
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'm-collapse-toggle';
+      btn.setAttribute('aria-expanded', 'false');
+      btn.innerHTML =
+        '<i class="m-ico fas ' + iconClass + '" aria-hidden="true"></i>' +
+        '<span class="m-label">' + label + '</span>' +
+        '<i class="m-chevron fas fa-chevron-down" aria-hidden="true"></i>';
+      btn.addEventListener('click', function () {
+        var collapsed = section.classList.toggle('is-collapsed');
+        btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      });
+      section.insertBefore(btn, section.firstChild);
+    }
+
+    function relocateMap() {
+      var content = document.getElementById('dynamicRoutesContent');
+      var mapSection = document.getElementById('mapSection');
+      if (!content || !mapSection) return;
+      var host = document.getElementById('mobileMapHost');
+      if (!host) {
+        host = document.createElement('div');
+        host.id = 'mobileMapHost';
+        content.insertBefore(host, content.firstChild);
+      }
+      // Move BEFORE the map initialises so Leaflet mounts at the new spot.
+      if (mapSection.parentNode !== host) host.appendChild(mapSection);
+      mapSection.classList.add('is-mobile-hero');
+    }
+
+    function applyLayout() {
+      if (laidOut || !MOBILE.matches) return;
+      laidOut = true;
+      relocateMap();
+      makeCollapsible(document.querySelector('.intent-discovery-section'),
+        'Nasıl gezmek istersiniz?', 'fa-compass');
+      makeCollapsible(document.querySelector('.preferences-section'),
+        'Tercihlerim &amp; öneriler', 'fa-sliders-h');
+    }
+
+    function populateMapOnce() {
+      if (populated || !MOBILE.matches) return;
+      // Don't hijack deep links — ?poi= / ?panorama= open their own views.
+      if (/[?&](poi|panorama)=/.test(window.location.search || '')) { populated = true; return; }
+      var results = document.getElementById('resultsSection');
+      if (results && results.style.display === 'block') { populated = true; return; }
+      var exploreBtn = document.getElementById('exploreBtn');
+      if (!exploreBtn) return;
+      populated = true;
+      try { exploreBtn.click(); } catch (e) {}
+    }
+
+    function init() {
+      applyLayout();
+      if (!MOBILE.matches) return;
+      if (document.readyState === 'complete') populateMapOnce();
+      else window.addEventListener('load', populateMapOnce, { once: true });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+    // Re-apply if the viewport crosses into mobile after load (rotation/resize).
+    var onChange = function () { if (MOBILE.matches) { applyLayout(); populateMapOnce(); } };
+    if (MOBILE.addEventListener) MOBILE.addEventListener('change', onChange);
+    else if (MOBILE.addListener) MOBILE.addListener(onChange);
+  })();
+  </script>
 
 </body>
 </html>

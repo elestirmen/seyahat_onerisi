@@ -64,6 +64,12 @@
       .media-image-wrapper img {
         touch-action: pan-zoom;
       }
+
+      /* Slim the oversized header to free vertical space on phones
+         (consistent with the "Keşfedilecek Yerler" discover tab) */
+      .header { padding: 12px 14px; }
+      .header h1 { font-size: 1.2rem; line-height: 1.2; }
+      .header p { display: none; }
     }
   </style>
   <!-- Touch/UX/Perf enhancements -->
@@ -310,7 +316,7 @@
     // Ensure tab state favors predefined flows when script loads
     window.currentTab = 'predefined-routes';
   </script>
-  <script src="static/js/poi_recommendation_system.js?v=20260601-stability1"></script>
+  <script src="static/js/poi_recommendation_system.js?v=20260602-mapfirst1"></script>
   <script src="static/js/modal-jitter-fix.js?v=20260520-jitter-cleanup"></script>
   <script src="static/js/predefined_routes.js"></script>
 </body>

@@ -605,3 +605,96 @@ body:has(.leaflet-pseudo-fullscreen) .explore-bottom-section {
     font-size: 1.3rem;
   }
 }
+
+/* ============================================================
+   Mobile "map-first" discover layout  (≤768px)
+   ------------------------------------------------------------
+   On phones the map becomes the hero at the top of the page and
+   the preference form (intent chips, category sliders, quick
+   select) collapses into tappable panels below it. Desktop /
+   tablet ≥769px is untouched. The JS that drives this lives in
+   an inline block at the bottom of personal_routes.html.
+   ============================================================ */
+@media (max-width: 768px) {
+  /* Slim the decorative header so the map sits high on screen one */
+  .header { padding: 12px 14px; }
+  .header h1 { font-size: 1.2rem; line-height: 1.2; }
+  .header p { display: none; }
+
+  /* Give the map room */
+  .content { padding: 8px 10px 16px; }
+
+  /* Map hero (JS relocates #mapSection into #mobileMapHost up top) */
+  #mobileMapHost { margin: 0; }
+  #mapSection.is-mobile-hero {
+    display: block !important;       /* beats inline display:none */
+    margin: 0 0 14px 0 !important;
+    padding: 6px;
+    border-radius: 14px;
+  }
+  /* The map speaks for itself — drop the heading + description on mobile */
+  #mapSection.is-mobile-hero > .section-title,
+  #mapSection.is-mobile-hero > p { display: none; }
+  #mapSection.is-mobile-hero .map-container-enhanced {
+    height: 62vh !important;
+    min-height: 340px !important;
+    margin-bottom: 0;
+    border-radius: 12px;
+  }
+
+  /* --- Collapsible preference panels --- */
+  .m-collapsible {
+    border: 1px solid #dbe3ef;
+    border-radius: 14px;
+    background: #fff;
+    margin: 0 0 12px 0;
+    padding: 0 !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  }
+  .m-collapse-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 14px 16px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .m-collapse-toggle .m-ico { color: #2563eb; width: 20px; text-align: center; }
+  .m-collapse-toggle .m-label { flex: 1; }
+  .m-collapse-toggle .m-chevron { color: #94a3b8; transition: transform 0.2s ease; }
+  .m-collapsible:not(.is-collapsed) .m-collapse-toggle .m-chevron { transform: rotate(180deg); }
+
+  /* Collapsed: hide everything except the toggle bar */
+  .m-collapsible.is-collapsed > :not(.m-collapse-toggle) { display: none !important; }
+  /* Expanded: pad the revealed content */
+  .m-collapsible:not(.is-collapsed) { padding-bottom: 14px !important; }
+  .m-collapsible > :not(.m-collapse-toggle) { padding-left: 14px; padding-right: 14px; }
+
+  /* The toggle label already names the panel — hide redundant inner chrome */
+  .m-collapsible .intent-discovery-copy,
+  .m-collapsible > .section-title,
+  .m-collapsible .preferences-description { display: none; }
+
+  /* Recommend CTA: static inside the panel (sticky breaks in a card) */
+  .m-collapsible .action-buttons-section {
+    position: static;
+    margin: 14px 0 0;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  .m-collapsible .action-buttons-section .recommend-btn { width: 100%; max-width: none; }
+
+  /* The bottom "Serbest Keşif" button is redundant once the map auto-loads
+     (we still click it programmatically, so only hide it visually). */
+  .explore-bottom-section { display: none !important; }
+}
+
