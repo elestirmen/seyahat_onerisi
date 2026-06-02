@@ -631,11 +631,29 @@ body:has(.leaflet-pseudo-fullscreen) .explore-bottom-section {
     margin: 0 0 14px 0 !important;
     padding: 6px;
     border-radius: 14px;
+    /* The base #mapSection has backdrop-filter, which creates a stacking
+       context. With the map moved to the top of the page that context would
+       TRAP the fullscreen map's z-index:9999 below the later #nearbyPOISection
+       (which also has backdrop-filter), so the "Yakınımda" panel showed over a
+       fullscreen map. Dropping it lets the fixed map escape to the root and
+       cover the whole screen. */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Safety net: while the map is fullscreen, nothing else should be visible. */
+  body:has(#mapContainer.fullscreen) #resultsSection,
+  body.personal-routes-map-fullscreen #resultsSection {
+    visibility: hidden;
   }
   /* The map speaks for itself — drop the heading + description on mobile */
   #mapSection.is-mobile-hero > .section-title,
   #mapSection.is-mobile-hero > p { display: none; }
-  #mapSection.is-mobile-hero .map-container-enhanced {
+  /* :not(.fullscreen) so the hero height never fights the fullscreen state —
+     #mapContainer gets the .fullscreen class (position:fixed, height:100vh) and
+     our !important height would otherwise pin it to 62vh, leaving the page
+     (e.g. the "Yakınımda" panel) showing under a half-screen map. */
+  #mapSection.is-mobile-hero .map-container-enhanced:not(.fullscreen) {
     height: 62vh !important;
     min-height: 340px !important;
     margin-bottom: 0;

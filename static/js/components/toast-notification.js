@@ -23,6 +23,13 @@
         }
 
         init() {
+            // This script is included in <head> without defer on some pages, so
+            // document.body can still be null when the instance is constructed.
+            // Defer until the DOM is ready instead of throwing on appendChild.
+            if (!document.body) {
+                document.addEventListener('DOMContentLoaded', () => this.init(), { once: true });
+                return;
+            }
             this.container = document.getElementById('toast-container');
             if (!this.container) {
                 this.container = document.createElement('div');
@@ -67,6 +74,12 @@
         }
 
         show(message, type = 'info', options = {}) {
+            // The container may not exist yet if a toast is requested before the
+            // DOM is ready; try to (re)initialise and bail gracefully if not.
+            if (!this.container) {
+                this.init();
+                if (!this.container) return null;
+            }
             const toastId = this.generateToastId();
             const duration = options.duration ?? this.defaultDuration;
             const title = options.title ?? this.getDefaultTitle(type);
