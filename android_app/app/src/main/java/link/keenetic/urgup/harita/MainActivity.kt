@@ -66,6 +66,9 @@ class MainActivity : AppCompatActivity() {
   private data class PendingPanoramaDeepLinkRequest(
     val alertId: String,
     val sourceType: String,
+    val panoramaPath: String,
+    val panoramaOriginalPath: String,
+    val panoramaTitle: String,
   )
 
   private lateinit var rootContainer: FrameLayout
@@ -518,13 +521,22 @@ class MainActivity : AppCompatActivity() {
       PendingPanoramaDeepLinkRequest(
         alertId = alertId,
         sourceType = targetUri?.getQueryParameter("panoramaSource")?.trim().orEmpty(),
+        panoramaPath = targetUri?.getQueryParameter("panoramaPath")?.trim().orEmpty(),
+        panoramaOriginalPath = targetUri?.getQueryParameter("panoramaOriginalPath")?.trim().orEmpty(),
+        panoramaTitle = targetUri?.getQueryParameter("panoramaTitle")?.trim().orEmpty(),
       )
     pendingPanoramaDeepLinkAttempts = 0
   }
 
   private fun dispatchPendingPanoramaDeepLink(currentUrl: String? = webView.url) {
     val request = pendingPanoramaDeepLinkRequest ?: return
-    val targetUrl = buildPanoramaTargetUrl(request.alertId, request.sourceType)
+    val targetUrl = buildPanoramaTargetUrl(
+      request.alertId,
+      request.sourceType,
+      request.panoramaPath,
+      request.panoramaOriginalPath,
+      request.panoramaTitle,
+    )
     val currentUri =
       currentUrl
         ?.trim()

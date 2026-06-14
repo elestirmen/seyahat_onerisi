@@ -8749,7 +8749,12 @@ let lastOpenedPanoramaDeepLinkKey = '';
 
 function normalizePanoramaMediaPath(path) {
     if (!path || typeof path !== 'string') return '';
-    return path.startsWith('/') ? path : `/${path}`;
+    const normalizedPath = path.trim();
+    if (!normalizedPath) return '';
+    if (/^(https?:)?\/\//i.test(normalizedPath) || normalizedPath.startsWith('blob:') || normalizedPath.startsWith('data:')) {
+        return normalizedPath;
+    }
+    return normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath.replace(/^\/+/, '')}`;
 }
 
 function sanitizePanoramaAlertIdSegment(value) {
@@ -8792,6 +8797,8 @@ function createPanoramaAlertRecord(panorama, sourceType = '') {
     const lng = typeof panorama?.lng === 'number' ? panorama.lng : parseFloat(panorama?.lng ?? panorama?.longitude);
     const caption = String(panorama?.caption || panorama?.name || '').trim();
     const alertId = derivePanoramaAlertId(panorama, resolvedSourceType);
+    const mediaPath = String(panorama?.path || panorama?.file_path || panorama?.url || panorama?.media_url || '').trim();
+    const originalPath = String(panorama?.original_path || panorama?.original_url || '').trim();
 
     return {
         ...(panorama && typeof panorama === 'object' ? panorama : {}),
@@ -8806,8 +8813,8 @@ function createPanoramaAlertRecord(panorama, sourceType = '') {
         lng: Number.isFinite(lng) ? lng : null,
         latitude: Number.isFinite(lat) ? lat : null,
         longitude: Number.isFinite(lng) ? lng : null,
-        path: String(panorama?.path || '').trim(),
-        original_path: String(panorama?.original_path || '').trim(),
+        path: mediaPath,
+        original_path: originalPath,
         pyramid_levels: Array.isArray(panorama?.pyramid_levels) ? panorama.pyramid_levels : [],
     };
 }
@@ -8852,6 +8859,24 @@ function buildPanoramaQueryFallback(params) {
         caption: panoramaTitle,
         name: panoramaTitle,
     }, sourceType);
+}
+
+function getPanoramaQueryFallbackForDeepLink(alertId = '', preferredSourceType = '') {
+    try {
+        const params = new URLSearchParams(window.location.search || '');
+        const queryAlertId = String(params.get('panorama') || '').trim();
+        if (!queryAlertId || queryAlertId !== String(alertId || '').trim()) return null;
+
+        const querySourceType = String(params.get('panoramaSource') || '').trim();
+        const normalizedPreferredSourceType = String(preferredSourceType || '').trim();
+        if (normalizedPreferredSourceType && querySourceType && querySourceType !== normalizedPreferredSourceType) {
+            return null;
+        }
+
+        return buildPanoramaQueryFallback(params);
+    } catch (_) {
+        return null;
+    }
 }
 
 async function fetchPanoramaAlertItemById(alertId, preferredSourceType = '') {
@@ -8901,17 +8926,35 @@ async function openPanoramaDeepLinkById(alertId, preferredSourceType = '', { foc
 
     const normalizedSourceType = String(preferredSourceType || '').trim();
     const deepLinkKey = `${normalizedSourceType}:${normalizedAlertId}`;
-    if (lastOpenedPanoramaDeepLinkKey === deepLinkKey) {
+    if (lastOpenedPanoramaDeepLinkKey === deepLinkKey && document.querySelector('[data-panorama-viewer-overlay="1"]')) {
         return true;
     }
 
+    const queryFallback = getPanoramaQueryFallbackForDeepLink(normalizedAlertId, normalizedSourceType);
     const panorama = await fetchPanoramaAlertItemById(normalizedAlertId, normalizedSourceType);
-    if (!panorama) return false;
-
-    lastOpenedPanoramaDeepLinkKey = deepLinkKey;
+    const panoramaToOpen = panorama && queryFallback
+        ? {
+            ...queryFallback,
+            ...panorama,
+            path: String(panorama.path || '').trim() || queryFallback.path,
+            original_path: String(panorama.original_path || '').trim() || queryFallback.original_path,
+            caption: String(panorama.caption || panorama.name || '').trim() || queryFallback.caption,
+            name: String(panorama.name || panorama.caption || '').trim() || queryFallback.name,
+            pyramid_levels: Array.isArray(panorama.pyramid_levels) && panorama.pyramid_levels.length
+                ? panorama.pyramid_levels
+                : queryFallback.pyramid_levels,
+        }
+        : (panorama || queryFallback);
+    if (!panoramaToOpen) return false;
 
     try {
-        return await openPanoramaAlertItem(panorama, { focusMap });
+        const opened = await openPanoramaAlertItem(panoramaToOpen, { focusMap });
+        if (opened) {
+            lastOpenedPanoramaDeepLinkKey = deepLinkKey;
+        } else if (lastOpenedPanoramaDeepLinkKey === deepLinkKey) {
+            lastOpenedPanoramaDeepLinkKey = '';
+        }
+        return opened;
     } catch (error) {
         if (lastOpenedPanoramaDeepLinkKey === deepLinkKey) {
             lastOpenedPanoramaDeepLinkKey = '';
@@ -8975,7 +9018,8 @@ async function openPanoramaAlertItem(panorama, { focusMap = true } = {}) {
 
     const originalUrl = normalizePanoramaMediaPath(alertItem.original_path);
     const pyramidEncoded = encodeURIComponent(JSON.stringify(Array.isArray(alertItem.pyramid_levels) ? alertItem.pyramid_levels : []));
-    openPanoramaViewer(imageUrl, alertItem.caption || alertItem.name || '360° Panorama', pyramidEncoded, originalUrl);
+    const viewerOpened = openPanoramaViewer(imageUrl, alertItem.caption || alertItem.name || '360° Panorama', pyramidEncoded, originalUrl);
+    if (viewerOpened === false) return false;
 
     if (focusMap) {
         try {
@@ -9131,18 +9175,23 @@ window.loadPanoramasLayer = loadPanoramasLayer;
 
 function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl = '') {
     try {
+        if (typeof window.__APDClosePanoramaViewer === 'function') {
+            try { window.__APDClosePanoramaViewer(); } catch (_) {}
+        }
+
         const normalContainerStyle = 'position:relative;width:90vw;max-width:1200px;height:75vh;border-radius:12px;overflow:hidden;background:#000;';
         const vrContainerStyle = 'position:relative;width:100vw;max-width:none;height:100vh;border-radius:0;overflow:hidden;background:#000;';
         const eyeOffset = 1.6;
 
         const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+        overlay.dataset.panoramaViewerOverlay = '1';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;';
 
         const container = document.createElement('div');
         container.style.cssText = normalContainerStyle;
 
         const actions = document.createElement('div');
-        actions.style.cssText = 'position:absolute;top:10px;right:10px;z-index:10000;display:flex;gap:8px;';
+        actions.style.cssText = 'position:absolute;top:10px;right:10px;z-index:2147483001;display:flex;gap:8px;';
 
         const vrBtn = document.createElement('button');
         vrBtn.innerHTML = '<i class="fas fa-vr-cardboard"></i> VR';
@@ -9155,13 +9204,13 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
 
         const title = document.createElement('div');
         title.textContent = caption || '360° Panorama';
-        title.style.cssText = 'position:absolute;left:16px;top:12px;color:#fff;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.6);z-index:10000;';
+        title.style.cssText = 'position:absolute;left:16px;top:12px;color:#fff;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.6);z-index:2147483001;';
 
         const viewerDiv = document.createElement('div');
         viewerDiv.style.cssText = 'width:100%;height:100%;';
 
         const hint = document.createElement('div');
-        hint.style.cssText = 'position:absolute;left:50%;bottom:12px;transform:translateX(-50%);padding:6px 10px;border-radius:999px;background:rgba(17,24,39,.82);color:#fff;font-size:12px;z-index:10000;display:none;text-align:center;max-width:90%;';
+        hint.style.cssText = 'position:absolute;left:50%;bottom:12px;transform:translateX(-50%);padding:6px 10px;border-radius:999px;background:rgba(17,24,39,.82);color:#fff;font-size:12px;z-index:2147483001;display:none;text-align:center;max-width:90%;';
 
         actions.appendChild(vrBtn);
         actions.appendChild(closeBtn);
@@ -10211,8 +10260,10 @@ function openPanoramaViewer(imageUrl, caption, pyramidEncoded = '', originalUrl 
             await initNormalViewer();
         })();
 
+        return true;
     } catch (e) {
         console.warn('Panorama viewer error:', e);
+        return false;
     }
 }
 window.openPanoramaViewer = openPanoramaViewer;
