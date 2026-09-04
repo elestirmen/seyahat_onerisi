@@ -641,10 +641,12 @@ body:has(.leaflet-pseudo-fullscreen) .explore-bottom-section {
     -webkit-backdrop-filter: none !important;
   }
 
-  /* Safety net: while the map is fullscreen, nothing else should be visible. */
-  body:has(#mapContainer.fullscreen) #resultsSection,
-  body.personal-routes-map-fullscreen #resultsSection {
-    visibility: hidden;
+  /* Safety net: the nearby-alert card now lives outside #resultsSection, so
+     hide every mobile discovery sibling except the host that owns the map. */
+  body:has(#mapContainer.fullscreen) #dynamicRoutesContent > :not(#mobileMapHost),
+  body.personal-routes-map-fullscreen #dynamicRoutesContent > :not(#mobileMapHost) {
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
   /* The map speaks for itself — drop the heading + description on mobile */
   #mapSection.is-mobile-hero > .section-title,
@@ -711,8 +713,4 @@ body:has(.leaflet-pseudo-fullscreen) .explore-bottom-section {
   }
   .m-collapsible .action-buttons-section .recommend-btn { width: 100%; max-width: none; }
 
-  /* The bottom "Serbest Keşif" button is redundant once the map auto-loads
-     (we still click it programmatically, so only hide it visually). */
-  .explore-bottom-section { display: none !important; }
 }
-

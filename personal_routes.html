@@ -3,15 +3,16 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: blob: http://localhost:5560 https://*; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' http://localhost:5560 https://harita.urgup.keenetic.link https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org https://*.tile.openstreetmap.org https://*.opentopomap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://api.open-elevation.com https://router.project-osrm.org;"/>
-  <title>Kişiye Göre Rotalar</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: blob: http://localhost:5560 https://*; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' http://localhost:5560 https://harita.urgup.keenetic.link https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org https://*.tile.openstreetmap.org https://*.opentopomap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://api.open-elevation.com https://router.project-osrm.org;"/>
+  <title>Size Özel Kapadokya Rotaları | Seyahat Rehberi</title>
+  <meta name="description" content="İlgi alanlarınıza göre Ürgüp ve Kapadokya'da keşfedilecek yerleri bulun, haritada görün ve rotanızı oluşturun."/>
   <!-- Base design system CSS -->
   <link rel="stylesheet" href="static/css/design-tokens.css"/>
   <link rel="stylesheet" href="static/css/layout-system.css"/>
   <link rel="stylesheet" href="static/css/components.css"/>
   <link rel="stylesheet" href="static/css/ux-enhancements.css"/>
   <!-- Page specific CSS -->
-  <link rel="stylesheet" href="static/css/personal_routes.css?v=20260602-mapfirst3"/>
+  <link rel="stylesheet" href="static/css/personal_routes.css?v=20260904-premium2"/>
   <!-- Shared feature CSS used by this page -->
   <link rel="stylesheet" href="static/css/route-details-modal.css"/>
   <link rel="stylesheet" href="static/css/poi-hover-stability-fix.css"/>
@@ -86,62 +87,102 @@
   <script src="static/js/poi-hover-integration.js" defer></script>
   <!-- Central Modal State Manager (for robust modal lifecycle) -->
   <script src="static/js/modal-state-manager.js" defer></script>
+  <!-- Premium typefaces (self-hosted variable fonts, Latin + Turkish subset) -->
+  <link rel="preload" href="static/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin/>
+  <link rel="preload" href="static/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin/>
+  <link rel="stylesheet" href="static/css/premium-fonts.css?v=20260904-premium2"/>
+  <link rel="stylesheet" href="static/css/premium-travel.css?v=20260904-premium2"/>
 </head>
 <body>
   <div class="container container-xl">
     <div class="header">
-      <h1><i class="fas fa-map-marked-alt"></i> Ürgüp POI Önerileri</h1>
-      <p>Tercihlerinizi belirleyin, size özel yerler keşfedin</p>
+      <div class="hero-kicker">Kişisel keşif deneyimi</div>
+      <h1><i class="fas fa-map-marked-alt"></i> Size göre, <em>Ürgüp</em> rotaları.</h1>
+      <p>İlgi alanlarınızı ve günün ritmini seçin; Kapadokya'nın karakterini taşıyan durakları sizin için bir araya getirelim.</p>
+      <div class="hero-highlights" aria-label="Deneyim özellikleri">
+        <span class="hero-highlight"><i class="fas fa-sparkles"></i> Akıllı öneriler</span>
+        <span class="hero-highlight"><i class="fas fa-map-location-dot"></i> Canlı harita</span>
+        <span class="hero-highlight"><i class="fas fa-route"></i> Esnek rota planı</span>
+      </div>
     </div>
 
     <div class="content p-6 md:p-8 lg:p-12">
       <!-- Kişisel (dinamik) rotalar içeriği -->
       <div class="tab-content active" id="dynamicRoutesContent">
+        <section class="discovery-toolbelt" aria-labelledby="discoveryToolsTitle">
+          <div class="discovery-toolbelt-copy">
+            <span class="toolbelt-kicker">Hızlı araçlar</span>
+            <h2 id="discoveryToolsTitle">Rotasız gezin veya yaklaşınca haberdar olun.</h2>
+            <p>Tüm noktaları haritada açın ya da görmek istediğiniz yer türleri için bildirimlerinizi ayarlayın.</p>
+          </div>
+          <div class="discovery-toolbelt-actions">
+            <div class="explore-bottom-section">
+              <button class="explore-btn" id="exploreBtn" type="button" aria-label="Serbest Keşif - Tüm POI'leri gör">
+                <span class="toolbelt-action-icon"><i class="fas fa-compass" aria-hidden="true"></i></span>
+                <span class="toolbelt-action-copy">
+                  <span class="btn-text">Serbest Keşif</span>
+                  <span class="btn-subtitle">Tüm noktaları haritada görün</span>
+                </span>
+                <i class="fas fa-arrow-right toolbelt-action-arrow" aria-hidden="true"></i>
+              </button>
+            </div>
+            <button class="notification-preferences-shortcut" id="notificationPreferencesShortcut" type="button"
+              aria-controls="nearbyAlertPreferencesPanel" aria-expanded="false">
+              <span class="toolbelt-action-icon"><i class="fas fa-bell" aria-hidden="true"></i></span>
+              <span class="toolbelt-action-copy">
+                <span class="toolbelt-action-title">Bildirim Tercihleri</span>
+                <span class="toolbelt-action-subtitle">Türleri ve uyarı mesafesini seçin</span>
+              </span>
+              <i class="fas fa-arrow-right toolbelt-action-arrow" aria-hidden="true"></i>
+            </button>
+          </div>
+        </section>
+
         <div class="intent-discovery-section" aria-label="Hızlı gezi başlangıcı">
           <div class="intent-discovery-copy">
-            <h2 class="section-title"><i class="fas fa-compass"></i> Nasıl gezmek istersiniz?</h2>
-            <p>Mevcut POI, rota süresi ve konum verisini kullanarak hızlı bir başlangıç seçin. Veri eksik olan seçenekler kural tabanlı çalışır.</p>
+            <h2 class="section-title"><i class="fas fa-compass"></i> Bugün nasıl gezmek istersiniz?</h2>
+            <p>Ritminizi seçin; konum, süre ve ilgi verilerini sizin için anlamlı bir başlangıca dönüştürelim.</p>
           </div>
           <div class="intent-chip-grid">
             <button class="intent-chip" type="button" data-intent="nearby">
               <i class="fas fa-location-dot"></i>
               <span class="intent-chip-main">Yakınımda</span>
-              <span class="intent-chip-meta">Konum verisi</span>
+              <span class="intent-chip-meta">Çevrenizi keşfedin</span>
             </button>
             <button class="intent-chip" type="button" data-intent="two_hours">
               <i class="fas fa-clock"></i>
               <span class="intent-chip-main">2 saat</span>
-              <span class="intent-chip-meta">1-3 saat rota</span>
+              <span class="intent-chip-meta">Kısa ve öz rota</span>
             </button>
             <button class="intent-chip" type="button" data-intent="walking">
               <i class="fas fa-walking"></i>
               <span class="intent-chip-main">Yürüyerek</span>
-              <span class="intent-chip-meta">Rota tipi</span>
+              <span class="intent-chip-meta">Adım adım keşif</span>
             </button>
             <button class="intent-chip" type="button" data-intent="scenic">
               <i class="fas fa-mountain"></i>
               <span class="intent-chip-main">Manzara</span>
-              <span class="intent-chip-meta">Doğa / seyir</span>
+              <span class="intent-chip-meta">En iyi seyirler</span>
             </button>
             <button class="intent-chip" type="button" data-intent="food">
               <i class="fas fa-utensils"></i>
               <span class="intent-chip-main">Yemek</span>
-              <span class="intent-chip-meta">Kategori puanı</span>
+              <span class="intent-chip-meta">Yerel tatlar</span>
             </button>
             <button class="intent-chip" type="button" data-intent="history">
               <i class="fas fa-landmark"></i>
               <span class="intent-chip-main">Tarih</span>
-              <span class="intent-chip-meta">Kategori puanı</span>
+              <span class="intent-chip-meta">Katmanlı geçmiş</span>
             </button>
             <button class="intent-chip is-estimated" type="button" data-intent="family">
               <i class="fas fa-child"></i>
               <span class="intent-chip-main">Çocukla</span>
-              <span class="intent-chip-meta">Kural tabanlı</span>
+              <span class="intent-chip-meta">Rahat tempolu</span>
             </button>
             <button class="intent-chip is-estimated" type="button" data-intent="evening">
               <i class="fas fa-moon"></i>
               <span class="intent-chip-main">Akşam</span>
-              <span class="intent-chip-meta">Saat verisi yok</span>
+              <span class="intent-chip-meta">Gün batımı sonrası</span>
             </button>
           </div>
         </div>
@@ -268,7 +309,7 @@
                   </div>
                 </div>
                 <div class="preference-slider-container">
-                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="macera">
+                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="macera" aria-label="Macera kategorisi ilgi seviyesi" touch-action="pan-x">
                   <div class="slider-track-labels">
                     <span class="track-label">İlgim yok</span>
                     <span class="track-label">Az ilgim var</span>
@@ -288,7 +329,7 @@
                   </div>
                 </div>
                 <div class="preference-slider-container">
-                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="rahatlatici">
+                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="rahatlatici" aria-label="Rahatlatıcı kategorisi ilgi seviyesi" touch-action="pan-x">
                   <div class="slider-track-labels">
                     <span class="track-label">İlgim yok</span>
                     <span class="track-label">Az ilgim var</span>
@@ -308,7 +349,7 @@
                   </div>
                 </div>
                 <div class="preference-slider-container">
-                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="spor">
+                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="spor" aria-label="Spor kategorisi ilgi seviyesi" touch-action="pan-x">
                   <div class="slider-track-labels">
                     <span class="track-label">İlgim yok</span>
                     <span class="track-label">Az ilgim var</span>
@@ -328,7 +369,7 @@
                   </div>
                 </div>
                 <div class="preference-slider-container">
-                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="alisveris">
+                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="alisveris" aria-label="Alışveriş kategorisi ilgi seviyesi" touch-action="pan-x">
                   <div class="slider-track-labels">
                     <span class="track-label">İlgim yok</span>
                     <span class="track-label">Az ilgim var</span>
@@ -348,7 +389,7 @@
                   </div>
                 </div>
                 <div class="preference-slider-container">
-                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="gece_hayati">
+                  <input type="range" min="0" max="4" value="0" step="1" class="preference-slider" id="gece_hayati" aria-label="Gece hayatı kategorisi ilgi seviyesi" touch-action="pan-x">
                   <div class="slider-track-labels">
                     <span class="track-label">İlgim yok</span>
                     <span class="track-label">Az ilgim var</span>
@@ -363,7 +404,7 @@
 
           <!-- Öneri butonu (Hızlı Seçim üstünde) -->
           <div class="action-buttons-section">
-            <button class="recommend-btn" id="recommendBtn">
+            <button class="recommend-btn" id="recommendBtn" type="button">
               <i class="fas fa-magic btn-icon"></i>
               <span class="btn-text">Önerilerimi Getir</span>
             </button>
@@ -372,33 +413,28 @@
           <div class="quick-selection-section">
             <div class="quick-selection-title"><i class="fas fa-magic"></i> Hızlı Seçim</div>
             <div class="quick-selection-buttons">
-              <button class="quick-btn" data-preset="nature"><i class="fas fa-leaf"></i> Doğa & Manzara</button>
-              <button class="quick-btn" data-preset="culture"><i class="fas fa-landmark"></i> Kültür & Tarih</button>
-              <button class="quick-btn" data-preset="food"><i class="fas fa-utensils"></i> Gastronomi</button>
-              <button class="quick-btn" data-preset="relax"><i class="fas fa-spa"></i> Dinlenme & Wellness</button>
-              <button class="quick-btn" data-preset="adventure"><i class="fas fa-mountain"></i> Macera & Spor</button>
-              <button class="quick-btn" data-preset="nightlife"><i class="fas fa-moon"></i> Gece Hayatı</button>
+              <button class="quick-btn" type="button" data-preset="nature"><i class="fas fa-leaf"></i> Doğa & Manzara</button>
+              <button class="quick-btn" type="button" data-preset="culture"><i class="fas fa-landmark"></i> Kültür & Tarih</button>
+              <button class="quick-btn" type="button" data-preset="food"><i class="fas fa-utensils"></i> Gastronomi</button>
+              <button class="quick-btn" type="button" data-preset="relax"><i class="fas fa-spa"></i> Dinlenme & Wellness</button>
+              <button class="quick-btn" type="button" data-preset="adventure"><i class="fas fa-mountain"></i> Macera & Spor</button>
+              <button class="quick-btn" type="button" data-preset="nightlife"><i class="fas fa-moon"></i> Gece Hayatı</button>
 
               <!-- Akıllı Preset Butonları - JavaScript'e bağımlı olmadan çalışır -->
-              <button class="quick-btn smart-preset" onclick="event.preventDefault(); setSmartPreset('gunesli-gun'); return false;">
+              <button class="quick-btn smart-preset" type="button" onclick="event.preventDefault(); setSmartPreset('gunesli-gun'); return false;">
                 <i class="fas fa-sun"></i> Güneşli Gün
               </button>
-              <button class="quick-btn smart-preset" onclick="event.preventDefault(); setSmartPreset('trend-yerler'); return false;">
+              <button class="quick-btn smart-preset" type="button" onclick="event.preventDefault(); setSmartPreset('trend-yerler'); return false;">
                 <i class="fas fa-fire"></i> Trend Yerler
               </button>
-              <button class="quick-btn smart-preset" onclick="event.preventDefault(); setSmartPreset('aksam-yemegi'); return false;">
+              <button class="quick-btn smart-preset" type="button" onclick="event.preventDefault(); setSmartPreset('aksam-yemegi'); return false;">
                 <i class="fas fa-moon"></i> Akşam Yemeği
               </button>
             </div>
           </div>
         </div>
 
-	        <!-- Öneri sonuçları bölümü -->
-
-	        <div class="results-section" id="resultsSection">
-	          <h2 class="section-title"><i class="fas fa-star"></i> Size Özel Öneriler</h2>
-
-	          <!-- Yakınımda gezilecek yerler -->
+	        <!-- Yakınımda gezilecek yerler ve bildirim tercihleri her zaman erişilebilir. -->
 	          <div class="nearby-poi-section" id="nearbyPOISection">
 	            <div class="nearby-poi-header">
 	              <h3 class="section-title" style="margin: 0;"><i class="fas fa-location-dot"></i> Yakınımda Gezilecek Yerler</h3>
@@ -441,7 +477,8 @@
 	                  <h4><i class="fas fa-bell"></i> Yaklaşınca Uyar</h4>
 	                  <p>Seçtiğiniz POI türleri uyarı mesafesine girdiğinde uygulama bildirim göstersin.</p>
 	                </div>
-	                <button class="nearby-poi-btn" id="nearbyAlertPreferencesBtn" type="button">
+	                <button class="nearby-poi-btn" id="nearbyAlertPreferencesBtn" type="button"
+	                  aria-controls="nearbyAlertPreferencesPanel" aria-expanded="false">
 	                  <i class="fas fa-sliders-h"></i> Uyarı Tercihleri
 	                </button>
 	              </div>
@@ -484,6 +521,10 @@
 	            <div class="nearby-poi-results" id="nearbyResults"></div>
 	          </div>
 
+	        <!-- Öneri sonuçları bölümü -->
+	        <div class="results-section" id="resultsSection">
+	          <h2 class="section-title"><i class="fas fa-star"></i> Size Özel Öneriler</h2>
+
 	          <div id="loadingIndicator" class="loading">
 	            <div class="loading__spinner"></div>
 	            <p class="loading__text">Öneriler hazırlanıyor...</p>
@@ -495,7 +536,7 @@
             <h3 class="section-title"><i class="fas fa-map-marked-alt"></i> Öneriler Haritası</h3>
             <p style="color: #666; font-size: 1rem; margin-bottom: 20px; text-align: center; line-height: 1.6;">Önerilen yerleri harita üzerinde görün ve detaylarına ulaşın. Marker'lara tıklayarak daha fazla bilgi alabilirsiniz.</p>
             <div id="mapContainer" class="map-container-enhanced">
-              <div class="mobile-map-fab" aria-hidden="false"><button class="fab-button" id="dynamicMapFullscreenBtn" title="Tam Ekran"><i class="fas fa-expand"></i></button></div>
+              <div class="mobile-map-fab" aria-hidden="false"><button class="fab-button" id="dynamicMapFullscreenBtn" type="button" title="Tam Ekran" aria-label="Haritayı tam ekran göster"><i class="fas fa-expand"></i></button></div>
             </div>
             <div id="elevationChartContainer" class="elevation-chart-hidden"></div>
           </div>
@@ -509,15 +550,6 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Sayfa Altı: Serbest Keşif (tüm POI'leri gör) -->
-  <div class="explore-bottom-section">
-    <button class="explore-btn" id="exploreBtn" aria-label="Serbest Keşif - Tüm POI'leri gör">
-      <i class="fas fa-compass btn-icon"></i>
-      <span class="btn-text">Serbest Keşif</span>
-      <span class="btn-subtitle">Tüm POI'leri Gör</span>
-    </button>
   </div>
 
   <!-- Shared overlays and modals used by this page -->
@@ -559,13 +591,13 @@
     <div class="media-modal-content">
       <div class="media-modal-header">
         <h3 class="media-modal-title" id="mediaModalTitle">Medya Görüntüleyici</h3>
-        <button class="media-modal-close" id="mediaModalClose" aria-label="Kapat"><i class="fas fa-times"></i></button>
+        <button class="media-modal-close" id="mediaModalClose" type="button" aria-label="Kapat"><i class="fas fa-times"></i></button>
       </div>
       <div class="media-modal-body" id="mediaModalBody">
         <div class="loading"><div class="loading__spinner"></div><p class="loading__text">Medya yükleniyor...</p></div>
       </div>
-      <button class="media-navigation media-nav-prev media-nav-btn" id="mediaPrevBtn" aria-label="Önceki"><i class="fas fa-chevron-left"></i></button>
-      <button class="media-navigation media-nav-next media-nav-btn" id="mediaNextBtn" aria-label="Sonraki"><i class="fas fa-chevron-right"></i></button>
+      <button class="media-navigation media-nav-prev media-nav-btn" id="mediaPrevBtn" type="button" aria-label="Önceki medya"><i class="fas fa-chevron-left"></i></button>
+      <button class="media-navigation media-nav-next media-nav-btn" id="mediaNextBtn" type="button" aria-label="Sonraki medya"><i class="fas fa-chevron-right"></i></button>
       <div class="media-counter" id="mediaCounter" style="display: none;">1 / 1</div>
       <div class="media-thumbnails" id="mediaThumbnails" style="display: none;"></div>
     </div>
@@ -580,7 +612,7 @@
               <h4 class="modal-title" id="poiDetailModalLabel">POI Detayları</h4>
               <div class="poi-modal-category-badge" id="poiModalCategory"></div>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
           </div>
         </div>
         <div class="modal-body p-0">
@@ -589,7 +621,7 @@
               <div class="media-gallery-main" id="mediaGalleryMain">
                 <div class="no-media-placeholder"><i class="fas fa-image fa-3x text-muted"></i><p class="text-muted mt-2">Bu POI için medya bulunamadı</p></div>
               </div>
-              <div class="media-gallery-controls"><button class="media-nav-btn prev-btn" id="poiMediaPrevBtn"><i class="fas fa-chevron-left"></i></button><button class="media-nav-btn next-btn" id="poiMediaNextBtn"><i class="fas fa-chevron-right"></i></button></div>
+              <div class="media-gallery-controls"><button class="media-nav-btn prev-btn" id="poiMediaPrevBtn" type="button" aria-label="Önceki POI görseli"><i class="fas fa-chevron-left"></i></button><button class="media-nav-btn next-btn" id="poiMediaNextBtn" type="button" aria-label="Sonraki POI görseli"><i class="fas fa-chevron-right"></i></button></div>
               <div class="media-gallery-thumbnails" id="mediaGalleryThumbnails"></div>
             </div>
           </div>
@@ -621,11 +653,11 @@
                     <div class="poi-actions-card mt-3">
                       <h5 class="section-title"><i class="fas fa-tools text-info me-2"></i> İşlemler</h5>
                       <div class="poi-action-buttons">
-                        <button class="btn btn-primary btn-sm w-100 mb-2" id="showOnMapBtn"><i class="fas fa-map-marker-alt me-2"></i> Haritada Göster</button>
-                        <button class="btn btn-success btn-sm w-100 mb-2" id="addToRouteBtn"><i class="fas fa-plus me-2"></i> Rotaya Ekle</button>
-                        <button class="btn btn-info btn-sm w-100 mb-2" id="openInGoogleMapsBtn"><i class="fab fa-google me-2"></i> Google Maps'te Aç</button>
-                        <button class="btn btn-outline-secondary btn-sm w-100" id="sharePoiBtn"><i class="fas fa-share-alt me-2"></i> Paylaş</button>
-                        <button class="btn btn-outline-danger btn-sm w-100 mt-2" id="togglePoiAlertMuteBtn"><i class="fas fa-bell-slash me-2"></i> Bu POI İçin Bildirim Gönderme</button>
+                        <button class="btn btn-primary btn-sm w-100 mb-2" id="showOnMapBtn" type="button"><i class="fas fa-map-marker-alt me-2"></i> Haritada Göster</button>
+                        <button class="btn btn-success btn-sm w-100 mb-2" id="addToRouteBtn" type="button"><i class="fas fa-plus me-2"></i> Rotaya Ekle</button>
+                        <button class="btn btn-info btn-sm w-100 mb-2" id="openInGoogleMapsBtn" type="button"><i class="fab fa-google me-2"></i> Google Maps'te Aç</button>
+                        <button class="btn btn-outline-secondary btn-sm w-100" id="sharePoiBtn" type="button"><i class="fas fa-share-alt me-2"></i> Paylaş</button>
+                        <button class="btn btn-outline-danger btn-sm w-100 mt-2" id="togglePoiAlertMuteBtn" type="button"><i class="fas fa-bell-slash me-2"></i> Bu POI İçin Bildirim Gönderme</button>
                         <small class="text-muted d-block mt-2" id="poiAlertMuteHelp">Bu ayar sadece sizin cihazınız için geçerlidir.</small>
                       </div>
                     </div>
@@ -640,7 +672,7 @@
   </div>
 
   <div id="routeDetailsPanel" class="route-details-panel">
-    <div class="route-header"><h3>Rota Detayları</h3><button class="close-btn" onclick="RouteDetailsPanel.hide()">×</button></div>
+    <div class="route-header"><h3>Rota Detayları</h3><button class="close-btn" type="button" aria-label="Rota detaylarını kapat" onclick="RouteDetailsPanel.hide()">×</button></div>
     <div class="route-summary">
       <div class="summary-item"><i class="fas fa-route"></i><span id="routeDistance">-- km</span></div>
       <div class="summary-item"><i class="fas fa-clock"></i><span id="routeDuration">-- saat</span></div>
@@ -672,19 +704,19 @@
   <script src="static/js/rate-limiter.js"></script>
   <script src="static/js/elevation-chart.js"></script>
   <script src="static/js/map-layer-control.js"></script>
+  <!-- Display-time normalisation for imported route names/descriptions -->
+  <script src="static/js/route-content.js?v=20260904-premium2"></script>
   <script src="static/js/route-details-modal.js"></script>
   <script src="static/js/modal-jitter-fix.js?v=20260520-jitter-cleanup"></script>
 
   <!-- Main app logic (shared) + page wrapper (isolated) -->
-  <script src="static/js/poi_recommendation_system.js?v=20260602-mapfirst1"></script>
-  <script src="static/js/personal_routes.js?v=20260323-mobile-fs-fix2"></script>
+  <script src="static/js/poi_recommendation_system.js?v=20260904-premium2"></script>
+  <script src="static/js/personal_routes.js?v=20260731-review3"></script>
 
   <!-- Simple smart preset functions -->
   <script>
     // Akıllı preset fonksiyonları - JavaScript'e bağımlı olmadan çalışır
     // Smart preset lock mekanizması
-    let smartPresetLock = false;
-    let smartPresetValues = {};
 
     // Debug logging only when the page is opened with ?debug=1
     // (or window.__SMART_PRESET_DEBUG__ is set), so production stays quiet.
@@ -757,9 +789,6 @@
       console.log('✅ Found preset:', preferences);
 
       // Lock mekanizmasını aktif et
-      smartPresetLock = true;
-      smartPresetValues = { ...preferences };
-
       const valueLabels = ['İlgilenmiyorum', 'Az İlgim Var', 'İlgim Var', 'Çok İlgim Var', 'Kesinlikle İhtiyacım Var'];
       let updatedCount = 0;
 
@@ -796,44 +825,6 @@
       });
 
       console.log(`🎉 Smart preset "${type}" applied: ${updatedCount} sliders updated`);
-
-      // Lock mekanizmasını 5 saniye sonra kaldır
-      setTimeout(() => {
-        smartPresetLock = false;
-        console.log('🔓 Smart preset lock released');
-      }, 5000);
-
-      // Sürekli kontrol et - slider'lar hala doğru mu?
-      let checkInterval = setInterval(() => {
-        if (!smartPresetLock) {
-          clearInterval(checkInterval);
-          console.log('🔍 Smart preset monitoring stopped');
-          return;
-        }
-
-        let stillCorrect = 0;
-        Object.entries(preferences).forEach(([category, expectedValue]) => {
-          const slider = document.getElementById(category);
-          if (slider && parseInt(slider.value) === expectedValue) {
-            stillCorrect++;
-          } else {
-            console.warn(`⚠️ ${category} changed! Expected: ${expectedValue}, Got: ${slider ? slider.value : 'N/A'}`);
-            // Tekrar düzelt
-            if (slider) {
-              slider.value = expectedValue;
-              const display = document.getElementById(category + '-value');
-              if (display) {
-                display.textContent = valueLabels[expectedValue] || valueLabels[0];
-              }
-              console.log(`🔧 ${category} corrected back to ${expectedValue}`);
-            }
-          }
-        });
-
-        if (stillCorrect < Object.keys(preferences).length) {
-          console.log(`🔄 Corrected ${Object.keys(preferences).length - stillCorrect} sliders`);
-        }
-      }, 200);
 
       // Visual feedback
       showPresetFeedback(type);
@@ -1355,14 +1346,13 @@
 	    }
 	  </style>
 
-  <!-- Mobile map-first discover layout (≤768px). Self-contained; reuses the
-       existing explore flow and Leaflet map. Desktop is untouched. -->
+  <!-- Mobile discovery layout (≤768px). The two primary tools stay first,
+       followed by the Leaflet map and collapsible preference panels. -->
   <script>
   (function () {
     'use strict';
     var MOBILE = window.matchMedia('(max-width: 768px)');
     var laidOut = false;   // collapsibles + map relocation done
-    var populated = false; // map auto-loaded once
 
     function makeCollapsible(section, label, iconClass) {
       if (!section || section.classList.contains('m-collapsible')) return;
@@ -1390,7 +1380,9 @@
       if (!host) {
         host = document.createElement('div');
         host.id = 'mobileMapHost';
-        content.insertBefore(host, content.firstChild);
+        var toolbelt = content.querySelector('.discovery-toolbelt');
+        if (toolbelt) toolbelt.insertAdjacentElement('afterend', host);
+        else content.insertBefore(host, content.firstChild);
       }
       // Move BEFORE the map initialises so Leaflet mounts at the new spot.
       if (mapSection.parentNode !== host) host.appendChild(mapSection);
@@ -1407,23 +1399,8 @@
         'Tercihlerim &amp; öneriler', 'fa-sliders-h');
     }
 
-    function populateMapOnce() {
-      if (populated || !MOBILE.matches) return;
-      // Don't hijack deep links — ?poi= / ?panorama= open their own views.
-      if (/[?&](poi|panorama)=/.test(window.location.search || '')) { populated = true; return; }
-      var results = document.getElementById('resultsSection');
-      if (results && results.style.display === 'block') { populated = true; return; }
-      var exploreBtn = document.getElementById('exploreBtn');
-      if (!exploreBtn) return;
-      populated = true;
-      try { exploreBtn.click(); } catch (e) {}
-    }
-
     function init() {
       applyLayout();
-      if (!MOBILE.matches) return;
-      if (document.readyState === 'complete') populateMapOnce();
-      else window.addEventListener('load', populateMapOnce, { once: true });
     }
 
     if (document.readyState === 'loading') {
@@ -1433,7 +1410,7 @@
     }
 
     // Re-apply if the viewport crosses into mobile after load (rotation/resize).
-    var onChange = function () { if (MOBILE.matches) { applyLayout(); populateMapOnce(); } };
+    var onChange = function () { if (MOBILE.matches) applyLayout(); };
     if (MOBILE.addEventListener) MOBILE.addEventListener('change', onChange);
     else if (MOBILE.addListener) MOBILE.addListener(onChange);
   })();

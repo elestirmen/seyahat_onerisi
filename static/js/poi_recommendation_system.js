@@ -345,6 +345,21 @@ function getCategoryStyle(category) {
  * @param {string} category - The category key
  * @returns {string} Display name
  */
+/**
+ * The category name without the emoji that poi-categories.js bakes into
+ * display_name ("🍽️ Gastronomik" -> "Gastronomik").
+ *
+ * Use this wherever the category is already shown with an icon, so the reader
+ * is not given the same symbol two or three times over. The emoji-bearing
+ * display_name stays untouched for the places that rely on it (map markers,
+ * the admin screens) - this only strips it at the point of display.
+ */
+function getCategoryLabel(category) {
+    return String(getCategoryDisplayName(category) || '')
+        .replace(/^[\p{Extended_Pictographic}️‍\s]+/u, '')
+        .trim();
+}
+
 function getCategoryDisplayName(category) {
     // Use centralized category configuration if available and not the same function
     if (typeof window !== 'undefined' && window.getCategoryDisplayName && window.getCategoryDisplayName !== getCategoryDisplayName) {
@@ -3251,6 +3266,24 @@ async function createSimpleRoute(waypoints) {
 
 // Show notification
 function showNotification(message, type = 'info') {
+    // There are two notification channels on these pages: the toast component
+    // (which queues messages in a stacking container) and this one, which
+    // appended a bare fixed-position div straight to <body>. Both pinned to the
+    // top right corner, so a toast and a notification raised at the same moment
+    // landed on top of each other. Where the toast system is present it owns the
+    // corner; the div below stays as the fallback for pages that omit it.
+    // Call sites open these strings with a decorative emoji ("🗺️ ...",
+    // "✅ ..."). The toast already shows an icon for the message type, so the
+    // emoji only doubles it up.
+    const text = String(message == null ? '' : message)
+        .replace(/^[\p{Extended_Pictographic}️‍\s]+/u, '');
+
+    if (typeof window.showToast === 'function') {
+        window.showToast(text, type);
+        return;
+    }
+    message = text;
+
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.style.cssText = `
@@ -6871,23 +6904,73 @@ function displayPredefinedRoutes(routes) {
 function createRouteCard(route) {
     const difficultyLevel = route.difficulty_level || 1;
     const difficultyStars = createDifficultyStars(difficultyLevel);
-    const duration = Math.round((route.estimated_duration || 0) / 60);
     const stopCount = route.poi_count || (route.waypoints ? route.waypoints.length : 0);
-    const distance = ensureRouteDistance(route).toFixed(1);
     const placeholderImage = ROUTE_PLACEHOLDER_400x200;
     const imageUrl = route.preview_image || placeholderImage;
     const rid = route.id || route._id;
-    
-    console.warn('🏷️ Creating route card:', {
-        name: route.name,
-        stopCount: stopCount,
-        rawPoiCount: route.poi_count
-    });
+
+    // Imported GPX tracks arrive with names like "Wikiloc - ... 13/06/2021" and
+    // telemetry in the description field. RouteContent normalises both for
+    // display; see static/js/route-content.js.
+    const RC = window.RouteContent;
+    const title = RC ? RC.title(route) : (route.name || 'İsimsiz Rota');
+    const description = RC ? RC.description(route) : (route.description || '');
+    const esc = RC ? RC.escapeHtml : (v) => String(v == null ? '' : v);
+
+    const distanceText = RC
+        ? RC.distanceLabel(ensureRouteDistance(route))
+        : `${ensureRouteDistance(route).toFixed(1)} km`;
+    const durationText = RC ? RC.durationLabel(route.estimated_duration) : '';
+    const stopsText = RC ? RC.stopsLabel(stopCount) : `${stopCount} durak`;
+
+    // A metadata chip is only worth its space when it carries a real value -
+    // "0 saat" and "0 durak" say nothing. And when the route has no name of its
+    // own, the title is already "Yürüyüş rotası · 19,4 km", so the distance
+    // chip would just repeat it.
+    const titleCarriesDistance = RC ? !RC.hasName(route) : false;
+    const metaItems = [];
+    if (distanceText && !titleCarriesDistance) {
+        metaItems.push(`
+                <div class="route-meta-item" aria-label="Mesafe: ${esc(distanceText)}">
+                    <i class="fas fa-route" aria-hidden="true"></i>
+                    <span class="route-distance">${esc(distanceText)}</span>
+                </div>`);
+    }
+    if (durationText) {
+        metaItems.push(`
+                <div class="route-meta-item" aria-label="Süre: ${esc(durationText)}">
+                    <i class="fas fa-clock" aria-hidden="true"></i>
+                    <span>${esc(durationText)}</span>
+                </div>`);
+    }
+    if (stopsText) {
+        metaItems.push(`
+                <div class="route-meta-item" aria-label="Durak sayısı: ${esc(stopsText)}">
+                    <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+                    <span>${esc(stopsText)}</span>
+                </div>`);
+    }
+    // Five dots alone leave the reader counting; the word says it outright and
+    // the dots stay beside it as the at-a-glance scale.
+    const difficultyText = (RC && RC.difficultyLabel(difficultyLevel)) || '';
+    metaItems.push(`
+                <div class="route-meta-item route-difficulty" aria-label="Zorluk seviyesi: ${esc(
+                    difficultyText || difficultyLevel
+                )}">
+                    <i class="fas fa-mountain" aria-hidden="true"></i>
+                    <span class="route-difficulty-label">${esc(difficultyText)}</span>
+                    <div class="difficulty-stars">${difficultyStars}</div>
+                </div>`);
+
+    // No stored description means no paragraph, rather than filler prose.
+    const descriptionMarkup = description
+        ? `\n                <p class="route-card-description">${esc(description)}</p>`
+        : '';
 
     return `
         <div class="route-card" data-route-id="${rid}">
             <div class="route-card-image">
-                <img src="${imageUrl}" alt="${route.name || 'Rota görseli'}" data-placeholder="${placeholderImage}" onerror="handleImageError(event)" class="route-card-main-image" loading="lazy">
+                <img src="${imageUrl}" alt="${esc(title)}" data-placeholder="${placeholderImage}" onerror="handleImageError(event)" class="route-card-main-image" loading="lazy">
                 <div class="route-card-media-overlay" id="route-media-overlay-${rid}" style="display:none;">
                     <div class="route-card-media-loading">
                         <i class="fas fa-spinner fa-spin"></i>
@@ -6897,30 +6980,14 @@ function createRouteCard(route) {
                 <div class="route-mini-map mini-map-overlay" id="mini-map-${rid}" aria-label="Rota önizleme haritası"></div>
             </div>
             <div class="route-card-header">
-                <h3 class="route-card-title">${route.name || 'İsimsiz Rota'}</h3>
+                <h3 class="route-card-title">${esc(title)}</h3>
                 <div class="route-card-actions">
                     <button class="favorite-btn" data-route-id="${route.id}" aria-label="Favorilere ekle">
                         <i class="fas fa-star"></i>
                     </button>
-                </div>
-                <p class="route-card-description">${(route.description && route.description.trim() !== '') ? route.description : 'Bu rota için özel bir açıklama bulunmuyor. Ancak bölgenin en güzel manzaralarını, tarihi ve kültürel zenginliklerini keşfetme fırsatı sunan eşsiz bir deneyim sizi bekliyor. Doğanın kalbinde unutulmaz anılar biriktirmeye hazır mısınız?'}</p>
+                </div>${descriptionMarkup}
             </div>
-            <div class="route-card-meta">
-                <div class="route-meta-item" aria-label="Mesafe: ${distance} km">
-                    <span class="route-distance">${distance} km</span>
-                </div>
-                <div class="route-meta-item" aria-label="Süre: ${duration} saat">
-                    <i class="fas fa-clock" aria-hidden="true"></i>
-                    <span>${duration} saat</span>
-                </div>
-                <div class="route-meta-item" aria-label="Durak sayısı: ${stopCount}">
-                    <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
-                    <span>${stopCount} durak</span>
-                </div>
-                <div class="route-meta-item route-difficulty" aria-label="Zorluk seviyesi: ${difficultyLevel}">
-                    <i class="fas fa-mountain" aria-hidden="true"></i>
-                    <div class="difficulty-stars">${difficultyStars}</div>
-                </div>
+            <div class="route-card-meta">${metaItems.join('')}
             </div>
         </div>
     `;
@@ -7127,46 +7194,49 @@ function showRouteCardFallback(routeId) {
 // Create fallback content based on route type
 function createRouteFallbackContent(route) {
     const routeType = route.route_type || 'walking';
-    const routeName = route.name || 'Rota';
-    
-    // Define fallback content for different route types
+    const RC = window.RouteContent;
+    const esc = RC ? RC.escapeHtml : (v) => String(v == null ? '' : v);
+
+    // Route types stay distinguishable, but within the palette of the site
+    // (forest, copper, sage, stone) instead of the stock red/green/blue/amber
+    // set - a saturated traffic-light card next to a photograph of Cappadocia
+    // is the loudest thing on the page.
     const fallbackConfigs = {
         'walking': {
             icon: 'fas fa-walking',
-            color: '#059669',
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            text: 'Yürüyüş Rotası'
+            background: 'linear-gradient(150deg, #2e4a3e 0%, #1c3128 100%)',
+            text: 'Yürüyüş rotası'
         },
         'hiking': {
             icon: 'fas fa-mountain',
-            color: '#d97706',
-            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-            text: 'Doğa Yürüyüşü'
+            background: 'linear-gradient(150deg, #b86e3b 0%, #8a4b25 100%)',
+            text: 'Doğa yürüyüşü'
         },
         'cycling': {
             icon: 'fas fa-bicycle',
-            color: '#2563eb',
-            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-            text: 'Bisiklet Rotası'
+            background: 'linear-gradient(150deg, #7d9488 0%, #4f6559 100%)',
+            text: 'Bisiklet rotası'
         },
         'driving': {
             icon: 'fas fa-car',
-            color: '#dc2626',
-            background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-            text: 'Araç Rotası'
+            background: 'linear-gradient(150deg, #6b6152 0%, #423b31 100%)',
+            text: 'Araç rotası'
         }
     };
-    
+
     const config = fallbackConfigs[routeType] || fallbackConfigs['walking'];
-    
+
+    // The card prints the route name immediately below this panel, so repeating
+    // it here only crowded the tile (and collided with the shape preview in the
+    // corner). The panel now carries the route type, and lets the mini map of
+    // the actual track be the thing you look at.
     return `
         <div class="route-fallback-content" style="background: ${config.background};">
             <div class="route-fallback-icon">
-                <i class="${config.icon}" style="color: white; font-size: 2.5rem;"></i>
+                <i class="${config.icon}" aria-hidden="true"></i>
             </div>
             <div class="route-fallback-text">
-                <h4 style="color: white; margin: 0; font-size: 1rem; font-weight: 600;">${routeName}</h4>
-                <p style="color: rgba(255,255,255,0.9); margin: 0.5rem 0 0 0; font-size: 0.85rem;">${config.text}</p>
+                <p>${esc(config.text)}</p>
             </div>
         </div>
     `;
@@ -8396,17 +8466,12 @@ async function selectPredefinedRoute(route) {
     
     await displayRoute();
 
-    // Store current route id globally and refresh its media markers
-    window.currentRouteId = route.id || route._id;
-    await refreshMediaMarkers(window.currentRouteId);
-
-
-    // Store selected route for reference
+    // Store the current route and refresh its media markers. This ran twice in
+    // a row (a duplicated block), which fetched the media twice and raised the
+    // "Medya işaretleri başarıyla yenilendi" toast twice for one selection.
     window.currentSelectedRoute = route;
     window.currentRouteId = route.id || route._id;
     await refreshMediaMarkers(window.currentRouteId);
-
-    // Log removed for cleaner console
 }
 
 function displaySelectedRoute(route, pois) {
@@ -11734,23 +11799,24 @@ async function displayRecommendations(recommendationData) {
     // Show route section
     routeSection.style.display = 'block';
 
-    // Create modern recommendation display
+    // Create modern recommendation display. A counter reading zero tells the
+    // reader nothing, so an empty bucket drops out of the summary instead of
+    // sitting there as "0 Alternatif".
+    const summaryStats = [
+        { n: recommendationData.highScore.length + recommendationData.lowScore.length, label: 'Toplam Öneri' },
+        { n: recommendationData.highScore.length, label: 'Size Özel' },
+        { n: recommendationData.lowScore.length, label: 'Alternatif' }
+    ].filter(stat => stat.n > 0);
+
     let html = `
         <div class="recommendations-modern">
             <div class="recommendations-header">
                 <div class="recommendations-stats">
+                    ${summaryStats.map(stat => `
                     <div class="stat-item">
-                        <span class="stat-number">${recommendationData.highScore.length + recommendationData.lowScore.length}</span>
-                        <span class="stat-label">Toplam Öneri</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">${recommendationData.highScore.length}</span>
-                        <span class="stat-label">Size Özel</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">${recommendationData.lowScore.length}</span>
-                        <span class="stat-label">Alternatif</span>
-                    </div>
+                        <span class="stat-number">${stat.n}</span>
+                        <span class="stat-label">${stat.label}</span>
+                    </div>`).join('')}
                 </div>
             </div>
     `;
@@ -12517,19 +12583,18 @@ function createModernPOICards(pois, type = 'primary') {
         const icon = getCategoryIcon(poi.category);
         const iconElement = icon.includes('<i') ? icon : `<span>${icon}</span>`;
         return `
-        <div class="modern-poi-card poi-card ${type}" data-poi-id="${poi.id || poi._id}" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
+        <div class="modern-poi-card poi-card ${type}" data-poi-id="${poi.id || poi._id}" data-poi-category="${String(poi.category || 'diger').replace(/"/g, '&quot;')}" onclick="focusOnMap(${poi.latitude}, ${poi.longitude})">
             <div class="poi-card__image-container">
                 <div class="poi-card__image-placeholder loading__skeleton">
                     <i class="fas fa-image"></i>
                 </div>
                 <div class="poi-card__image-overlay"></div>
-                <span class="poi-card__category">${getCategoryDisplayName(poi.category)}</span>
             </div>
-            
+
             <div class="poi-card-header">
                 <div class="poi-category-badge">
                     ${iconElement}
-                    <span>${getCategoryDisplayName(poi.category)}</span>
+                    <span>${getCategoryLabel(poi.category)}</span>
                 </div>
                 <div class="poi-score ${poi.recommendationScore >= 45 ? 'high' : 'medium'}">
                     ${poi.recommendationScore}%
@@ -14119,22 +14184,25 @@ function initializeNearbyPOIsUI() {
             ? options.categories.map((value) => String(value || '').trim()).filter(Boolean)
             : [];
 
-        const searchParams = new URLSearchParams({
-            lat: String(lat),
-            lng: String(lng),
-            radius_m: String(radiusM),
-            limit: String(limit),
-        });
+        const requestBody = {
+            lat,
+            lng,
+            radius_m: radiusM,
+            limit,
+        };
 
         if (categories.length) {
-            categories.forEach((categoryName) => {
-                searchParams.append('categories', categoryName);
-            });
+            requestBody.categories = categories;
         } else if (category) {
-            searchParams.set('category', category);
+            requestBody.category = category;
         }
 
-        const res = await fetch(`${apiBase}/pois/nearby?${searchParams.toString()}`, { credentials: 'include' });
+        const res = await fetch(`${apiBase}/pois/nearby`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+        });
         if (!res.ok) {
             const text = await res.text().catch(() => '');
             throw new Error(`Yakın POI API hatası: ${res.status}${text ? ` - ${text}` : ''}`);
@@ -14145,14 +14213,12 @@ function initializeNearbyPOIsUI() {
     const fetchNearbyPanoramas = async (lat, lng, options = {}) => {
         const radiusM = Number.isFinite(options.radiusM) ? options.radiusM : getAlertRadiusMeters();
         const limit = Number.isFinite(options.limit) ? options.limit : 20;
-        const searchParams = new URLSearchParams({
-            lat: String(lat),
-            lng: String(lng),
-            radius_m: String(radiusM),
-            limit: String(limit),
+        const res = await fetch('/api/panoramas/nearby', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat, lng, radius_m: radiusM, limit }),
         });
-
-        const res = await fetch(`/api/panoramas/nearby?${searchParams.toString()}`, { credentials: 'include' });
         if (!res.ok) {
             const text = await res.text().catch(() => '');
             throw new Error(`Yakın panorama API hatası: ${res.status}${text ? ` - ${text}` : ''}`);
@@ -14781,6 +14847,12 @@ function initializeNearbyPOIsUI() {
     if (canRunLiveAlerts) {
         const setAlertPreferencesPanelVisible = (visible) => {
             if (!alertPreferencesPanel || !alertPreferencesBtn) return;
+
+            const shortcut = document.getElementById('notificationPreferencesShortcut');
+            alertPreferencesBtn.setAttribute('aria-expanded', visible ? 'true' : 'false');
+            if (shortcut) {
+                shortcut.setAttribute('aria-expanded', visible ? 'true' : 'false');
+            }
 
             if (visible) {
                 alertPreferencesPanel.removeAttribute('hidden');
@@ -15457,7 +15529,7 @@ async function showAllPOIs() {
             throw new Error('POIClient module is not available');
         }
 
-        const poisData = await window.POIClient.getAllPOIs({ normalize: true, refresh: true });
+        const poisData = await window.POIClient.getAllPOIs({ normalize: true });
 
         const allPOIs = (Array.isArray(poisData) ? poisData : []).map(poi => ({
             ...poi,
@@ -15952,6 +16024,10 @@ function applyPOICardFallbackCover(cardElement) {
     const placeholder = imageContainer.querySelector('.poi-card__image-placeholder');
     if (!placeholder) return;
     if (placeholder.dataset && placeholder.dataset.coverApplied === '1') return;
+    // The media loader hides this placeholder as soon as it inserts a real
+    // image. Depending on which runs first that can happen before we get here,
+    // and re-dressing a hidden placeholder would put the cover over the photo.
+    if (placeholder.style.display === 'none') return;
 
     const categoryKey = (cardElement.dataset && cardElement.dataset.poiCategory) ? cardElement.dataset.poiCategory : 'diger';
     let categoryStyle = { color: '#64748b', iconClass: 'fas fa-map-marker-alt' };
@@ -15961,31 +16037,26 @@ function applyPOICardFallbackCover(cardElement) {
         }
     } catch (_) {}
 
-    const categoryLabel = (typeof getCategoryDisplayName === 'function') ? getCategoryDisplayName(categoryKey) : 'POI';
+    const categoryLabel = (typeof getCategoryLabel === 'function')
+        ? getCategoryLabel(categoryKey)
+        : ((typeof getCategoryDisplayName === 'function') ? getCategoryDisplayName(categoryKey) : 'POI');
 
     placeholder.classList.remove('loading__skeleton');
-    placeholder.style.display = 'flex';
-    placeholder.style.alignItems = 'center';
-    placeholder.style.justifyContent = 'center';
-    placeholder.style.flexDirection = 'column';
-    placeholder.style.gap = '8px';
-    placeholder.style.background = `linear-gradient(135deg, ${categoryStyle.color}33 0%, rgba(255,255,255,0.0) 100%)`;
-    placeholder.style.color = '#0f172a';
+    placeholder.classList.add('poi-cover');
 
+    // Structure only; the palette lives in premium-travel.css so this cover can
+    // be themed with the rest of the page instead of carrying baked-in colours.
+    //
+    // The category is named on the badge directly below the image, so the cover
+    // carries just its icon - and the name goes on the accessible label, since
+    // the icon alone says nothing to a screen reader.
     placeholder.innerHTML = `
-        <div style="
-            width: 54px; height: 54px; border-radius: 16px;
-            display:flex; align-items:center; justify-content:center;
-            background: ${categoryStyle.color};
-            color: white;
-            box-shadow: 0 10px 26px rgba(0,0,0,0.18);
-        ">
-            <i class="${categoryStyle.iconClass}" style="font-size: 20px;"></i>
-        </div>
-        <div style="font-weight: 800; font-size: 12px; opacity: 0.95; text-align:center; padding: 0 10px;">
-            ${escapeHtml(categoryLabel)}
+        <div class="poi-cover__icon">
+            <i class="${categoryStyle.iconClass}" aria-hidden="true"></i>
         </div>
     `;
+    placeholder.setAttribute('role', 'img');
+    placeholder.setAttribute('aria-label', `${categoryLabel} kategorisi (fotoğraf yok)`);
 
     placeholder.dataset.coverApplied = '1';
 }

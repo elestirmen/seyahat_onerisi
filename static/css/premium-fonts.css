@@ -1,0 +1,82 @@
+/*
+ * Cappadocia premium travel skin - typefaces only.
+ *
+ * Kept separate from premium-travel.css so every surface (the tabbed shell, the
+ * two discovery iframes, the policy page) can share one set of @font-face rules
+ * without also inheriting the skin's layout overrides.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Typefaces (self-hosted, SIL OFL — see static/fonts/LICENSE-*.txt)
+ *
+ * Inter    -> interface and body copy
+ * Fraunces -> display: hero titles, section titles, the wordmark
+ *
+ * Both are variable fonts with a 100-900 weight axis, which is what lets the
+ * design ask for in-between weights (500 on titles, 650 on the wordmark, 720
+ * on chips) instead of snapping to bold. Each family is subset to Latin plus
+ * the Turkish additions, so the whole type system costs ~120 KB.
+ * --------------------------------------------------------------------------- */
+
+/* Latin core */
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0020-007E, U+00A0-00FF, U+0131, U+0152-0153, U+02C6, U+02DA,
+    U+02DC, U+2013-2014, U+2018-201A, U+201C-201E, U+2022, U+2026, U+2030,
+    U+2039-203A, U+2044, U+20AC, U+2122, U+2212;
+}
+
+/* Turkish additions: Ğ ğ İ Ş ş ₺ */
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/inter-latin-ext.woff2') format('woff2');
+  unicode-range: U+011E-011F, U+0130, U+015E-015F, U+20BA;
+}
+
+@font-face {
+  font-family: Fraunces;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/fraunces-latin.woff2') format('woff2');
+  unicode-range: U+0020-007E, U+00A0-00FF, U+0131, U+0152-0153, U+02C6, U+02DA,
+    U+02DC, U+2013-2014, U+2018-201A, U+201C-201E, U+2022, U+2026, U+2030,
+    U+2039-203A, U+2044, U+20AC, U+2122, U+2212;
+}
+
+@font-face {
+  font-family: Fraunces;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/fraunces-latin-ext.woff2') format('woff2');
+  unicode-range: U+011E-011F, U+0130, U+015E-015F, U+20BA;
+}
+
+/* The hero accent words are set in italic, so the italic cut is not optional. */
+@font-face {
+  font-family: Fraunces;
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/fraunces-italic-latin.woff2') format('woff2');
+  unicode-range: U+0020-007E, U+00A0-00FF, U+0131, U+0152-0153, U+02C6, U+02DA,
+    U+02DC, U+2013-2014, U+2018-201A, U+201C-201E, U+2022, U+2026, U+2030,
+    U+2039-203A, U+2044, U+20AC, U+2122, U+2212;
+}
+
+@font-face {
+  font-family: Fraunces;
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/fraunces-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+011E-011F, U+0130, U+015E-015F, U+20BA;
+}

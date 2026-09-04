@@ -18,8 +18,10 @@
     // Initialize preference system when DOM is ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initializePreferences);
+      document.addEventListener('DOMContentLoaded', initializeNotificationPreferencesShortcut);
     } else {
       initializePreferences();
+      initializeNotificationPreferencesShortcut();
     }
 
   } catch (err) {
@@ -971,6 +973,9 @@
       // Initialize explore button
       initializeExploreButton();
 
+      // Keep live-alert settings reachable before recommendation results exist
+      initializeNotificationPreferencesShortcut();
+
       console.warn('Preference system initialized successfully');
     } catch (err) {
       console.error('Error initializing preferences:', err);
@@ -1421,6 +1426,45 @@
     }
   }
 
+  // Surface the existing live-alert preferences from the top of the discovery
+  // flow. The actual controls and persistence stay in the shared app script.
+  function initializeNotificationPreferencesShortcut() {
+    const shortcut = document.getElementById('notificationPreferencesShortcut');
+    const alertSection = document.getElementById('nearbyAlertSection');
+    const preferencesBtn = document.getElementById('nearbyAlertPreferencesBtn');
+    const preferencesPanel = document.getElementById('nearbyAlertPreferencesPanel');
+
+    if (!shortcut || !alertSection || !preferencesBtn || !preferencesPanel) return;
+    if (shortcut.dataset.preferencesShortcutReady === 'true') return;
+    shortcut.dataset.preferencesShortcutReady = 'true';
+
+    const syncExpandedState = () => {
+      const isExpanded = !preferencesPanel.hasAttribute('hidden');
+      shortcut.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+      preferencesBtn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+    };
+
+    shortcut.addEventListener('click', () => {
+      if (preferencesPanel.hasAttribute('hidden')) {
+        preferencesBtn.click();
+
+        // Safety fallback for an unusually early tap before the shared alert
+        // controller has attached its own button listener.
+        if (preferencesPanel.hasAttribute('hidden')) {
+          preferencesPanel.removeAttribute('hidden');
+        }
+      }
+
+      syncExpandedState();
+      alertSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.setTimeout(() => preferencesBtn.focus({ preventScroll: true }), 450);
+    });
+
+    const observer = new MutationObserver(syncExpandedState);
+    observer.observe(preferencesPanel, { attributes: true, attributeFilter: ['hidden'] });
+    syncExpandedState();
+  }
+
   // Safety: event delegation fallback for quick presets
   document.addEventListener('click', function(e) {
     const btn = e.target.closest('.quick-btn[data-preset]');
@@ -1443,6 +1487,8 @@
     
     try {
       // Add loading state
+      exploreBtn.disabled = true;
+      exploreBtn.setAttribute('aria-busy', 'true');
       exploreBtn.classList.add('loading');
       exploreBtn.querySelector('.btn-text').textContent = 'Yükleniyor';
       
@@ -1516,6 +1562,8 @@
       hideRecommendationLoadingIndicator(loadingIndicator);
 
       // Remove loading state
+      exploreBtn.disabled = false;
+      exploreBtn.removeAttribute('aria-busy');
       exploreBtn.classList.remove('loading');
       exploreBtn.querySelector('.btn-text').textContent = 'Serbest Keşif';
     }

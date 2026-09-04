@@ -107,22 +107,22 @@ class RouteDetailsModal {
                                 <h3><i class="fas fa-chart-bar"></i> Rota İstatistikleri</h3>
                                 <div class="route-stats-grid" id="routeStatsGrid">
                                     <div class="route-stat-item">
-                                        <div class="route-stat-icon">📏</div>
+                                        <div class="route-stat-icon"><i class="fas fa-route" aria-hidden="true"></i></div>
                                         <span class="route-stat-value" id="routeStatDistance">-- km</span>
                                         <div class="route-stat-label">Mesafe</div>
                                     </div>
                                     <div class="route-stat-item">
-                                        <div class="route-stat-icon">⏱️</div>
+                                        <div class="route-stat-icon"><i class="fas fa-clock" aria-hidden="true"></i></div>
                                         <span class="route-stat-value" id="routeStatDuration">-- saat</span>
                                         <div class="route-stat-label">Süre</div>
                                     </div>
                                     <div class="route-stat-item">
-                                        <div class="route-stat-icon">📍</div>
+                                        <div class="route-stat-icon"><i class="fas fa-map-marker-alt" aria-hidden="true"></i></div>
                                         <span class="route-stat-value" id="routeStatStops">-- durak</span>
                                         <div class="route-stat-label">Durak Sayısı</div>
                                     </div>
                                     <div class="route-stat-item">
-                                        <div class="route-stat-icon">⛰️</div>
+                                        <div class="route-stat-icon"><i class="fas fa-mountain" aria-hidden="true"></i></div>
                                         <span class="route-stat-value" id="routeStatDifficulty">--</span>
                                         <div class="route-stat-label">Zorluk</div>
                                     </div>
@@ -605,16 +605,30 @@ class RouteDetailsModal {
         const title = document.getElementById('routeModalTitle');
         const subtitle = document.getElementById('routeModalSubtitle');
 
+        // Names and metadata come straight from GPX imports; RouteContent gives
+        // them the same treatment here as on the catalogue cards, so a route is
+        // called the same thing wherever it appears.
+        const RC = window.RouteContent;
+
         if (title) {
-            title.textContent = routeData.name || 'Rota Detayları';
+            title.textContent = RC
+                ? RC.title(routeData)
+                : (routeData.name || 'Rota Detayları');
         }
 
         if (subtitle) {
-            const duration = Math.round((routeData.estimated_duration || 0) / 60);
-            const distance = (routeData.total_distance || 0).toFixed(1);
             const stopCount = routeData.poi_count || (routeData.waypoints ? routeData.waypoints.length : 0);
-
-            subtitle.textContent = `${distance} km • ${duration} saat • ${stopCount} durak`;
+            let parts;
+            if (RC) {
+                parts = [
+                    RC.distanceLabel(routeData.total_distance),
+                    RC.durationLabel(routeData.estimated_duration),
+                    RC.stopsLabel(stopCount)
+                ].filter(Boolean);
+            } else {
+                parts = [`${(routeData.total_distance || 0).toFixed(1)} km`, `${stopCount} durak`];
+            }
+            subtitle.textContent = parts.join(' • ');
         }
     }
 
@@ -797,22 +811,52 @@ class RouteDetailsModal {
 
     async loadOverviewContent() {
         const route = this.currentRoute;
+        const RC = window.RouteContent;
 
-        // Update statistics
-        const distance = (route.total_distance || 0).toFixed(1);
-        const duration = Math.round((route.estimated_duration || 0) / 60);
         const stopCount = route.poi_count || (route.waypoints ? route.waypoints.length : 0);
+        const distance = RC
+            ? RC.distanceLabel(route.total_distance)
+            : `${(route.total_distance || 0).toFixed(1)} km`;
+        const duration = RC ? RC.durationLabel(route.estimated_duration) : '';
         const difficulty = this.createDifficultyStars(route.difficulty_level || 1);
 
-        document.getElementById('routeStatDistance').textContent = `${distance} km`;
-        document.getElementById('routeStatDuration').textContent = `${duration} saat`;
-        document.getElementById('routeStatStops').textContent = `${stopCount}`;
-        document.getElementById('routeStatDifficulty').innerHTML = difficulty;
+        // A statistic with nothing behind it ("0 saat", "0 durak") is worse than
+        // no tile at all, so the tile is hidden rather than filled with a zero.
+        const setStat = (id, value) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const tile = el.closest('.route-stat-item');
+            if (!value) {
+                if (tile) tile.hidden = true;
+                return;
+            }
+            if (tile) tile.hidden = false;
+            el.textContent = value;
+        };
 
-        // Update description
+        setStat('routeStatDistance', distance);
+        setStat('routeStatDuration', duration);
+        setStat('routeStatStops', RC ? RC.stopsLabel(stopCount) : (stopCount ? `${stopCount}` : ''));
+
+        const difficultyEl = document.getElementById('routeStatDifficulty');
+        if (difficultyEl) difficultyEl.innerHTML = difficulty;
+
+        // Descriptions on imported routes hold GPX telemetry rather than prose;
+        // RouteContent strips it, and where nothing is left we say so plainly
+        // instead of printing "Elevation: 1601 m Time from start: ...".
         const descriptionEl = document.getElementById('routeDescription');
         if (descriptionEl) {
-            descriptionEl.textContent = route.description || 'Bu rota için açıklama bulunmuyor.';
+            const text = RC ? RC.description(route) : (route.description || '');
+            const section = descriptionEl.closest('.route-overview-section');
+            if (text) {
+                descriptionEl.textContent = text;
+                descriptionEl.classList.remove('route-description--empty');
+                if (section) section.hidden = false;
+            } else {
+                descriptionEl.textContent = 'Bu rota için henüz bir açıklama yazılmadı.';
+                descriptionEl.classList.add('route-description--empty');
+                if (section) section.hidden = false;
+            }
         }
 
         // Elevation profile is now loaded in the map tab
@@ -2192,7 +2236,7 @@ class RouteDetailsModal {
             }
 
             const route = this.currentRoute;
-            const title = route.name || 'Ürgüp Rotası';
+            const title = (window.RouteContent && window.RouteContent.title(route)) || route.name || 'Ürgüp Rotası';
             const text = `"${title}" rotasını keşfet!`;
 
             // Prefer deep link by routeId when available (supported by predefined_routes.html)
@@ -4240,14 +4284,19 @@ class RouteDetailsModal {
 
     createDifficultyStars(level) {
         const maxStars = 5;
+        const RC = window.RouteContent;
+        const label = RC ? RC.difficultyLabel(level) : '';
         let starsHTML = '';
 
         for (let i = 1; i <= maxStars; i++) {
-            const isFilled = i <= level;
-            starsHTML += `<i class="fas fa-star" style="color: ${isFilled ? '#fbbf24' : '#e5e7eb'}"></i>`;
+            const filled = i <= level ? ' is-filled' : '';
+            starsHTML += `<i class="fas fa-star route-difficulty-star${filled}" aria-hidden="true"></i>`;
         }
 
-        return starsHTML;
+        // The word carries the meaning; the stars are the scale beside it.
+        return label
+            ? `<span class="route-difficulty-word">${label}</span><span class="route-difficulty-scale">${starsHTML}</span>`
+            : `<span class="route-difficulty-scale">${starsHTML}</span>`;
     }
 
     getCategoryStyle(category) {

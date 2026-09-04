@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: blob: http://localhost:5560 https://*; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' http://localhost:5560 https://harita.urgup.keenetic.link https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org https://*.tile.openstreetmap.org https://*.opentopomap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://api.open-elevation.com https://router.project-osrm.org;"/>
-  <title>Hazır Rotalar</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: blob: http://localhost:5560 https://*; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' http://localhost:5560 https://harita.urgup.keenetic.link https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://*.openstreetmap.org https://*.tile.openstreetmap.org https://*.opentopomap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://api.open-elevation.com https://router.project-osrm.org;"/>
+  <title>Seçilmiş Kapadokya Rotaları | Seyahat Rehberi</title>
+  <meta name="description" content="Kapadokya ve Ürgüp için hazırlanmış seçkin yürüyüş, doğa, bisiklet ve araç rotalarını keşfedin."/>
   <!-- Base design system CSS -->
   <link rel="stylesheet" href="static/css/design-tokens.css"/>
   <link rel="stylesheet" href="static/css/layout-system.css"/>
@@ -84,12 +85,23 @@
   <script src="static/js/poi-hover-integration.js" defer></script>
   <!-- Central Modal State Manager (for robust modal lifecycle) -->
   <script src="static/js/modal-state-manager.js" defer></script>
+  <!-- Premium typefaces (self-hosted variable fonts, Latin + Turkish subset) -->
+  <link rel="preload" href="static/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin/>
+  <link rel="preload" href="static/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin/>
+  <link rel="stylesheet" href="static/css/premium-fonts.css?v=20260904-premium2"/>
+  <link rel="stylesheet" href="static/css/premium-travel.css?v=20260904-premium2"/>
 </head>
 <body>
   <div class="container container-xl">
     <div class="header">
-      <h1><i class="fas fa-route"></i> Hazır Rotalar</h1>
-      <p>Uzmanlar tarafından hazırlanmış rotaları keşfedin</p>
+      <div class="hero-kicker">Özenle seçilmiş deneyimler</div>
+      <h1><i class="fas fa-route"></i> Kapadokya'yı <em>iyi bir rota</em> ile yaşayın.</h1>
+      <p>Kısa yürüyüşlerden gün boyu süren keşiflere, bölgenin hikâyesini izleyen seçilmiş rotalar.</p>
+      <div class="hero-highlights" aria-label="Rota özellikleri">
+        <span class="hero-highlight"><i class="fas fa-signs-post"></i> Kürasyonlu duraklar</span>
+        <span class="hero-highlight"><i class="fas fa-mountain-sun"></i> Farklı zorluklar</span>
+        <span class="hero-highlight"><i class="fas fa-location-arrow"></i> Harita üzerinde hazır</span>
+      </div>
     </div>
 
     <div class="content p-6 md:p-8 lg:p-12">
@@ -97,11 +109,12 @@
         <div class="predefined-routes-section">
           <div class="predefined-routes-header">
             <div class="section-header-content">
-              <h2 class="section-title"><i class="fas fa-route"></i> Hazır Rotalar</h2>
-              <p class="predefined-routes-description">Uzmanlar tarafından hazırlanmış rotalar. Farklı deneyimler ve zorluk seviyeleri.</p>
+              <h2 class="section-title"><i class="fas fa-route"></i> Rota koleksiyonu</h2>
+              <p class="predefined-routes-description">Sürenize, temponuza ve keşif biçiminize uyan rotayı bulun.</p>
             </div>
             <div class="route-search">
-              <input type="search" id="routeSearchInput" class="form-control" placeholder="Rota ara...">
+              <label for="routeSearchInput" class="visually-hidden">Rota ara</label>
+              <input type="search" id="routeSearchInput" class="form-control" placeholder="Rota veya deneyim ara...">
             </div>
             <div class="routes-quick-stats" id="routesQuickStats">
               <div class="quick-stat-item"><div class="stat-icon"><i class="fas fa-route"></i></div><div class="stat-content"><span class="stat-number" id="totalRoutesCount">-</span><span class="stat-label">Toplam Rota</span></div></div>
@@ -113,14 +126,14 @@
           <div class="mobile-filter-panel" id="mobileFilterPanel">
             <div class="mobile-filter-handle"><div class="filter-handle-bar"></div></div>
             <div class="mobile-filter-content">
-              <div class="mobile-filter-header"><h3 class="mobile-filter-title"><i class="fas fa-sliders-h"></i> Filtreler</h3><button class="mobile-filter-close" id="mobileFilterClose"><i class="fas fa-times"></i></button></div>
+              <div class="mobile-filter-header"><h3 class="mobile-filter-title"><i class="fas fa-sliders-h"></i> Filtreler</h3><button type="button" class="mobile-filter-close" id="mobileFilterClose" aria-label="Filtreleri kapat"><i class="fas fa-times"></i></button></div>
               <div class="mobile-filter-body"></div>
             </div>
           </div>
 
           <div class="route-filters-enhanced">
             <div class="filters-content" id="filtersContent">
-              <div class="filters-header"><h3 class="filters-title"><i class="fas fa-sliders-h"></i> Filtreler</h3><button class="filters-toggle-btn" id="filtersToggleBtn"><i class="fas fa-chevron-down"></i></button></div>
+              <div class="filters-header"><h3 class="filters-title"><i class="fas fa-sliders-h"></i> Filtreler</h3><button type="button" class="filters-toggle-btn" id="filtersToggleBtn" aria-label="Filtreleri daralt"><i class="fas fa-chevron-down"></i></button></div>
               <div class="filter-chips-container">
                 <div class="filter-chip-group"><label class="filter-chip-label">Rota Tipi</label><div class="filter-chips" id="routeTypeChips"><button class="filter-chip active" data-value=""><i class="fas fa-globe"></i><span>Tümü</span></button><button class="filter-chip" data-value="walking"><i class="fas fa-walking"></i><span>Yürüyüş</span></button><button class="filter-chip" data-value="hiking"><i class="fas fa-hiking"></i><span>Doğa</span></button><button class="filter-chip" data-value="cycling"><i class="fas fa-bicycle"></i><span>Bisiklet</span></button><button class="filter-chip" data-value="driving"><i class="fas fa-car"></i><span>Araç</span></button></div></div>
                 <div class="filter-chip-group"><label class="filter-chip-label">Zorluk</label><div class="filter-chips" id="difficultyChips"><button class="filter-chip active" data-value=""><i class="fas fa-star"></i><span>Tümü</span></button><button class="filter-chip" data-value="1"><i class="fas fa-leaf"></i><span>Kolay</span></button><button class="filter-chip" data-value="2"><i class="fas fa-mountain"></i><span>Orta</span></button><button class="filter-chip" data-value="3"><i class="fas fa-fire"></i><span>Zor</span></button><button class="filter-chip" data-value="4"><i class="fas fa-bolt"></i><span>Çok Zor</span></button><button class="filter-chip" data-value="5"><i class="fas fa-crown"></i><span>Uzman</span></button></div></div>
@@ -233,14 +246,14 @@
         <div class="modal-header border-0 pb-0">
           <div class="poi-modal-header w-100">
             <div class="poi-modal-title-section"><h4 class="modal-title" id="poiDetailModalLabel">POI Detayları</h4><div class="poi-modal-category-badge" id="poiModalCategory"></div></div>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
           </div>
         </div>
         <div class="modal-body p-0">
           <div class="poi-media-gallery" id="poiMediaGallery">
             <div class="media-gallery-container">
               <div class="media-gallery-main" id="mediaGalleryMain"><div class="no-media-placeholder"><i class="fas fa-image fa-3x text-muted"></i><p class="text-muted mt-2">Bu POI için medya bulunmuyor.</p></div></div>
-              <div class="media-gallery-controls"><button class="media-nav-btn prev-btn" id="predefinedMediaPrevBtn"><i class="fas fa-chevron-left"></i></button><button class="media-nav-btn next-btn" id="predefinedMediaNextBtn"><i class="fas fa-chevron-right"></i></button></div>
+              <div class="media-gallery-controls"><button type="button" class="media-nav-btn prev-btn" id="predefinedMediaPrevBtn" aria-label="Önceki medya"><i class="fas fa-chevron-left"></i></button><button type="button" class="media-nav-btn next-btn" id="predefinedMediaNextBtn" aria-label="Sonraki medya"><i class="fas fa-chevron-right"></i></button></div>
               <div class="media-gallery-thumbnails" id="mediaGalleryThumbnails"></div>
             </div>
           </div>
@@ -280,7 +293,7 @@
   </div>
 
   <div id="routeDetailsPanel" class="route-details-panel">
-    <div class="route-header"><h3>Rota Detayları</h3><button class="close-btn" onclick="RouteDetailsPanel.hide()">×</button></div>
+    <div class="route-header"><h3>Rota Detayları</h3><button type="button" class="close-btn" onclick="RouteDetailsPanel.hide()" aria-label="Rota detaylarını kapat">×</button></div>
     <div class="route-summary">
       <div class="summary-item"><i class="fas fa-route"></i><span id="routeDistance">-- km</span></div>
       <div class="summary-item"><i class="fas fa-clock"></i><span id="routeDuration">-- saat</span></div>
@@ -309,6 +322,8 @@
   <script src="static/js/rate-limiter.js"></script>
   <script src="static/js/elevation-chart.js"></script>
   <script src="static/js/map-layer-control.js"></script>
+  <!-- Display-time normalisation for imported route names/descriptions -->
+  <script src="static/js/route-content.js?v=20260904-premium2"></script>
   <script src="static/js/route-details-modal.js"></script>
 
   <!-- Main app logic (shared) + page wrapper (isolated) -->
@@ -316,7 +331,7 @@
     // Ensure tab state favors predefined flows when script loads
     window.currentTab = 'predefined-routes';
   </script>
-  <script src="static/js/poi_recommendation_system.js?v=20260602-mapfirst1"></script>
+  <script src="static/js/poi_recommendation_system.js?v=20260904-premium2"></script>
   <script src="static/js/modal-jitter-fix.js?v=20260520-jitter-cleanup"></script>
   <script src="static/js/predefined_routes.js"></script>
 </body>
