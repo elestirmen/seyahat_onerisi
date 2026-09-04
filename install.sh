@@ -285,9 +285,10 @@ setup_database() {
         echo -e "${YELLOW}🗃️  Veritabanı hazırlanıyor...${NC}"
         
         if [ "$DB_TYPE" = "mongodb" ]; then
-            python setup_poi_database.py mongodb "$POI_DB_CONNECTION" --db-name "$POI_DB_NAME"
+            echo -e "${RED}❌ MongoDB adaptörü bu sürümde desteklenmiyor. PostgreSQL seçin.${NC}"
+            return 1
         elif [ "$DB_TYPE" = "postgresql" ]; then
-            python setup_poi_database.py postgresql "$POI_DB_CONNECTION"
+            python setup_poi_database.py "$POI_DB_CONNECTION"
         fi
         
         echo -e "${GREEN}✅ Veritabanı hazırlandı${NC}"

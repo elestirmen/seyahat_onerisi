@@ -13,7 +13,7 @@ import uuid
 import unicodedata
 import re
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from werkzeug.utils import secure_filename
 from auth_middleware import auth_middleware
 from auth_config import auth_config
@@ -104,9 +104,16 @@ def validate_poi_payload(payload, partial=False):
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
+legacy_cors_origins = [
+    origin.strip()
+    for origin in os.environ.get('CORS_ORIGINS', '').split(',')
+    if origin.strip()
+]
+if '*' in legacy_cors_origins:
+    raise RuntimeError("Wildcard CORS_ORIGINS is not supported; configure explicit origins")
 CORS(
     app,
-    origins=["*"],
+    origins=legacy_cors_origins,
     supports_credentials=False,
     allow_headers=["Content-Type", "Authorization", "X-Admin-Token"],
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -116,30 +123,54 @@ CORS(
 auth_middleware.init_app(app)
 
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint for CI/benchmarks."""
-    response = {
-        'status': 'healthy',
-        'timestamp': datetime.utcnow().isoformat() + 'Z'
-    }
-
-    # Best-effort database status (never hard-fail health)
+def _legacy_database_health():
+    """Return a public-safe dependency status for readiness checks."""
     try:
         if 'JSON_FALLBACK' in globals() and JSON_FALLBACK:
-            response['database'] = {'status': 'healthy', 'mode': 'json'}
-        else:
-            db = get_db()
-            if db is None:
-                response['database'] = {'status': 'unhealthy'}
-            else:
-                response['database'] = {
-                    'status': 'healthy',
-                    'type': os.environ.get('POI_DB_TYPE', 'postgresql')
-                }
-                db.disconnect()
-    except Exception as e:
-        response['database'] = {'status': 'unhealthy', 'error': str(e)}
+            return {'status': 'unhealthy', 'mode': 'json_fallback'}
+
+        db = get_db()
+        if db is None:
+            return {'status': 'unhealthy'}
+        try:
+            return {'status': 'healthy'}
+        finally:
+            db.disconnect()
+    except Exception:
+        logger.exception("Legacy database readiness check failed")
+        return {'status': 'unhealthy'}
+
+
+@app.route('/livez', methods=['GET'])
+def liveness_check():
+    """Process-only probe; does not depend on PostgreSQL."""
+    return jsonify({
+        'status': 'alive',
+        'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+    }), 200
+
+
+@app.route('/readyz', methods=['GET'])
+def readiness_check():
+    """Dependency probe; unhealthy PostgreSQL must remove this worker."""
+    database = _legacy_database_health()
+    ready = database['status'] == 'healthy'
+    return jsonify({
+        'status': 'ready' if ready else 'not_ready',
+        'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+        'database': database,
+    }), 200 if ready else 503
+
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Backward-compatible aggregate health response."""
+    database = _legacy_database_health()
+    response = {
+        'status': 'healthy' if database['status'] == 'healthy' else 'unhealthy',
+        'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+        'database': database,
+    }
 
     return jsonify(response), 200
 
@@ -157,7 +188,7 @@ def admin_rate_limit(max_requests=30, window_seconds=60):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+            client_ip = auth_middleware.get_client_ip()
             current_time = time.time()
             
             # Clean old entries
@@ -567,6 +598,17 @@ def login():
     if not auth_config.is_admin_token_configured():
         return jsonify({'success': False, 'error': 'Admin token not configured'}), 503
 
+    client_ip = auth_middleware.get_client_ip()
+    allowed, _, _, retry_after = auth_middleware.check_rate_limit(client_ip)
+    if not allowed:
+        response = jsonify({
+            'success': False,
+            'error': 'Too many failed login attempts',
+        })
+        response.status_code = 429
+        response.headers['Retry-After'] = str(retry_after)
+        return response
+
     data = request.get_json(silent=True) if request.is_json else request.form
     token = ''
 
@@ -584,8 +626,12 @@ def login():
             token = authz[7:].strip()
 
     if not auth_config.validate_admin_token(token):
+        auth_middleware.record_failed_attempt(
+            client_ip, request.headers.get('User-Agent')
+        )
         return jsonify({'success': False, 'error': 'Invalid token'}), 401
 
+    auth_middleware.clear_failed_attempts(client_ip)
     return jsonify({
         'success': True,
         'message': 'Login successful',
@@ -614,6 +660,7 @@ def clear_rate_limits():
     """Clear rate limiting cache (for testing)."""
     global admin_rate_limits
     admin_rate_limits.clear()
+    auth_middleware.clear_all_rate_limits()
     return jsonify({
         'success': True,
         'message': 'Rate limits cleared'
@@ -643,6 +690,9 @@ app.register_blueprint(auth_bp)
 
 # JSON verileri için fallback
 JSON_FALLBACK = False
+JSON_FALLBACK_ENABLED = os.environ.get(
+    'POI_ENABLE_JSON_FALLBACK', 'false'
+).strip().lower() in {'1', 'true', 'yes', 'on'}
 JSON_FILE_PATH = 'test_data.json'
 
 # Pre-loaded walking network graph
@@ -779,8 +829,18 @@ def get_db():
         JSON_FALLBACK = False
         return db
     except Exception as e:
-        print(f"⚠️  Veritabanına bağlanılamadı, JSON verileri kullanılacak: {e}")
-        JSON_FALLBACK = True
+        if JSON_FALLBACK_ENABLED:
+            logger.warning(
+                "Database unavailable; explicitly enabled JSON fallback is active: %s",
+                e,
+            )
+            JSON_FALLBACK = True
+        else:
+            logger.error(
+                "Database unavailable; writable JSON fallback is disabled: %s",
+                e,
+            )
+            JSON_FALLBACK = False
         return None
 
 @app.route('/')
@@ -1482,20 +1542,27 @@ def list_pois():
         return jsonify({'error': f'Search error: {str(e)}'}), 500
 
 
-@app.route('/api/pois/nearby', methods=['GET'])
+@app.route('/api/pois/nearby', methods=['GET', 'POST'])
 def nearby_pois():
     """
     Find POIs within a radius (meters) of a given coordinate.
 
-    Query params:
+    Query parameters or a JSON body:
       - lat: float
       - lng: float
       - radius_m: int (default 1000)
       - limit: int (default 50, max 200)
     """
     try:
-        lat_raw = request.args.get('lat', '').strip()
-        lng_raw = request.args.get('lng', '').strip()
+        if request.method == 'POST':
+            payload = request.get_json(silent=True)
+            if not isinstance(payload, dict):
+                return jsonify({'error': 'Request body must be a JSON object'}), 400
+        else:
+            payload = request.args
+
+        lat_raw = str(payload.get('lat') or '').strip()
+        lng_raw = str(payload.get('lng') or '').strip()
         if not lat_raw or not lng_raw:
             return jsonify({'error': 'lat and lng query params are required'}), 400
 
@@ -1508,8 +1575,8 @@ def nearby_pois():
         if not (-90 <= lat <= 90 and -180 <= lng <= 180):
             return jsonify({'error': 'lat/lng out of range'}), 400
 
-        radius_m = request.args.get('radius_m', '1000').strip()
-        limit = request.args.get('limit', '50').strip()
+        radius_m = str(payload.get('radius_m', '1000')).strip()
+        limit = str(payload.get('limit', '50')).strip()
         try:
             radius_m_i = int(float(radius_m))
         except Exception:
@@ -1530,6 +1597,24 @@ def nearby_pois():
         if limit_i > 200:
             limit_i = 200
 
+        if request.method == 'GET':
+            raw_categories = request.args.getlist('categories')
+        else:
+            raw_categories = payload.get('categories', [])
+            if isinstance(raw_categories, str):
+                raw_categories = [raw_categories]
+            elif not isinstance(raw_categories, list):
+                return jsonify({'error': 'categories must be an array of strings'}), 400
+
+        single_category = str(payload.get('category') or '').strip()
+        if single_category and not raw_categories:
+            raw_categories = [single_category]
+        categories = []
+        for category_name in raw_categories[:20]:
+            normalized = str(category_name or '').strip()
+            if normalized and normalized not in categories:
+                categories.append(normalized)
+
         # JSON fallback mode (test_data.json)
         if JSON_FALLBACK:
             test_data = load_test_data() or {}
@@ -1539,6 +1624,8 @@ def nearby_pois():
             try:
                 for cat, pois in test_data.items():
                     if not isinstance(pois, list):
+                        continue
+                    if categories and cat not in categories:
                         continue
                     for poi in pois:
                         if not isinstance(poi, dict):
@@ -1601,11 +1688,15 @@ def nearby_pois():
                         ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography,
                         %s
                       )
-                ORDER BY distance_m ASC
-                LIMIT %s
             """
+            query_params = [lng, lat, lng, lat, radius_m_i]
+            if categories:
+                query += " AND p.category = ANY(%s)"
+                query_params.append(categories)
+            query += " ORDER BY distance_m ASC LIMIT %s"
+            query_params.append(limit_i)
             with db.conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute(query, (lng, lat, lng, lat, radius_m_i, limit_i))
+                cur.execute(query, query_params)
                 rows = cur.fetchall() or []
 
             pois = []
@@ -1629,8 +1720,9 @@ def nearby_pois():
         finally:
             db.disconnect()
 
-    except Exception as e:
-        return jsonify({'error': f'Nearby search error: {str(e)}'}), 500
+    except Exception:
+        logger.exception("Legacy nearby POI search failed")
+        return jsonify({'error': 'Nearby search failed'}), 500
 
 def perform_database_search(db, search_query, category_filter=None):
     """
@@ -2556,6 +2648,57 @@ def get_poi_media(poi_id):
         
         # Medya dosyalarını getir - POI ID bazlı sistem
         media_files = media_manager.get_poi_media_by_id(poi_id, media_type)
+
+        # POI zenginlestirme akisi dis URL'leri `poi_images` tablosunda tutar.
+        # Eski medya yoneticisi sadece yerel dosya klasorlerini okudugu icin bu
+        # URL'leri de ayni medya yanitina ekleyerek mevcut frontend'i besliyoruz.
+        if not JSON_FALLBACK and media_type in (None, '', 'image'):
+            existing_paths = {
+                item.get('path')
+                for item in media_files
+                if item.get('media_type') == 'image' and item.get('path')
+            }
+            try:
+                with get_db_conn() as conn:
+                    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                        cur.execute(
+                            """
+                            SELECT
+                                to_jsonb(pi)->>'image_url' AS image_url,
+                                pi.thumbnail_url,
+                                pi.caption,
+                                pi.is_primary
+                            FROM poi_images AS pi
+                            WHERE pi.poi_id = %s
+                              AND COALESCE(
+                                  NULLIF(to_jsonb(pi)->>'image_url', ''),
+                                  NULLIF(pi.thumbnail_url, '')
+                              ) IS NOT NULL
+                            ORDER BY pi.is_primary DESC, pi.id
+                            """,
+                            (poi_id_int,),
+                        )
+                        for row in cur.fetchall():
+                            image_path = row.get('image_url') or row.get('thumbnail_url')
+                            preview_path = row.get('thumbnail_url') or image_path
+                            if not image_path or image_path in existing_paths:
+                                continue
+                            media_files.append({
+                                'media_type': 'image',
+                                'path': image_path,
+                                'preview_path': preview_path,
+                                'file_path': image_path,
+                                'thumbnail_path': preview_path,
+                                'filename': os.path.basename(image_path.split('?', 1)[0]) or image_path,
+                                'description': row.get('caption') or '',
+                                'caption': row.get('caption') or '',
+                                'is_primary': row.get('is_primary', False),
+                                'source': 'poi_images',
+                            })
+                            existing_paths.add(image_path)
+            except Exception as db_media_error:
+                logger.warning("POI DB image media lookup failed for %s: %s", poi_id, db_media_error)
+
         return jsonify({'media': media_files})
         
     except Exception as e:
@@ -2845,11 +2988,18 @@ def list_route_panoramas():
         return jsonify({'error': f'Error fetching route panoramas: {str(e)}'}), 500
 
 
-@app.route('/api/panoramas/nearby', methods=['GET'])
+@app.route('/api/panoramas/nearby', methods=['GET', 'POST'])
 def nearby_panoramas():
     """Konuma göre yakındaki bağımsız ve rota panoramalarını listele."""
-    lat_raw = (request.args.get('lat') or '').strip()
-    lng_raw = (request.args.get('lng') or '').strip()
+    if request.method == 'POST':
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({'error': 'Request body must be a JSON object'}), 400
+    else:
+        payload = request.args
+
+    lat_raw = str(payload.get('lat') or '').strip()
+    lng_raw = str(payload.get('lng') or '').strip()
     if not lat_raw or not lng_raw:
         return jsonify({'error': 'lat and lng query params are required'}), 400
 
@@ -2863,12 +3013,12 @@ def nearby_panoramas():
         return jsonify({'error': 'lat/lng out of range'}), 400
 
     try:
-        radius_m = int(float(request.args.get('radius_m', 1000)))
+        radius_m = int(float(payload.get('radius_m', 1000)))
     except (TypeError, ValueError):
         radius_m = 1000
 
     try:
-        limit = int(float(request.args.get('limit', 20)))
+        limit = int(float(payload.get('limit', 20)))
     except (TypeError, ValueError):
         limit = 20
 
@@ -2880,9 +3030,9 @@ def nearby_panoramas():
             limit=limit,
         )
         return jsonify(payload), 200
-    except Exception as e:
-        logger.error(f"Error fetching nearby panoramas: {e}")
-        return jsonify({'error': f'Error fetching nearby panoramas: {str(e)}'}), 500
+    except Exception:
+        logger.exception("Legacy nearby panorama search failed")
+        return jsonify({'error': 'Error fetching nearby panoramas'}), 500
 
 
 @app.route('/api/panoramas/<pano_id>', methods=['DELETE'])
@@ -3766,9 +3916,9 @@ def create_driving_route():
             try:
                 nearest_node = ox.nearest_nodes(G, wp['lng'], wp['lat'])
                 route_nodes.append(nearest_node)
-                print(f"Waypoint {i+1}: {wp.get('name', 'Unknown')} ({wp['lat']:.4f}, {wp['lng']:.4f}) -> Node {nearest_node}")
-            except Exception as e:
-                print(f"❌ Error finding nearest node for waypoint {i+1} ({wp['lat']:.4f}, {wp['lng']:.4f}): {e}")
+                logger.debug("Mapped driving waypoint %s to a graph node", i + 1)
+            except Exception:
+                logger.exception("Could not map driving waypoint %s", i + 1)
                 # Fallback to straight line if node not found
                 return jsonify({
                     'error': f'Waypoint {i+1} is outside driving network coverage',
@@ -3987,9 +4137,9 @@ def create_smart_route():
                 try:
                     nearest_node = ox.nearest_nodes(G, wp['lng'], wp['lat'])
                     route_nodes.append(nearest_node)
-                    print(f"Waypoint {i+1}: {wp.get('name', 'Unknown')} ({wp['lat']:.4f}, {wp['lng']:.4f}) -> Node {nearest_node}")
-                except Exception as e:
-                    print(f"❌ Error finding nearest node for waypoint {i+1} ({wp['lat']:.4f}, {wp['lng']:.4f}): {e}")
+                    logger.debug("Mapped smart-route waypoint %s to a graph node", i + 1)
+                except Exception:
+                    logger.exception("Could not map smart-route waypoint %s", i + 1)
                     # Try to find nearest node with larger tolerance
                     try:
                         print(f"🔍 Searching for nearest node with larger radius for waypoint {i+1}...")
@@ -4489,7 +4639,7 @@ def public_rate_limit(max_requests=100, window_seconds=60):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+            client_ip = auth_middleware.get_client_ip()
             current_time = time.time()
             
             # Clean old entries
@@ -6032,7 +6182,7 @@ def confirm_route_import():
                 'points_count': len(parsed_route.points),
                 'waypoints_count': len(parsed_route.waypoints),
                 'imported_at': datetime.now().isoformat(),
-                'imported_by': request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr) or 'unknown',
+                'imported_by': auth_middleware.get_client_ip(),
                 'original_filename': os.path.basename(file_path).split('_', 1)[1],
                 'import_source': parsed_route.original_format
             }

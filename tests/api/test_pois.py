@@ -14,6 +14,21 @@ def test_list_pois_invalid_limit_returns_400(client):
     assert resp.status_code == 400
 
 
+def test_list_pois_zero_limit_returns_400(client):
+    resp = client.get("/api/pois?limit=0")
+    assert resp.status_code == 400
+
+
+def test_list_pois_zero_page_returns_400(client):
+    resp = client.get("/api/pois?page=0")
+    assert resp.status_code == 400
+
+
+def test_nearby_pois_rejects_non_finite_coordinates(client):
+    resp = client.get("/api/pois/nearby?lat=nan&lng=34.91")
+    assert resp.status_code == 400
+
+
 def test_search_pois_requires_query_param(client):
     resp = client.get("/api/search")
     assert resp.status_code == 400

@@ -178,6 +178,75 @@ export async function performMainMapInitializationImpl(state, deps = {}) {
   }
 }
 
+function createPopupActionButton(label, iconClass, onClick) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'popup-btn';
+
+  const icon = document.createElement('i');
+  icon.className = iconClass;
+  icon.setAttribute('aria-hidden', 'true');
+
+  const text = document.createElement('span');
+  text.textContent = label;
+
+  button.append(icon, text);
+  button.addEventListener('click', onClick);
+  return button;
+}
+
+export function createPOIPopupElement(poi, options = {}) {
+  const popupPOI = poi || {};
+  const {
+    categoryDisplayName = popupPOI.category || '',
+    lat = popupPOI.latitude ?? popupPOI.lat,
+    lng = popupPOI.longitude ?? popupPOI.lon ?? popupPOI.lng,
+    showPOIDetail = () => {},
+    openInGoogleMaps = () => {},
+    addToRoute = () => {},
+  } = options;
+
+  const popup = document.createElement('div');
+  popup.className = 'poi-popup';
+
+  const header = document.createElement('div');
+  header.className = 'poi-popup-header';
+
+  const title = document.createElement('h4');
+  title.textContent = popupPOI.name ?? '';
+
+  const category = document.createElement('span');
+  category.className = 'poi-category-badge';
+  category.textContent = categoryDisplayName ?? '';
+
+  header.append(title, category);
+  popup.append(header);
+
+  if (popupPOI.description) {
+    const description = document.createElement('p');
+    description.className = 'poi-description';
+    description.textContent = popupPOI.description;
+    popup.append(description);
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'poi-popup-actions';
+  actions.append(
+    createPopupActionButton('Detaylar', 'fas fa-info-circle', () => {
+      showPOIDetail(popupPOI._id || popupPOI.id, popupPOI);
+    }),
+    createPopupActionButton('Google Maps', 'fas fa-external-link-alt', () => {
+      openInGoogleMaps(lat, lng, popupPOI.name || '');
+    }),
+    createPopupActionButton('Rotaya Ekle', 'fas fa-plus', () => {
+      addToRoute(popupPOI);
+    }),
+  );
+  popup.append(actions);
+
+  return popup;
+}
+
 export function updateMapWithPOIsImpl(state, deps = {}, allPOIs = []) {
   if (!state || !state.map) {
     console.error('❌ Map not initialized');
@@ -228,27 +297,14 @@ export function updateMapWithPOIsImpl(state, deps = {}, allPOIs = []) {
         marker.addTo(state.map);
       }
 
-      const categoryDisplayName = getCategoryDisplayName(poi.category);
-      const popupContent = `
-        <div class="poi-popup">
-          <div class="poi-popup-header">
-            <h4>${poi.name}</h4>
-            <span class="poi-category-badge">${categoryDisplayName}</span>
-          </div>
-          ${poi.description ? `<p class="poi-description">${poi.description}</p>` : ''}
-          <div class="poi-popup-actions">
-            <button onclick="showPOIDetail('${poi._id || poi.id}', ${JSON.stringify(poi).replace(/"/g, '&quot;')})" class="popup-btn">
-              <i class="fas fa-info-circle"></i> Detaylar
-            </button>
-            <button onclick="openInGoogleMaps(${lat}, ${lng}, '${(poi.name || '').replace(/'/g, "\\'")}')" class="popup-btn">
-              <i class="fas fa-external-link-alt"></i> Google Maps
-            </button>
-            <button onclick="addToRoute(${JSON.stringify(poi).replace(/"/g, '&quot;')})" class="popup-btn">
-              <i class="fas fa-plus"></i> Rotaya Ekle
-            </button>
-          </div>
-        </div>
-      `;
+      const popupContent = createPOIPopupElement(poi, {
+        categoryDisplayName: getCategoryDisplayName(poi.category),
+        lat,
+        lng,
+        showPOIDetail,
+        openInGoogleMaps,
+        addToRoute,
+      });
 
       marker.bindPopup(popupContent);
       marker.poiName = poi.name || '';
@@ -311,6 +367,7 @@ if (typeof window !== 'undefined') {
   window.MapControllerImpl = {
     initializeMainMapImpl,
     performMainMapInitializationImpl,
+    createPOIPopupElement,
     updateMapWithPOIsImpl,
     switchToDynamicMapViewImpl,
   };
@@ -319,6 +376,7 @@ if (typeof window !== 'undefined') {
 export default {
   initializeMainMapImpl,
   performMainMapInitializationImpl,
+  createPOIPopupElement,
   updateMapWithPOIsImpl,
   switchToDynamicMapViewImpl,
 };

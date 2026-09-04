@@ -16,6 +16,27 @@ from datetime import datetime
 import hashlib
 
 
+MAX_XML_BYTES = 20 * 1024 * 1024
+MAX_KMZ_ENTRIES = 100
+MAX_KMZ_UNCOMPRESSED_BYTES = 100 * 1024 * 1024
+MAX_KMZ_COMPRESSION_RATIO = 100
+MAX_ROUTE_POINTS = 100_000
+MAX_ROUTE_WAYPOINTS = 10_000
+
+
+def _valid_coordinate(latitude: float, longitude: float) -> bool:
+    return (
+        math.isfinite(latitude)
+        and math.isfinite(longitude)
+        and -90 <= latitude <= 90
+        and -180 <= longitude <= 180
+    )
+
+
+def _finite_or_none(value: Optional[float]) -> Optional[float]:
+    return value if value is not None and math.isfinite(value) else None
+
+
 @dataclass
 class RoutePoint:
     """Represents a single point in a route"""
@@ -60,6 +81,47 @@ class RouteParserError(Exception):
         super().__init__(self.message)
 
 
+def _ensure_safe_xml_file(file_path: str) -> None:
+    """Reject oversized XML and DTD/entity declarations before parsing."""
+    file_size = os.path.getsize(file_path)
+    if file_size > MAX_XML_BYTES:
+        raise RouteParserError(
+            "XML rota içeriği izin verilen boyutu aşıyor",
+            "XML_TOO_LARGE",
+            {"file_size": file_size, "max_size": MAX_XML_BYTES},
+        )
+
+    # ElementTree does not need DTD support for GPX/KML. Rejecting declarations
+    # up front also protects deployments whose XML implementation differs.
+    needles = (b"<!DOCTYPE", b"<!ENTITY")
+    overlap = max(len(needle) for needle in needles) - 1
+    tail = b""
+    with open(file_path, "rb") as xml_file:
+        for chunk in iter(lambda: xml_file.read(64 * 1024), b""):
+            sample = (tail + chunk).upper()
+            if any(needle in sample for needle in needles):
+                raise RouteParserError(
+                    "DTD ve entity tanımları rota dosyalarında desteklenmiyor",
+                    "UNSAFE_XML",
+                )
+            tail = sample[-overlap:]
+
+
+def _ensure_route_size(points: List[RoutePoint], waypoints: List[RoutePoint]) -> None:
+    if len(points) > MAX_ROUTE_POINTS:
+        raise RouteParserError(
+            "Rota çok fazla nokta içeriyor",
+            "TOO_MANY_ROUTE_POINTS",
+            {"points_count": len(points), "max_points": MAX_ROUTE_POINTS},
+        )
+    if len(waypoints) > MAX_ROUTE_WAYPOINTS:
+        raise RouteParserError(
+            "Rota çok fazla waypoint içeriyor",
+            "TOO_MANY_WAYPOINTS",
+            {"waypoints_count": len(waypoints), "max_waypoints": MAX_ROUTE_WAYPOINTS},
+        )
+
+
 class GPXParser:
     """Parser for GPX (GPS Exchange Format) files"""
     
@@ -72,6 +134,7 @@ class GPXParser:
     def parse(self, file_path: str) -> ParsedRoute:
         """Parse GPX file and extract route data"""
         try:
+            _ensure_safe_xml_file(file_path)
             tree = ET.parse(file_path)
             root = tree.getroot()
             
@@ -86,6 +149,7 @@ class GPXParser:
             
             # Extract waypoints
             waypoints = self._extract_waypoints(root, namespace)
+            _ensure_route_size(points, waypoints)
             
             # Calculate file hash
             file_hash = self._calculate_file_hash(file_path)
@@ -102,6 +166,8 @@ class GPXParser:
                 original_format='gpx'
             )
             
+        except RouteParserError:
+            raise
         except ET.ParseError as e:
             raise RouteParserError(
                 f"GPX dosyası parse edilemedi: {str(e)}",
@@ -182,13 +248,15 @@ class GPXParser:
         try:
             lat = float(trkpt.get('lat'))
             lon = float(trkpt.get('lon'))
+            if not _valid_coordinate(lat, lon):
+                return None
             
             # Elevation
             elevation = None
             ele_elem = trkpt.find(f'{{{self.namespaces[namespace]}}}ele')
             if ele_elem is not None:
                 try:
-                    elevation = float(ele_elem.text)
+                    elevation = _finite_or_none(float(ele_elem.text))
                 except:
                     pass
             
@@ -215,6 +283,8 @@ class GPXParser:
         try:
             lat = float(wpt.get('lat'))
             lon = float(wpt.get('lon'))
+            if not _valid_coordinate(lat, lon):
+                return None
             
             # Name
             name = None
@@ -233,7 +303,7 @@ class GPXParser:
             ele_elem = wpt.find(f'{{{self.namespaces[namespace]}}}ele')
             if ele_elem is not None:
                 try:
-                    elevation = float(ele_elem.text)
+                    elevation = _finite_or_none(float(ele_elem.text))
                 except:
                     pass
             
@@ -300,6 +370,7 @@ class KMLParser:
     def parse(self, file_path: str) -> ParsedRoute:
         """Parse KML file and extract route data"""
         try:
+            _ensure_safe_xml_file(file_path)
             tree = ET.parse(file_path)
             root = tree.getroot()
             
@@ -318,6 +389,7 @@ class KMLParser:
             
             # Extract waypoints from Placemark elements
             waypoints = self._extract_placemarks(root, namespace)
+            _ensure_route_size(points, waypoints)
             
             # Calculate file hash
             file_hash = self._calculate_file_hash(file_path)
@@ -334,6 +406,8 @@ class KMLParser:
                 original_format='kml'
             )
             
+        except RouteParserError:
+            raise
         except ET.ParseError as e:
             raise RouteParserError(
                 f"KML dosyası parse edilemedi: {str(e)}",
@@ -430,7 +504,9 @@ class KMLParser:
                         try:
                             longitude = float(coords[0])
                             latitude = float(coords[1])
-                            elevation = float(coords[2]) if len(coords) > 2 else None
+                            if not _valid_coordinate(latitude, longitude):
+                                continue
+                            elevation = _finite_or_none(float(coords[2])) if len(coords) > 2 else None
                             
                             # Get timestamp if available
                             time_elem = when_elements[i] if i < len(when_elements) else None
@@ -521,7 +597,9 @@ class KMLParser:
             if len(parts) >= 2:
                 lon = float(parts[0])
                 lat = float(parts[1])
-                alt = float(parts[2]) if len(parts) > 2 else None
+                if not _valid_coordinate(lat, lon):
+                    return None
+                alt = _finite_or_none(float(parts[2])) if len(parts) > 2 else None
                 
                 result = [lon, lat]
                 if alt is not None:
@@ -585,7 +663,7 @@ class KMZParser:
             
             # Create temporary KML file
             import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.kml', delete=False) as temp_file:
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.kml', delete=False) as temp_file:
                 temp_file.write(kml_content)
                 temp_kml_path = temp_file.name
             
@@ -622,25 +700,89 @@ class KMZParser:
                 {"file_path": file_path, "error": str(e)}
             )
     
-    def _extract_kml_from_kmz(self, kmz_path: str) -> str:
+    def _extract_kml_from_kmz(self, kmz_path: str) -> bytes:
         """Extract KML content from KMZ archive"""
         with zipfile.ZipFile(kmz_path, 'r') as kmz_file:
+            entries = kmz_file.infolist()
+            if len(entries) > MAX_KMZ_ENTRIES:
+                raise RouteParserError(
+                    "KMZ arşivi çok fazla dosya içeriyor",
+                    "KMZ_TOO_MANY_ENTRIES",
+                    {"entry_count": len(entries), "max_entries": MAX_KMZ_ENTRIES},
+                )
+
+            total_uncompressed = sum(entry.file_size for entry in entries)
+            total_compressed = sum(entry.compress_size for entry in entries)
+            if total_uncompressed > MAX_KMZ_UNCOMPRESSED_BYTES:
+                raise RouteParserError(
+                    "KMZ arşivinin açılmış boyutu izin verilen sınırı aşıyor",
+                    "KMZ_UNCOMPRESSED_TOO_LARGE",
+                    {
+                        "uncompressed_size": total_uncompressed,
+                        "max_size": MAX_KMZ_UNCOMPRESSED_BYTES,
+                    },
+                )
+
+            archive_ratio = total_uncompressed / max(total_compressed, 1)
+            if archive_ratio > MAX_KMZ_COMPRESSION_RATIO:
+                raise RouteParserError(
+                    "KMZ arşivinin sıkıştırma oranı güvenli sınırı aşıyor",
+                    "KMZ_SUSPICIOUS_COMPRESSION",
+                    {"compression_ratio": round(archive_ratio, 2)},
+                )
+
+            for entry in entries:
+                normalized_name = entry.filename.replace('\\', '/')
+                path_parts = normalized_name.split('/')
+                if (
+                    normalized_name.startswith('/')
+                    or '..' in path_parts
+                    or entry.flag_bits & 0x1
+                ):
+                    raise RouteParserError(
+                        "KMZ arşivi güvenli olmayan bir dosya girdisi içeriyor",
+                        "KMZ_UNSAFE_ENTRY",
+                    )
+
             # Look for KML files in the archive
-            kml_files = [f for f in kmz_file.namelist() if f.lower().endswith('.kml')]
+            kml_files = [entry for entry in entries if entry.filename.lower().endswith('.kml')]
             
             if not kml_files:
                 raise RouteParserError(
                     "KMZ arşivinde KML dosyası bulunamadı",
                     "KMZ_NO_KML_FOUND",
-                    {"file_path": kmz_path, "archive_contents": kmz_file.namelist()}
+                    {"file_path": kmz_path, "archive_entry_count": len(entries)}
                 )
             
             # Use the first KML file found (usually doc.kml)
-            main_kml = kml_files[0]
+            main_kml = next(
+                (entry for entry in kml_files if entry.filename.lower().endswith('doc.kml')),
+                kml_files[0],
+            )
+            if main_kml.file_size > MAX_XML_BYTES:
+                raise RouteParserError(
+                    "KMZ içindeki KML dosyası izin verilen boyutu aşıyor",
+                    "XML_TOO_LARGE",
+                    {"file_size": main_kml.file_size, "max_size": MAX_XML_BYTES},
+                )
+
+            kml_ratio = main_kml.file_size / max(main_kml.compress_size, 1)
+            if kml_ratio > MAX_KMZ_COMPRESSION_RATIO:
+                raise RouteParserError(
+                    "KMZ içindeki KML dosyasının sıkıştırma oranı güvenli değil",
+                    "KMZ_SUSPICIOUS_COMPRESSION",
+                    {"compression_ratio": round(kml_ratio, 2)},
+                )
             
             # Extract and decode KML content
             with kmz_file.open(main_kml) as kml_file:
-                kml_content = kml_file.read().decode('utf-8')
+                kml_content = kml_file.read(MAX_XML_BYTES + 1)
+
+            if len(kml_content) > MAX_XML_BYTES:
+                raise RouteParserError(
+                    "KMZ içindeki KML dosyası izin verilen boyutu aşıyor",
+                    "XML_TOO_LARGE",
+                )
             
             return kml_content
     
@@ -778,7 +920,7 @@ class RouteFileParser:
     
     def _is_valid_coordinate(self, lat: float, lon: float) -> bool:
         """Validate coordinate values"""
-        return (-90 <= lat <= 90) and (-180 <= lon <= 180)
+        return _valid_coordinate(lat, lon)
     
     def extract_metadata(self, parsed_route: ParsedRoute) -> Dict[str, Any]:
         """Extract metadata in a standardized format"""

@@ -877,6 +877,55 @@ class MediaService:
                 normalized.setdefault('description', normalized.get('caption', ''))
                 normalized_items.append(normalized)
 
+            if media_type in (None, "", "image"):
+                existing_paths = {
+                    item.get("path")
+                    for item in normalized_items
+                    if item.get("media_type") == "image" and item.get("path")
+                }
+                try:
+                    with self._get_database_connection() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute(
+                                """
+                                SELECT
+                                    to_jsonb(pi)->>'image_url' AS image_url,
+                                    pi.thumbnail_url,
+                                    pi.caption,
+                                    pi.is_primary
+                                FROM poi_images AS pi
+                                WHERE pi.poi_id = %s
+                                  AND COALESCE(
+                                      NULLIF(to_jsonb(pi)->>'image_url', ''),
+                                      NULLIF(pi.thumbnail_url, '')
+                                  ) IS NOT NULL
+                                ORDER BY pi.is_primary DESC, pi.id
+                                """,
+                                (poi_id,),
+                            )
+                            for row in cur.fetchall():
+                                image_path = row.get("image_url") or row.get("thumbnail_url")
+                                preview_path = row.get("thumbnail_url") or image_path
+                                if not image_path or image_path in existing_paths:
+                                    continue
+                                filename = Path(image_path.split("?", 1)[0]).name or image_path
+                                normalized_items.append({
+                                    "poi_id": poi_id,
+                                    "media_type": "image",
+                                    "path": image_path,
+                                    "preview_path": preview_path,
+                                    "file_path": image_path,
+                                    "thumbnail_path": preview_path,
+                                    "filename": filename,
+                                    "description": row.get("caption") or "",
+                                    "caption": row.get("caption") or "",
+                                    "is_primary": row.get("is_primary", False),
+                                    "source": "poi_images",
+                                })
+                                existing_paths.add(image_path)
+                except Exception as exc:
+                    logger.warning("POI DB image media lookup failed for %s: %s", poi_id, exc)
+
             return normalized_items
             
         except Exception as e:

@@ -26,6 +26,16 @@ def login():
         return response
 
     if request.method == "POST":
+        client_ip = auth_middleware.get_client_ip()
+        allowed, _, _, retry_after = auth_middleware.check_rate_limit(client_ip)
+        if not allowed:
+            response = jsonify(
+                {"success": False, "error": "Too many failed login attempts"}
+            )
+            response.status_code = 429
+            response.headers["Retry-After"] = str(retry_after)
+            return response
+
         data = request.get_json(silent=True) if request.is_json else request.form
         try:
             token = (data.get("token") or data.get("password") or "").strip()
@@ -36,8 +46,12 @@ def login():
             return jsonify({"success": False, "error": "Admin token not configured"}), 503
 
         if not auth_config.validate_admin_token(token):
+            auth_middleware.record_failed_attempt(
+                client_ip, request.headers.get("User-Agent")
+            )
             return jsonify({"success": False, "error": "Invalid token"}), 401
 
+        auth_middleware.clear_failed_attempts(client_ip)
         return jsonify({"success": True, "message": "Login successful"}), 200
 
     # GET

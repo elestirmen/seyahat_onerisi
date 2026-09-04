@@ -11,6 +11,15 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 
+@pytest.fixture(autouse=True)
+def reset_auth_rate_limits():
+    from auth_middleware import auth_middleware
+
+    auth_middleware.clear_all_rate_limits()
+    yield
+    auth_middleware.clear_all_rate_limits()
+
+
 @pytest.fixture()
 def app(monkeypatch):
     os.environ.setdefault("FLASK_ENV", "testing")

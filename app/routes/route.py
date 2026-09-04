@@ -8,6 +8,7 @@ import logging
 
 from app.services.route_service import route_service
 from app.middleware.error_handler import APIError, bad_request
+from app.utils.validation import parse_bool, parse_bounded_int, parse_coordinates
 from auth_middleware import auth_middleware
 
 logger = logging.getLogger(__name__)
@@ -19,12 +20,11 @@ route_bp = Blueprint('route', __name__, url_prefix='/api')
 @route_bp.route('/routes', methods=['GET'])
 def list_routes():
     """
-    List routes with optional filtering and pagination.
+    List active routes with optional filtering and pagination.
     
     Query Parameters:
         - search: Search term for route name/description
         - route_type: Filter by route type (hiking, cultural, cycling, etc.)
-        - is_active: Filter by active status (true/false)
         - page: Page number (default: 1)
         - limit: Items per page (default: 20, max: 100)
     """
@@ -33,17 +33,14 @@ def list_routes():
         search = request.args.get('search')
         route_type = request.args.get('route_type')
         
-        # Parse boolean is_active parameter
-        is_active = request.args.get('is_active')
-        if is_active is not None:
-            is_active = is_active.lower() in ('true', '1', 'yes')
-        
         # Parse pagination parameters
-        try:
-            page = int(request.args.get('page', 1))
-            limit = int(request.args.get('limit', 20))
-        except (ValueError, TypeError):
-            raise bad_request("Invalid page or limit parameter")
+        page = parse_bounded_int(
+            request.args.get('page'), 'page', default=1, minimum=1, maximum=1_000_000,
+            clamp_maximum=False,
+        )
+        limit = parse_bounded_int(
+            request.args.get('limit'), 'limit', default=20, minimum=1, maximum=100,
+        )
         
         # Call service
         result = route_service.list_routes(
@@ -51,7 +48,7 @@ def list_routes():
             limit=limit,
             search=search,
             route_type=route_type,
-            is_active=is_active
+            is_active=True
         )
         
         return jsonify(result), 200
@@ -76,7 +73,7 @@ def get_route(route_id):
             raise bad_request("Route ID is required")
         
         # Call service
-        result = route_service.get_route(route_id)
+        result = route_service.get_route(route_id, require_active=True)
         
         return jsonify(result), 200
         
@@ -106,10 +103,9 @@ def search_routes():
             raise bad_request("Search query 'q' is required")
         
         # Parse limit parameter
-        try:
-            limit = int(request.args.get('limit', 50))
-        except (ValueError, TypeError):
-            raise bad_request("Invalid limit parameter")
+        limit = parse_bounded_int(
+            request.args.get('limit'), 'limit', default=50, minimum=1, maximum=100,
+        )
         
         # Call service
         result = route_service.search_routes(
@@ -160,7 +156,7 @@ def get_route_geometry(route_id):
             raise bad_request("Route ID is required")
         
         # Get route first to ensure it exists
-        route = route_service.get_route(route_id)
+        route = route_service.get_route(route_id, require_active=True)
         
         # Extract geometry if available
         geometry = route.get('geometry')
@@ -225,14 +221,16 @@ def admin_list_routes():
         # Parse boolean is_active parameter (admin can see both active and inactive)
         is_active = request.args.get('is_active')
         if is_active is not None:
-            is_active = is_active.lower() in ('true', '1', 'yes')
+            is_active = parse_bool(is_active, 'is_active')
         
         # Parse pagination parameters
-        try:
-            page = int(request.args.get('page', 1))
-            limit = int(request.args.get('limit', 20))
-        except (ValueError, TypeError):
-            raise bad_request("Invalid page or limit parameter")
+        page = parse_bounded_int(
+            request.args.get('page'), 'page', default=1, minimum=1, maximum=1_000_000,
+            clamp_maximum=False,
+        )
+        limit = parse_bounded_int(
+            request.args.get('limit'), 'limit', default=20, minimum=1, maximum=100,
+        )
         
         # Call service
         result = route_service.list_routes(
@@ -265,8 +263,8 @@ def admin_get_route(route_id):
         if not route_id:
             raise bad_request("Route ID is required")
         
-        # Call service (same as public but admin context)
-        result = route_service.get_route(route_id)
+        # Admins may inspect inactive/soft-deleted routes.
+        result = route_service.get_route(route_id, require_active=False)
         
         return jsonify(result), 200
         
@@ -305,20 +303,16 @@ def admin_add_route_media(route_id):
 
         file = request.files['file']
         caption = request.form.get('caption')
-        is_primary = request.form.get('is_primary', 'false').lower() in ('true', '1', 'yes')
+        is_primary = parse_bool(
+            request.form.get('is_primary'), 'is_primary', default=False
+        )
         lat = request.form.get('lat')
         lng = request.form.get('lng')
 
         if lat or lng:
             if not (lat and lng):
                 raise bad_request("lat and lng must be provided together")
-            try:
-                lat_val = float(lat)
-                lng_val = float(lng)
-            except (TypeError, ValueError):
-                raise bad_request("Invalid lat or lng")
-            if not (-90 <= lat_val <= 90 and -180 <= lng_val <= 180):
-                raise bad_request("lat/lng out of range")
+            lat_val, lng_val = parse_coordinates(lat, lng)
             lat, lng = lat_val, lng_val
         else:
             lat = lng = None

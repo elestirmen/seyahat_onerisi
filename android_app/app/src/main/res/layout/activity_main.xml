@@ -8,5 +8,40 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent" />
 
-</FrameLayout>
+  <LinearLayout
+    android:id="@+id/webLoadErrorView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp"
+    android:visibility="gone">
 
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:gravity="center"
+      android:text="@string/web_load_error_title"
+      android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="12dp"
+      android:gravity="center"
+      android:text="@string/web_load_error_message"
+      android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <Button
+      android:id="@+id/webLoadRetryButton"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="20dp"
+      android:text="@string/web_load_retry" />
+
+  </LinearLayout>
+
+</FrameLayout>

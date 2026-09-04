@@ -70,7 +70,7 @@ class AuthConfig:
             # Content Security Policy - restrictive but functional for the POI app
             "Content-Security-Policy": (
                 "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; "
+                "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; "
                 "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; "
                 "img-src 'self' data: blob: https://*.openstreetmap.org https://*.tile.openstreetmap.org https://*.opentopomap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://unpkg.com; "
                 "font-src 'self' https://cdnjs.cloudflare.com; "
@@ -78,6 +78,7 @@ class AuthConfig:
                 "media-src 'self'; "
                 "object-src 'none'; "
                 "base-uri 'self'; "
+                "frame-ancestors 'self'; "
                 "form-action 'self';"
             ),
             # Referrer policy for privacy
@@ -87,10 +88,6 @@ class AuthConfig:
                 "geolocation=(self), microphone=(), camera=(), payment=(), usb=(), "
                 "magnetometer=(), gyroscope=(), accelerometer=()"
             ),
-            # Cache control for sensitive pages
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0",
         }
 
 

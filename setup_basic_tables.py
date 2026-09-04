@@ -24,6 +24,7 @@ def get_db_conn():
 def setup_basic_tables():
     """Setup basic database tables"""
     conn = None
+    cur = None
     try:
         conn = get_db_conn()
         cur = conn.cursor()
@@ -72,14 +73,6 @@ def setup_basic_tables():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_route_media_route_id ON route_media(route_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_route_media_location ON route_media(lat, lng) WHERE lat IS NOT NULL AND lng IS NOT NULL;")
         print("✅ Indexes created")
-        
-        # Insert a test route
-        cur.execute("""
-            INSERT INTO routes (id, name, description, route_type, difficulty_level)
-            VALUES (154, 'Test Route 154', 'Test route for media location testing', 'walking', 2)
-            ON CONFLICT (id) DO NOTHING;
-        """)
-        print("✅ Test route 154 created")
         
         conn.commit()
         print("🎉 Basic tables setup completed!")

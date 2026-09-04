@@ -18,6 +18,7 @@ from werkzeug.utils import secure_filename
 
 from app.middleware.error_handler import APIError, bad_request, not_found
 from app.services.media_service import media_service
+from app.utils.validation import parse_bool, parse_finite_float
 
 logger = logging.getLogger(__name__)
 
@@ -559,13 +560,7 @@ class RouteService:
         return meta
 
     def _coerce_bool(self, value: Any) -> bool:
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, (int, float)):
-            return bool(value)
-        if isinstance(value, str):
-            return value.strip().lower() in ("true", "1", "yes", "on")
-        return bool(value)
+        return parse_bool(value, "boolean value")
     
     def list_routes(self, page: int = 1, limit: int = 20, search: str = None, 
                    route_type: str = None, is_active: bool = None) -> Dict[str, Any]:
@@ -582,10 +577,11 @@ class RouteService:
         Returns:
             Dict with routes, total, page, total_pages
         """
-        if limit > 100:
-            limit = 100
+        if limit < 1:
+            raise bad_request("limit must be at least 1")
+        limit = min(limit, 100)
         if page < 1:
-            page = 1
+            raise bad_request("page must be at least 1")
         
         offset = (page - 1) * limit
         
@@ -669,25 +665,26 @@ class RouteService:
                     'per_page': limit
                 }
     
-    def get_route(self, route_id: int) -> Dict[str, Any]:
+    def get_route(self, route_id: int, require_active: bool = False) -> Dict[str, Any]:
         """
         Get route by ID.
         
         Args:
             route_id: Route identifier
+            require_active: Exclude inactive/soft-deleted routes when true
             
         Returns:
             Route data
         """
         try:
-            return self._get_route_database(route_id)
+            return self._get_route_database(route_id, require_active=require_active)
         except APIError:
             raise
         except Exception as e:
             logger.error(f"Error getting route {route_id}: {e}")
             raise APIError(f"Failed to get route {route_id}", "ROUTE_GET_ERROR")
     
-    def _get_route_database(self, route_id: int) -> Dict[str, Any]:
+    def _get_route_database(self, route_id: int, require_active: bool = False) -> Dict[str, Any]:
         """Get route from database."""
         conn_context = self._get_database_connection()
         
@@ -727,10 +724,11 @@ class RouteService:
                 if "elevation_resolution" in schema:
                     select_fields.append("elevation_resolution")
 
+                active_condition = " AND is_active = true" if require_active and "is_active" in schema else ""
                 query = f"""
                     SELECT {', '.join(select_fields)}
                     FROM routes
-                    WHERE id = %s
+                    WHERE id = %s{active_condition}
                 """
                 cursor.execute(query, (route_id,))
                 result = cursor.fetchone()
@@ -768,10 +766,7 @@ class RouteService:
         def _to_float(value, field):
             if value is None:
                 return None
-            try:
-                return float(value)
-            except (TypeError, ValueError):
-                raise bad_request(f"Invalid {field} format")
+            return parse_finite_float(value, field)
 
         difficulty_level = _to_int(route_data.get("difficulty_level", 1), "difficulty_level")
         if difficulty_level is not None and not (1 <= difficulty_level <= 5):
@@ -781,8 +776,12 @@ class RouteService:
         total_distance = _to_float(route_data.get("total_distance"), "total_distance")
         elevation_gain = _to_int(route_data.get("elevation_gain"), "elevation_gain")
 
-        is_circular = bool(route_data.get("is_circular", False))
-        is_active = bool(route_data.get("is_active", True))
+        is_circular = parse_bool(
+            route_data.get("is_circular"), "is_circular", default=False
+        )
+        is_active = parse_bool(
+            route_data.get("is_active"), "is_active", default=True
+        )
 
         tags = route_data.get("tags", "")
         if isinstance(tags, list):
@@ -912,16 +911,13 @@ class RouteService:
                     if val is None:
                         set_parts.append(f"{column} = NULL")
                         return
-                    try:
-                        val = float(val)
-                    except (TypeError, ValueError):
-                        raise bad_request(f"Invalid {field} format")
+                    val = parse_finite_float(val, field)
                 elif cast == "jsonb":
                     set_parts.append(f"{column} = %s::jsonb")
                     values.append(json.dumps(val))
                     return
                 elif cast == "bool":
-                    val = bool(val)
+                    val = parse_bool(val, field)
 
                 set_parts.append(f"{column} = %s")
                 values.append(val)
@@ -1114,32 +1110,159 @@ class RouteService:
         return [dict(row) for row in rows]
 
     def find_nearby_pois(self, route_id: int, max_distance_meters: int = 500) -> List[Dict[str, Any]]:
-        """Find POIs close to a route geometry or waypoint chain."""
+        """Find unassociated POIs close to a route geometry or waypoint chain."""
+        max_distance = parse_finite_float(max_distance_meters, "max_distance_meters")
+        if max_distance <= 0:
+            raise bad_request("max_distance_meters must be greater than 0")
+
+        # Load the route once. Prefer its real LineString over waypoint/POI
+        # approximations so the native PostGIS query and fallback agree.
         route = self.get_route(route_id)
-        geometry_data = self.get_route_geometry(route_id)
-        route_points = self._extract_route_points(route, geometry_data)
+        geometry_points = self._extract_route_points({"geometry": route.get("geometry")})
+        waypoint_points = self._extract_route_points({"waypoints": route.get("waypoints")})
+        route_points = geometry_points or waypoint_points or self._extract_route_points(route)
         if not route_points:
             return []
 
-        existing_ids = set()
-        for poi in self.get_route_pois(route_id):
-            try:
-                existing_ids.add(int(poi.get("poi_id")))
-            except (TypeError, ValueError):
-                continue
-        results: List[Dict[str, Any]] = []
-        for poi in self._list_active_pois_with_location():
-            poi_id = poi.get("id")
-            if poi_id in existing_ids:
-                continue
+        conn_context = self._get_database_connection()
+        with conn_context as conn:
+            routes_schema = self._get_table_schema(conn, "routes")
+            pois_schema = self._get_table_schema(conn, "pois")
+            route_pois_schema = self._get_table_schema(conn, "route_pois")
+            route_poi_assoc_schema = self._get_table_schema(conn, "route_poi_associations")
 
+            if "location" not in pois_schema:
+                return []
+
+            poi_active_condition = "AND p.is_active = true" if "is_active" in pois_schema else ""
+            native_exclusions = []
+            if {"route_id", "poi_id"}.issubset(route_pois_schema):
+                native_exclusions.append(
+                    "NOT EXISTS (SELECT 1 FROM route_pois rp "
+                    "WHERE rp.route_id = r.id AND rp.poi_id = p.id)"
+                )
+            if {"route_id", "poi_id"}.issubset(route_poi_assoc_schema):
+                native_exclusions.append(
+                    "NOT EXISTS (SELECT 1 FROM route_poi_associations rpa "
+                    "WHERE rpa.route_id = r.id AND rpa.poi_id = p.id)"
+                )
+            native_exclusion_sql = "\nAND ".join(native_exclusions)
+            if native_exclusion_sql:
+                native_exclusion_sql = f"AND {native_exclusion_sql}"
+
+            # Canonical schema: both columns are geography values with GIST
+            # indexes. Distance filtering and sorting stay entirely in PostGIS.
+            use_native_postgis = (
+                routes_schema.get("route_geometry") == "geography"
+                and pois_schema.get("location") == "geography"
+                and bool(geometry_points)
+            )
+            if use_native_postgis:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        f"""
+                        SELECT p.id, p.name, p.category, p.description,
+                               ST_Y(p.location::geometry) AS lat,
+                               ST_X(p.location::geometry) AS lon,
+                               ST_Distance(r.route_geometry, p.location) AS distance_meters,
+                               ST_Y(ST_ClosestPoint(r.route_geometry::geometry, p.location::geometry)) AS closest_lat,
+                               ST_X(ST_ClosestPoint(r.route_geometry::geometry, p.location::geometry)) AS closest_lng
+                        FROM routes r
+                        JOIN pois p ON p.location IS NOT NULL
+                        WHERE r.id = %s
+                          AND r.route_geometry IS NOT NULL
+                          {poi_active_condition}
+                          AND ST_DWithin(r.route_geometry, p.location, %s)
+                          {native_exclusion_sql}
+                        ORDER BY distance_meters ASC, p.id ASC
+                        """,
+                        [route_id, max_distance],
+                    )
+                    rows = cursor.fetchall() or []
+
+                results = []
+                for row in rows:
+                    item = dict(row)
+                    closest_lat = item.pop("closest_lat", None)
+                    closest_lng = item.pop("closest_lng", None)
+                    if item.get("distance_meters") is not None:
+                        item["distance_meters"] = round(float(item["distance_meters"]), 2)
+                    if closest_lat is not None and closest_lng is not None:
+                        item["closest_route_point"] = {
+                            "lat": round(float(closest_lat), 6),
+                            "lng": round(float(closest_lng), 6),
+                        }
+                    results.append(item)
+                return results
+
+            # Older schemas may store only JSON geometry/waypoints. Bound the
+            # candidate set by an expanded route envelope before applying the
+            # exact existing polyline calculation in Python.
+            candidate_limit = 500
+            latitudes = [point[0] for point in route_points]
+            longitudes = [point[1] for point in route_points]
+            mid_latitude = (min(latitudes) + max(latitudes)) / 2.0
+            latitude_buffer = max_distance / 111_320.0
+            longitude_scale = max(abs(math.cos(math.radians(mid_latitude))), 0.01)
+            longitude_buffer = max_distance / (111_320.0 * longitude_scale)
+
+            min_latitude = max(-90.0, min(latitudes) - latitude_buffer)
+            max_latitude = min(90.0, max(latitudes) + latitude_buffer)
+            min_longitude = max(-180.0, min(longitudes) - longitude_buffer)
+            max_longitude = min(180.0, max(longitudes) + longitude_buffer)
+
+            fallback_exclusions = []
+            fallback_params: List[Any] = [
+                min_latitude,
+                max_latitude,
+                min_longitude,
+                max_longitude,
+            ]
+            if {"route_id", "poi_id"}.issubset(route_pois_schema):
+                fallback_exclusions.append(
+                    "NOT EXISTS (SELECT 1 FROM route_pois rp "
+                    "WHERE rp.route_id = %s AND rp.poi_id = p.id)"
+                )
+                fallback_params.append(route_id)
+            if {"route_id", "poi_id"}.issubset(route_poi_assoc_schema):
+                fallback_exclusions.append(
+                    "NOT EXISTS (SELECT 1 FROM route_poi_associations rpa "
+                    "WHERE rpa.route_id = %s AND rpa.poi_id = p.id)"
+                )
+                fallback_params.append(route_id)
+            fallback_exclusion_sql = "\nAND ".join(fallback_exclusions)
+            if fallback_exclusion_sql:
+                fallback_exclusion_sql = f"AND {fallback_exclusion_sql}"
+            fallback_params.append(candidate_limit)
+
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    f"""
+                    SELECT p.id, p.name, p.category, p.description,
+                           ST_Y(p.location::geometry) AS lat,
+                           ST_X(p.location::geometry) AS lon
+                    FROM pois p
+                    WHERE p.location IS NOT NULL
+                      {poi_active_condition}
+                      AND ST_Y(p.location::geometry) BETWEEN %s AND %s
+                      AND ST_X(p.location::geometry) BETWEEN %s AND %s
+                      {fallback_exclusion_sql}
+                    ORDER BY p.id ASC
+                    LIMIT %s
+                    """,
+                    fallback_params,
+                )
+                candidates = cursor.fetchall() or []
+
+        results: List[Dict[str, Any]] = []
+        for poi in candidates:
             lat = poi.get("lat")
             lng = poi.get("lon")
             if lat is None or lng is None:
                 continue
 
             distance_meters, closest_point = self._distance_to_polyline((float(lat), float(lng)), route_points)
-            if distance_meters > max_distance_meters:
+            if distance_meters > max_distance:
                 continue
 
             item = dict(poi)
@@ -1247,7 +1370,9 @@ class RouteService:
             if isinstance(item, dict):
                 poi_id = item.get("poi_id", item.get("id"))
                 order_in_route = item.get("order_in_route", item.get("sequence_order", idx))
-                is_mandatory = bool(item.get("is_mandatory", True))
+                is_mandatory = parse_bool(
+                    item.get("is_mandatory"), "is_mandatory", default=True
+                )
                 estimated_time_at_poi = item.get("estimated_time_at_poi", 15)
                 notes = item.get("notes", "") or ""
             else:
@@ -1398,8 +1523,9 @@ class RouteService:
         if not query:
             raise bad_request("Search query is required")
         
-        if limit > 100:
-            limit = 100
+        if limit < 1:
+            raise bad_request("limit must be at least 1")
+        limit = min(limit, 100)
         
         try:
             return self._search_routes_database(query, route_type, limit)
@@ -1417,9 +1543,11 @@ class RouteService:
             with conn.cursor() as cursor:
                 schema = self._get_table_schema(conn, "routes")
 
-                # Build WHERE clause
+                # Build WHERE clause and parameters in the same order as the
+                # placeholders. Keeping the search predicate in this list
+                # prevents route_type from being bound to a search placeholder.
                 where_conditions = ["1=1"]
-                params = [f"%{query}%", f"%{query}%"]
+                params = []
 
                 if "is_active" in schema:
                     where_conditions.append("is_active = true")
@@ -1427,6 +1555,9 @@ class RouteService:
                 if route_type and "route_type" in schema:
                     where_conditions.append("route_type = %s")
                     params.append(route_type)
+
+                where_conditions.append("(name ILIKE %s OR description ILIKE %s)")
+                params.extend([f"%{query}%", f"%{query}%"])
                 
                 where_clause = " AND ".join(where_conditions)
 
@@ -1448,7 +1579,7 @@ class RouteService:
                 search_query = f"""
                     SELECT {', '.join(select_fields)}
                     FROM routes
-                    WHERE {where_clause} AND (name ILIKE %s OR description ILIKE %s)
+                    WHERE {where_clause}
                     ORDER BY
                         CASE WHEN name ILIKE %s THEN 1 ELSE 2 END,
                         name

@@ -6,6 +6,16 @@ Environment-based configuration management with sensible defaults.
 import os
 import secrets
 
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - production dependency validation catches this
+    load_dotenv = None
+
+if load_dotenv:
+    # Configuration class attributes are evaluated at import time, so the env
+    # file must be loaded before those classes read database/CORS credentials.
+    load_dotenv()
+
 
 DEFAULT_SECRET_KEY = secrets.token_urlsafe(48)
 
@@ -29,7 +39,9 @@ class Config:
     ADMIN_TOKEN = os.environ.get('POI_ADMIN_TOKEN', '')
     
     # CORS Configuration
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*')
+    # Same-origin needs no CORS header. Development explicitly opts into its
+    # local UI origins below; production must configure an allowlist.
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '')
     
     # Rate Limiting
     RATE_LIMIT_ENABLED = os.environ.get('RATE_LIMIT_ENABLED', 'true').lower() == 'true'
@@ -115,6 +127,22 @@ class ProductionConfig(Config):
         secret_key = (app.config.get("SECRET_KEY") or "").strip()
         if len(secret_key) < 32:
             raise ValueError("SECRET_KEY must be at least 32 characters in production")
+
+        database_password = (
+            os.environ.get("DB_PASSWORD")
+            or os.environ.get("POI_DB_PASSWORD")
+            or ""
+        ).strip()
+        if not database_password or database_password in {"poi_password", "your_db_password"}:
+            raise ValueError("A non-placeholder database password must be set in production")
+
+        cors_origins = {
+            origin.strip()
+            for origin in str(app.config.get("CORS_ORIGINS") or "").split(",")
+            if origin.strip()
+        }
+        if "*" in cors_origins:
+            raise ValueError("Wildcard CORS_ORIGINS is not allowed in production")
 
 
 class TestingConfig(Config):

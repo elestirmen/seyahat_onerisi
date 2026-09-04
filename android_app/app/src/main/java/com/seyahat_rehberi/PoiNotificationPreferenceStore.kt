@@ -1,4 +1,4 @@
-package link.keenetic.urgup.harita
+package com.seyahat_rehberi
 
 import android.content.Context
 

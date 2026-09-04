@@ -112,14 +112,6 @@ class ErrorHandler:
         if request_id:
             error_response['request_id'] = request_id
         
-        # Add debug information in development
-        if current_app and current_app.config.get('DEBUG', False):
-            error_response['debug'] = {
-                'method': request.method if request else None,
-                'args': dict(request.args) if request else None,
-                'headers': dict(request.headers) if request else None
-            }
-        
         return error_response
     
     def handle_api_error(self, error: APIError) -> Tuple[Dict[str, Any], int]:
@@ -189,7 +181,6 @@ class ErrorHandler:
             message=error_message,
             code=error_code,
             status_code=status_code,
-            details={'database_error': str(error)} if current_app.config.get('DEBUG') else None
         )
         
         return jsonify(response), status_code
@@ -226,19 +217,11 @@ class ErrorHandler:
         logger.error(f"Unexpected Error [{error_id}]: {error}")
         logger.error(f"Traceback [{error_id}]: {traceback.format_exc()}")
         
-        # Don't expose internal errors in production
-        if current_app.config.get('DEBUG', False):
-            message = str(error)
-            details = {'traceback': traceback.format_exc()}
-        else:
-            message = "An unexpected error occurred"
-            details = {'error_id': error_id}
-        
         response = self.create_error_response(
-            message=message,
+            message="An unexpected error occurred",
             code="INTERNAL_ERROR",
             status_code=500,
-            details=details,
+            details={'error_id': error_id},
             request_id=error_id
         )
         

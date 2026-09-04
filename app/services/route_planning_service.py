@@ -8,6 +8,7 @@ import logging
 from typing import Dict, List, Any
 
 from app.middleware.error_handler import APIError, bad_request
+from app.utils.validation import parse_coordinates
 
 logger = logging.getLogger(__name__)
 
@@ -39,20 +40,27 @@ class RoutePlanningService:
             Route data with coordinates, distance, duration, instructions
         """
         try:
+            if not isinstance(waypoints, list):
+                raise bad_request("waypoints must be an array")
             if len(waypoints) < 2:
                 raise bad_request("At least 2 waypoints required")
+            if len(waypoints) > 100:
+                raise bad_request("At most 100 waypoints are supported")
             
             # Validate waypoints
+            normalized_waypoints = []
             for i, wp in enumerate(waypoints):
+                if not isinstance(wp, dict):
+                    raise bad_request(f"Waypoint {i+1} must be an object")
                 if 'lat' not in wp or 'lng' not in wp:
                     raise bad_request(f"Waypoint {i+1} missing lat/lng coordinates")
-                
                 try:
-                    lat, lng = float(wp['lat']), float(wp['lng'])
-                    if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
-                        raise ValueError("Invalid coordinates")
-                except (ValueError, TypeError):
+                    lat, lng = parse_coordinates(wp['lat'], wp['lng'])
+                except APIError:
                     raise bad_request(f"Invalid coordinates for waypoint {i+1}")
+                normalized_waypoints.append({**wp, 'lat': lat, 'lng': lng})
+
+            waypoints = normalized_waypoints
             
             # Determine route type
             if route_type == 'smart':
@@ -83,13 +91,7 @@ class RoutePlanningService:
             Walking route data
         """
         try:
-            # Try OSMnx-based routing first
-            try:
-                return self._create_osmnx_walking_route(waypoints)
-            except Exception as osmnx_error:
-                logger.warning(f"OSMnx walking route failed: {osmnx_error}")
-                # Fallback to simple routing
-                return self._create_simple_route(waypoints, 'walking')
+            return self._create_straight_line_preview(waypoints, 'walking')
                 
         except APIError:
             raise
@@ -108,13 +110,7 @@ class RoutePlanningService:
             Driving route data
         """
         try:
-            # Try OSMnx-based routing first
-            try:
-                return self._create_osmnx_driving_route(waypoints)
-            except Exception as osmnx_error:
-                logger.warning(f"OSMnx driving route failed: {osmnx_error}")
-                # Fallback to simple routing
-                return self._create_simple_route(waypoints, 'driving')
+            return self._create_straight_line_preview(waypoints, 'driving')
                 
         except APIError:
             raise
@@ -140,12 +136,10 @@ class RoutePlanningService:
             if len(waypoints) <= 2:
                 return waypoints
             
-            # For small number of waypoints, use simple nearest neighbor
-            if len(waypoints) <= 10:
-                return self._nearest_neighbor_optimization(waypoints, start_point, end_point)
-            else:
-                # For larger sets, use a more sophisticated approach
-                return self._genetic_algorithm_optimization(waypoints, start_point, end_point)
+            # This is a deterministic nearest-neighbour heuristic, not an
+            # optimal TSP solver. Keeping one honest implementation avoids
+            # presenting the same heuristic as a genetic algorithm.
+            return self._nearest_neighbor_optimization(waypoints, start_point, end_point)
                 
         except Exception as e:
             logger.error(f"Route optimization error: {e}")
@@ -266,96 +260,86 @@ class RoutePlanningService:
         
         return c * r
     
+    def _create_straight_line_preview(
+        self, waypoints: List[Dict[str, Any]], route_type: str
+    ) -> Dict[str, Any]:
+        """Create an explicitly approximate, non-navigational route preview."""
+        try:
+            full_route = []
+            segments = []
+            total_distance = 0.0
+            for index in range(len(waypoints) - 1):
+                start = waypoints[index]
+                end = waypoints[index + 1]
+                segment_coords = self._interpolate_coordinates(
+                    start, end, num_points=10 if route_type == 'walking' else 5
+                )
+                full_route.extend(
+                    segment_coords[1:] if full_route else segment_coords
+                )
+                segment_distance = self._haversine_distance(
+                    start['lat'], start['lng'], end['lat'], end['lng']
+                )
+                total_distance += segment_distance
+                segments.append(
+                    {
+                        'coordinates': segment_coords,
+                        'distance': round(segment_distance, 2),
+                        'from': start.get('name', f'Point {index + 1}'),
+                        'to': end.get('name', f'Point {index + 2}'),
+                    }
+                )
+
+            speed = (
+                self.walking_speed_kmh
+                if route_type == 'walking'
+                else self.driving_speed_kmh
+            )
+            estimated_time = (total_distance / speed) * 60
+            instructions = [
+                f"Continue toward {waypoint.get('name', f'Point {index + 1}')}"
+                for index, waypoint in enumerate(waypoints[1:], start=1)
+            ]
+            return {
+                'success': True,
+                'route': {
+                    'segments': segments,
+                    'coordinates': [
+                        [coordinate['lng'], coordinate['lat']]
+                        for coordinate in full_route
+                    ],
+                    'distance': round(total_distance, 2),
+                    'duration': round(estimated_time, 1),
+                    'instructions': instructions,
+                    'total_distance': round(total_distance, 2),
+                    'estimated_time': round(estimated_time, 1),
+                    'waypoint_count': len(waypoints),
+                    'network_type': route_type,
+                    'geometry_accuracy': 'approximate',
+                },
+                'fallback_used': True,
+                'approximate': True,
+                'routing_provider': 'straight_line_preview',
+                'warning': (
+                    'Approximate straight-line preview only; do not use as '
+                    'turn-by-turn navigation.'
+                ),
+            }
+        except APIError:
+            raise
+        except Exception as e:
+            raise APIError(
+                f"Straight-line preview error: {str(e)}",
+                "ROUTE_PREVIEW_ERROR",
+                500,
+            )
+
+    # Compatibility aliases for callers that used the old mock method names.
     def _create_osmnx_walking_route(self, waypoints: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Create walking route using OSMnx (simplified mock implementation)."""
-        try:
-            # In real implementation, would use OSMnx and NetworkX
-            # For now, create a mock response based on the API structure we saw
-            
-            full_route = []
-            total_distance = 0
-            
-            # Generate mock route coordinates between waypoints
-            for i in range(len(waypoints) - 1):
-                start = waypoints[i]
-                end = waypoints[i + 1]
-                
-                # Create interpolated points between waypoints
-                segment_coords = self._interpolate_coordinates(start, end, num_points=10)
-                full_route.extend(segment_coords)
-                
-                # Calculate segment distance
-                segment_distance = self._haversine_distance(
-                    start['lat'], start['lng'], end['lat'], end['lng']
-                )
-                total_distance += segment_distance
-            
-            # Calculate estimated time
-            estimated_time_minutes = (total_distance / self.walking_speed_kmh) * 60
-            
-            return {
-                'success': True,
-                'route': {
-                    'segments': [{
-                        'coordinates': full_route,
-                        'distance': round(total_distance, 2),
-                        'from': waypoints[0].get('name', 'Start'),
-                        'to': waypoints[-1].get('name', 'End')
-                    }],
-                    'total_distance': round(total_distance, 2),
-                    'estimated_time': round(estimated_time_minutes, 1),
-                    'waypoint_count': len(waypoints),
-                    'network_type': 'walking'
-                },
-                'fallback_used': False
-            }
-            
-        except Exception as e:
-            raise APIError(f"OSMnx walking route error: {str(e)}", "OSMNX_WALKING_ERROR", 500)
-    
+        return self._create_straight_line_preview(waypoints, 'walking')
+
     def _create_osmnx_driving_route(self, waypoints: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Create driving route using OSMnx (simplified mock implementation)."""
-        try:
-            # Similar to walking route but with different speed and interpolation
-            
-            full_route = []
-            total_distance = 0
-            
-            for i in range(len(waypoints) - 1):
-                start = waypoints[i]
-                end = waypoints[i + 1]
-                
-                # Create road-like route between waypoints
-                segment_coords = self._interpolate_coordinates(start, end, num_points=5)
-                full_route.extend(segment_coords)
-                
-                segment_distance = self._haversine_distance(
-                    start['lat'], start['lng'], end['lat'], end['lng']
-                )
-                total_distance += segment_distance
-            
-            # Calculate estimated time for driving
-            estimated_time_minutes = (total_distance / self.driving_speed_kmh) * 60
-            
-            return {
-                'success': True,
-                'route': {
-                    'segments': [{
-                        'coordinates': full_route,
-                        'distance': round(total_distance, 2),
-                        'from': waypoints[0].get('name', 'Start'),
-                        'to': waypoints[-1].get('name', 'End')
-                    }],
-                    'total_distance': round(total_distance, 2),
-                    'estimated_time': round(estimated_time_minutes, 1),
-                    'waypoint_count': len(waypoints),
-                    'network_type': 'driving'
-                },
-                'fallback_used': False
-            }
-            
-        except Exception as e:
-            raise APIError(f"OSMnx driving route error: {str(e)}", "OSMNX_DRIVING_ERROR", 500)
+        return self._create_straight_line_preview(waypoints, 'driving')
     
     def _create_simple_route(self, waypoints: List[Dict[str, Any]], route_type: str) -> Dict[str, Any]:
         """Create simple route with straight lines (fallback)."""
@@ -465,8 +449,7 @@ class RoutePlanningService:
     def _genetic_algorithm_optimization(self, waypoints: List[Dict[str, Any]], 
                                       start_point: Dict[str, Any] = None,
                                       end_point: Dict[str, Any] = None) -> List[Dict[str, Any]]:
-        """Optimize route using simplified genetic algorithm (placeholder)."""
-        # For now, fall back to nearest neighbor for complex cases
+        """Compatibility wrapper for the nearest-neighbour heuristic."""
         return self._nearest_neighbor_optimization(waypoints, start_point, end_point)
 
 

@@ -1,5 +1,8 @@
 <resources>
   <string name="app_name">Harita Ürgüp</string>
+  <string name="web_load_error_title">Sayfa yüklenemedi</string>
+  <string name="web_load_error_message">İnternet bağlantınızı kontrol edip yeniden deneyin.</string>
+  <string name="web_load_retry">Yeniden dene</string>
   <string name="nearby_poi_channel_name">Yakın İçerik Uyarıları</string>
   <string name="nearby_poi_channel_description">Yakınınızdaki POI ve 360 içerikler için canlı uyarı bildirimleri</string>
   <string name="nearby_poi_notification_title">Yakın İçerik Uyarısı</string>

@@ -17,6 +17,7 @@ class MobileOptimizations {
     constructor() {
         this.isTouch = 'ontouchstart' in window;
         this.isMobile = window.innerWidth <= 768;
+        this.performanceDebugEnabled = window.__POI_PERF_DEBUG__ === true;
         this.mapFullscreen = false;
         this.currentView = 'map'; // 'map' or 'list'
         this.filterPanelExpanded = false;
@@ -67,7 +68,9 @@ class MobileOptimizations {
         // Performance and mobile-specific features
         this.setupViewportBasedRendering();
         this.setupEventThrottling();
-        this.setupPerformanceMonitoring();
+        if (this.performanceDebugEnabled) {
+            this.setupPerformanceMonitoring();
+        }
         this.setupMemoryManagement();
         this.setupTouchEventHandling();
         
@@ -84,8 +87,10 @@ class MobileOptimizations {
         this.setupResponsiveBreakpoints();
         this.setupLazyLoading();
         this.setupProgressiveEnhancement();
-        this.startPerformanceMonitoring();
-        this.startMemoryTracking();
+        if (this.performanceDebugEnabled) {
+            this.startPerformanceMonitoring();
+            this.startMemoryTracking();
+        }
     }
 
     /**

@@ -14,6 +14,9 @@ Configure via environment variable: `POI_ADMIN_TOKEN`.
 from __future__ import annotations
 
 import logging
+import os
+import threading
+import time
 from functools import wraps
 from urllib.parse import quote
 
@@ -30,8 +33,23 @@ class AuthMiddleware:
 
     def __init__(self, app=None):
         self.app = None
+        self._failed_attempts = {}
+        self._rate_limit_lock = threading.Lock()
+        self.max_failed_attempts = self._positive_env_int(
+            "ADMIN_LOGIN_MAX_ATTEMPTS", 5
+        )
+        self.failed_attempt_window = self._positive_env_int(
+            "ADMIN_LOGIN_ATTEMPT_WINDOW_SECONDS", 900
+        )
         if app is not None:
             self.init_app(app)
+
+    @staticmethod
+    def _positive_env_int(name, default):
+        try:
+            return max(1, int(os.environ.get(name, default)))
+        except (TypeError, ValueError):
+            return default
 
     def init_app(self, app):
         self.app = app
@@ -45,6 +63,32 @@ class AuthMiddleware:
                 response.headers.setdefault(header, value)
         except Exception:
             pass
+
+        path = request.path.lower()
+        sensitive = (
+            path.startswith("/api/")
+            or path.startswith("/auth/")
+            or path.startswith("/admin")
+            or path.endswith("poi_manager_ui.html")
+        )
+        cacheable_asset = path.startswith("/static/") or path.endswith(
+            (
+                ".css", ".js", ".mjs", ".png", ".jpg", ".jpeg", ".webp",
+                ".gif", ".svg", ".ico", ".woff", ".woff2", ".ttf", ".mp3",
+                ".mp4", ".webm", ".glb", ".gltf",
+            )
+        )
+        if sensitive:
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        elif cacheable_asset and request.method in {"GET", "HEAD"} and response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=86400"
+            response.headers.pop("Pragma", None)
+            response.headers.pop("Expires", None)
+        else:
+            # Public HTML may be revalidated but is not pinned indefinitely.
+            response.headers.setdefault("Cache-Control", "no-cache")
         return response
 
     def _extract_token(self):
@@ -64,6 +108,13 @@ class AuthMiddleware:
     def is_authenticated(self) -> bool:
         token = self._extract_token()
         return auth_config.validate_admin_token(token)
+
+    def get_client_ip(self):
+        """Return the transport peer address without trusting raw proxy headers."""
+        # Never consume X-Forwarded-For directly here. A reverse proxy should
+        # enforce its own limits too; deployments may add a correctly scoped
+        # ProxyFix only when the exact proxy hop count is known.
+        return request.remote_addr or "unknown"
 
     def _wants_json(self) -> bool:
         if request.path.startswith("/api/"):
@@ -131,13 +182,50 @@ class AuthMiddleware:
         return True
 
     def check_rate_limit(self, ip_address):
-        return True, 0, None, 0
+        now = time.time()
+        client_key = str(ip_address or "unknown")
+        with self._rate_limit_lock:
+            attempts = [
+                timestamp
+                for timestamp in self._failed_attempts.get(client_key, [])
+                if now - timestamp < self.failed_attempt_window
+            ]
+            if attempts:
+                self._failed_attempts[client_key] = attempts
+            else:
+                self._failed_attempts.pop(client_key, None)
+
+            remaining = max(0, self.max_failed_attempts - len(attempts))
+            if remaining == 0:
+                retry_after = max(
+                    1,
+                    int(self.failed_attempt_window - (now - attempts[0])),
+                )
+                return False, 0, int(attempts[0] + self.failed_attempt_window), retry_after
+
+            return True, remaining, None, 0
 
     def record_failed_attempt(self, ip_address, user_agent=None):
-        return None
+        now = time.time()
+        client_key = str(ip_address or "unknown")
+        with self._rate_limit_lock:
+            attempts = [
+                timestamp
+                for timestamp in self._failed_attempts.get(client_key, [])
+                if now - timestamp < self.failed_attempt_window
+            ]
+            attempts.append(now)
+            self._failed_attempts[client_key] = attempts[-self.max_failed_attempts:]
+        logger.warning("Failed admin login attempt from %s", client_key)
 
     def clear_failed_attempts(self, ip_address):
-        return None
+        client_key = str(ip_address or "unknown")
+        with self._rate_limit_lock:
+            self._failed_attempts.pop(client_key, None)
+
+    def clear_all_rate_limits(self):
+        with self._rate_limit_lock:
+            self._failed_attempts.clear()
 
 
 auth_middleware = AuthMiddleware()

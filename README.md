@@ -41,7 +41,7 @@
 - **Kategori Sistemi**: 10+ farklı kategori (Tarihi, Sanat & Kültür, Doğa, Eğlence, Alışveriş, Spor, Macera, Rahatlatıcı, Yemek, Gece Hayatı)
 - **Medya Yönetimi**: POI'lar için fotoğraf, video ve 360° panorama desteği
 - **Değerlendirme Sistemi**: Çok boyutlu rating sistemi (her kategori için ayrı puanlama)
-- **Akıllı Öneriler**: Makine öğrenmesi tabanlı kişiselleştirilmiş POI önerileri
+- **Akıllı Öneriler**: Tercih, yakınlık ve kalite ağırlıklarına dayalı kişiselleştirilmiş POI puanlama
 - **Gelişmiş Arama**: Türkçe karakter desteği ile tam metin arama
 
 #### 🗺️ Rota Planlama
@@ -56,7 +56,7 @@
 #### 🗺️ Harita ve Navigasyon
 - **OpenStreetMap Entegrasyonu**: Folium ve Leaflet tabanlı interaktif haritalar
 - **Çoklu Harita Katmanları**: OpenStreetMap, OpenTopoMap, CartoDB, Satellite görünümleri
-- **Gerçek Zamanlı Rota Çizimi**: OSMnx ve NetworkX ile gerçek yürüyüş yolları üzerinden rota hesaplama
+- **Rota Çizimi**: Yapılandırılmış legacy graph rotası; modüler `/api/route/smart` ucu ise gerçek bir yönlendirme sağlayıcısı bağlanana kadar açıkça işaretlenmiş yaklaşık düz-hat önizlemesi döndürür
 - **GPX/KML Desteği**: Rota import/export işlemleri
 - **Marker Clustering**: Çok sayıda POI için performanslı görselleştirme
 - **360° Panorama Görüntüleme**: Google Model Viewer ile panorama desteği
@@ -1192,6 +1192,10 @@ source venv/bin/activate
 pip install -r requirements.txt
 pip install pytest pytest-cov black flake8 mypy
 
+# Alternatif: temiz bir sanal ortamda yalnız CI/test içe aktarımları için
+# daha küçük sabitlenmiş set (requirements.txt ile birlikte kurmayın)
+pip install -r requirements-ci.txt
+
 # Geliştirme modunda çalıştırın
 export FLASK_ENV=development
 export FLASK_DEBUG=True
@@ -1214,6 +1218,8 @@ git checkout -b feature/yeni-ozellik
 ```bash
 python -m pytest tests/
 python -m pytest --cov=app tests/
+node tests/frontend_security.test.mjs
+(cd android_app && ./gradlew :app:compileDebugKotlin --no-daemon)
 python smoke_test.py
 ```
 
@@ -1525,9 +1531,16 @@ sudo systemctl start urgup-seyahat-onerisi
 
 #### Nginx Reverse Proxy
 ```nginx
+# Keep precise coordinates out of access logs by logging $uri (path only),
+# never $request or $request_uri (which include query parameters).
+log_format poi_privacy '$remote_addr - $remote_user [$time_local] '
+                       '"$request_method $uri $server_protocol" $status $body_bytes_sent '
+                       '"$http_referer" "$http_user_agent"';
+
 server {
     listen 80;
     server_name yourdomain.com www.yourdomain.com;
+    access_log /var/log/nginx/poi_access.log poi_privacy;
 
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;

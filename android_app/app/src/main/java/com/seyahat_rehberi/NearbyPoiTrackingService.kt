@@ -1,4 +1,4 @@
-package link.keenetic.urgup.harita
+package com.seyahat_rehberi
 
 import android.Manifest
 import android.app.Notification
@@ -23,6 +23,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -33,8 +34,8 @@ import kotlin.math.roundToInt
 class NearbyPoiTrackingService : Service() {
   companion object {
     private const val TAG = "NearbyPoiTracking"
-    private const val ACTION_START = "link.keenetic.urgup.harita.action.START_POI_TRACKING"
-    private const val ACTION_STOP = "link.keenetic.urgup.harita.action.STOP_POI_TRACKING"
+    private const val ACTION_START = "com.seyahat_rehberi.action.START_POI_TRACKING"
+    private const val ACTION_STOP = "com.seyahat_rehberi.action.STOP_POI_TRACKING"
     private const val EXTRA_CATEGORY = "extra_category"
     private const val EXTRA_CATEGORIES = "extra_categories"
     private const val EXTRA_ALERT_RADIUS_METERS = "extra_alert_radius_meters"
@@ -448,23 +449,26 @@ class NearbyPoiTrackingService : Service() {
   }
 
   private fun fetchNearbyPois(location: Location): List<NearbyAlertItem> {
-    val uriBuilder = Uri.parse(API_URL).buildUpon()
-      .appendQueryParameter("lat", location.latitude.toString())
-      .appendQueryParameter("lng", location.longitude.toString())
-      .appendQueryParameter("radius_m", alertRadiusMeters.toString())
-      .appendQueryParameter("limit", "20")
-
-    if (!trackAllCategories) {
-      selectedCategories.forEach { categoryName ->
-        uriBuilder.appendQueryParameter("categories", categoryName)
+    val requestBody = JSONObject().apply {
+      put("lat", location.latitude)
+      put("lng", location.longitude)
+      put("radius_m", alertRadiusMeters)
+      put("limit", 20)
+      if (!trackAllCategories) {
+        put("categories", JSONArray(selectedCategories))
       }
     }
 
-    val connection = (URL(uriBuilder.build().toString()).openConnection() as HttpURLConnection).apply {
-      requestMethod = "GET"
+    val connection = (URL(API_URL).openConnection() as HttpURLConnection).apply {
+      requestMethod = "POST"
       connectTimeout = 10_000
       readTimeout = 10_000
       doInput = true
+      doOutput = true
+      setRequestProperty("Content-Type", "application/json; charset=utf-8")
+      outputStream.bufferedWriter(Charsets.UTF_8).use { writer ->
+        writer.write(requestBody.toString())
+      }
     }
 
     return try {
@@ -504,17 +508,23 @@ class NearbyPoiTrackingService : Service() {
   }
 
   private fun fetchNearbyPanoramas(location: Location): List<NearbyAlertItem> {
-    val uriBuilder = Uri.parse(PANORAMA_API_URL).buildUpon()
-      .appendQueryParameter("lat", location.latitude.toString())
-      .appendQueryParameter("lng", location.longitude.toString())
-      .appendQueryParameter("radius_m", alertRadiusMeters.toString())
-      .appendQueryParameter("limit", "20")
+    val requestBody = JSONObject().apply {
+      put("lat", location.latitude)
+      put("lng", location.longitude)
+      put("radius_m", alertRadiusMeters)
+      put("limit", 20)
+    }
 
-    val connection = (URL(uriBuilder.build().toString()).openConnection() as HttpURLConnection).apply {
-      requestMethod = "GET"
+    val connection = (URL(PANORAMA_API_URL).openConnection() as HttpURLConnection).apply {
+      requestMethod = "POST"
       connectTimeout = 10_000
       readTimeout = 10_000
       doInput = true
+      doOutput = true
+      setRequestProperty("Content-Type", "application/json; charset=utf-8")
+      outputStream.bufferedWriter(Charsets.UTF_8).use { writer ->
+        writer.write(requestBody.toString())
+      }
     }
 
     return try {

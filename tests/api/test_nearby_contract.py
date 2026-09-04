@@ -52,6 +52,53 @@ def test_nearby_pois_rejects_out_of_range_coordinates(client):
     assert data["code"] == "BAD_REQUEST"
 
 
+def test_nearby_pois_accepts_private_json_body(client, monkeypatch):
+    from app.services import poi_service
+
+    captured = {}
+
+    def _stub_nearby(**kwargs):
+        captured.update(kwargs)
+        return {"center": {"lat": kwargs["lat"], "lng": kwargs["lng"]}, "pois": [], "count": 0}
+
+    monkeypatch.setattr(poi_service, "search_nearby_pois", _stub_nearby, raising=False)
+
+    resp = client.post(
+        "/api/pois/nearby",
+        json={
+            "lat": 38.63,
+            "lng": 34.91,
+            "radius_m": 750,
+            "limit": 12,
+            "categories": ["yemek", "doga"],
+        },
+    )
+
+    assert resp.status_code == 200
+    assert captured == {
+        "lat": 38.63,
+        "lng": 34.91,
+        "radius_m": 750,
+        "limit": 12,
+        "category": None,
+        "categories": ["yemek", "doga"],
+    }
+
+
+def test_nearby_pois_bounds_category_filter_cardinality(client):
+    resp = client.post(
+        "/api/pois/nearby",
+        json={
+            "lat": 38.63,
+            "lng": 34.91,
+            "categories": [f"category-{index}" for index in range(21)],
+        },
+    )
+
+    assert resp.status_code == 400
+    assert resp.get_json()["error"] == "at most 20 categories may be requested"
+
+
 def test_nearby_panoramas_contract_preserves_expected_shape(client, monkeypatch):
     from app.services import media_service
 
@@ -98,3 +145,28 @@ def test_nearby_panoramas_rejects_out_of_range_coordinates(client):
     assert resp.status_code == 400
     data = resp.get_json()
     assert data["error"] == "lat/lng out of range"
+
+
+def test_nearby_panoramas_accepts_private_json_body(client, monkeypatch):
+    from app.services import media_service
+
+    captured = {}
+
+    def _stub_nearby(**kwargs):
+        captured.update(kwargs)
+        return {"center": {"lat": kwargs["lat"], "lng": kwargs["lng"]}, "panoramas": [], "count": 0}
+
+    monkeypatch.setattr(media_service, "search_nearby_panoramas", _stub_nearby, raising=False)
+
+    resp = client.post(
+        "/api/panoramas/nearby",
+        json={"lat": 38.63, "lng": 34.91, "radius_m": 400, "limit": 7},
+    )
+
+    assert resp.status_code == 200
+    assert captured == {
+        "lat": 38.63,
+        "lng": 34.91,
+        "radius_m": 400,
+        "limit": 7,
+    }

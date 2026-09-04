@@ -47,9 +47,9 @@ def create_app(config_name=None):
         raise
     
     # Initialize CORS
-    cors_origins = app.config.get('CORS_ORIGINS', ["*"])
+    cors_origins = app.config.get('CORS_ORIGINS', [])
     if isinstance(cors_origins, str):
-        cors_origins = [origin.strip() for origin in cors_origins.split(',')]
+        cors_origins = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
     
     CORS(
         app,

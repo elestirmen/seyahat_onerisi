@@ -4,6 +4,7 @@ Handles all POI-related HTTP endpoints.
 """
 
 from typing import List
+import math
 
 from flask import Blueprint, request, jsonify
 import logging
@@ -11,6 +12,7 @@ import logging
 from app.services.poi_service import poi_service
 from app.services.media_service import media_service
 from app.middleware.error_handler import APIError, bad_request
+from app.utils.validation import parse_bounded_int
 from auth_middleware import auth_middleware
 
 logger = logging.getLogger(__name__)
@@ -25,8 +27,12 @@ def _legacy_style_error(error: APIError):
     return jsonify({'error': message}), status_code
 
 
-def _parse_category_filters() -> List[str]:
-    raw_values = request.args.getlist('categories') + request.args.getlist('categories[]')
+def _parse_category_filters(payload=None) -> List[str]:
+    if isinstance(payload, dict):
+        raw_categories = payload.get('categories', payload.get('categories[]', []))
+        raw_values = raw_categories if isinstance(raw_categories, list) else [raw_categories]
+    else:
+        raw_values = request.args.getlist('categories') + request.args.getlist('categories[]')
     normalized: List[str] = []
     seen = set()
 
@@ -35,6 +41,10 @@ def _parse_category_filters() -> List[str]:
             category_name = item.strip()
             if not category_name or category_name in seen:
                 continue
+            if len(category_name) > 100:
+                raise bad_request("category names must be at most 100 characters")
+            if len(normalized) >= 20:
+                raise bad_request("at most 20 categories may be requested")
             normalized.append(category_name)
             seen.add(category_name)
 
@@ -72,11 +82,13 @@ def list_pois():
         category = request.args.get('category')
         
         # Parse pagination parameters
-        try:
-            page = int(request.args.get('page', 1))
-            limit = int(request.args.get('limit', 20))
-        except (ValueError, TypeError):
-            raise bad_request("Invalid page or limit parameter")
+        page = parse_bounded_int(
+            request.args.get('page'), 'page', default=1, minimum=1, maximum=1_000_000,
+            clamp_maximum=False,
+        )
+        limit = parse_bounded_int(
+            request.args.get('limit'), 'limit', default=20, minimum=1, maximum=100,
+        )
         
         # Parse sort parameter
         sort = request.args.get('sort', 'name_asc')
@@ -145,10 +157,9 @@ def search_pois():
         
         category = request.args.get('category')
         
-        try:
-            limit = int(request.args.get('limit', 50))
-        except (ValueError, TypeError):
-            raise bad_request("Invalid limit parameter")
+        limit = parse_bounded_int(
+            request.args.get('limit'), 'limit', default=50, minimum=1, maximum=100,
+        )
         
         # Call service
         result = poi_service.search_pois(
@@ -166,29 +177,39 @@ def search_pois():
         raise APIError("Internal server error", "INTERNAL_ERROR", 500)
 
 
-@poi_bp.route('/pois/nearby', methods=['GET'])
+@poi_bp.route('/pois/nearby', methods=['GET', 'POST'])
 def nearby_pois():
     """List nearby POIs around a coordinate, optionally filtered by category/categories."""
     try:
-        lat_raw = (request.args.get('lat') or '').strip()
-        lng_raw = (request.args.get('lng') or '').strip()
+        if request.method == 'POST':
+            payload = request.get_json(silent=True)
+            if not isinstance(payload, dict):
+                raise bad_request("Request body must be a JSON object")
+        else:
+            payload = request.args
+
+        lat_raw = str(payload.get('lat') or '').strip()
+        lng_raw = str(payload.get('lng') or '').strip()
         if not lat_raw or not lng_raw:
             raise bad_request("lat and lng query params are required")
 
         try:
             lat = float(lat_raw)
             lng = float(lng_raw)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             raise bad_request("lat and lng must be numbers")
-
-        if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        if (
+            not math.isfinite(lat)
+            or not math.isfinite(lng)
+            or not (-90 <= lat <= 90 and -180 <= lng <= 180)
+        ):
             raise bad_request("lat/lng out of range")
 
-        radius_m = _parse_clamped_int_param('radius_m', request.args.get('radius_m'), 1000, 50, 50000)
-        limit = _parse_clamped_int_param('limit', request.args.get('limit'), 50, 1, 200)
+        radius_m = _parse_clamped_int_param('radius_m', payload.get('radius_m'), 1000, 50, 50000)
+        limit = _parse_clamped_int_param('limit', payload.get('limit'), 50, 1, 200)
 
-        categories = _parse_category_filters()
-        category = (request.args.get('category') or '').strip() or None
+        categories = _parse_category_filters(payload if request.method == 'POST' else None)
+        category = str(payload.get('category') or '').strip() or None
         if categories:
             category = None
 

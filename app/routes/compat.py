@@ -229,10 +229,17 @@ def list_route_panoramas():
     return jsonify(media_service.list_route_panoramas()), 200
 
 
-@compat_bp.route("/api/panoramas/nearby", methods=["GET"])
+@compat_bp.route("/api/panoramas/nearby", methods=["GET", "POST"])
 def nearby_panoramas():
-    lat_raw = (request.args.get("lat") or "").strip()
-    lng_raw = (request.args.get("lng") or "").strip()
+    if request.method == "POST":
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"error": "Request body must be a JSON object"}), 400
+    else:
+        payload = request.args
+
+    lat_raw = str(payload.get("lat") or "").strip()
+    lng_raw = str(payload.get("lng") or "").strip()
     if not lat_raw or not lng_raw:
         return jsonify({"error": "lat and lng query params are required"}), 400
 
@@ -245,8 +252,8 @@ def nearby_panoramas():
     if not (-90 <= lat <= 90 and -180 <= lng <= 180):
         return jsonify({"error": "lat/lng out of range"}), 400
 
-    radius_m = _parse_clamped_int_param("radius_m", request.args.get("radius_m"), 1000, 50, 10_000)
-    limit = _parse_clamped_int_param("limit", request.args.get("limit"), 20, 1, 100)
+    radius_m = _parse_clamped_int_param("radius_m", payload.get("radius_m"), 1000, 50, 10_000)
+    limit = _parse_clamped_int_param("limit", payload.get("limit"), 20, 1, 100)
 
     try:
         return jsonify(media_service.search_nearby_panoramas(lat=lat, lng=lng, radius_m=radius_m, limit=limit)), 200

@@ -13,15 +13,15 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-  namespace = "link.keenetic.urgup.harita"
-  compileSdk = 34
+  namespace = "com.seyahat_rehberi"
+  compileSdk = 35
 
   defaultConfig {
-    applicationId = "link.keenetic.urgup.harita"
+    applicationId = "com.seyahat_rehberi"
     minSdk = 23
-    targetSdk = 34
-    versionCode = 1
-    versionName = "1.0"
+    targetSdk = 35
+    versionCode = 2
+    versionName = "1.0.1"
   }
 
   signingConfigs {

@@ -1,4 +1,4 @@
-package link.keenetic.urgup.harita
+package com.seyahat_rehberi
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -6,6 +6,7 @@ import android.app.Notification
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
@@ -13,6 +14,7 @@ import android.net.Uri
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -21,11 +23,14 @@ import android.webkit.GeolocationPermissions
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.view.View
+import android.widget.Button
 import android.widget.FrameLayout
 import androidx.activity.addCallback
 import androidx.activity.result.ActivityResultLauncher
@@ -47,13 +52,17 @@ class MainActivity : AppCompatActivity() {
     private const val EXTRA_TARGET_URL = "target_url"
     private const val POI_ALERT_CHANNEL_ID = "nearby_poi_alerts"
     private const val DEFAULT_NATIVE_LOCATION_MAX_AGE_MS = 5 * 60 * 1000L
-    private val TRUSTED_WEB_HOSTS =
-      linkedSetOf<String>().apply {
-        Uri.parse(START_URL).host?.lowercase()?.let(::add)
-        add("localhost")
-        add("127.0.0.1")
-        add("10.0.2.2")
-      }
+    private const val RELEASE_WEB_ORIGIN = "https://harita.urgup.keenetic.link:443"
+    private val DEBUG_WEB_ORIGINS =
+      setOf(
+        "http://localhost:80",
+        "http://localhost:5560",
+        "http://127.0.0.1:80",
+        "http://127.0.0.1:5560",
+        "http://10.0.2.2:80",
+        "http://10.0.2.2:5560",
+      )
+    private val EXTERNAL_NAVIGATION_SCHEMES = setOf("http", "https", "mailto", "tel", "geo", "market")
   }
 
   private data class PendingPoiTrackingStartRequest(
@@ -73,6 +82,10 @@ class MainActivity : AppCompatActivity() {
 
   private lateinit var rootContainer: FrameLayout
   private lateinit var webView: WebView
+  private lateinit var webLoadErrorView: View
+  private lateinit var webLoadRetryButton: Button
+  private var lastFailedWebUrl = START_URL
+  private var mainFrameLoadFailed = false
 
   private var filePathCallback: ValueCallback<Array<Uri>>? = null
   private lateinit var fileChooserLauncher: ActivityResultLauncher<Intent>
@@ -100,6 +113,14 @@ class MainActivity : AppCompatActivity() {
 
     rootContainer = findViewById(android.R.id.content)
     webView = findViewById(R.id.webview)
+    webLoadErrorView = findViewById(R.id.webLoadErrorView)
+    webLoadRetryButton = findViewById(R.id.webLoadRetryButton)
+    webLoadRetryButton.setOnClickListener {
+      val retryUrl = lastFailedWebUrl.takeIf(::isTrustedWebUrl) ?: START_URL
+      mainFrameLoadFailed = false
+      hideWebLoadError()
+      webView.loadUrl(retryUrl)
+    }
 
     fileChooserLauncher =
       registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -238,6 +259,7 @@ class MainActivity : AppCompatActivity() {
   }
 
   private fun setupWebView() {
+    WebView.setWebContentsDebuggingEnabled(isDebuggableBuild())
     CookieManager.getInstance().setAcceptCookie(true)
     CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
 
@@ -245,7 +267,14 @@ class MainActivity : AppCompatActivity() {
       javaScriptEnabled = true
       domStorageEnabled = true
       setGeolocationEnabled(true)
+      allowFileAccess = false
+      allowContentAccess = false
+      javaScriptCanOpenWindowsAutomatically = false
+      setSupportMultipleWindows(false)
       mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        safeBrowsingEnabled = true
+      }
       userAgentString = "$userAgentString HaritaUrdupWebView/1.0"
     }
     webView.addJavascriptInterface(AndroidBridge(), "APDAndroid")
@@ -253,28 +282,49 @@ class MainActivity : AppCompatActivity() {
     webView.webViewClient =
       object : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-          val uri = request.url
-          val scheme = uri.scheme?.lowercase() ?: return false
-          return when (scheme) {
-            "http", "https" -> {
-              if (isTrustedWebUri(uri)) {
-                false
-              } else {
-                openExternalUrl(uri)
-                true
-              }
-            }
-            "about", "javascript" -> false
-            else -> {
-              openExternalUrl(uri)
-              true
-            }
-          }
+          return handleWebNavigation(request.url)
+        }
+
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+        override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+          val uri = runCatching { Uri.parse(url) }.getOrNull()
+          return handleWebNavigation(uri)
+        }
+
+        override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+          super.onPageStarted(view, url, favicon)
+          mainFrameLoadFailed = false
+          hideWebLoadError()
         }
 
         override fun onPageFinished(view: WebView, url: String?) {
           super.onPageFinished(view, url)
+          if (!mainFrameLoadFailed) {
+            hideWebLoadError()
+          }
           dispatchPendingPanoramaDeepLink(url)
+        }
+
+        override fun onReceivedError(
+          view: WebView,
+          request: WebResourceRequest,
+          error: WebResourceError,
+        ) {
+          super.onReceivedError(view, request, error)
+          if (request.isForMainFrame) {
+            showWebLoadError(request.url)
+          }
+        }
+
+        override fun onReceivedHttpError(
+          view: WebView,
+          request: WebResourceRequest,
+          errorResponse: WebResourceResponse,
+        ) {
+          super.onReceivedHttpError(view, request, errorResponse)
+          if (request.isForMainFrame && errorResponse.statusCode >= 500) {
+            showWebLoadError(request.url)
+          }
         }
       }
 
@@ -471,12 +521,58 @@ class MainActivity : AppCompatActivity() {
     return isTrustedWebUri(parsedOrigin)
   }
 
+  private fun isTrustedWebUrl(url: String?): Boolean {
+    val uri =
+      url
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.let { runCatching { Uri.parse(it) }.getOrNull() }
+    return isTrustedWebUri(uri)
+  }
+
   private fun isTrustedWebUri(uri: Uri?): Boolean {
-    if (uri == null) return false
-    val scheme = uri.scheme?.lowercase() ?: return false
-    if (scheme != "http" && scheme != "https") return false
-    val host = uri.host?.lowercase() ?: return false
-    return TRUSTED_WEB_HOSTS.contains(host)
+    val origin = normalizedWebOrigin(uri) ?: return false
+    if (origin == RELEASE_WEB_ORIGIN) return true
+    return isDebuggableBuild() && DEBUG_WEB_ORIGINS.contains(origin)
+  }
+
+  private fun isDebuggableBuild(): Boolean {
+    return applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+  }
+
+  private fun normalizedWebOrigin(uri: Uri?): String? {
+    if (uri == null || !uri.isHierarchical) return null
+    val scheme = uri.scheme?.lowercase() ?: return null
+    if (scheme != "http" && scheme != "https") return null
+    val host = uri.host?.lowercase() ?: return null
+    val port =
+      when {
+        uri.port >= 0 -> uri.port
+        scheme == "https" -> 443
+        else -> 80
+      }
+    return "$scheme://$host:$port"
+  }
+
+  private fun handleWebNavigation(uri: Uri?): Boolean {
+    if (isTrustedWebUri(uri)) return false
+
+    val scheme = uri?.scheme?.lowercase()
+    if (uri != null && scheme in EXTERNAL_NAVIGATION_SCHEMES) {
+      openExternalUrl(uri)
+    }
+    return true
+  }
+
+  private fun showWebLoadError(failedUri: Uri?) {
+    mainFrameLoadFailed = true
+    lastFailedWebUrl = failedUri?.toString()?.takeIf(::isTrustedWebUrl) ?: START_URL
+    webLoadErrorView.visibility = View.VISIBLE
+    webLoadErrorView.bringToFront()
+  }
+
+  private fun hideWebLoadError() {
+    webLoadErrorView.visibility = View.GONE
   }
 
   private fun openExternalUrl(uri: Uri) {

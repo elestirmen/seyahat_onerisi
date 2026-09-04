@@ -7,7 +7,9 @@ class LoadingManager {
     constructor() {
         this.loadingStates = new Map();
         this.observers = new Map();
-        this.performanceMonitor = new PerformanceMonitor();
+        this.performanceMonitor = new PerformanceMonitor({
+            enabled: window.__POI_PERF_DEBUG__ === true
+        });
         this.init();
     }
 
@@ -494,6 +496,7 @@ class LoadingManager {
 class PerformanceMonitor {
     constructor(options = {}) {
         this.options = {
+            enabled: false,
             fpsThreshold: 50,
             memoryThreshold: 100, // MB
             renderTimeThreshold: 16, // ms (60fps)
@@ -535,18 +538,21 @@ class PerformanceMonitor {
             }
         };
 
-        this.setupUXManagerIntegration();
+        if (this.options.enabled) {
+            this.setupUXManagerIntegration();
+        }
     }
 
     setupUXManagerIntegration() {
-        // Wait for UX Manager to be available
+        let attemptsRemaining = 20;
         const checkUXManager = () => {
             if (window.uxManager) {
                 this.uxManager = window.uxManager;
                 this.uxManager.addEventListener('uxManagerReady', () => {
                     // Log removed for cleaner console
                 });
-            } else {
+            } else if (attemptsRemaining > 0 && this.isMonitoring) {
+                attemptsRemaining--;
                 setTimeout(checkUXManager, 100);
             }
         };
@@ -554,6 +560,7 @@ class PerformanceMonitor {
     }
 
     start() {
+        if (!this.options.enabled || this.isMonitoring) return;
         this.isMonitoring = true;
         this.monitorFrameRate();
         this.monitorMemory();

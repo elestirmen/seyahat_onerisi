@@ -9,6 +9,8 @@ import json
 import uuid
 import hashlib
 import tempfile
+import zipfile
+import time
 from typing import Dict, Any, Optional
 from datetime import datetime
 from pathlib import Path
@@ -25,11 +27,26 @@ class RouteImportService:
     def __init__(self):
         self.allowed_extensions = {'gpx', 'kml', 'kmz'}
         self.max_file_size = 50 * 1024 * 1024  # 50MB
+        self.max_xml_size = 20 * 1024 * 1024  # parsed XML payload limit
+        self.max_kmz_entries = 100
+        self.max_kmz_uncompressed_size = 100 * 1024 * 1024
+        self.max_kmz_compression_ratio = 100
         self.min_file_size = 100  # 100 bytes
         self.upload_dir = tempfile.gettempdir()
         self.state_dir = Path(self.upload_dir) / "poi_route_import_state"
-        self.state_dir.mkdir(parents=True, exist_ok=True)
+        self.state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        try:
+            self.state_dir.chmod(0o700)
+        except OSError:
+            pass
+        try:
+            self.state_ttl_seconds = max(
+                300, int(os.environ.get("ROUTE_IMPORT_STATE_TTL_SECONDS", "86400"))
+            )
+        except (TypeError, ValueError):
+            self.state_ttl_seconds = 86400
         self.progress_tracking = {}
+        self._cleanup_stale_states()
 
     def _normalize_upload_id(self, upload_id: str) -> str:
         try:
@@ -51,9 +68,21 @@ class RouteImportService:
         safe_upload_id = self._normalize_upload_id(upload_id)
         state_path = self._state_path(safe_upload_id)
         temp_path = state_path.with_suffix(".tmp")
-        with open(temp_path, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, ensure_ascii=False)
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        descriptor = os.open(temp_path, flags, 0o600)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, ensure_ascii=False)
+        except Exception:
+            temp_path.unlink(missing_ok=True)
+            raise
         os.replace(temp_path, state_path)
+        try:
+            state_path.chmod(0o600)
+        except OSError:
+            pass
 
     def _read_progress_state(self, upload_id: str) -> Optional[Dict[str, Any]]:
         safe_upload_id = self._normalize_upload_id(upload_id)
@@ -66,6 +95,47 @@ class RouteImportService:
         except Exception as exc:
             logger.warning(f"Failed to read import state for {safe_upload_id}: {exc}")
             return None
+
+    def _is_managed_upload_path(self, file_path: Any, upload_id: Any = None) -> bool:
+        if not file_path:
+            return False
+        try:
+            candidate = Path(str(file_path)).resolve()
+            upload_root = Path(self.upload_dir).resolve()
+            candidate.relative_to(upload_root)
+            if candidate.parent != upload_root or candidate.suffix.lower().lstrip('.') not in self.allowed_extensions:
+                return False
+            filename_token = candidate.stem.removeprefix("route_import_")
+            if filename_token == candidate.stem:
+                return False
+            normalized_token = str(uuid.UUID(filename_token))
+            if upload_id is not None and normalized_token != self._normalize_upload_id(upload_id):
+                return False
+            return True
+        except (OSError, ValueError, AttributeError, APIError):
+            return False
+
+    def _cleanup_stale_states(self) -> None:
+        """Remove expired import state and only its managed temporary upload."""
+        cutoff = time.time() - self.state_ttl_seconds
+        for state_path in self.state_dir.glob("*.json"):
+            try:
+                if state_path.stat().st_mtime >= cutoff:
+                    continue
+                temp_file_path = None
+                try:
+                    with open(state_path, "r", encoding="utf-8") as handle:
+                        payload = json.load(handle)
+                    if isinstance(payload, dict):
+                        temp_file_path = payload.get("temp_file_path")
+                except (OSError, ValueError, TypeError):
+                    pass
+
+                if self._is_managed_upload_path(temp_file_path, state_path.stem):
+                    Path(str(temp_file_path)).unlink(missing_ok=True)
+                state_path.unlink(missing_ok=True)
+            except OSError as exc:
+                logger.warning("Failed to clean stale route import state: %s", exc)
     
     def validate_file(self, file: FileStorage) -> Dict[str, Any]:
         """
@@ -137,16 +207,23 @@ class RouteImportService:
             except Exception as e:
                 warnings.append(f"Could not read file content: {str(e)}")
             
-            # Generate file hash for security
+            # Generate the hash incrementally so a maximum-sized upload is not
+            # duplicated in process memory.
             try:
-                file_content = file.read()
-                file.seek(0)  # Reset position
-                file_hash = hashlib.sha256(file_content).hexdigest()
+                file_hash = self._calculate_stream_hash(file)
                 file_info['sha256_hash'] = file_hash
                 # Frontend expects file_hash
                 file_info['file_hash'] = file_hash
             except Exception as e:
                 warnings.append(f"Could not generate file hash: {str(e)}")
+
+            extension = file_info.get('extension')
+            if extension in {'gpx', 'kml'} and file_size > self.max_xml_size:
+                errors.append(
+                    f"XML content too large (maximum {self.max_xml_size // (1024 * 1024)} MB)"
+                )
+            elif extension == 'kmz' and not errors:
+                errors.extend(self._validate_kmz_archive(file))
             
             return {
                 'is_valid': len(errors) == 0,
@@ -154,7 +231,6 @@ class RouteImportService:
                 'warnings': warnings,
                 'file_info': file_info
             }
-            
         except Exception as e:
             logger.error(f"File validation error: {e}")
             return {
@@ -163,6 +239,83 @@ class RouteImportService:
                 'warnings': warnings,
                 'file_info': file_info
             }
+
+    @staticmethod
+    def _calculate_stream_hash(file: FileStorage) -> str:
+        current_position = file.tell()
+        digest = hashlib.sha256()
+        try:
+            file.seek(0)
+            for chunk in iter(lambda: file.read(64 * 1024), b''):
+                digest.update(chunk)
+            return digest.hexdigest()
+        finally:
+            file.seek(current_position)
+
+    def _validate_kmz_archive(self, file: FileStorage):
+        """Validate archive metadata without inflating entries into memory."""
+        errors = []
+        current_position = file.tell()
+        try:
+            file.seek(0)
+            with zipfile.ZipFile(file.stream, 'r') as archive:
+                entries = archive.infolist()
+                if len(entries) > self.max_kmz_entries:
+                    errors.append(
+                        f"KMZ contains too many entries (maximum {self.max_kmz_entries})"
+                    )
+
+                total_uncompressed = sum(entry.file_size for entry in entries)
+                total_compressed = sum(entry.compress_size for entry in entries)
+                if total_uncompressed > self.max_kmz_uncompressed_size:
+                    errors.append(
+                        "KMZ uncompressed content exceeds the allowed size"
+                    )
+                elif (
+                    total_uncompressed / max(total_compressed, 1)
+                    > self.max_kmz_compression_ratio
+                ):
+                    errors.append("KMZ has a suspicious compression ratio")
+
+                for entry in entries:
+                    normalized_name = entry.filename.replace('\\', '/')
+                    if (
+                        normalized_name.startswith('/')
+                        or '..' in normalized_name.split('/')
+                        or entry.flag_bits & 0x1
+                    ):
+                        errors.append("KMZ contains an unsafe archive entry")
+                        break
+
+                kml_entries = [
+                    entry for entry in entries
+                    if entry.filename.lower().endswith('.kml')
+                ]
+                if not kml_entries:
+                    errors.append("KMZ archive does not contain a KML file")
+                else:
+                    main_kml = next(
+                        (
+                            entry for entry in kml_entries
+                            if entry.filename.lower().endswith('doc.kml')
+                        ),
+                        kml_entries[0],
+                    )
+                    if main_kml.file_size > self.max_xml_size:
+                        errors.append(
+                            "KML content inside KMZ exceeds the allowed size"
+                        )
+                    elif (
+                        main_kml.file_size / max(main_kml.compress_size, 1)
+                        > self.max_kmz_compression_ratio
+                    ):
+                        errors.append("KML content has a suspicious compression ratio")
+        except (zipfile.BadZipFile, OSError):
+            errors.append("KMZ is not a valid ZIP archive")
+        finally:
+            file.seek(current_position)
+
+        return errors
     
     def save_uploaded_file(self, file: FileStorage, upload_id: str) -> str:
         """
@@ -182,15 +335,28 @@ class RouteImportService:
             safe_filename = f"route_import_{safe_upload_id}.{ext}"
             file_path = str(Path(self.upload_dir) / safe_filename)
             
-            # Save file
-            file.save(file_path)
+            # Create with owner-only permissions from the first byte. Applying
+            # chmod only after saving creates a brief disclosure window under
+            # permissive process umasks.
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
+            descriptor = os.open(file_path, flags, 0o600)
+            try:
+                with os.fdopen(descriptor, "wb") as destination:
+                    file.save(destination)
+            except Exception:
+                Path(file_path).unlink(missing_ok=True)
+                raise
             
-            logger.info(f"File saved to {file_path}")
+            logger.info("Route import upload saved for %s", safe_upload_id)
             return file_path
             
-        except Exception as e:
-            logger.error(f"Error saving file: {e}")
-            raise APIError(f"Failed to save file: {str(e)}", "FILE_SAVE_ERROR")
+        except APIError:
+            raise
+        except Exception:
+            logger.exception("Error saving route import upload")
+            raise APIError("Failed to save file", "FILE_SAVE_ERROR")
     
     def parse_route_file(self, file_path: str, file_info: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -268,9 +434,9 @@ class RouteImportService:
 
         except APIError:
             raise
-        except Exception as e:
-            logger.error(f"Error parsing route file: {e}")
-            raise APIError(f"Failed to parse route file: {str(e)}", "ROUTE_PARSE_ERROR")
+        except Exception:
+            logger.exception("Error parsing route import file")
+            raise APIError("Failed to parse route file", "ROUTE_PARSE_ERROR")
     
     def _parse_gpx_file(self, file_path: str) -> Dict[str, Any]:
         """Parse GPX file."""
@@ -409,10 +575,13 @@ class RouteImportService:
                 state = self.get_progress(safe_upload_id) or {}
                 file_path = state.get('temp_file_path')
 
-            # Remove file if exists
-            if file_path and os.path.exists(file_path):
+            # Never unlink a caller-supplied path outside the exact managed
+            # route-import filename format.
+            if self._is_managed_upload_path(file_path, safe_upload_id) and os.path.exists(file_path):
                 os.unlink(file_path)
-                logger.info(f"Cleaned up file: {file_path}")
+                logger.info("Cleaned up route import upload for %s", safe_upload_id)
+            elif file_path:
+                logger.warning("Refused to clean unmanaged upload path for %s", safe_upload_id)
             
             # Remove progress tracking
             if safe_upload_id in self.progress_tracking:
@@ -441,6 +610,7 @@ class RouteImportService:
         file_path = None
         
         try:
+            self._cleanup_stale_states()
             # Initialize progress
             self.update_progress(upload_id, 'validating', 10, 'Validating file...')
             

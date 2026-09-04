@@ -34,7 +34,13 @@ max_requests_jitter = _env_int("GUNICORN_MAX_REQUESTS_JITTER", 100)
 accesslog = "-"
 errorlog = "-"
 loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "info")
-access_log_format = '%(h)s %({x-forwarded-for}i)s "%(r)s" %(s)s %(b)s %(L)ss "%(f)s" "%(a)s"'
+# Log the URL path but not its query string: nearby lookups carry precise
+# coordinates in query parameters and must not become a location history.
+access_log_format = '%(h)s "%(m)s %(U)s %(H)s" %(s)s %(b)s %(L)ss "%(f)s" "%(a)s"'
 
-forwarded_allow_ips = os.environ.get("GUNICORN_FORWARDED_ALLOW_IPS", "*")
+# Only trust forwarding headers from a local reverse proxy by default. Container
+# or load-balancer deployments must set an explicit proxy CIDR/address list.
+forwarded_allow_ips = os.environ.get(
+    "GUNICORN_FORWARDED_ALLOW_IPS", "127.0.0.1,::1"
+)
 proxy_allow_ips = forwarded_allow_ips

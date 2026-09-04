@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import math
 import logging
+import os
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.middleware.error_handler import APIError, bad_request
@@ -51,6 +52,15 @@ CATEGORY_MAPPING = {
 
 class RecommendationService:
     """Business logic for recommendation requests."""
+
+    def __init__(self):
+        try:
+            configured_limit = int(
+                os.environ.get("RECOMMENDATION_CANDIDATE_LIMIT", "5000")
+            )
+        except (TypeError, ValueError):
+            configured_limit = 5000
+        self.candidate_limit = max(100, min(configured_limit, 20_000))
 
     def get_recommendations(self, payload: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         data = payload or {}
@@ -149,6 +159,11 @@ class RecommendationService:
         return {
             "recommendations": diversified,
             "total": len(diversified),
+            "algorithm": {
+                "name": "weighted_preference_scoring",
+                "version": "1",
+                "machine_learning": False,
+            },
             "preferences_used": pref_values,
             "location_used": (
                 {"latitude": user_lat, "longitude": user_lng}
@@ -209,8 +224,12 @@ class RecommendationService:
                         FROM pois p
                         LEFT JOIN poi_ratings r ON p.id = r.poi_id
                         WHERE p.location IS NOT NULL
+                          AND p.is_active = TRUE
                         GROUP BY p.id, p.name, p.category, p.location, p.description
-                        """
+                        ORDER BY p.id
+                        LIMIT %s
+                        """,
+                        (self.candidate_limit,),
                     )
                     rows = cursor.fetchall() or []
 

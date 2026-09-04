@@ -293,9 +293,7 @@ class AuthService:
     
     def _get_client_ip(self) -> str:
         """Get client IP address."""
-        return request.environ.get('HTTP_X_FORWARDED_FOR') or \
-               request.environ.get('HTTP_X_REAL_IP') or \
-               request.environ.get('REMOTE_ADDR', 'unknown')
+        return request.remote_addr or 'unknown'
     
     def _is_ip_locked_out(self, ip: str) -> bool:
         """Check if IP is locked out due to failed attempts."""

@@ -1,4 +1,4 @@
-package link.keenetic.urgup.harita
+package com.seyahat_rehberi
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -8,7 +8,7 @@ import androidx.core.app.NotificationManagerCompat
 
 class PoiNotificationActionReceiver : BroadcastReceiver() {
   companion object {
-    const val ACTION_MUTE_POI = "link.keenetic.urgup.harita.action.MUTE_POI_NOTIFICATION"
+    const val ACTION_MUTE_POI = "com.seyahat_rehberi.action.MUTE_POI_NOTIFICATION"
     const val EXTRA_POI_ID = "extra_poi_id"
     const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
   }

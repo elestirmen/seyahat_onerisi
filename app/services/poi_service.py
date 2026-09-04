@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 
 from app.middleware.error_handler import APIError, bad_request, not_found
+from app.utils.validation import parse_bool, parse_coordinates, parse_finite_float
 
 logger = logging.getLogger(__name__)
 
@@ -289,10 +290,11 @@ class POIService:
         Returns:
             Dict with pois, total, page, total_pages
         """
-        if limit > 100:
-            limit = 100
+        if limit < 1:
+            raise bad_request("limit must be at least 1")
+        limit = min(limit, 100)
         if page < 1:
-            page = 1
+            raise bad_request("page must be at least 1")
         
         offset = (page - 1) * limit
         
@@ -393,8 +395,9 @@ class POIService:
         if not query:
             raise bad_request("Search query is required")
         
-        if limit > 100:
-            limit = 100
+        if limit < 1:
+            raise bad_request("limit must be at least 1")
+        limit = min(limit, 100)
         
         try:
             return self._search_pois_database(query, category, limit)
@@ -414,11 +417,7 @@ class POIService:
         categories: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Return POIs near the given coordinate ordered by distance."""
-        if not (-90 <= lat <= 90):
-            raise bad_request("Latitude must be between -90 and 90")
-
-        if not (-180 <= lng <= 180):
-            raise bad_request("Longitude must be between -180 and 180")
+        lat, lng = parse_coordinates(lat, lng)
 
         radius_m = max(50, min(int(radius_m), 50000))
         limit = max(1, min(int(limit), 200))
@@ -850,22 +849,16 @@ class POIService:
             if field not in poi_data:
                 raise bad_request(f"Missing required field: {field}")
         
-        # Validate data types
-        try:
-            float(poi_data['latitude'])
-            float(poi_data['longitude'])
-        except (ValueError, TypeError):
-            raise bad_request("Invalid latitude or longitude format")
+        latitude, longitude = parse_coordinates(
+            poi_data['latitude'], poi_data['longitude']
+        )
         
         category = poi_data.get('category') or 'other'
         description = poi_data.get('description', '')
         short_description = poi_data.get('short_description', '')
         altitude = poi_data.get('altitude')
         if altitude is not None:
-            try:
-                altitude = float(altitude)
-            except (TypeError, ValueError):
-                raise bad_request("Invalid altitude format")
+            altitude = parse_finite_float(altitude, "altitude")
 
         attributes = poi_data.get('attributes')
         if attributes is None:
@@ -878,11 +871,11 @@ class POIService:
             'category': category,
             'description': description,
             'short_description': short_description,
-            'latitude': float(poi_data['latitude']),
-            'longitude': float(poi_data['longitude']),
+            'latitude': latitude,
+            'longitude': longitude,
             'altitude': altitude,
             'attributes': attributes,
-            'is_active': bool(poi_data.get('is_active', True))
+            'is_active': parse_bool(poi_data.get('is_active'), 'is_active', default=True)
         }
 
         try:
@@ -1004,10 +997,7 @@ class POIService:
         if 'altitude' in poi_data:
             altitude = poi_data.get('altitude')
             if altitude is not None:
-                try:
-                    altitude = float(altitude)
-                except (TypeError, ValueError):
-                    raise bad_request("Invalid altitude format")
+                altitude = parse_finite_float(altitude, "altitude")
             fields.append('altitude = %s')
             values.append(altitude)
 
@@ -1020,18 +1010,14 @@ class POIService:
 
         if 'is_active' in poi_data:
             fields.append('is_active = %s')
-            values.append(bool(poi_data['is_active']))
+            values.append(parse_bool(poi_data['is_active'], 'is_active'))
 
         latitude = poi_data.get('latitude', poi_data.get('lat'))
         longitude = poi_data.get('longitude', poi_data.get('lng'))
         if latitude is not None or longitude is not None:
             if latitude is None or longitude is None:
                 raise bad_request("Both latitude and longitude are required to update location")
-            try:
-                latitude = float(latitude)
-                longitude = float(longitude)
-            except (TypeError, ValueError):
-                raise bad_request("Invalid latitude or longitude format")
+            latitude, longitude = parse_coordinates(latitude, longitude)
             fields.append('location = ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography')
             values.extend([longitude, latitude])
 
